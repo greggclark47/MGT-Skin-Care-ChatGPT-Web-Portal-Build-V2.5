@@ -11,6 +11,7 @@
     "test:billing": "node test/billing.cjs",
     "test:operations": "node test/operations.cjs",
     "test:ai-budget": "node test/ai-budget.cjs",
+    "test:operators": "node test/operators.cjs",
     "worker": "node --env-file-if-exists=.env dist/portal/worker.js"
   },
   "dependencies": {

@@ -50,8 +50,10 @@ Keep `OPENCLAW_ENABLED=false` until the OpenClaw-compatible endpoint has been in
 | Account | Supabase OTP and secure cookie session | Auth provider and email delivery |
 | Support | Requests and admin replies | External helpdesk delivery and staffing |
 | Plans & Billing | Stripe checkout, portal and signed status webhooks | Both plan prices, benefits, terms and Stripe setup |
-| Admin | Session roles, knowledge/rule drafting and approval, support replies | Operator role provisioning; full product management UI remains incomplete |
+| Admin | Session roles, exact-email operator role management, knowledge/rule drafting and approval, support replies | Initial superadmin bootstrap; full product management UI remains incomplete |
 | Company / policies / partners | Existing informational routes | Final legal content and agreements |
+
+Operator access at `/admin/operators` lets an existing superadmin find an account that has completed sign-in and assign only the five supported portal roles. It never creates an account or grants a role from a client-provided identity. The server checks the operator's current role inside the update transaction, prevents self-edits, rejects stale revisions or out-of-band role changes, and records each change with its prior and new roles. A trusted administrator must still provision the first superadmin after verifying that account outside this portal; there is no public bootstrap endpoint.
 
 ## Operations worker and backup verification
 Compose now runs a separate worker every 60 seconds. It expires sessions and stale rate limits, retains AI-routing logs, notifications, billing activity and run records according to the environment settings, creates one durable replenishment notification per due reminder, and delivers it in-app by default. Set `NOTIFICATION_DELIVERY=webhook` only after configuring an HTTPS endpoint and token; failed deliveries are leased and retried up to three times without duplicate delivery.

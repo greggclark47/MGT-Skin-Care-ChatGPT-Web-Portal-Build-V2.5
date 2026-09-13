@@ -13,6 +13,8 @@ import {RETAILERS,SHOP_SEGMENTS,COMMERCE_MODEL} from './retailers';
 export interface PortalOptions{store:Store;env?:NodeJS.ProcessEnv;stripe?:StripeClient;coach?:SafeCoach;analysisGateway?:AiGateway;verifyOtp?:(email:string,otp:string)=>Promise<{id:string,email:string}>}
 const now=()=>new Date().toISOString();
 const emptyCart=()=>({items:[] as {product_id:string,quantity:number}[],revision:randomUUID()});
+const OPERATOR_ROLES=['superadmin','catalog_editor','sme','compliance','viewer'] as const;
+const validOperatorRoles=(value:unknown):value is string[]=>Array.isArray(value)&&value.length<=OPERATOR_ROLES.length&&value.every((item:unknown)=>typeof item==='string'&&OPERATOR_ROLES.includes(item as typeof OPERATOR_ROLES[number]))&&new Set(value).size===value.length;
 async function audit(db:Records,actor:string,action:string,target:string){const id=randomUUID();await db.put('audit',id,{id,actor,action,target,at:now()});}
 function profileInput(b:any):SkinProfileInput{
  for(const [key,allowed] of Object.entries({skin_type:SKIN_TYPES,sensitivity:SKIN_SENSITIVITY,age_band:AGE_BANDS,current_routine:ROUTINE_LEVELS,desired_outcome:DESIRED_OUTCOMES,budget_range:BUDGET_RANGES}))check((allowed as readonly string[]).includes(b[key]),400,'invalid_profile','Please complete all profile questions.');
@@ -200,6 +202,49 @@ export async function createPortal(options:PortalOptions){
  {name:'Verified encrypted backup',configured:backup?.status==='healthy'}],backup,note:'Configuration presence only. Live provider and deployment checks are still required.'});});
  get('/admin/ai-routing',async(req,res)=>{role(req,['superadmin','compliance']);const since=Date.now()-86400000;const logs=await db.tx(async r=>(await r.entries<any>('ai_routing_log')).map(x=>x.value).filter(x=>Date.parse(x.created_at||'')>=since));const routes=new Map<string,any>();for(const log of logs){const key=`${log.provider||'unavailable'}:${log.model||'none'}:${log.task_type||'unknown'}`,row=routes.get(key)||{provider:log.provider||'unavailable',model:log.model||'none',task:log.task_type||'unknown',requests:0,successes:0,fallbacks:0,validation_failures:0,cost_cents:0,latencies:[] as number[]};row.requests++;row.successes+=log.failure_reason?0:1;row.fallbacks+=log.used_fallback?1:0;row.validation_failures+=log.validation_failed?1:0;row.cost_cents+=Number(log.cost_cents)||0;if(Number.isFinite(log.latency_ms))row.latencies.push(log.latency_ms);routes.set(key,row);}const summary=[...routes.values()].map(row=>{const latencies=row.latencies.sort((a:number,b:number)=>a-b);return{provider:row.provider,model:row.model,task:row.task,requests:row.requests,successes:row.successes,fallbacks:row.fallbacks,validation_failures:row.validation_failures,cost_cents:Number(row.cost_cents.toFixed(4)),p95_latency_ms:latencies.length?latencies[Math.floor((latencies.length-1)*.95)]:0};}).sort((a,b)=>b.requests-a.requests||a.provider.localeCompare(b.provider));res.json({window_hours:24,requests:logs.length,cost_cents:Number(summary.reduce((total,row)=>total+row.cost_cents,0).toFixed(4)),routes:summary});});
  post('/admin/backup/verified',async(req,res)=>{const user=role(req,['superadmin','compliance']);const completed_at=text(req.body.completed_at,40),location_identifier=text(req.body.location_identifier,200),checksum=text(req.body.checksum,200);check(!Number.isNaN(Date.parse(completed_at)),400,'backup_timestamp_invalid','Provide a valid backup completion time.');await db.tx(async r=>{await r.put('backup_status','latest',{completed_at:new Date(completed_at).toISOString(),location_identifier,checksum,verified_by:user.id,verified_at:now()});await audit(r,user.id,'backup.verified',location_identifier);});res.json({saved:true});});
+ post('/admin/operators/lookup',async(req,res)=>{
+  const operator=role(req,['superadmin']);
+  const email=text(req.body.email,254).toLowerCase();
+  check(/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email),400,'email_invalid','Enter the exact account email address.');
+  const found=await db.tx(async r=>{
+   await r.lock('operator-role:'+hash(operator.id));
+   const current=await r.get<any>('accounts',operator.id);
+   check(current?.roles?.includes('superadmin'),403,'forbidden','Your account does not have access to this action.');
+   await rate(r,'operator-lookup:'+operator.id,20,60000);
+   return (await r.list<any>('accounts')).filter(user=>user.email===email);
+  });
+  check(found.length===1,found.length?409:404,found.length?'account_ambiguous':'account_missing',found.length?'This email matches more than one account. Resolve that identity before assigning roles.':'No signed-in account has this email address.');
+  check(found[0].id!==operator.id,409,'self_role_change','Your own roles cannot be changed here.');
+  res.json({account:{id:found[0].id,email:found[0].email,roles:found[0].roles||[],revision:found[0].roles_revision||0}});
+ });
+ post('/admin/operators/roles',async(req,res)=>{
+  const operator=role(req,['superadmin']);
+  check(req.body.confirm===true,400,'confirmation_required','Confirm the operator role change.');
+  const id=text(req.body.id,100),email=text(req.body.email,254).toLowerCase();
+  const requested=req.body.roles,expected=req.body.expected_roles;
+  check(validOperatorRoles(requested)&&validOperatorRoles(expected),400,'roles_invalid','Choose only the listed operator roles.');
+  check(Number.isInteger(req.body.expected_revision)&&req.body.expected_revision>=0,400,'revision_invalid','Refresh the account before saving roles.');
+  const nextRoles=OPERATOR_ROLES.filter(item=>requested.includes(item));
+  const updated=await db.tx(async r=>{
+   for(const accountId of [id,operator.id].sort())await r.lock('operator-role:'+hash(accountId));
+   const current=await r.get<any>('accounts',operator.id);
+   check(current?.roles?.includes('superadmin'),403,'forbidden','Your account does not have access to this action.');
+   const target=await r.get<any>('accounts',id);
+   check(target&&target.email===email,404,'account_missing','The selected account no longer matches. Look it up again.');
+   check(target.id!==operator.id,409,'self_role_change','Your own roles cannot be changed here.');
+   const revision=target.roles_revision||0;
+   check(revision===req.body.expected_revision,409,'roles_changed','These roles changed since you opened the account. Look it up again.');
+   const priorRoles:Array<string>=target.roles||[];
+   check(JSON.stringify(priorRoles.slice().sort())===JSON.stringify(expected.slice().sort()),409,'roles_changed','These roles changed since you opened the account. Look it up again.');
+   check(JSON.stringify(priorRoles.slice().sort())!==JSON.stringify(nextRoles.slice().sort()),409,'roles_unchanged','Select a different role set before saving.');
+   const changed_at=now();
+   await r.put('accounts',id,{...target,roles:nextRoles,roles_revision:revision+1,roles_updated_at:changed_at});
+   await r.put('operator_role_changes',randomUUID(),{target_id:id,operator_id:operator.id,previous_roles:priorRoles,next_roles:nextRoles,changed_at});
+   await audit(r,operator.id,'operator.roles_changed',id);
+   return{id,email,roles:nextRoles,revision:revision+1};
+  });
+  res.json({account:updated});
+ });
  get('/admin',async(req,res)=>{role(req,['superadmin','catalog_editor','sme','compliance','viewer']);res.json(await db.tx(async r=>({roles:req.account!.roles,products:await r.list('products'),rules:await r.list('rules'),knowledge:await r.list('knowledge'),orders:await r.list('orders'),tickets:await r.list('tickets'),partners:await r.list('partners'),jobs:await r.list('jobs'),audit:(await r.list('audit')).slice(-100),company:await r.get('settings','company')||null,deletion_requests:await r.list('deletion_requests')})));});
  post('/admin/product',async(req,res)=>{const u=role(req,['catalog_editor','superadmin']);const b=req.body;const id=text(b.id,100),name=text(b.name,120);check(Number.isInteger(b.price_cents)&&b.price_cents>0&&b.price_cents<1000000,400,'invalid_price','Invalid product price.');check(Number.isInteger(b.stock)&&b.stock>=0,400,'invalid_stock','Invalid stock quantity.');check(['cleanser','toner','serum','treatment','moisturizer','sunscreen','eye'].includes(b.slot),400,'invalid_slot','Choose a supported routine slot.');check(Array.isArray(b.ingredients)&&b.ingredients.length>0&&b.ingredients.length<=100&&b.ingredients.every((i:any)=>typeof i==='string'&&/^[a-z0-9_]{1,80}$/.test(i)),400,'ingredients_required','Use normalized ingredient keys.');
   await db.tx(async r=>{const old=await r.get('products',id);await r.put('products',id,{id,name,description:text(b.description,1000),slot:b.slot,ingredients:b.ingredients,price_cents:b.price_cents,stock:b.stock,merchant_id:text(b.merchant_id,100),brand_id:text(b.brand_id||b.merchant_id,100),status:'draft',approved:false,sample:false,concern_tags:[],concern_weights:{},type_fit:{},updated_by:u.id,created_at:old?.created_at||now()});await audit(r,u.id,'product.draft',id);});res.json({saved:true});

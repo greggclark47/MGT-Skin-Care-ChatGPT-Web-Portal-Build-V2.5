@@ -1,0 +1,80 @@
+services:
+  ollama:
+    image: ollama/ollama:latest
+    volumes:
+      - ollama:/root/.ollama
+    environment:
+      OLLAMA_HOST: 0.0.0.0:11434
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+    restart: unless-stopped
+  postgres:
+    image: postgres:17-bookworm
+    environment:
+      POSTGRES_DB: mgt
+      POSTGRES_USER: mgt
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set a database password}
+    volumes:
+      - database:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mgt -d mgt"]
+      interval: 10s
+      retries: 5
+    restart: unless-stopped
+  api:
+    build:
+      context: ../..
+      dockerfile: infra/portal/Dockerfile.api
+    env_file: .env
+    environment:
+      HOST: 0.0.0.0
+      DATABASE_URL: postgresql://mgt:${POSTGRES_PASSWORD}@postgres:5432/mgt
+      OLLAMA_ENABLED: "true"
+      OLLAMA_BASE_URL: http://ollama:11434
+      OPENCLAW_BASE_URL: http://ollama:11434/v1
+    depends_on:
+      postgres:
+        condition: service_healthy
+      ollama:
+        condition: service_healthy
+    restart: unless-stopped
+  worker:
+    build:
+      context: ../..
+      dockerfile: infra/portal/Dockerfile.api
+    command: ["node", "dist/portal/worker.js"]
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://mgt:${POSTGRES_PASSWORD}@postgres:5432/mgt
+      WORKER_INTERVAL_SECONDS: "60"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+  web:
+    build:
+      context: ../..
+      dockerfile: infra/portal/Dockerfile.web
+      args:
+        PORTAL_API_ORIGIN: http://api:3100
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+  edge:
+    image: caddy:2
+    ports: ["80:80", "443:443"]
+    environment:
+      PORTAL_DOMAIN: ${PORTAL_DOMAIN:?Set portal domain}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - certificates:/data
+    depends_on: [web]
+    restart: unless-stopped
+volumes:
+  database:
+  certificates:
+  ollama:

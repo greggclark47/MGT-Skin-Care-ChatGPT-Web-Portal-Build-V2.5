@@ -1,0 +1,21 @@
+node_modules/
+dist/
+.next/
+.next-dev/
+.smoke-build/
+.env
+.env.*
+!.env.example
+*.log
+.DS_Store
+work/data/
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+
+# Generated/local artifacts are kept out of the source backup.
+tmp/
+output/
+.pnpm-store/
+*.zip
+*.tsbuildinfo

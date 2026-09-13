@@ -1,0 +1,14 @@
+{
+  "name": "@mgt/domain",
+  "version": "0.2.0",
+  "private": true,
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "node --experimental-vm-modules ../../node_modules/.bin/jest || echo 'jest not installed yet — see SC-P1 tooling task'"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.0"
+  }
+}

@@ -50,6 +50,11 @@ console.assert(
 );
 console.assert(routine.steps.length === 3, 'expected 3 required-slot steps: cleanser excluded as unsafe for this profile, no optional candidates supplied');
 
+const pmOnlyResults = new Map<RoutineSlot, ReturnType<typeof scoreCandidates>>();
+pmOnlyResults.set('treatment', scoreCandidates([{ id: 'p-retinol-1', slot: 'treatment', ingredients: ['retinol'], price_cents: 4200, concern_tags: [], concern_weights: { texture_focus: 1 }, type_fit: {}, brand_id: 'brand-c', status: 'active' }], classification.profile_vector, classification.avoid_flags, [], profileInput.budget_range));
+const pmOnlyRoutine = buildRoutine(pmOnlyResults, new Map([['p-retinol-1', ['retinol']]]));
+console.assert(pmOnlyRoutine.steps[0]?.time === 'pm', 'retinol-class treatments must be PM-only, not AM/PM');
+
 const catalog: ProductCatalogLookup = {
   price_cents: (id) => ({ 'p-cleanser-1': 2200, 'p-treatment-1': 3000, 'p-moist-1': 2800, 'p-spf-1': 1800 } as Record<string, number>)[id] ?? 0,
   isAvailable: () => true,

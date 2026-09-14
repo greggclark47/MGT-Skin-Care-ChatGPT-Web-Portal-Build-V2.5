@@ -1,7 +1,7 @@
 import { ROUTINE_SLOT_ORDER, type RoutineSlot, type RoutineTime } from '../types/enums';
 import type { ScoreResult, ExclusionResult } from './scoring-engine';
 
-export const ROUTINE_ENGINE_VERSION = '1.0.0';
+export const ROUTINE_ENGINE_VERSION = '1.1.0';
 
 export interface RoutineStep {
   slot: RoutineSlot;
@@ -30,9 +30,12 @@ const CONFLICT_RULES: ConflictRule[] = [
   { a: 'benzoyl_peroxide', b: 'retinol', note: 'Benzoyl peroxide can deactivate retinol — use at different times of day.' },
 ];
 
-function timeForSlot(slot: RoutineSlot): RoutineTime {
+const PM_ONLY_INGREDIENTS = new Set(['retinol', 'retinoid', 'retinal', 'tretinoin', 'adapalene']);
+
+function timeForSlot(slot: RoutineSlot, ingredients: string[] = []): RoutineTime {
   if (slot === 'sunscreen') return 'am';
   if (slot === 'exfoliant' || slot === 'mask') return 'weekly';
+  if (ingredients.some((ingredient) => PM_ONLY_INGREDIENTS.has(ingredient))) return 'pm';
   return 'am_pm';
 }
 
@@ -62,7 +65,7 @@ export function buildRoutine(
     ingredients.forEach((i) => chosenIngredients.add(i));
     steps.push({
       slot,
-      time: timeForSlot(slot),
+      time: timeForSlot(slot, ingredients),
       product_id: top.product_id,
       order: ROUTINE_SLOT_ORDER.indexOf(slot),
       is_optional: optional,

@@ -201,6 +201,36 @@ export async function createPortal(options:PortalOptions){
  {name:'Subscriptions enabled',configured:env.SUBSCRIPTIONS_ENABLED==='true'},
  {name:'Verified encrypted backup',configured:backup?.status==='healthy'}],backup,note:'Configuration presence only. Live provider and deployment checks are still required.'});});
  get('/admin/ai-routing',async(req,res)=>{role(req,['superadmin','compliance']);const since=Date.now()-86400000;const logs=await db.tx(async r=>(await r.entries<any>('ai_routing_log')).map(x=>x.value).filter(x=>Date.parse(x.created_at||'')>=since));const routes=new Map<string,any>();for(const log of logs){const key=`${log.provider||'unavailable'}:${log.model||'none'}:${log.task_type||'unknown'}`,row=routes.get(key)||{provider:log.provider||'unavailable',model:log.model||'none',task:log.task_type||'unknown',requests:0,successes:0,fallbacks:0,validation_failures:0,cost_cents:0,latencies:[] as number[]};row.requests++;row.successes+=log.failure_reason?0:1;row.fallbacks+=log.used_fallback?1:0;row.validation_failures+=log.validation_failed?1:0;row.cost_cents+=Number(log.cost_cents)||0;if(Number.isFinite(log.latency_ms))row.latencies.push(log.latency_ms);routes.set(key,row);}const summary=[...routes.values()].map(row=>{const latencies=row.latencies.sort((a:number,b:number)=>a-b);return{provider:row.provider,model:row.model,task:row.task,requests:row.requests,successes:row.successes,fallbacks:row.fallbacks,validation_failures:row.validation_failures,cost_cents:Number(row.cost_cents.toFixed(4)),p95_latency_ms:latencies.length?latencies[Math.floor((latencies.length-1)*.95)]:0};}).sort((a,b)=>b.requests-a.requests||a.provider.localeCompare(b.provider));res.json({window_hours:24,requests:logs.length,cost_cents:Number(summary.reduce((total,row)=>total+row.cost_cents,0).toFixed(4)),routes:summary});});
+ get('/admin/ai-economics',async(req,res)=>{
+  role(req,['superadmin','compliance']);
+  const since=Date.now()-86400000;
+  const {logs,budgets,reservations}=await db.tx(async r=>({
+   logs:(await r.entries<any>('ai_routing_log')).map(x=>x.value).filter(x=>Date.parse(x.created_at||'')>=since),
+   budgets:await r.entries<any>('ai_budget'),
+   reservations:await r.entries<any>('ai_budget_reservations')
+  }));
+  const totals={requests:logs.length,successes:0,failures:0,fallbacks:0,validation_failures:0,cost_cents:0,input_tokens:0,output_tokens:0};
+  const byTask=new Map<string,any>(),byModel=new Map<string,any>(),hourly=new Map<string,any>();
+  const add=(map:Map<string,any>,key:string,seed:any,log:any)=>{const row=map.get(key)||{...seed,requests:0,failures:0,fallbacks:0,validation_failures:0,cost_cents:0,input_tokens:0,output_tokens:0};row.requests++;row.failures+=log.failure_reason?1:0;row.fallbacks+=log.used_fallback?1:0;row.validation_failures+=log.validation_failed?1:0;row.cost_cents+=Number(log.cost_cents)||0;row.input_tokens+=Number(log.input_tokens)||0;row.output_tokens+=Number(log.output_tokens)||0;map.set(key,row);};
+  for(const log of logs){
+   const created=Date.parse(log.created_at||'');
+   totals.successes+=log.failure_reason?0:1;totals.failures+=log.failure_reason?1:0;totals.fallbacks+=log.used_fallback?1:0;totals.validation_failures+=log.validation_failed?1:0;totals.cost_cents+=Number(log.cost_cents)||0;totals.input_tokens+=Number(log.input_tokens)||0;totals.output_tokens+=Number(log.output_tokens)||0;
+   add(byTask,log.task_type||'unknown',{task:log.task_type||'unknown'},log);
+   add(byModel,`${log.provider||'unavailable'}:${log.model||'none'}`,{provider:log.provider||'unavailable',model:log.model||'none'},log);
+   if(Number.isFinite(created)){const bucket=new Date(Math.floor(created/3600000)*3600000).toISOString();add(hourly,bucket,{hour:bucket},log);}
+  }
+  const sortRows=(rows:any[])=>rows.map(row=>({...row,cost_cents:Number(row.cost_cents.toFixed(4))})).sort((a,b)=>b.cost_cents-a.cost_cents||b.requests-a.requests);
+  const staleCutoff=Date.now()-600000;
+  const pendingReservations=reservations.filter(({value})=>value?.status==='reserved');
+  const staleReservations=pendingReservations.filter(({value})=>Date.parse(value.created_at||'')<staleCutoff);
+  const budgetRows=budgets.map(({id,value})=>({budget_key:id,cents:Number(value?.cents)||0,updated_at:value?.updated_at||null})).sort((a,b)=>b.cents-a.cents).slice(0,20);
+  const alerts=[
+   totals.validation_failures?`${totals.validation_failures} validation failure${totals.validation_failures===1?'':'s'} need review`:null,
+   totals.failures?`${totals.failures} failed AI request${totals.failures===1?'':'s'} in the last 24 hours`:null,
+   staleReservations.length?`${staleReservations.length} hosted cost hold${staleReservations.length===1?'':'s'} older than 10 minutes`:null
+  ].filter(Boolean);
+  res.json({window_hours:24,totals:{...totals,cost_cents:Number(totals.cost_cents.toFixed(4)),success_rate:totals.requests?Number((totals.successes/totals.requests).toFixed(4)):1,fallback_rate:totals.requests?Number((totals.fallbacks/totals.requests).toFixed(4)):0,validation_failure_rate:totals.requests?Number((totals.validation_failures/totals.requests).toFixed(4)):0},by_task:sortRows([...byTask.values()]),by_model:sortRows([...byModel.values()]),hourly:sortRows([...hourly.values()]).sort((a,b)=>a.hour.localeCompare(b.hour)),budgets:budgetRows,pending_reservations:pendingReservations.length,stale_reservations:staleReservations.length,alerts});
+ });
  post('/admin/backup/verified',async(req,res)=>{const user=role(req,['superadmin','compliance']);const completed_at=text(req.body.completed_at,40),location_identifier=text(req.body.location_identifier,200),checksum=text(req.body.checksum,200);check(!Number.isNaN(Date.parse(completed_at)),400,'backup_timestamp_invalid','Provide a valid backup completion time.');await db.tx(async r=>{await r.put('backup_status','latest',{completed_at:new Date(completed_at).toISOString(),location_identifier,checksum,verified_by:user.id,verified_at:now()});await audit(r,user.id,'backup.verified',location_identifier);});res.json({saved:true});});
  post('/admin/operators/lookup',async(req,res)=>{
   const operator=role(req,['superadmin']);

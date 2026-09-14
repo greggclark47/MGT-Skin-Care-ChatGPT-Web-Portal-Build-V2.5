@@ -46,7 +46,7 @@ export const SEED_CATALOG: CandidateProduct[] = [
   { id: 'treatment-retinol', slot: 'treatment', ingredients: ['retinol'], price_cents: 4200, concern_tags: [], concern_weights: { aging_focus: 1, texture_focus: 0.4 }, type_fit: {}, brand_id: 'brand-c', status: 'active' },
   { id: 'moisturizer-gel', slot: 'moisturizer', ingredients: ['hyaluronic_acid', 'glycerin'], price_cents: 2800, concern_tags: [], concern_weights: {}, type_fit: { oil_control_need: 0.7, hydration_need: 0.5 }, brand_id: 'brand-b', status: 'active' },
   { id: 'moisturizer-rich', slot: 'moisturizer', ingredients: ['ceramides', 'glycerin'], price_cents: 3200, concern_tags: [], concern_weights: {}, type_fit: { hydration_need: 1 }, brand_id: 'brand-b', status: 'active' },
-  { id: 'spf-lightweight', slot: 'sunscreen', ingredients: [], price_cents: 1900, concern_tags: [], concern_weights: {}, type_fit: {}, brand_id: 'brand-b', status: 'active' },
+  { id: 'spf-lightweight', slot: 'sunscreen', ingredients: ['zinc_oxide'], price_cents: 1900, concern_tags: [], concern_weights: {}, type_fit: {}, brand_id: 'brand-b', status: 'active' },
   { id: 'toner-hydrating', slot: 'toner', ingredients: ['glycerin'], price_cents: 1600, concern_tags: [], concern_weights: {}, type_fit: { hydration_need: 0.6 }, brand_id: 'brand-a', status: 'active' },
   { id: 'eye-cream-basic', slot: 'eye', ingredients: ['glycerin'], price_cents: 2400, concern_tags: [], concern_weights: { eye_area_focus: 0.8 }, type_fit: {}, brand_id: 'brand-c', status: 'active' },
 ];

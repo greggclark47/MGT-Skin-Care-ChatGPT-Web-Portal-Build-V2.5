@@ -24,7 +24,7 @@ const {createPortal}=require('../dist/portal/server');const {LocalStore}=require
  }
  assert.equal((await a('/orders')).status,409);assert.equal((await fetch(origin+'/webhooks/stripe',{method:'POST'})).status,409);assert.equal(paymentCalls,0);
  const input={skin_type:'dry',concerns:['hydration'],sensitivity:'none',age_band:'26_35',current_routine:'basic',desired_outcome:'glow',budget_range:'between_25_50',ingredient_avoidances:[],consent:true};
- const result=await a('/profile',input);assert.equal(result.status,200,JSON.stringify(result));assert(result.data.profile.routine.steps.length>0);assert.equal((await b('/profile')).data.profile,null);
+ const result=await a('/profile',input);assert.equal(result.status,200,JSON.stringify(result));assert(result.data.profile.routine.steps.length>0);assert(result.data.profile.routine.steps.some(s=>s.slot==='sunscreen'&&s.time==='am'),'required sunscreen step should be present for the demo catalog');assert.equal((await b('/profile')).data.profile,null);
  const products=(await a('/catalog')).data.products;await a('/reminders',{product_id:products[0].id,days:30});assert.equal((await a('/reminders')).data.reminders.length,1);assert.equal((await b('/reminders')).data.reminders.length,0);
  await a('/reminders/remove',{product_id:products[0].id});assert.equal((await a('/reminders')).data.reminders.length,0);
  assert.equal((await a('/admin',undefined,{'x-admin-user-id':'superadmin'})).status,401);

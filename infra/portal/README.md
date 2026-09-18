@@ -36,7 +36,7 @@ docker compose exec ollama ollama pull llava:latest
 docker compose up -d api web edge
 ```
 
-Keep `OPENCLAW_ENABLED=false` until the OpenClaw-compatible endpoint has been installed and tested. Hosted OpenAI escalation is optional; keep its key unset to run the portal entirely on the local stack. Supabase remains the identity and production data system of record: provide its Auth URL/key and a production PostgreSQL connection in the server environment only.
+Keep `OPENCLAW_ENABLED=false` until the OpenClaw-compatible endpoint has been installed and tested. Hosted OpenAI escalation is optional; keep its key unset to run the portal entirely on the local stack. Supabase remains the identity and production data system of record: provide its Auth URL/key and a production PostgreSQL connection in the server environment only. The worker also needs `SUPABASE_SERVICE_ROLE_KEY` to complete requested identity deletion; keep that privileged key server-side and never expose it to the web build.
 
 ## Tab coverage and remaining external setup
 | Area | Backend | Remaining |
@@ -47,7 +47,7 @@ Keep `OPENCLAW_ENABLED=false` until the OpenClaw-compatible endpoint has been in
 | Replenishment | Persistent reminders, durable in-app notifications and optional HTTPS webhook delivery | Configure a delivery channel and test it with real recipients |
 | Coach | Reviewed-library local-first gateway with Ollama, DeepSeek fallback, LangChain context pipeline and Supabase-backed telemetry | Ollama models, reviewed content, optional hosted escalation validation |
 | Learn | Approved knowledge records | Editorial publishing |
-| Account | Supabase OTP and secure cookie session | Auth provider and email delivery |
+| Account | Supabase OTP, secure cookie session, data export, and delayed account deletion with cancellation and operational blockers | Auth provider, email delivery, service-role identity deletion, and live lifecycle validation |
 | Support | Requests and admin replies | External helpdesk delivery and staffing |
 | Plans & Billing | Stripe checkout, portal and signed status webhooks | Both plan prices, benefits, terms and Stripe setup |
 | Admin | Session roles, exact-email operator role management, knowledge/rule drafting and approval, support replies | Initial superadmin bootstrap; full product management UI remains incomplete |
@@ -58,9 +58,11 @@ Operator access at `/admin/operators` lets an existing superadmin find an accoun
 ## Operations worker and backup verification
 Compose now runs a separate worker every 60 seconds. It expires sessions and stale rate limits, retains AI-routing logs, notifications, billing activity and run records according to the environment settings, creates one durable replenishment notification per due reminder, and delivers it in-app by default. Set `NOTIFICATION_DELIVERY=webhook` only after configuring an HTTPS endpoint and token; failed deliveries are leased and retried up to three times without duplicate delivery. The worker writes a health heartbeat after each successful run, and its container becomes unhealthy when that heartbeat is stale.
 
+Signed-in users can schedule account deletion with a 30-day cancellation window. The worker pauses a request when it finds active subscriptions, a legacy paid membership, an unfinished order, operator access, a vendor account, or an unsettled hosted-AI charge. When eligible, it deletes the Supabase identity first, then removes portal-owned personal data and sessions in one database transaction. Completed transaction and audit records are retained only in anonymized form, and a non-identifying completion record is kept for operational proof. Retried jobs are leased and tolerate a previously deleted Supabase identity. Live Supabase deletion and organization-specific legal-retention policy still require production validation and counsel review.
+
 The worker does not create database dumps itself: automatic unencrypted database dumps on the app host are not an acceptable production backup design. Use an encrypted, off-host PostgreSQL backup service with a tested restoration procedure. A superadmin or compliance operator records each verified backup through `POST /api/hub/admin/backup/verified` with its completion time, storage identifier and checksum. Future-dated completions are rejected. The worker exposes that proof on `/readyz` and marks it stale after `BACKUP_MAX_AGE_HOURS` (26 by default). Production `/readyz` returns HTTP 503 when the worker or backup is stale, while `/healthz` remains the container liveness probe so operators can still open the portal and correct readiness.
 
-Run `pnpm --filter @mgt/api test:operations` and `pnpm --filter @mgt/api test:readiness` for worker and readiness regression checks. Request and webhook reconciliation dashboards, deletion execution, a live notification provider and a real restore drill still require environment-specific implementation and validation. No claim of complete production readiness is made.
+Run `pnpm --filter @mgt/api test:operations` and `pnpm --filter @mgt/api test:readiness` for worker and readiness regression checks. Request and webhook reconciliation dashboards, live identity-deletion validation, a live notification provider and a real restore drill still require environment-specific implementation and validation. No claim of complete production readiness is made.
 
 Validation: API compilation, web build, existing referral suite and new billing suite. Remaining: real Stripe sandbox lifecycle, production PostgreSQL, container startup, browser interactions and deployment.
 

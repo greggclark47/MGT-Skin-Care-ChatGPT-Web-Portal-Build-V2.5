@@ -58,23 +58,34 @@ export function installSubscriptionWebhook(app:express.Express,db:Store,stripe:S
  app.post('/webhooks/subscriptions',express.raw({type:'application/json',limit:'256kb'}),wrap(async(req,res)=>{
   check(stripe&&env.STRIPE_SUBSCRIPTION_WEBHOOK_SECRET,503,'billing_unconfigured','Subscription webhook is not configured.');
   let event:Stripe.Event;try{event=stripe.webhooks.constructEvent(req.body,req.headers['stripe-signature'] as string,env.STRIPE_SUBSCRIPTION_WEBHOOK_SECRET,300);}catch{throw new Fault(400,'invalid_signature','Invalid webhook signature.');}
-  check(event.livemode===(env.STRIPE_SECRET_KEY?.startsWith('sk_live_')===true),400,'mode_mismatch','Payment mode mismatch.');
-  const allowed=['customer.subscription.created','customer.subscription.updated','customer.subscription.deleted','checkout.session.completed'];
-  if(!allowed.includes(event.type)){res.json({ignored:true});return;}
-  const outcome=await db.tx(async r=>{
-   if(await r.get('subscription_events',event.id))return{duplicate:true};
-   const object=event.data.object as any;
-   const id=event.type==='checkout.session.completed'?object.subscription:object.id;
-   if(!id)return{ignored:true};
-   // Fetch current provider state inside the serialized update to avoid stale event ordering.
-   const subscription=await stripe!.subscriptions.retrieve(typeof id==='string'?id:id.id);
-   if(subscription.metadata.kind!=='mgt_subscription')return{ignored:true};
-   const actor=subscription.metadata.actor;check(['consumer','vendor'].includes(subscription.metadata.audience)&&actor?.endsWith(':'+subscription.metadata.audience),409,'audience_mismatch','Subscription audience could not be verified.');await r.lock('billing:'+actor);const customer=typeof subscription.customer==='string'?subscription.customer:subscription.customer.id;
-   const record=await r.get('subscriptions',actor);check(record?.customer_id===customer,409,'owner_mismatch','Subscription ownership could not be verified.');
-   const audience=subscription.metadata.audience;const monthly=env['STRIPE_'+audience.toUpperCase()+'_MONTHLY_PRICE_ID']||env['STRIPE_'+audience.toUpperCase()+'_PRICE_ID'];const annual=env['STRIPE_'+audience.toUpperCase()+'_ANNUAL_PRICE_ID'];const currentPrice=subscription.items.data[0]?.price.id;const valid=subscription.items.data.length===1&&[monthly,annual].filter(Boolean).includes(currentPrice);
-   await r.put('subscriptions',actor,{...record,trial_used:record.trial_used||!!subscription.trial_start,trial_end:subscription.trial_end,current_period_end:subscription.current_period_end,cycle:currentPrice===annual?'annual':'monthly',subscription_id:subscription.id,status:subscription.status,active:valid&&['active','trialing'].includes(subscription.status),cancel_at_period_end:subscription.cancel_at_period_end,updated_at:new Date().toISOString()});
-   await r.put('billing_activity',event.id,{id:event.id,actor,at:new Date().toISOString(),status:subscription.status,cycle:currentPrice===annual?'annual':'monthly',cancel_at_period_end:subscription.cancel_at_period_end});
-   await r.put('subscription_events',event.id,{type:event.type,at:new Date().toISOString()});return{processed:true};
-  });res.json(outcome);
+  check(typeof event.id==='string'&&event.id.length>0&&event.id.length<=255&&typeof event.type==='string'&&event.type.length<=200,400,'invalid_event','Invalid subscription event.');
+  const received_at=new Date().toISOString();
+  await db.tx(async r=>{await r.lock('subscription-receipt:'+event.id);const prior=await r.get<any>('subscription_webhook_receipts',event.id);await r.put('subscription_webhook_receipts',event.id,{id:event.id,type:event.type,status:prior?.status==='processed'?'processed':'processing',attempts:(prior?.attempts||0)+1,duplicate_count:prior?.duplicate_count||0,first_received_at:prior?.first_received_at||received_at,last_received_at:received_at,processed_at:prior?.processed_at||null,last_error_code:null});});
+  try{
+   check(event.livemode===(env.STRIPE_SECRET_KEY?.startsWith('sk_live_')===true),400,'mode_mismatch','Payment mode mismatch.');
+   const allowed=['customer.subscription.created','customer.subscription.updated','customer.subscription.deleted','checkout.session.completed'];
+   let outcome:{processed?:boolean;duplicate?:boolean;ignored?:boolean};
+   if(!allowed.includes(event.type))outcome={ignored:true};
+   else outcome=await db.tx(async r=>{
+    if(await r.get('subscription_events',event.id))return{duplicate:true};
+    const object=event.data.object as any;
+    const id=event.type==='checkout.session.completed'?object.subscription:object.id;
+    if(!id)return{ignored:true};
+    // Fetch current provider state inside the serialized update to avoid stale event ordering.
+    const subscription=await stripe!.subscriptions.retrieve(typeof id==='string'?id:id.id);
+    if(subscription.metadata.kind!=='mgt_subscription')return{ignored:true};
+    const actor=subscription.metadata.actor;check(['consumer','vendor'].includes(subscription.metadata.audience)&&actor?.endsWith(':'+subscription.metadata.audience),409,'audience_mismatch','Subscription audience could not be verified.');await r.lock('billing:'+actor);const customer=typeof subscription.customer==='string'?subscription.customer:subscription.customer.id;
+    const record=await r.get('subscriptions',actor);check(record?.customer_id===customer,409,'owner_mismatch','Subscription ownership could not be verified.');
+    const audience=subscription.metadata.audience;const monthly=env['STRIPE_'+audience.toUpperCase()+'_MONTHLY_PRICE_ID']||env['STRIPE_'+audience.toUpperCase()+'_PRICE_ID'];const annual=env['STRIPE_'+audience.toUpperCase()+'_ANNUAL_PRICE_ID'];const currentPrice=subscription.items.data[0]?.price.id;const valid=subscription.items.data.length===1&&[monthly,annual].filter(Boolean).includes(currentPrice);
+    await r.put('subscriptions',actor,{...record,trial_used:record.trial_used||!!subscription.trial_start,trial_end:subscription.trial_end,current_period_end:subscription.current_period_end,cycle:currentPrice===annual?'annual':'monthly',subscription_id:subscription.id,status:subscription.status,active:valid&&['active','trialing'].includes(subscription.status),cancel_at_period_end:subscription.cancel_at_period_end,updated_at:new Date().toISOString()});
+    await r.put('billing_activity',event.id,{id:event.id,actor,at:new Date().toISOString(),status:subscription.status,cycle:currentPrice===annual?'annual':'monthly',cancel_at_period_end:subscription.cancel_at_period_end});
+    await r.put('subscription_events',event.id,{type:event.type,at:new Date().toISOString()});return{processed:true};
+   });
+   await db.tx(async r=>{await r.lock('subscription-receipt:'+event.id);const receipt=await r.get<any>('subscription_webhook_receipts',event.id);if(receipt)await r.put('subscription_webhook_receipts',event.id,{...receipt,status:outcome.ignored?'ignored':'processed',last_outcome:outcome.duplicate?'duplicate':outcome.ignored?'ignored':'processed',duplicate_count:(receipt.duplicate_count||0)+(outcome.duplicate?1:0),processed_at:outcome.processed?new Date().toISOString():receipt.processed_at,last_error_code:null});});
+   res.json(outcome);
+  }catch(error){
+   await db.tx(async r=>{await r.lock('subscription-receipt:'+event.id);const receipt=await r.get<any>('subscription_webhook_receipts',event.id);if(receipt&&receipt.status!=='processed')await r.put('subscription_webhook_receipts',event.id,{...receipt,status:'failed',last_outcome:'failed',last_error_code:error instanceof Fault?error.code:'provider_error',failed_at:new Date().toISOString()});});
+   throw error;
+  }
  }));
 }

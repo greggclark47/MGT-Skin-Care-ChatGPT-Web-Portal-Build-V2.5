@@ -50,6 +50,8 @@ services:
     environment:
       DATABASE_URL: postgresql://mgt:${POSTGRES_PASSWORD}@postgres:5432/mgt
       WORKER_INTERVAL_SECONDS: "60"
+      PROCESS_ROLE: worker
+      WORKER_HEALTH_FILE: /tmp/mgt-worker-health.json
     depends_on:
       postgres:
         condition: service_healthy

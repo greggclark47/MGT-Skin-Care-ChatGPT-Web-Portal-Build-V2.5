@@ -1,4 +1,5 @@
 import { createHash, randomUUID } from 'node:crypto';
+import {writeFile,rename} from 'node:fs/promises';
 import type { Records, Store } from './store';
 
 type Notification={id:string;actor:string;kind:'replenishment_reminder';status:'queued'|'processing'|'delivered'|'failed'|'read';scheduled_at:string;created_at:string;updated_at:string;attempts:number;payload:{product_id:string;due_at:string};lease_until?:string;delivered_at?:string;read_at?:string;last_error?:string};
@@ -23,6 +24,23 @@ const iso=(ms=Date.now())=>new Date(ms).toISOString();
 const timestamp=(value:any)=>typeof value==='string'&&!Number.isNaN(Date.parse(value))?Date.parse(value):undefined;
 const int=(value:string|undefined,fallback:number,min:number,max:number)=>{const parsed=Number(value);return Number.isInteger(parsed)&&parsed>=min&&parsed<=max?parsed:fallback;};
 const notificationId=(actor:string,reminder:Reminder)=>'reminder_'+createHash('sha256').update(`${actor}:${reminder.product_id}:${reminder.due_at}`).digest('hex').slice(0,40);
+
+export function operationalReadiness(backup:any,runs:{value:any}[],at=Date.now(),workerMaxAgeMs=5*60000){
+ const lastRun=runs.map(entry=>entry.value).filter(run=>run&&typeof run.completed_at==='string')
+  .sort((a,b)=>Date.parse(b.completed_at)-Date.parse(a.completed_at))[0]||null;
+ const lastCompleted=timestamp(lastRun?.completed_at);
+ const workerHealthy=lastCompleted!==undefined&&lastCompleted<=at&&at-lastCompleted<=workerMaxAgeMs;
+ const backupHealthy=backup?.status==='healthy'&&timestamp(backup?.last_success_at)!==undefined
+  && timestamp(backup.last_success_at)!<=at;
+ const issues=[!workerHealthy?'operations_worker_stale':null,!backupHealthy?'backup_unhealthy':null].filter(Boolean);
+ return {healthy:issues.length===0,issues,last_run:lastRun,backup};
+}
+
+export async function writeWorkerHeartbeat(file:string,result:unknown){
+ const temp=file+'.tmp';
+ await writeFile(temp,JSON.stringify({updated_at:new Date().toISOString(),result}));
+ await rename(temp,file);
+}
 
 export function notificationDeliveryFromEnv(env:NodeJS.ProcessEnv):NotificationDelivery{
  if(env.NOTIFICATION_DELIVERY==='webhook'){

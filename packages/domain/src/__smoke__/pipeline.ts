@@ -10,6 +10,11 @@ import { resolveEntitlement } from '../engines/entitlement-resolver';
 import { estimateRunOut, shouldNudge } from '../engines/replenishment-engine';
 import type { RoutineSlot } from '../types/enums';
 
+let failures = 0;
+function check(condition: boolean, message: string) {
+  if (!condition) { failures++; console.error('FAIL:', message); }
+}
+
 const profileInput = {
   skin_type: 'oily' as const,
   concerns: ['acne', 'pore_minimizing'] as const,
@@ -23,7 +28,7 @@ const profileInput = {
 
 const classification = classify({ ...profileInput, concerns: [...profileInput.concerns] });
 console.log('1. classify() ->', JSON.stringify(classification.profile_vector));
-console.assert(classification.profile_vector.acne_focus > 0.5, 'acne_focus should be elevated for acne concern');
+check(classification.profile_vector.acne_focus > 0.5, 'acne_focus should be elevated for acne concern');
 
 const candidates: Record<RoutineSlot, CandidateProduct[]> = {
   cleanser: [{ id: 'p-cleanser-1', slot: 'cleanser', ingredients: ['salicylic_acid'], price_cents: 2200, concern_tags: [], concern_weights: { acne_focus: 1 }, type_fit: { oil_control_need: 1 }, brand_id: 'brand-a', status: 'active' }],
@@ -44,11 +49,16 @@ console.log('2. scoreCandidates(cleanser) ->', JSON.stringify(slotResults.get('c
 
 const routine = buildRoutine(slotResults, ingredientMap);
 console.log('3. buildRoutine() -> steps:', routine.steps.map((s) => `${s.slot}:${s.product_id}`).join(', '));
-console.assert(
+check(
   routine.steps.every((s) => s.slot !== 'cleanser'),
   'FAIL: an excluded (unsafe) candidate must never appear in the built routine',
 );
-console.assert(routine.steps.length === 3, 'expected 3 required-slot steps: cleanser excluded as unsafe for this profile, no optional candidates supplied');
+check(routine.steps.length === 3, 'expected 3 required-slot steps: cleanser excluded as unsafe for this profile, no optional candidates supplied');
+
+const pmOnlyResults = new Map<RoutineSlot, ReturnType<typeof scoreCandidates>>();
+pmOnlyResults.set('treatment', [{product_id: 'p-retinol-1', score: 100, reasons: [], excluded: false}]);
+const pmOnlyRoutine = buildRoutine(pmOnlyResults, new Map([['p-retinol-1', ['retinol']]]));
+check(pmOnlyRoutine.steps[0]?.time === 'pm', 'retinol-class treatments must be PM-only, not AM/PM');
 
 const catalog: ProductCatalogLookup = {
   price_cents: (id) => ({ 'p-cleanser-1': 2200, 'p-treatment-1': 3000, 'p-moist-1': 2800, 'p-spf-1': 1800 } as Record<string, number>)[id] ?? 0,
@@ -58,13 +68,17 @@ let cart = buildCartFromRoutine(routine, catalog);
 cart = applyBundle(cart, [{ id: 'starter-bundle', required_product_ids: ['p-cleanser-1', 'p-treatment-1', 'p-moist-1', 'p-spf-1'], discount_cents: 500 }]);
 const pricing = priceCart(cart, false, 599, 0.07);
 console.log('4. cart total ->', JSON.stringify(pricing));
-console.assert(pricing.total_cents > 0, 'cart total should be positive');
+check(pricing.total_cents > 0, 'cart total should be positive');
 
 const entitlement = resolveEntitlement([{ provider: 'stripe', status: 'active', current_period_end: new Date(Date.now() + 20 * 86400000).toISOString() }]);
 console.log('5. resolveEntitlement() ->', JSON.stringify(entitlement));
-console.assert(entitlement.premium === true, 'active stripe sub should resolve premium=true');
+check(entitlement.premium === true, 'active stripe sub should resolve premium=true');
 
 const runout = estimateRunOut({ size_ml: 150, frequency_per_week: 14, ml_per_use: 2, purchased_at: new Date(Date.now() - 30 * 86400000).toISOString() });
 console.log('6. estimateRunOut() ->', JSON.stringify(runout), 'shouldNudge:', shouldNudge(runout));
 
-console.log('\nSMOKE TEST PASSED — all six engines wired end to end.');
+if (failures) {
+  throw new Error(`SMOKE TEST FAILED — ${failures} assertion${failures === 1 ? '' : 's'} failed.`);
+} else {
+  console.log('\nSMOKE TEST PASSED — all six engines wired end to end.');
+}

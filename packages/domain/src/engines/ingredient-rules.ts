@@ -108,4 +108,5 @@ export const SEED_INGREDIENT_RULES: Omit<VersionedIngredientRule, 'status' | 'sm
   { ingredient_key: 'ceramides', display_name: 'Ceramides', sensitivity_ceiling_required: 0.1, triggers_avoid_flag: null, rationale: 'Barrier lipid, broadly tolerated.', version: 1 },
   { ingredient_key: 'glycerin', display_name: 'Glycerin', sensitivity_ceiling_required: 0.1, triggers_avoid_flag: null, rationale: 'Humectant, broadly tolerated.', version: 1 },
   { ingredient_key: 'zinc_pca', display_name: 'Zinc PCA', sensitivity_ceiling_required: 0.2, triggers_avoid_flag: null, rationale: 'Sebum-regulating, generally well tolerated.', version: 1 },
+  { ingredient_key: 'zinc_oxide', display_name: 'Zinc oxide', sensitivity_ceiling_required: 0.1, triggers_avoid_flag: null, rationale: 'Mineral UV filter, generally well tolerated in leave-on sunscreen formulas.', version: 1 },
 ];

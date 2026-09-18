@@ -4,9 +4,9 @@ import {check} from './security';
 import type {Records,Store} from './store';
 export interface Product extends CandidateProduct {name:string;description:string;sample:boolean;stock:number;merchant_id:string;image_url?:string;approved:boolean;approved_by?:string;updated_by?:string}
 export const names:Record<string,string>={'cleanser-gentle':'Gentle daily cleanser','cleanser-salicylic':'Clarifying cleanser','treatment-niacinamide':'Niacinamide concentrate','treatment-retinol':'Retinol night treatment','moisturizer-gel':'Lightweight moisture gel','moisturizer-rich':'Rich barrier cream','spf-lightweight':'Daily sun protection','toner-hydrating':'Hydrating toner','eye-cream-basic':'Everyday eye cream'};
-export async function initializeCatalog(store:Store,demo:boolean){await store.tx(async db=>{if(demo&&(await db.list('products')).length===0){
- for(const p of SEED_CATALOG)await db.put('products',p.id,{...p,name:names[p.id],description:'Sample catalog item from the MGT v2 blueprint. Not available for purchase.',sample:true,stock:100,merchant_id:'sample',approved:false});
- for(const r of SEED_INGREDIENT_RULES)await db.put('rules',r.ingredient_key,{...r,status:'draft',sample:true});
+export async function initializeCatalog(store:Store,demo:boolean){await store.tx(async db=>{if(demo){
+ for(const p of SEED_CATALOG){const existing=await db.get<Product>('products',p.id);if(!existing||existing.sample)await db.put('products',p.id,{...p,name:names[p.id],description:'Sample catalog item from the MGT v2 blueprint. Not available for purchase.',sample:true,stock:100,merchant_id:'sample',approved:false});}
+ for(const r of SEED_INGREDIENT_RULES){const existing=await db.get<any>('rules',r.ingredient_key);if(!existing||existing.sample)await db.put('rules',r.ingredient_key,{...r,status:'draft',sample:true});}
 }});}
 export async function match(db:Records,input:SkinProfileInput,demo:boolean){
  const c=classify(input);

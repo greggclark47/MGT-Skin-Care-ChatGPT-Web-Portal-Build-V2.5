@@ -38,6 +38,10 @@ function BudgetReservations({canReconcile}:{canReconcile:boolean}){
     <button className="button" disabled={busyId===hold.id}>{busyId===hold.id?'Reconciling…':'Reconcile hold'}</button>
    </form>}
   </article>)}
+  {holds.data&&<><h3>Recent reconciliations</h3>
+   {holds.data.recent?.length===0?<p>No holds have been reconciled yet.</p>:<div className="table-wrap"><table><thead><tr><th>Reservation</th><th>Budget</th><th>Reserved</th><th>Verified cost</th><th>Provider reference</th><th>Reconciled by</th><th>Time</th></tr></thead><tbody>
+    {holds.data.recent?.map((item:any)=><tr key={item.id}><td>{item.id}</td><td>{item.budget_key}</td><td>${(Number(item.reserved_cents)/100).toFixed(4)}</td><td>${(Number(item.actual_cents)/100).toFixed(4)}</td><td>{item.provider_reference}</td><td>{item.operator_id}</td><td>{new Date(item.reconciled_at).toLocaleString()}</td></tr>)}
+   </tbody></table></div>}</>}
  </section>;
 }
 

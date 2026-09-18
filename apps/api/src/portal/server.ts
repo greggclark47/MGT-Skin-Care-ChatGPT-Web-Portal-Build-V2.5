@@ -10,9 +10,12 @@ import {SafeCoach,gatewayFromEnv,StoreBudgetStore,StoreRoutingLogSink,screenInpu
 import type {AiGateway} from '@mgt/ai-gateway';
 import {stripeFromEnv,processStripeEvent,type StripeClient} from './payments';
 import {RETAILERS,SHOP_SEGMENTS,COMMERCE_MODEL} from './retailers';
+import {operationalReadiness} from './operations';
 export interface PortalOptions{store:Store;env?:NodeJS.ProcessEnv;stripe?:StripeClient;coach?:SafeCoach;analysisGateway?:AiGateway;verifyOtp?:(email:string,otp:string)=>Promise<{id:string,email:string}>}
 const now=()=>new Date().toISOString();
 const emptyCart=()=>({items:[] as {product_id:string,quantity:number}[],revision:randomUUID()});
+const OPERATOR_ROLES=['superadmin','catalog_editor','sme','compliance','viewer'] as const;
+const validOperatorRoles=(value:unknown):value is string[]=>Array.isArray(value)&&value.length<=OPERATOR_ROLES.length&&value.every((item:unknown)=>typeof item==='string'&&OPERATOR_ROLES.includes(item as typeof OPERATOR_ROLES[number]))&&new Set(value).size===value.length;
 async function audit(db:Records,actor:string,action:string,target:string){const id=randomUUID();await db.put('audit',id,{id,actor,action,target,at:now()});}
 function profileInput(b:any):SkinProfileInput{
  for(const [key,allowed] of Object.entries({skin_type:SKIN_TYPES,sensitivity:SKIN_SENSITIVITY,age_band:AGE_BANDS,current_routine:ROUTINE_LEVELS,desired_outcome:DESIRED_OUTCOMES,budget_range:BUDGET_RANGES}))check((allowed as readonly string[]).includes(b[key]),400,'invalid_profile','Please complete all profile questions.');
@@ -32,7 +35,14 @@ export async function createPortal(options:PortalOptions){
  app.use(['/api/hub/checkout','/api/hub/cart','/api/hub/orders','/api/hub/admin/payout','/api/hub/admin/refund','/api/hub/admin/fulfill','/api/hub/partners/onboard','/api/hub/admin/partner/approve','/api/hub/membership/checkout','/api/hub/membership/portal','/webhooks/stripe'],(_req,res)=>res.status(409).json({error:{code:'external_commerce_only',message:'Purchases, billing, shipping and returns are handled by the external vendor. MGT does not process product orders.'}}));
  app.use((req,res,next)=>{(req as HubRequest).requestId=randomUUID();res.set({'X-Content-Type-Options':'nosniff','Referrer-Policy':'same-origin','Cache-Control':'no-store','X-Request-Id':(req as HubRequest).requestId});next();});
  app.get('/healthz',(_req,res)=>res.json({status:'ok'}));
- app.get('/readyz',wrap(async(_req,res)=>{const operations=await db.tx(async r=>({backup:await r.get('operations','backup_health'),last_run:(await r.entries<any>('operation_runs')).slice(-1)[0]?.value||null}));res.json({status:'ok',storage:db.kind,operations});}));
+ app.get('/readyz',wrap(async(_req,res)=>{
+  const snapshot=await db.tx(async r=>({backup:await r.get('operations','backup_health'),runs:await r.entries<any>('operation_runs')}));
+  const workerInterval=Math.max(15,Math.min(3600,Number(env.WORKER_INTERVAL_SECONDS)||60));
+  const maxAge=Math.max(60,Math.min(10800,Number(env.WORKER_READINESS_MAX_AGE_SECONDS)||Math.max(300,workerInterval*3)))*1000;
+  const operations=operationalReadiness(snapshot.backup,snapshot.runs,Date.now(),maxAge);
+  const healthy=!prod||operations.healthy;
+  res.status(healthy?200:503).json({status:healthy?'ok':'not_ready',storage:db.kind,operations});
+ }));
  app.post('/webhooks/stripe',express.raw({type:'application/json',limit:'256kb'}),wrap(async(req,res)=>{
   check(stripe&&env.STRIPE_WEBHOOK_SECRET,503,'payments_unconfigured','Payments are not configured.');
   let event;try{event=stripe.webhooks.constructEvent(req.body,req.headers['stripe-signature'] as string,env.STRIPE_WEBHOOK_SECRET,300);}catch{throw new Fault(400,'invalid_signature','Invalid webhook signature.');}
@@ -165,7 +175,9 @@ export async function createPortal(options:PortalOptions){
  });
  get('/admin/ai/reservations',async(req,res)=>{
   role(req,['superadmin','compliance']);
-  res.json({pending:await new StoreBudgetStore(db).pending(),minimum_age_minutes:10});
+  const budget=new StoreBudgetStore(db);
+  const pending=await budget.pending(),recent=await budget.recentReconciliations();
+  res.json({pending,recent,minimum_age_minutes:10});
  });
  post('/admin/ai/reservations/reconcile',async(req,res)=>{
   const operator=role(req,['superadmin']);
@@ -197,7 +209,80 @@ export async function createPortal(options:PortalOptions){
  {name:'Subscriptions enabled',configured:env.SUBSCRIPTIONS_ENABLED==='true'},
  {name:'Verified encrypted backup',configured:backup?.status==='healthy'}],backup,note:'Configuration presence only. Live provider and deployment checks are still required.'});});
  get('/admin/ai-routing',async(req,res)=>{role(req,['superadmin','compliance']);const since=Date.now()-86400000;const logs=await db.tx(async r=>(await r.entries<any>('ai_routing_log')).map(x=>x.value).filter(x=>Date.parse(x.created_at||'')>=since));const routes=new Map<string,any>();for(const log of logs){const key=`${log.provider||'unavailable'}:${log.model||'none'}:${log.task_type||'unknown'}`,row=routes.get(key)||{provider:log.provider||'unavailable',model:log.model||'none',task:log.task_type||'unknown',requests:0,successes:0,fallbacks:0,validation_failures:0,cost_cents:0,latencies:[] as number[]};row.requests++;row.successes+=log.failure_reason?0:1;row.fallbacks+=log.used_fallback?1:0;row.validation_failures+=log.validation_failed?1:0;row.cost_cents+=Number(log.cost_cents)||0;if(Number.isFinite(log.latency_ms))row.latencies.push(log.latency_ms);routes.set(key,row);}const summary=[...routes.values()].map(row=>{const latencies=row.latencies.sort((a:number,b:number)=>a-b);return{provider:row.provider,model:row.model,task:row.task,requests:row.requests,successes:row.successes,fallbacks:row.fallbacks,validation_failures:row.validation_failures,cost_cents:Number(row.cost_cents.toFixed(4)),p95_latency_ms:latencies.length?latencies[Math.floor((latencies.length-1)*.95)]:0};}).sort((a,b)=>b.requests-a.requests||a.provider.localeCompare(b.provider));res.json({window_hours:24,requests:logs.length,cost_cents:Number(summary.reduce((total,row)=>total+row.cost_cents,0).toFixed(4)),routes:summary});});
- post('/admin/backup/verified',async(req,res)=>{const user=role(req,['superadmin','compliance']);const completed_at=text(req.body.completed_at,40),location_identifier=text(req.body.location_identifier,200),checksum=text(req.body.checksum,200);check(!Number.isNaN(Date.parse(completed_at)),400,'backup_timestamp_invalid','Provide a valid backup completion time.');await db.tx(async r=>{await r.put('backup_status','latest',{completed_at:new Date(completed_at).toISOString(),location_identifier,checksum,verified_by:user.id,verified_at:now()});await audit(r,user.id,'backup.verified',location_identifier);});res.json({saved:true});});
+ get('/admin/ai-economics',async(req,res)=>{
+  role(req,['superadmin','compliance']);
+  const since=Date.now()-86400000;
+  const {logs,budgets,reservations}=await db.tx(async r=>({
+   logs:(await r.entries<any>('ai_routing_log')).map(x=>x.value).filter(x=>Date.parse(x.created_at||'')>=since),
+   budgets:await r.entries<any>('ai_budget'),
+   reservations:await r.entries<any>('ai_budget_reservations')
+  }));
+  const totals={requests:logs.length,successes:0,failures:0,fallbacks:0,validation_failures:0,cost_cents:0,input_tokens:0,output_tokens:0};
+  const byTask=new Map<string,any>(),byModel=new Map<string,any>(),hourly=new Map<string,any>();
+  const add=(map:Map<string,any>,key:string,seed:any,log:any)=>{const row=map.get(key)||{...seed,requests:0,failures:0,fallbacks:0,validation_failures:0,cost_cents:0,input_tokens:0,output_tokens:0};row.requests++;row.failures+=log.failure_reason?1:0;row.fallbacks+=log.used_fallback?1:0;row.validation_failures+=log.validation_failed?1:0;row.cost_cents+=Number(log.cost_cents)||0;row.input_tokens+=Number(log.input_tokens)||0;row.output_tokens+=Number(log.output_tokens)||0;map.set(key,row);};
+  for(const log of logs){
+   const created=Date.parse(log.created_at||'');
+   totals.successes+=log.failure_reason?0:1;totals.failures+=log.failure_reason?1:0;totals.fallbacks+=log.used_fallback?1:0;totals.validation_failures+=log.validation_failed?1:0;totals.cost_cents+=Number(log.cost_cents)||0;totals.input_tokens+=Number(log.input_tokens)||0;totals.output_tokens+=Number(log.output_tokens)||0;
+   add(byTask,log.task_type||'unknown',{task:log.task_type||'unknown'},log);
+   add(byModel,`${log.provider||'unavailable'}:${log.model||'none'}`,{provider:log.provider||'unavailable',model:log.model||'none'},log);
+   if(Number.isFinite(created)){const bucket=new Date(Math.floor(created/3600000)*3600000).toISOString();add(hourly,bucket,{hour:bucket},log);}
+  }
+  const sortRows=(rows:any[])=>rows.map(row=>({...row,cost_cents:Number(row.cost_cents.toFixed(4))})).sort((a,b)=>b.cost_cents-a.cost_cents||b.requests-a.requests);
+  const staleCutoff=Date.now()-600000;
+  const pendingReservations=reservations.filter(({value})=>value?.status==='reserved');
+  const staleReservations=pendingReservations.filter(({value})=>Date.parse(value.created_at||'')<staleCutoff);
+  const budgetRows=budgets.map(({id,value})=>({budget_key:id,cents:Number(value?.cents)||0,updated_at:value?.updated_at||null})).sort((a,b)=>b.cents-a.cents).slice(0,20);
+  const alerts=[
+   totals.validation_failures?`${totals.validation_failures} validation failure${totals.validation_failures===1?'':'s'} need review`:null,
+   totals.failures?`${totals.failures} failed AI request${totals.failures===1?'':'s'} in the last 24 hours`:null,
+   staleReservations.length?`${staleReservations.length} hosted cost hold${staleReservations.length===1?'':'s'} older than 10 minutes`:null
+  ].filter(Boolean);
+  res.json({window_hours:24,totals:{...totals,cost_cents:Number(totals.cost_cents.toFixed(4)),success_rate:totals.requests?Number((totals.successes/totals.requests).toFixed(4)):1,fallback_rate:totals.requests?Number((totals.fallbacks/totals.requests).toFixed(4)):0,validation_failure_rate:totals.requests?Number((totals.validation_failures/totals.requests).toFixed(4)):0},by_task:sortRows([...byTask.values()]),by_model:sortRows([...byModel.values()]),hourly:sortRows([...hourly.values()]).sort((a,b)=>a.hour.localeCompare(b.hour)),budgets:budgetRows,pending_reservations:pendingReservations.length,stale_reservations:staleReservations.length,alerts});
+ });
+ post('/admin/backup/verified',async(req,res)=>{const user=role(req,['superadmin','compliance']);const completed_at=text(req.body.completed_at,40),location_identifier=text(req.body.location_identifier,200),checksum=text(req.body.checksum,200);const completed=Date.parse(completed_at);check(!Number.isNaN(completed)&&completed<=Date.now()+60000,400,'backup_timestamp_invalid','Provide a valid backup completion time that is not in the future.');await db.tx(async r=>{await r.put('backup_status','latest',{completed_at:new Date(completed).toISOString(),location_identifier,checksum,verified_by:user.id,verified_at:now()});await audit(r,user.id,'backup.verified',location_identifier);});res.json({saved:true});});
+ post('/admin/operators/lookup',async(req,res)=>{
+  const operator=role(req,['superadmin']);
+  const email=text(req.body.email,254).toLowerCase();
+  check(/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email),400,'email_invalid','Enter the exact account email address.');
+  const found=await db.tx(async r=>{
+   await r.lock('operator-role:'+hash(operator.id));
+   const current=await r.get<any>('accounts',operator.id);
+   check(current?.roles?.includes('superadmin'),403,'forbidden','Your account does not have access to this action.');
+   await rate(r,'operator-lookup:'+operator.id,20,60000);
+   return (await r.list<any>('accounts')).filter(user=>user.email===email);
+  });
+  check(found.length===1,found.length?409:404,found.length?'account_ambiguous':'account_missing',found.length?'This email matches more than one account. Resolve that identity before assigning roles.':'No signed-in account has this email address.');
+  check(found[0].id!==operator.id,409,'self_role_change','Your own roles cannot be changed here.');
+  res.json({account:{id:found[0].id,email:found[0].email,roles:found[0].roles||[],revision:found[0].roles_revision||0}});
+ });
+ post('/admin/operators/roles',async(req,res)=>{
+  const operator=role(req,['superadmin']);
+  check(req.body.confirm===true,400,'confirmation_required','Confirm the operator role change.');
+  const id=text(req.body.id,100),email=text(req.body.email,254).toLowerCase();
+  const requested=req.body.roles,expected=req.body.expected_roles;
+  check(validOperatorRoles(requested)&&validOperatorRoles(expected),400,'roles_invalid','Choose only the listed operator roles.');
+  check(Number.isInteger(req.body.expected_revision)&&req.body.expected_revision>=0,400,'revision_invalid','Refresh the account before saving roles.');
+  const nextRoles=OPERATOR_ROLES.filter(item=>requested.includes(item));
+  const updated=await db.tx(async r=>{
+   for(const accountId of [id,operator.id].sort())await r.lock('operator-role:'+hash(accountId));
+   const current=await r.get<any>('accounts',operator.id);
+   check(current?.roles?.includes('superadmin'),403,'forbidden','Your account does not have access to this action.');
+   const target=await r.get<any>('accounts',id);
+   check(target&&target.email===email,404,'account_missing','The selected account no longer matches. Look it up again.');
+   check(target.id!==operator.id,409,'self_role_change','Your own roles cannot be changed here.');
+   const revision=target.roles_revision||0;
+   check(revision===req.body.expected_revision,409,'roles_changed','These roles changed since you opened the account. Look it up again.');
+   const priorRoles:Array<string>=target.roles||[];
+   check(JSON.stringify(priorRoles.slice().sort())===JSON.stringify(expected.slice().sort()),409,'roles_changed','These roles changed since you opened the account. Look it up again.');
+   check(JSON.stringify(priorRoles.slice().sort())!==JSON.stringify(nextRoles.slice().sort()),409,'roles_unchanged','Select a different role set before saving.');
+   const changed_at=now();
+   await r.put('accounts',id,{...target,roles:nextRoles,roles_revision:revision+1,roles_updated_at:changed_at});
+   await r.put('operator_role_changes',randomUUID(),{target_id:id,operator_id:operator.id,previous_roles:priorRoles,next_roles:nextRoles,changed_at});
+   await audit(r,operator.id,'operator.roles_changed',id);
+   return{id,email,roles:nextRoles,revision:revision+1};
+  });
+  res.json({account:updated});
+ });
  get('/admin',async(req,res)=>{role(req,['superadmin','catalog_editor','sme','compliance','viewer']);res.json(await db.tx(async r=>({roles:req.account!.roles,products:await r.list('products'),rules:await r.list('rules'),knowledge:await r.list('knowledge'),orders:await r.list('orders'),tickets:await r.list('tickets'),partners:await r.list('partners'),jobs:await r.list('jobs'),audit:(await r.list('audit')).slice(-100),company:await r.get('settings','company')||null,deletion_requests:await r.list('deletion_requests')})));});
  post('/admin/product',async(req,res)=>{const u=role(req,['catalog_editor','superadmin']);const b=req.body;const id=text(b.id,100),name=text(b.name,120);check(Number.isInteger(b.price_cents)&&b.price_cents>0&&b.price_cents<1000000,400,'invalid_price','Invalid product price.');check(Number.isInteger(b.stock)&&b.stock>=0,400,'invalid_stock','Invalid stock quantity.');check(['cleanser','toner','serum','treatment','moisturizer','sunscreen','eye'].includes(b.slot),400,'invalid_slot','Choose a supported routine slot.');check(Array.isArray(b.ingredients)&&b.ingredients.length>0&&b.ingredients.length<=100&&b.ingredients.every((i:any)=>typeof i==='string'&&/^[a-z0-9_]{1,80}$/.test(i)),400,'ingredients_required','Use normalized ingredient keys.');
   await db.tx(async r=>{const old=await r.get('products',id);await r.put('products',id,{id,name,description:text(b.description,1000),slot:b.slot,ingredients:b.ingredients,price_cents:b.price_cents,stock:b.stock,merchant_id:text(b.merchant_id,100),brand_id:text(b.brand_id||b.merchant_id,100),status:'draft',approved:false,sample:false,concern_tags:[],concern_weights:{},type_fit:{},updated_by:u.id,created_at:old?.created_at||now()});await audit(r,u.id,'product.draft',id);});res.json({saved:true});

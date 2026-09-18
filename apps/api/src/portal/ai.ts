@@ -29,6 +29,7 @@ export class StoreRoutingLogSink implements RoutingLogSink{
 // Production shares this store with Supabase/Postgres, so daily caps survive API restarts and
 // apply consistently across API replicas. SQLite keeps the exact same behavior for local work.
 type BudgetReservation={budget_key:string;reserved_cents:number;status:'reserved'|'settled';created_at:string;actual_cents?:number;settled_at?:string};
+type BudgetReconciliation={id:string;budget_key:string;reserved_cents:number;actual_cents:number;operator_id:string;provider_reference:string;reconciled_at:string};
 export class StoreBudgetStore implements BudgetStore{
  constructor(private store:Store,private now=()=>Date.now()){}
  private id(userId:string,budgetClass:BudgetClass){return `${new Date(this.now()).toISOString().slice(0,10)}:${userId}:${budgetClass}`;}
@@ -70,6 +71,11 @@ export class StoreBudgetStore implements BudgetStore{
    .filter(({value})=>value.status==='reserved'&&Date.parse(value.created_at)<=cutoff)
    .sort((a,b)=>a.value.created_at.localeCompare(b.value.created_at))
    .slice(0,50).map(({id,value})=>({id,budget_key:value.budget_key,reserved_cents:value.reserved_cents,created_at:value.created_at})));
+ }
+ async recentReconciliations(){
+  return this.store.tx(async r=>(await r.list<BudgetReconciliation>('ai_budget_reconciliations'))
+   .sort((a,b)=>b.reconciled_at.localeCompare(a.reconciled_at)||b.id.localeCompare(a.id))
+   .slice(0,50));
  }
  async reconcile(id:string,actualCents:number,operatorId:string,providerReference:string){
   actualCents=checkedCents(actualCents);

@@ -43,7 +43,34 @@ function normalizeTarget(target) {
   ]));
 }
 
+export function validateTargetManifest(target) {
+  const errors = [];
+  if (!target || typeof target !== "object" || Array.isArray(target)) errors.push("manifest must be an object");
+  if (!target?.lineages || typeof target.lineages !== "object" || Array.isArray(target.lineages)) errors.push("lineages must be an object");
+  for (const [lineage, entries] of Object.entries(target?.lineages || {})) {
+    if (!Array.isArray(entries)) {
+      errors.push(`${lineage} must be an array`);
+      continue;
+    }
+    const names = new Set();
+    for (const [index, entry] of entries.entries()) {
+      if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
+        errors.push(`${lineage}[${index}] must be an object`);
+        continue;
+      }
+      if (!/^\d{4}$/.test(String(entry.id || ""))) errors.push(`${lineage}[${index}].id must be four digits`);
+      if (!migrationPattern.test(String(entry.name || ""))) errors.push(`${lineage}[${index}].name must be a numbered SQL migration`);
+      if (names.has(entry.name)) errors.push(`${lineage} contains duplicate migration ${entry.name}`);
+      names.add(entry.name);
+      if (entry.sha256 !== undefined && !/^[a-f0-9]{64}$/.test(String(entry.sha256))) errors.push(`${lineage}[${index}].sha256 must be a lowercase SHA-256 hash`);
+    }
+  }
+  return { ok: errors.length === 0, errors };
+}
+
 export function reconcileManifest(local, target) {
+  const shape = validateTargetManifest(target);
+  if (!shape.ok) return { ok: false, failures: [{ type: "invalid_target_manifest", details: shape.errors }] };
   const failures = [];
   const targetLineages = normalizeTarget(target);
   for (const [lineage, desired] of Object.entries(local.lineages)) {
@@ -71,8 +98,12 @@ function cli() {
   const manifest = buildManifest({ databaseDir: join(root, "infra/db/migrations"), portalDir: join(root, "infra/portal/migrations") });
   const result = { manifest, reconciliation: null };
   if (targetPath) {
-    const target = JSON.parse(readFileSync(resolve(targetPath), "utf8"));
-    result.reconciliation = reconcileManifest(manifest, target);
+    try {
+      const target = JSON.parse(readFileSync(resolve(targetPath), "utf8"));
+      result.reconciliation = reconcileManifest(manifest, target);
+    } catch (error) {
+      result.reconciliation = { ok: false, failures: [{ type: "invalid_target_manifest", details: [error instanceof Error ? error.message : "Unable to read target manifest"] }] };
+    }
   }
   console.log(JSON.stringify(result, null, 2));
   process.exitCode = result.reconciliation && !result.reconciliation.ok ? 1 : 0;

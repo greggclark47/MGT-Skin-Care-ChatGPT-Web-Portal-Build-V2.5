@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { buildManifest, collectMigrations, reconcileManifest } from "./migration-lineage.mjs";
+import { buildManifest, collectMigrations, reconcileManifest, validateTargetManifest } from "./migration-lineage.mjs";
 
 test("migration manifest inventories both independent lineages with hashes", () => {
   const manifest = buildManifest({ databaseDir: "infra/db/migrations", portalDir: "infra/portal/migrations" });
@@ -23,4 +23,24 @@ test("reconciliation accepts an exact target and rejects missing, changed, or un
   assert.ok(result.failures.some((failure) => failure.type === "missing_on_target"));
   assert.ok(result.failures.some((failure) => failure.type === "content_mismatch"));
   assert.ok(result.failures.some((failure) => failure.type === "unknown_on_target"));
+});
+
+test("target manifests fail closed when their shape, hash, or uniqueness is invalid", () => {
+  const malformed = {
+    lineages: {
+      database: [
+        { id: "1", name: "0001_schema.sql", sha256: "not-a-hash" },
+        { id: "0001", name: "0001_schema.sql", sha256: "0".repeat(64) }
+      ],
+      portal: "not-an-array"
+    }
+  };
+  const shape = validateTargetManifest(malformed);
+  assert.equal(shape.ok, false);
+  assert.ok(shape.errors.some((error) => error.includes("four digits")));
+  assert.ok(shape.errors.some((error) => error.includes("lowercase SHA-256")));
+  assert.ok(shape.errors.some((error) => error.includes("duplicate migration")));
+  assert.ok(shape.errors.some((error) => error.includes("must be an array")));
+  const local = { lineages: { database: [], portal: [] } };
+  assert.equal(reconcileManifest(local, malformed).failures[0].type, "invalid_target_manifest");
 });

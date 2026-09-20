@@ -17,8 +17,9 @@ node infra/db/migration-lineage.mjs --target-manifest work/reconciliation/target
 ```
 
 The comparison fails closed on missing, unknown, reordered, or content-mismatched migrations.
-The target manifest must contain migration metadata only; never export secrets, customer rows,
-tokens, or database dumps. This check is evidence for review, not permission to apply changes.
+It also rejects malformed target shapes, duplicate names, invalid IDs, and invalid hashes. The
+target manifest must contain migration metadata only; never export secrets, customer rows, tokens,
+or database dumps. This check is evidence for review, not permission to apply changes.
 
 Apply every file in `migrations/` in **numeric order**. The full set has been verified to
 apply cleanly to a fresh PostgreSQL 16 (see "History" below — it did not, before 2026-09-06).

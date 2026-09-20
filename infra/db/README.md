@@ -2,6 +2,24 @@
 
 ## Applying
 
+Before applying migrations to a target project, generate the local lineage manifest:
+
+```
+pnpm reconcile:migrations > work/local-migration-manifest.json
+```
+
+After the database owner supplies a sanitized target manifest containing the applied
+`database` and `portal` migration names and hashes, compare it without connecting to or
+mutating the target database:
+
+```
+node infra/db/migration-lineage.mjs --target-manifest work/reconciliation/target-migrations.json
+```
+
+The comparison fails closed on missing, unknown, reordered, or content-mismatched migrations.
+The target manifest must contain migration metadata only; never export secrets, customer rows,
+tokens, or database dumps. This check is evidence for review, not permission to apply changes.
+
 Apply every file in `migrations/` in **numeric order**. The full set has been verified to
 apply cleanly to a fresh PostgreSQL 16 (see "History" below — it did not, before 2026-09-06).
 

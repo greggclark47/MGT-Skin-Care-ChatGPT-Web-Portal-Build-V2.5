@@ -11,7 +11,9 @@
     "test": "pnpm -r test",
     "migrate": "node infra/db/migrate.js",
     "infra:preflight": "node --env-file-if-exists=infra/portal/.env infra/portal/preflight.mjs",
+    "reconcile:migrations": "node infra/db/migration-lineage.mjs",
     "test:infra": "node --test infra/portal/preflight.test.mjs",
+    "test:lineage": "node --test infra/db/migration-lineage.test.mjs",
     "test:verification": "node infra/portal/verify.cjs"
   }
 }

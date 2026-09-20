@@ -46,7 +46,9 @@ services:
       PORTAL_AUTO_MIGRATE: "false"
       OLLAMA_ENABLED: "true"
       OLLAMA_BASE_URL: http://ollama:11434
-      OPENCLAW_BASE_URL: http://ollama:11434/v1
+      OPENCLAW_ENABLED: ${OPENCLAW_ENABLED:-false}
+      OPENCLAW_BASE_URL: http://ollama:11434
+      OPENCLAW_API_MODE: ollama
     depends_on:
       ollama:
         condition: service_healthy

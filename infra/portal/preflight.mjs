@@ -68,7 +68,9 @@ export function validateEnvironment(env) {
   if (!["true", "false"].includes(String(env.OPENCLAW_ENABLED).toLowerCase())) errors.push("OPENCLAW_ENABLED must be true or false.");
   if (isTrue(env.OPENCLAW_ENABLED)) {
     if (!validUrl(env.OPENCLAW_BASE_URL, ["http:", "https:"])) errors.push("OPENCLAW_BASE_URL must be a valid HTTP(S) URL when OpenClaw is enabled.");
-    requireValue("OPENCLAW_API_KEY");
+    const openClawMode = String(env.OPENCLAW_API_MODE || "ollama");
+    if (!["ollama", "openai-completions"].includes(openClawMode)) errors.push("OPENCLAW_API_MODE must be ollama or openai-completions.");
+    if (openClawMode === "openai-completions") requireValue("OPENCLAW_API_KEY");
   } else {
     warnings.push("OpenClaw orchestration is disabled.");
   }

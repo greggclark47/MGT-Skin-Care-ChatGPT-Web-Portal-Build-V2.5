@@ -29,7 +29,7 @@ The edge now sends compression and baseline security headers, exposes liveness a
 Dockerfiles and Compose remain unvalidated in containers. Pin image digests and review network/secret management before deployment. `PORTAL_AUTO_MIGRATE=false` is required in production. The portal only checks its required storage columns at startup; migration application is a separately reviewed operation after inspecting both migration lineages. Local development may explicitly opt into the existing migration helper. No migration history has been reconciled against a live project here.
 
 ## Local-first AI setup
-The portal uses one shared gateway. Ollama is the default runtime for high-frequency tasks, DeepSeek runs as the local reasoning fallback through Ollama, OpenClaw can be enabled as an Ollama-compatible orchestration endpoint, and GPT-5.6 Sol is the opt-in escalation for explicitly entitled premium work. LangChain Core bounds and serializes the retrieved context; it does not create an additional model call. Routing telemetry and daily AI spend caps are persisted through the same Supabase/Postgres store as the portal, rather than resetting on an API restart.
+The portal uses one shared gateway. Ollama is the default runtime for high-frequency tasks, DeepSeek runs as the local reasoning fallback through Ollama, OpenClaw can be enabled in native Ollama mode, and GPT-5.6 Sol is the opt-in escalation for explicitly entitled premium work. LangChain Core bounds and serializes the retrieved context; it does not create an additional model call. Routing telemetry and daily AI spend caps are persisted through the same Supabase/Postgres store as the portal, rather than resetting on an API restart.
 
 The Compose file includes Ollama with a persistent model volume, bounded parallelism, model residency controls, and a one-shot `model-sync` profile. After setting approved model tags in the environment, synchronize only the models needed by the current feature set:
 
@@ -43,7 +43,7 @@ The Codex build lane is not an Ollama model or a public portal runtime. It remai
 
 Caddy now persists its configuration state separately from certificates and validates the mounted Caddyfile in its healthcheck. The edge still remains the only service publishing host ports.
 
-Keep `OPENCLAW_ENABLED=false` until the OpenClaw-compatible endpoint has been installed and tested. Hosted OpenAI escalation is optional; keep its key unset to run the portal entirely on the local stack. Supabase remains the identity and production data system of record: provide its Auth URL/key and a production PostgreSQL connection in the server environment only. The worker also needs `SUPABASE_SERVICE_ROLE_KEY` to complete requested identity deletion; keep that privileged key server-side and never expose it to the web build.
+Keep `OPENCLAW_ENABLED=false` until the OpenClaw runtime has been installed and tested against Ollama's native `/api/chat` endpoint. Set `OPENCLAW_API_MODE=openai-completions` only for a separately verified compatible proxy. Hosted OpenAI escalation is optional; keep its key unset to run the portal entirely on the local stack. Supabase remains the identity and production data system of record: provide its Auth URL/key and a production PostgreSQL connection in the server environment only. The worker also needs `SUPABASE_SERVICE_ROLE_KEY` to complete requested identity deletion; keep that privileged key server-side and never expose it to the web build.
 
 ## Tab coverage and remaining external setup
 | Area | Backend | Remaining |

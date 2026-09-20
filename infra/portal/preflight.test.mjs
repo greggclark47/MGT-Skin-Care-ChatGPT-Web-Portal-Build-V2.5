@@ -82,3 +82,14 @@ test("rejects floating or placeholder container image tags", () => {
   assert.ok(result.errors.some((error) => error.startsWith("OLLAMA_IMAGE")));
   assert.ok(result.errors.some((error) => error.startsWith("CADDY_IMAGE")));
 });
+
+test("allows native Ollama mode without an OpenClaw key and gates proxy mode", () => {
+  const native = validateEnvironment({ ...production, OPENCLAW_ENABLED: "true", OPENCLAW_BASE_URL: "http://ollama:11434", OPENCLAW_API_MODE: "ollama", OPENCLAW_API_KEY: "" });
+  assert.equal(native.ok, true);
+  const invalid = validateEnvironment({ ...production, OPENCLAW_ENABLED: "true", OPENCLAW_BASE_URL: "http://ollama:11434", OPENCLAW_API_MODE: "unsupported" });
+  assert.equal(invalid.ok, false);
+  assert.ok(invalid.errors.some((error) => error.includes("OPENCLAW_API_MODE")));
+  const proxy = validateEnvironment({ ...production, OPENCLAW_ENABLED: "true", OPENCLAW_BASE_URL: "http://proxy.internal", OPENCLAW_API_MODE: "openai-completions", OPENCLAW_API_KEY: "" });
+  assert.equal(proxy.ok, false);
+  assert.ok(proxy.errors.some((error) => error.startsWith("OPENCLAW_API_KEY")));
+});

@@ -148,7 +148,7 @@ export class SafeCoach{
    const result=await this.gateway.execute({task_type:'coach_answer',user_id:userId,system_prompt:system,user_prompt:prompt,retrieved_knowledge_ids:articles.map(a=>a.id),has_premium_entitlement:hasPremiumEntitlement,output_validator:exactValidation});
    if(!result.ok)throw new Fault(503,'ai_unavailable','A verified answer is unavailable right now. Please try again later or contact support.');
    const citations=validateSelections(result.text||'',articles);
-   const value=citations.length?{kind:'reviewed_excerpts',text:'From the reviewed skincare library:',citations,provider:result.provider,model:result.model}:{...noMatch,provider:result.provider,model:result.model};
+   const value=citations.length?{kind:'reviewed_excerpts',text:'From the reviewed skincare library:',citations}:{...noMatch};
    this.cache.set(cacheKey,{expires:Date.now()+300000,value});return value;
   }
 
@@ -160,7 +160,7 @@ export class SafeCoach{
     const raw=await p.call(system,prompt,AbortSignal.timeout(Math.min(12000,remaining)));
     const citations=validateSelections(raw,articles);this.failures.delete(p.name);
     if(!citations.length)return noMatch;
-    const value={kind:'reviewed_excerpts',text:'From the reviewed skincare library:',citations,provider:p.name,model:p.model};
+    const value={kind:'reviewed_excerpts',text:'From the reviewed skincare library:',citations};
     this.cache.set(cacheKey,{expires:Date.now()+300000,value});return value;
    }catch{const n=(f?.n||0)+1;this.failures.set(p.name,{n,until:n>=3?Date.now()+60000:0});}
   }

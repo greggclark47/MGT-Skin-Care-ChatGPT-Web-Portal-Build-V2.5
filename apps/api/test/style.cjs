@@ -27,8 +27,9 @@ const {DEFAULT_STYLE,STYLE_SECTIONS,stylePlan}=require('@mgt/domain');
   assert.deepEqual((await a('/account/export')).data.style_profile,saved);
   assert.equal((await db.tx(r=>r.list('style_profiles'))).length,1,'Guest profile migrates without a duplicate');
   await b('/style-profile',{...preferences,palette:'warm'});
-  await b('/auth/verify',{email:'style@example.com',code:'123456'});await b('/session');
-  assert.equal((await b('/style-profile')).data.profile.input.palette,'cool','Existing account preference wins on sign-in');
+  const conflict=await b('/auth/verify',{email:'style@example.com',code:'123456'});assert.equal(conflict.status,409);assert.equal(conflict.data.error.code,'profile_merge_conflict');await b('/session');
+  assert.equal((await b('/style-profile')).data.profile.input.palette,'warm','Guest preferences survive a conflicting sign-in');
+  assert.equal((await a('/style-profile')).data.profile.input.palette,'cool','Existing account preferences remain unchanged');
   const cool=stylePlan(preferences),warm=stylePlan({...preferences,palette:'warm'});
   for(const section of STYLE_SECTIONS){assert(cool.cards[section.id].length>=3);}
   assert.notDeepEqual(cool.cards.makeup,warm.cards.makeup);assert.notDeepEqual(cool.cards.clothing,warm.cards.clothing);

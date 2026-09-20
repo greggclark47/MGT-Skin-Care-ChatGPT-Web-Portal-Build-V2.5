@@ -18,9 +18,13 @@
 Current local tests use a mocked Stripe client with real signature verification. No Stripe account has been provisioned, prices created, payments collected, or live webhooks validated.
 
 ## Deployment scaffold
-Copy infra/portal/env.example to infra/portal/.env and fill service values outside source control. DATABASE_URL credentials must be URI-encoded if using reserved characters. Run Docker Compose from infra/portal after assigning a domain with DNS pointing at the host. Only the TLS edge publishes host ports. Database storage and TLS certificates use named volumes. API uses PostgreSQL in production and refuses demo mode or HTTP public origins. Web-to-API forwarding is set at build time.
+Copy infra/portal/env.example to infra/portal/.env and fill service values outside source control. DATABASE_URL must identify the reviewed Supabase database, use verified TLS, and URI-encode reserved characters in credentials. API and worker use the same external database. Compose no longer provisions an independent database; existing local database volumes have not been deleted. Only the TLS edge publishes host ports. API refuses demo mode or HTTP public origins in production. Web-to-API forwarding is set at build time. Do not deploy before schema/identity reconciliation and role-based RLS checks.
 
-Dockerfiles and Compose are prepared but have not been container-built or deployed here. Pin image digests and review network/secret management in the deployment environment. The portal applies its own checked-in migrations from `infra/portal/migrations` and records them in `portal_schema_migrations`; the older phase SQL migrations remain separate and must not be mixed into this adapter. The generic hub_records adapter now uses short, record-scoped advisory locks for concurrent changes instead of a single global database lock.
+Before building containers, run `pnpm infra:preflight`. It rejects placeholder origins, missing backend settings, unverified database TLS, automatic production migration, invalid worker/backup windows, incomplete notification-webhook configuration, and partially enabled subscriptions. Configuration validation does not establish live readiness. Run `pnpm test:infra` after changing this contract.
+
+The edge now sends compression and baseline security headers, exposes liveness and readiness separately, routes same-origin API and signed subscription webhook traffic directly to the API, and emits structured access logs. Compose rotates local JSON logs, waits for both API and web health before starting the edge, and gives Node services explicit shutdown windows.
+
+Dockerfiles and Compose remain unvalidated in containers. Pin image digests and review network/secret management before deployment. `PORTAL_AUTO_MIGRATE=false` is required in production. The portal only checks its required storage columns at startup; migration application is a separately reviewed operation after inspecting both migration lineages. Local development may explicitly opt into the existing migration helper. No migration history has been reconciled against a live project here.
 
 ## Local-first AI setup
 The portal uses one shared gateway. Ollama is the default runtime for high-frequency tasks, DeepSeek runs as the local reasoning fallback through Ollama, OpenClaw can be enabled as an Ollama-compatible orchestration endpoint, and GPT-5.6 Sol is the opt-in escalation for explicitly entitled premium work. LangChain Core bounds and serializes the retrieved context; it does not create an additional model call. Routing telemetry and daily AI spend caps are persisted through the same Supabase/Postgres store as the portal, rather than resetting on an API restart.
@@ -28,7 +32,7 @@ The portal uses one shared gateway. Ollama is the default runtime for high-frequ
 The Compose file includes Ollama with a persistent model volume. After starting the stack, pull only the models needed by the current feature set:
 
 ```text
-docker compose up -d postgres ollama
+docker compose up -d ollama
 docker compose exec ollama ollama pull llama3.2:3b
 docker compose exec ollama ollama pull deepseek-r1:8b
 docker compose exec ollama ollama pull nomic-embed-text
@@ -36,7 +40,7 @@ docker compose exec ollama ollama pull llava:latest
 docker compose up -d api web edge
 ```
 
-Keep `OPENCLAW_ENABLED=false` until the OpenClaw-compatible endpoint has been installed and tested. Hosted OpenAI escalation is optional; keep its key unset to run the portal entirely on the local stack. Supabase remains the identity and production data system of record: provide its Auth URL/key and a production PostgreSQL connection in the server environment only.
+Keep `OPENCLAW_ENABLED=false` until the OpenClaw-compatible endpoint has been installed and tested. Hosted OpenAI escalation is optional; keep its key unset to run the portal entirely on the local stack. Supabase remains the identity and production data system of record: provide its Auth URL/key and a production PostgreSQL connection in the server environment only. The worker also needs `SUPABASE_SERVICE_ROLE_KEY` to complete requested identity deletion; keep that privileged key server-side and never expose it to the web build.
 
 ## Tab coverage and remaining external setup
 | Area | Backend | Remaining |
@@ -47,20 +51,26 @@ Keep `OPENCLAW_ENABLED=false` until the OpenClaw-compatible endpoint has been in
 | Replenishment | Persistent reminders, durable in-app notifications and optional HTTPS webhook delivery | Configure a delivery channel and test it with real recipients |
 | Coach | Reviewed-library local-first gateway with Ollama, DeepSeek fallback, LangChain context pipeline and Supabase-backed telemetry | Ollama models, reviewed content, optional hosted escalation validation |
 | Learn | Approved knowledge records | Editorial publishing |
-| Account | Supabase OTP and secure cookie session | Auth provider and email delivery |
+| Account | Supabase OTP, secure cookie session, data export, and delayed account deletion with cancellation and operational blockers | Auth provider, email delivery, service-role identity deletion, and live lifecycle validation |
 | Support | Requests and admin replies | External helpdesk delivery and staffing |
 | Plans & Billing | Stripe checkout, portal and signed status webhooks | Both plan prices, benefits, terms and Stripe setup |
-| Admin | Session roles, exact-email operator role management, knowledge/rule drafting and approval, support replies | Initial superadmin bootstrap; full product management UI remains incomplete |
+| Admin | Session roles, exact-email operator role management, privacy-safe deletion operations, knowledge/rule drafting and approval, support replies | Initial superadmin bootstrap; full product management UI remains incomplete |
 | Company / policies / partners | Existing informational routes | Final legal content and agreements |
 
 Operator access at `/admin/operators` lets an existing superadmin find an account that has completed sign-in and assign only the five supported portal roles. It never creates an account or grants a role from a client-provided identity. The server checks the operator's current role inside the update transaction, prevents self-edits, rejects stale revisions or out-of-band role changes, and records each change with its prior and new roles. A trusted administrator must still provision the first superadmin after verifying that account outside this portal; there is no public bootstrap endpoint.
 
 ## Operations worker and backup verification
-Compose now runs a separate worker every 60 seconds. It expires sessions and stale rate limits, retains AI-routing logs, notifications, billing activity and run records according to the environment settings, creates one durable replenishment notification per due reminder, and delivers it in-app by default. Set `NOTIFICATION_DELIVERY=webhook` only after configuring an HTTPS endpoint and token; failed deliveries are leased and retried up to three times without duplicate delivery.
+Compose now runs a separate worker every 60 seconds. It expires sessions and stale rate limits, retains AI-routing logs, notifications, billing activity and run records according to the environment settings, creates one durable replenishment notification per due reminder, and delivers it in-app by default. Set `NOTIFICATION_DELIVERY=webhook` only after configuring an HTTPS endpoint and token; failed deliveries are leased and retried up to three times without duplicate delivery. The worker writes a health heartbeat after each successful run, and its container becomes unhealthy when that heartbeat is stale.
 
-The worker does not create database dumps itself: automatic unencrypted database dumps on the app host are not an acceptable production backup design. Use an encrypted, off-host PostgreSQL backup service with a tested restoration procedure. A superadmin or compliance operator records each verified backup through `POST /api/hub/admin/backup/verified` with its completion time, storage identifier and checksum. The worker exposes that proof on readiness and marks it stale after `BACKUP_MAX_AGE_HOURS` (26 by default). This makes a missing backup visible without placing storage credentials in the portal.
+Signed-in users can schedule account deletion with a 30-day cancellation window. The worker pauses a request when it finds active subscriptions, a legacy paid membership, an unfinished order, operator access, a vendor account, or an unsettled hosted-AI charge. When eligible, it deletes the Supabase identity first, then removes portal-owned personal data and sessions in one database transaction. Completed transaction and audit records are retained only in anonymized form, and a non-identifying completion record is kept for operational proof. Retried jobs are leased and tolerate a previously deleted Supabase identity. Live Supabase deletion and organization-specific legal-retention policy still require production validation and counsel review.
 
-Run `pnpm --filter @mgt/api test:operations` for the worker regression smoke. Request and webhook reconciliation dashboards, deletion execution, a live notification provider and a real restore drill still require environment-specific implementation and validation. No claim of complete production readiness is made.
+Superadmin and compliance operators can inspect a read-only privacy operations panel. It reports queue totals, due and blocked requests, blocker categories, provider readiness and anonymous completion proof without returning account IDs, emails, provider error text, support messages or profile data. Raw deletion records are no longer included in the broad admin response. The general admin response also withholds support, order, partner and job records from non-operations roles and strips actor and target identifiers from audit rows. Anonymous completion proof is retained for 730 days by default through `OPERATIONS_DELETION_PROOF_RETENTION_DAYS`.
+
+Every signature-verified subscription webhook now receives a durable, sanitized receipt before processing. Successful, ignored, duplicate and failed outcomes update that receipt without retaining customer, payment method or subscription payloads. Invalid signatures are never recorded. The operations dashboard shows 24-hour event, delivery, duplicate, failure and stalled-processing counts plus provider event IDs and safe error codes for reconciliation. Receipts are retained for 90 days by default through `OPERATIONS_WEBHOOK_RECEIPT_RETENTION_DAYS`.
+
+The worker does not create database dumps itself: automatic unencrypted database dumps on the app host are not an acceptable production backup design. Use an encrypted, off-host PostgreSQL backup service with a tested restoration procedure. A superadmin or compliance operator records each verified backup through `POST /api/hub/admin/backup/verified` with its completion time, storage identifier and checksum. Future-dated completions are rejected. The worker exposes that proof on `/readyz` and marks it stale after `BACKUP_MAX_AGE_HOURS` (26 by default). Production `/readyz` returns HTTP 503 when the worker or backup is stale, while `/healthz` remains the container liveness probe so operators can still open the portal and correct readiness.
+
+Run `pnpm --filter @mgt/api test:operations` and `pnpm --filter @mgt/api test:readiness` for worker and readiness regression checks. Checkout-request reconciliation, live webhook delivery validation, live identity-deletion validation, a live notification provider and a real restore drill still require environment-specific implementation and validation. No claim of complete production readiness is made.
 
 Validation: API compilation, web build, existing referral suite and new billing suite. Remaining: real Stripe sandbox lifecycle, production PostgreSQL, container startup, browser interactions and deployment.
 

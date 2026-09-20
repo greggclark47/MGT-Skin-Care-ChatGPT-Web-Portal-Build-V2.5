@@ -1,20 +1,36 @@
 import {installBilling,installSubscriptionWebhook} from './billing';
+import {portalV1Router,portalEntitlement,portalUsageAccount,ownEntitlement} from './subscriptions';
+import {installGuestAccess,activeGuestAccess} from './guest-access';
+import {readProfile,lockProfile,saveProfile} from './profiles';
 import {installStyle} from './style';
 import express,{type Response} from 'express';
 import {randomUUID} from 'node:crypto';
 import {SKIN_TYPES,SKIN_CONCERNS,SKIN_SENSITIVITY,AGE_BANDS,ROUTINE_LEVELS,DESIRED_OUTCOMES,BUDGET_RANGES,simplify,type SkinProfileInput} from '@mgt/domain';
-import {LocalStore,PgStore,type Store,type Records} from './store';
+import {LocalStore,PgStore,startupMigrations,type Store,type Records} from './store';
 import {check,Fault,hash,token,text,wrap,sessionMiddleware,rate,account,role,type HubRequest,type Session} from './security';
 import {initializeCatalog,match,quote,type Product} from './catalog';
 import {SafeCoach,gatewayFromEnv,StoreBudgetStore,StoreRoutingLogSink,screenInput,type Knowledge} from './ai';
 import type {AiGateway} from '@mgt/ai-gateway';
 import {stripeFromEnv,processStripeEvent,type StripeClient} from './payments';
 import {RETAILERS,SHOP_SEGMENTS,COMMERCE_MODEL} from './retailers';
+import {operationalReadiness} from './operations';
 export interface PortalOptions{store:Store;env?:NodeJS.ProcessEnv;stripe?:StripeClient;coach?:SafeCoach;analysisGateway?:AiGateway;verifyOtp?:(email:string,otp:string)=>Promise<{id:string,email:string}>}
 const now=()=>new Date().toISOString();
 const emptyCart=()=>({items:[] as {product_id:string,quantity:number}[],revision:randomUUID()});
 const OPERATOR_ROLES=['superadmin','catalog_editor','sme','compliance','viewer'] as const;
+const routeLabel=(task:unknown)=>({coach_answer:'Guided answers',operator_analysis:'Complex review',product_why:'Product explanations',coach_routine_command:'Routine guidance',routine_optimization_deep:'Deep routine review',premium_consultation:'Premium consultation',vision_attributes:'Visual attributes',embed:'Knowledge indexing'} as Record<string,string>)[String(task)]||'Other analysis';
 const validOperatorRoles=(value:unknown):value is string[]=>Array.isArray(value)&&value.length<=OPERATOR_ROLES.length&&value.every((item:unknown)=>typeof item==='string'&&OPERATOR_ROLES.includes(item as typeof OPERATOR_ROLES[number]))&&new Set(value).size===value.length;
+function publicOrder(order:any){
+ const {stripe_session_id,checkout_url,payment_intent_id,charge_id,refund_id,customer_id,...safe}=order||{};
+ return safe;
+}
+function publicSubscriptionRecord(record:any){
+ if(!record)return null;
+ return {status:typeof record.status==='string'?record.status:'unknown',active:record.active===true,
+  cancel_at_period_end:record.cancel_at_period_end===true,trial_end:record.trial_end||null,
+  current_period_end:record.current_period_end||null,cycle:['monthly','annual'].includes(record.cycle)?record.cycle:null,
+  trial_used:record.trial_used===true};
+}
 async function audit(db:Records,actor:string,action:string,target:string){const id=randomUUID();await db.put('audit',id,{id,actor,action,target,at:now()});}
 function profileInput(b:any):SkinProfileInput{
  for(const [key,allowed] of Object.entries({skin_type:SKIN_TYPES,sensitivity:SKIN_SENSITIVITY,age_band:AGE_BANDS,current_routine:ROUTINE_LEVELS,desired_outcome:DESIRED_OUTCOMES,budget_range:BUDGET_RANGES}))check((allowed as readonly string[]).includes(b[key]),400,'invalid_profile','Please complete all profile questions.');
@@ -34,7 +50,14 @@ export async function createPortal(options:PortalOptions){
  app.use(['/api/hub/checkout','/api/hub/cart','/api/hub/orders','/api/hub/admin/payout','/api/hub/admin/refund','/api/hub/admin/fulfill','/api/hub/partners/onboard','/api/hub/admin/partner/approve','/api/hub/membership/checkout','/api/hub/membership/portal','/webhooks/stripe'],(_req,res)=>res.status(409).json({error:{code:'external_commerce_only',message:'Purchases, billing, shipping and returns are handled by the external vendor. MGT does not process product orders.'}}));
  app.use((req,res,next)=>{(req as HubRequest).requestId=randomUUID();res.set({'X-Content-Type-Options':'nosniff','Referrer-Policy':'same-origin','Cache-Control':'no-store','X-Request-Id':(req as HubRequest).requestId});next();});
  app.get('/healthz',(_req,res)=>res.json({status:'ok'}));
- app.get('/readyz',wrap(async(_req,res)=>{const operations=await db.tx(async r=>({backup:await r.get('operations','backup_health'),last_run:(await r.entries<any>('operation_runs')).slice(-1)[0]?.value||null}));res.json({status:'ok',storage:db.kind,operations});}));
+ app.get('/readyz',wrap(async(_req,res)=>{
+  const snapshot=await db.tx(async r=>({backup:await r.get('operations','backup_health'),runs:await r.entries<any>('operation_runs')}));
+  const workerInterval=Math.max(15,Math.min(3600,Number(env.WORKER_INTERVAL_SECONDS)||60));
+  const maxAge=Math.max(60,Math.min(10800,Number(env.WORKER_READINESS_MAX_AGE_SECONDS)||Math.max(300,workerInterval*3)))*1000;
+  const operations=operationalReadiness(snapshot.backup,snapshot.runs,Date.now(),maxAge);
+  const healthy=!prod||operations.healthy;
+  res.status(healthy?200:503).json({status:healthy?'ok':'not_ready',storage:db.kind,operations});
+ }));
  app.post('/webhooks/stripe',express.raw({type:'application/json',limit:'256kb'}),wrap(async(req,res)=>{
   check(stripe&&env.STRIPE_WEBHOOK_SECRET,503,'payments_unconfigured','Payments are not configured.');
   let event;try{event=stripe.webhooks.constructEvent(req.body,req.headers['stripe-signature'] as string,env.STRIPE_WEBHOOK_SECRET,300);}catch{throw new Fault(400,'invalid_signature','Invalid webhook signature.');}
@@ -42,32 +65,43 @@ export async function createPortal(options:PortalOptions){
  }));
  installSubscriptionWebhook(app,db,stripe,env);
  app.use(express.json({limit:'64kb'}));
+ app.use(['/api/hub','/api/v1'],wrap(async(req,_res,next)=>{if(!['GET','HEAD','OPTIONS'].includes(req.method))check(req.body&&typeof req.body==='object'&&!Array.isArray(req.body),400,'invalid_request','Send a valid request object.');next();}));
  const session=sessionMiddleware(db,origin,prod);
- app.use('/api/hub',session);
- app.use('/api/hub',wrap(async(req,_res,next)=>{await db.tx(async r=>rate(r,'request:'+req.actor,180,60000));next();}));
+ app.use(['/api/hub','/api/v1'],session);
+ app.use(['/api/hub','/api/v1'],wrap(async(req,_res,next)=>{await db.tx(async r=>rate(r,'request:'+req.actor,180,60000));next();}));
+ app.use(['/api/hub','/api/v1'],wrap(async(req,_res,next)=>{
+  const allowed=['/session','/auth/','/account/','/guest-access','/billing','/subscriptions','/entitlement','/company','/retailers','/catalog','/knowledge','/support'];
+  if(!allowed.some(path=>req.path===path||req.path.startsWith(path.endsWith('/')?path:path+'/'))){
+   await db.tx(async r=>{const invited=await r.get('guest_memberships',req.actor);check(!invited||!!await activeGuestAccess(r,req.actor)||(await ownEntitlement(r,req.actor)).premium,403,'guest_access_ended','Your invited access has ended. Review full access or ask the owner for a new invitation.');});
+  }
+  next();
+ }));
+ app.use('/api/v1',portalV1Router(db,stripe,env));
  installBilling(app,db,stripe,env,origin);
+ installGuestAccess(app,db);
  installStyle(app,db);
  const get=(path:string,fn:(r:HubRequest,s:Response)=>Promise<any>)=>app.get('/api/hub'+path,wrap(fn));
  const post=(path:string,fn:(r:HubRequest,s:Response)=>Promise<any>)=>app.post('/api/hub'+path,wrap(fn));
  get('/retailers',async(_req,res)=>res.json({retailers:RETAILERS,segments:SHOP_SEGMENTS,commerce:COMMERCE_MODEL}));
  get('/saved-retailers',async(req,res)=>res.json({ids:await db.tx(r=>r.get<string[]>('saved_retailers',req.actor))||[]}));
  post('/saved-retailers',async(req,res)=>{const id=text(req.body.id,100);check(RETAILERS.some(r=>r.id===id)&&typeof req.body.saved==='boolean',400,'invalid_retailer','Choose a listed retailer.');await db.tx(async r=>{const ids=await r.get<string[]>('saved_retailers',req.actor)||[];await r.put('saved_retailers',req.actor,req.body.saved?[...new Set([...ids,id])]:ids.filter(x=>x!==id));});res.json({saved:req.body.saved});});
- get('/session',async(req,res)=>res.json({csrf:req.csrf,account:req.account||null,demo,auth_configured:!!(env.SUPABASE_URL&&env.SUPABASE_ANON_KEY),payments_configured:false,commerce:COMMERCE_MODEL,ai_configured:coach.configured,membership:await db.tx(r=>r.get('memberships',req.actor))||{premium:false}}));
+ get('/session',async(req,res)=>{const state=await db.tx(async r=>({membership:await portalEntitlement(r,req.actor),deletion_request:req.account?await r.get('deletion_requests',req.actor)||null:null}));res.json({csrf:req.csrf,account:req.account||null,demo,auth_configured:!!(env.SUPABASE_URL&&env.SUPABASE_ANON_KEY),payments_configured:false,commerce:COMMERCE_MODEL,ai_configured:coach.configured,...state});});
  get('/catalog',async(_req,res)=>res.json({products:await db.tx(async r=>(await r.list<Product>('products')).filter(p=>p.status==='active'&&(demo||p.approved&&!p.sample))),demo}));
  get('/company',async(_req,res)=>res.json(await db.tx(r=>r.get('settings','company'))||{name:'MGT Skin Care',legal_name:null,support_email:null,affiliations:[],policies_published:false}));
- get('/profile',async(req,res)=>res.json({profile:await db.tx(r=>r.get('profiles',req.actor))||null}));
+ get('/profile',async(req,res)=>res.json(await db.tx(async r=>{await r.lock('profile:'+req.actor);return readProfile(r,req.actor);})));
  post('/profile',async(req,res)=>{
   check(req.body.consent===true,400,'consent_required','Please consent to saving your skincare preferences.');
   const input=profileInput(req.body);
-  const profile=await db.tx(async r=>{const result=await match(r,input,demo);await r.put('profiles',req.actor,{...result,consent_version:'2026-09-06',consented_at:now()});await audit(r,req.actor,'profile.saved','self');return result;});res.json({profile});
+  const saved=await db.tx(async r=>{await lockProfile(r,req.actor,req.body.expected_revision);const result=await match(r,input,demo);return saveProfile(r,req.actor,{...result,consent_version:'2026-09-06',consented_at:now()});});res.json(saved);
  });
  post('/profile/feedback',async(req,res)=>{
   check(['comfortable','irritation','no_change'].includes(req.body.feedback),400,'invalid_feedback','Choose a feedback option.');
-  const profile=await db.tx(async r=>{const p=await r.get('profiles',req.actor);check(p,404,'profile_missing','Complete your Skin Match first.');
+  const saved=await db.tx(async r=>{const p=await lockProfile(r,req.actor,req.body.expected_revision);check(p,404,'profile_missing','Complete your Skin Match first.');
    if(req.body.feedback==='irritation')p.input.sensitivity='high';
-   const next=await match(r,p.input,demo);await r.put('profiles',req.actor,{...p,...next,last_feedback:req.body.feedback,feedback_at:now()});return next;});res.json({profile,text:req.body.feedback==='irritation'?'Stop products that irritate your skin. Seek professional advice for persistent or severe symptoms. Your preferences are now more cautious.':'Your feedback has been saved.'});
+   const next=await match(r,p.input,demo);return saveProfile(r,req.actor,{...p,...next,last_feedback:req.body.feedback,feedback_at:now()},'profile.feedback');});res.json({...saved,text:req.body.feedback==='irritation'?'Stop products that irritate your skin. Seek professional advice for persistent or severe symptoms. Your preferences are now more cautious.':'Your feedback has been saved.'});
  });
- post('/routine/simplify',async(req,res)=>{const profile=await db.tx(async r=>{const p=await r.get('profiles',req.actor);check(p,404,'profile_missing','Complete your Skin Match first.');p.routine=simplify(p.routine);await r.put('profiles',req.actor,p);return p;});res.json({profile});});
+ post('/routine/simplify',async(req,res)=>{res.json(await db.tx(async r=>{const p=await lockProfile(r,req.actor,req.body.expected_revision);check(p,404,'profile_missing','Complete your Skin Match first.');return saveProfile(r,req.actor,{...p,routine:simplify(p.routine)},'profile.simplified');}));});
+ post('/profile/remove',async(req,res)=>{check(req.body.confirm===true,400,'confirmation_required','Confirm removal of your saved skincare profile.');res.json(await db.tx(async r=>{await lockProfile(r,req.actor,req.body.expected_revision);return saveProfile(r,req.actor,null,'profile.removed');}));});
  get('/cart',async(req,res)=>res.json(await db.tx(async r=>{const cart=await r.get('carts',req.actor)||emptyCart();return{cart,quote:quote(cart,await r.list<Product>('products'),!!(await r.get('memberships',req.actor))?.premium,false)};})));
  post('/cart',async(req,res)=>{res.json(await db.tx(async r=>{
   const id=text(req.body.product_id,100),quantity=req.body.quantity;
@@ -95,16 +129,24 @@ export async function createPortal(options:PortalOptions){
   const verified=options.verifyOtp?await options.verifyOtp(email,otp):(await supa('verify',{email,token:otp,type:'email'})).user;
   check(verified?.id&&verified.email===email,401,'identity_invalid','Identity could not be verified.');
   const secret=token(),sid=hash(secret);await db.tx(async r=>{
+   await r.lock('identity:'+hash(verified.id));
    let user=await r.get('accounts',verified.id);if(!user){user={id:verified.id,email,roles:[],created_at:now()};await r.put('accounts',user.id,user);}
    const actor='user_'+user.id;
+   for(const owner of [...new Set([req.actor,actor])].sort())await r.lock('profile:'+owner);
+   if(req.actor.startsWith('guest_'))for(const scope of ['profiles','carts','reminders','saved_retailers','style_profiles']){
+    const guest=await r.get(scope,req.actor),existing=await r.get(scope,actor);
+    check(!guest||!existing||JSON.stringify(guest)===JSON.stringify(existing),409,'profile_merge_conflict','Guest and account data differ. Both were kept; account linking needs a merge choice before continuing.');
+   }
    for(const scope of ['profiles','carts','reminders','saved_retailers','style_profiles']){const old=await r.get(scope,req.actor);if(old&&!(await r.get(scope,actor))){await r.put(scope,actor,old);}if(req.actor.startsWith('guest_'))await r.remove(scope,req.actor);}
+   const linked=await r.get('profiles',actor);if(linked?.revision)await r.put('profile_revisions',actor,{revision:linked.revision});
+   if(req.actor.startsWith('guest_'))await r.remove('profile_revisions',req.actor);
    if(req.actor.startsWith('guest_')){for(const ticket of (await r.list('tickets')).filter((t:any)=>t.actor===req.actor)){await r.put('tickets',ticket.id,{...ticket,actor,email:user.email});}}
    await r.remove('sessions',req.sid);await r.put('sessions',sid,{id:sid,actor,userId:user.id,csrf:token(),expires:Date.now()+86400000});
   });
   res.cookie(prod?'__Host-mgt':'mgt',secret,{httpOnly:true,secure:prod,sameSite:'lax',path:'/',maxAge:86400000});res.json({signed_in:true});
  });
  post('/auth/logout',async(req,res)=>{await db.tx(r=>r.remove('sessions',req.sid));res.clearCookie(prod?'__Host-mgt':'mgt',{httpOnly:true,secure:prod,sameSite:'lax',path:'/'});res.json({signed_out:true});});
- get('/orders',async(req,res)=>{account(req);res.json({orders:await db.tx(async r=>(await r.list('orders')).filter(o=>o.actor===req.actor))});});
+ get('/orders',async(req,res)=>{account(req);res.json({orders:await db.tx(async r=>(await r.list('orders')).filter(o=>o.actor===req.actor).map(publicOrder))});});
  post('/checkout',async(req,res)=>{
   const user=account(req);check(stripe,503,'payments_unconfigured','Checkout is awaiting launch configuration.');
   check(!demo,409,'sample_catalog','Sample products cannot be purchased.');
@@ -141,9 +183,8 @@ export async function createPortal(options:PortalOptions){
  post('/coach',async(req,res)=>{
   const message=text(req.body.message,1800);const refusal=screenInput(message);if(refusal)return res.json({kind:'guidance',text:refusal,citations:[]});
   const user=account(req);check(req.body.ai_consent===true,400,'ai_consent','Please allow this message to be processed by the AI service.');
-  const articles=await db.tx(async r=>{await rate(r,'ai-user:'+user.id,20,86400000);await rate(r,'ai-global',500,86400000);return(await r.list<Knowledge>('knowledge')).filter(a=>a.status==='approved'&&a.approved_by);});
-  const premium=await db.tx(async r=>{const membership=await r.get<{premium?:boolean;status?:string}>('memberships',req.actor);return membership?.premium===true&&['active','trialing'].includes(membership.status||'');});
-  const answer=await coach.answer(message,articles,req.actor,premium);await db.tx(r=>audit(r,req.actor,'coach.answer','prompt-v2.1'));res.json(answer);
+  const access=await db.tx(async r=>{const usage=await portalUsageAccount(r,req.actor,user.id);await rate(r,'ai-user:'+usage.userId,20,86400000);await rate(r,'ai-global',500,86400000);return {usage,premium:(await portalEntitlement(r,req.actor)).premium,articles:(await r.list<Knowledge>('knowledge')).filter(a=>a.status==='approved'&&a.approved_by)};});
+  const answer=await coach.answer(message,access.articles,access.usage.actor,access.premium);await db.tx(r=>audit(r,req.actor,'coach.answer','prompt-v2.1'));res.json(answer);
  });
  post('/admin/ai/analyze',async(req,res)=>{
   const operator=role(req,['superadmin','compliance']);
@@ -163,21 +204,21 @@ export async function createPortal(options:PortalOptions){
   const result=await gateway.execute({task_type:'operator_analysis',user_id:operator.id,system_prompt:system,user_prompt:question,has_operator_authorization:true,output_validator});
   check(result.ok,503,'ai_unavailable','Hosted analysis is unavailable. Review the AI routing log.');
   await db.tx(r=>audit(r,operator.id,'ai.analysis','operator_analysis'));
-  res.json({analysis:result.parsed,model:result.model,cost_cents:result.cost_cents});
+  res.json({analysis:result.parsed,cost_cents:result.cost_cents});
  });
  get('/admin/ai/reservations',async(req,res)=>{
-  role(req,['superadmin','compliance']);
-  const budget=new StoreBudgetStore(db);
-  const pending=await budget.pending(),recent=await budget.recentReconciliations();
-  res.json({pending,recent,minimum_age_minutes:10});
+ role(req,['superadmin','compliance']);
+ const budget=new StoreBudgetStore(db);
+ const pending=await budget.pending(),recent=await budget.recentReconciliations();
+  res.json({pending,recent:recent.map(({provider_reference,...item})=>({...item,billing_reference:provider_reference})),minimum_age_minutes:10});
  });
  post('/admin/ai/reservations/reconcile',async(req,res)=>{
   const operator=role(req,['superadmin']);
-  check(req.body.confirm===true,400,'confirmation_required','Confirm that you checked the provider billing record.');
-  const id=text(req.body.id,100),providerReference=text(req.body.provider_reference,200);
+  check(req.body.confirm===true,400,'confirmation_required','Confirm that you checked the service billing record.');
+  const id=text(req.body.id,100),providerReference=text(req.body.billing_reference,200);
   const actualCents=Number(req.body.actual_cents);
-  check(Number.isFinite(actualCents)&&actualCents>=0,400,'invalid_cost','Enter the verified provider cost in cents.');
-  check(actualCents>0||req.body.confirmed_no_charge===true,400,'no_charge_unconfirmed','Confirm the provider reported no charge.');
+  check(Number.isFinite(actualCents)&&actualCents>=0,400,'invalid_cost','Enter the verified service cost in cents.');
+  check(actualCents>0||req.body.confirmed_no_charge===true,400,'no_charge_unconfirmed','Confirm the service reported no charge.');
   const result=await new StoreBudgetStore(db).reconcile(id,actualCents,operator.id,providerReference);
   await db.tx(r=>audit(r,operator.id,'ai.budget_reconciled',id));
   res.json(result);
@@ -186,21 +227,24 @@ export async function createPortal(options:PortalOptions){
  post('/support',async(req,res)=>{
   const subject=text(req.body.subject,150),message=text(req.body.message,4000);await db.tx(async r=>{await rate(r,'ticket:'+req.actor,5,3600000);const id=randomUUID();await r.put('tickets',id,{id,actor:req.actor,email:req.account?.email||null,subject,message,status:'open',replies:[],created_at:now()});});res.json({saved:true});
  });
- get('/account/export',async(req,res)=>{account(req);const exported=await db.tx(async r=>({profile:await r.get('profiles',req.actor)||null,style_profile:await r.get('style_profiles',req.actor)||null,reminders:await r.get('reminders',req.actor)||[],orders:(await r.list('orders')).filter(o=>o.actor===req.actor),tickets:(await r.list('tickets')).filter(t=>t.actor===req.actor),saved_retailers:await r.get('saved_retailers',req.actor)||[],subscriptions:await Promise.all(['consumer','vendor'].map(async audience=>({audience,record:await r.get('subscriptions',req.actor+':'+audience)||null}))),exported_at:now()}));res.setHeader('Content-Disposition','attachment; filename="mgt-my-data.json"');res.json(exported);});
- post('/account/deletion-request',async(req,res)=>{account(req);check(req.body.confirm===true,400,'confirm_required','Please confirm the deletion request.');await db.tx(async r=>{await r.put('deletion_requests',req.actor,{actor:req.actor,requested_at:now(),status:'pending',not_before:new Date(Date.now()+30*86400000).toISOString()});await audit(r,req.actor,'account.deletion_requested','self');});res.json({requested:true});});
+ get('/account/export',async(req,res)=>{account(req);const exported=await db.tx(async r=>({profile:await r.get('profiles',req.actor)||null,style_profile:await r.get('style_profiles',req.actor)||null,reminders:await r.get('reminders',req.actor)||[],orders:(await r.list('orders')).filter(o=>o.actor===req.actor).map(publicOrder),tickets:(await r.list('tickets')).filter(t=>t.actor===req.actor),saved_retailers:await r.get('saved_retailers',req.actor)||[],subscriptions:await Promise.all(['consumer','vendor'].map(async audience=>({audience,record:publicSubscriptionRecord(await r.get('subscriptions',req.actor+':'+audience))}))),deletion_request:await r.get('deletion_requests',req.actor)||null,exported_at:now()}));res.setHeader('Content-Disposition','attachment; filename="mgt-my-data.json"');res.json(exported);});
+ get('/account/deletion-request',async(req,res)=>{account(req);res.json({request:await db.tx(r=>r.get('deletion_requests',req.actor))||null});});
+ post('/account/deletion-request',async(req,res)=>{const user=account(req);check(req.body.confirm===true,400,'confirm_required','Please confirm the deletion request.');const request=await db.tx(async r=>{await r.lock('account-deletion:'+hash(req.actor));const existing=await r.get<any>('deletion_requests',req.actor);if(existing?.status==='processing')throw new Fault(409,'deletion_in_progress','Account deletion is already in progress.');if(existing?.status==='pending'){const normalized={...existing,request_id:existing.request_id||randomUUID(),user_id:existing.user_id||user.id};await r.put('deletion_requests',req.actor,normalized);return normalized;}const requested_at=now(),created={request_id:randomUUID(),actor:req.actor,user_id:user.id,requested_at,status:'pending',not_before:new Date(Date.now()+30*86400000).toISOString(),attempts:0};await r.put('deletion_requests',req.actor,created);await audit(r,req.actor,'account.deletion_requested','self');return created;});res.json({requested:true,request});});
+ post('/account/deletion-cancel',async(req,res)=>{account(req);check(req.body.confirm===true,400,'confirm_required','Please confirm cancellation of the deletion request.');await db.tx(async r=>{await r.lock('account-deletion:'+hash(req.actor));const request=await r.get<any>('deletion_requests',req.actor);check(request,404,'deletion_request_missing','No deletion request was found.');check(request.status==='pending',409,'deletion_in_progress','Account deletion is already in progress and cannot be cancelled.');await audit(r,req.actor,'account.deletion_cancelled','self');await r.remove('deletion_requests',req.actor);});res.json({cancelled:true});});
  // Admin identity is the verified session account. No client headers or role claims are trusted.
  get('/admin/readiness',async(req,res)=>{role(req,['superadmin','compliance']);const {company,backup}=await db.tx(async r=>({company:await r.get('settings','company'),backup:await r.get<any>('operations','backup_health')}));res.json({checks:[
  {name:'Production database',configured:db.kind==='postgres'},
  {name:'Email sign-in',configured:!!(env.SUPABASE_URL&&env.SUPABASE_ANON_KEY)},
- {name:'AI provider',configured:coach.configured},
- {name:'Stripe secret key',configured:!!env.STRIPE_SECRET_KEY},
- {name:'Subscription webhook secret',configured:!!env.STRIPE_SUBSCRIPTION_WEBHOOK_SECRET},
+ {name:'Account identity deletion',configured:!!(env.SUPABASE_URL&&env.SUPABASE_SERVICE_ROLE_KEY)},
+ {name:'Analysis service',configured:coach.configured},
+ {name:'Subscription signing key',configured:!!env.STRIPE_SECRET_KEY},
+ {name:'Subscription event signing',configured:!!env.STRIPE_SUBSCRIPTION_WEBHOOK_SECRET},
  ...['CONSUMER','VENDOR'].flatMap(a=>['MONTHLY','ANNUAL'].map(c=>({name:a.toLowerCase()+' '+c.toLowerCase()+' price',configured:!!(env['STRIPE_'+a+'_'+c+'_PRICE_ID']||(c==='MONTHLY'&&env['STRIPE_'+a+'_PRICE_ID']))}))),
  {name:'Subscription terms approved',configured:env.SUBSCRIPTION_TERMS_APPROVED==='true'&&!!company?.policies_published},
  {name:'Company details',configured:!!(company?.legal_name&&company?.support_email)},
  {name:'Subscriptions enabled',configured:env.SUBSCRIPTIONS_ENABLED==='true'},
- {name:'Verified encrypted backup',configured:backup?.status==='healthy'}],backup,note:'Configuration presence only. Live provider and deployment checks are still required.'});});
- get('/admin/ai-routing',async(req,res)=>{role(req,['superadmin','compliance']);const since=Date.now()-86400000;const logs=await db.tx(async r=>(await r.entries<any>('ai_routing_log')).map(x=>x.value).filter(x=>Date.parse(x.created_at||'')>=since));const routes=new Map<string,any>();for(const log of logs){const key=`${log.provider||'unavailable'}:${log.model||'none'}:${log.task_type||'unknown'}`,row=routes.get(key)||{provider:log.provider||'unavailable',model:log.model||'none',task:log.task_type||'unknown',requests:0,successes:0,fallbacks:0,validation_failures:0,cost_cents:0,latencies:[] as number[]};row.requests++;row.successes+=log.failure_reason?0:1;row.fallbacks+=log.used_fallback?1:0;row.validation_failures+=log.validation_failed?1:0;row.cost_cents+=Number(log.cost_cents)||0;if(Number.isFinite(log.latency_ms))row.latencies.push(log.latency_ms);routes.set(key,row);}const summary=[...routes.values()].map(row=>{const latencies=row.latencies.sort((a:number,b:number)=>a-b);return{provider:row.provider,model:row.model,task:row.task,requests:row.requests,successes:row.successes,fallbacks:row.fallbacks,validation_failures:row.validation_failures,cost_cents:Number(row.cost_cents.toFixed(4)),p95_latency_ms:latencies.length?latencies[Math.floor((latencies.length-1)*.95)]:0};}).sort((a,b)=>b.requests-a.requests||a.provider.localeCompare(b.provider));res.json({window_hours:24,requests:logs.length,cost_cents:Number(summary.reduce((total,row)=>total+row.cost_cents,0).toFixed(4)),routes:summary});});
+ {name:'Verified encrypted backup',configured:backup?.status==='healthy'}],backup,note:'Configuration presence only. Live service and deployment checks are still required.'});});
+ get('/admin/ai-routing',async(req,res)=>{role(req,['superadmin','compliance']);const since=Date.now()-86400000;const logs=await db.tx(async r=>(await r.entries<any>('ai_routing_log')).map(x=>x.value).filter(x=>Date.parse(x.created_at||'')>=since));const routes=new Map<string,any>();for(const log of logs){const key=`${log.task_type||'unknown'}`,row=routes.get(key)||{task:log.task_type||'unknown',requests:0,successes:0,fallbacks:0,validation_failures:0,cost_cents:0,latencies:[] as number[]};row.requests++;row.successes+=log.failure_reason?0:1;row.fallbacks+=log.used_fallback?1:0;row.validation_failures+=log.validation_failed?1:0;row.cost_cents+=Number(log.cost_cents)||0;if(Number.isFinite(log.latency_ms))row.latencies.push(log.latency_ms);routes.set(key,row);}const summary=[...routes.values()].map(row=>{const latencies=row.latencies.sort((a:number,b:number)=>a-b);return{route:routeLabel(row.task),requests:row.requests,successes:row.successes,fallbacks:row.fallbacks,validation_failures:row.validation_failures,cost_cents:Number(row.cost_cents.toFixed(4)),p95_latency_ms:latencies.length?latencies[Math.floor((latencies.length-1)*.95)]:0};}).sort((a,b)=>b.requests-a.requests||a.route.localeCompare(b.route));res.json({window_hours:24,requests:logs.length,cost_cents:Number(summary.reduce((total,row)=>total+row.cost_cents,0).toFixed(4)),routes:summary});});
  get('/admin/ai-economics',async(req,res)=>{
   role(req,['superadmin','compliance']);
   const since=Date.now()-86400000;
@@ -210,13 +254,13 @@ export async function createPortal(options:PortalOptions){
    reservations:await r.entries<any>('ai_budget_reservations')
   }));
   const totals={requests:logs.length,successes:0,failures:0,fallbacks:0,validation_failures:0,cost_cents:0,input_tokens:0,output_tokens:0};
-  const byTask=new Map<string,any>(),byModel=new Map<string,any>(),hourly=new Map<string,any>();
+  const byTask=new Map<string,any>(),byRoute=new Map<string,any>(),hourly=new Map<string,any>();
   const add=(map:Map<string,any>,key:string,seed:any,log:any)=>{const row=map.get(key)||{...seed,requests:0,failures:0,fallbacks:0,validation_failures:0,cost_cents:0,input_tokens:0,output_tokens:0};row.requests++;row.failures+=log.failure_reason?1:0;row.fallbacks+=log.used_fallback?1:0;row.validation_failures+=log.validation_failed?1:0;row.cost_cents+=Number(log.cost_cents)||0;row.input_tokens+=Number(log.input_tokens)||0;row.output_tokens+=Number(log.output_tokens)||0;map.set(key,row);};
   for(const log of logs){
    const created=Date.parse(log.created_at||'');
    totals.successes+=log.failure_reason?0:1;totals.failures+=log.failure_reason?1:0;totals.fallbacks+=log.used_fallback?1:0;totals.validation_failures+=log.validation_failed?1:0;totals.cost_cents+=Number(log.cost_cents)||0;totals.input_tokens+=Number(log.input_tokens)||0;totals.output_tokens+=Number(log.output_tokens)||0;
    add(byTask,log.task_type||'unknown',{task:log.task_type||'unknown'},log);
-   add(byModel,`${log.provider||'unavailable'}:${log.model||'none'}`,{provider:log.provider||'unavailable',model:log.model||'none'},log);
+   add(byRoute,log.task_type||'unknown',{route:routeLabel(log.task_type)},log);
    if(Number.isFinite(created)){const bucket=new Date(Math.floor(created/3600000)*3600000).toISOString();add(hourly,bucket,{hour:bucket},log);}
   }
   const sortRows=(rows:any[])=>rows.map(row=>({...row,cost_cents:Number(row.cost_cents.toFixed(4))})).sort((a,b)=>b.cost_cents-a.cost_cents||b.requests-a.requests);
@@ -229,9 +273,27 @@ export async function createPortal(options:PortalOptions){
    totals.failures?`${totals.failures} failed AI request${totals.failures===1?'':'s'} in the last 24 hours`:null,
    staleReservations.length?`${staleReservations.length} hosted cost hold${staleReservations.length===1?'':'s'} older than 10 minutes`:null
   ].filter(Boolean);
-  res.json({window_hours:24,totals:{...totals,cost_cents:Number(totals.cost_cents.toFixed(4)),success_rate:totals.requests?Number((totals.successes/totals.requests).toFixed(4)):1,fallback_rate:totals.requests?Number((totals.fallbacks/totals.requests).toFixed(4)):0,validation_failure_rate:totals.requests?Number((totals.validation_failures/totals.requests).toFixed(4)):0},by_task:sortRows([...byTask.values()]),by_model:sortRows([...byModel.values()]),hourly:sortRows([...hourly.values()]).sort((a,b)=>a.hour.localeCompare(b.hour)),budgets:budgetRows,pending_reservations:pendingReservations.length,stale_reservations:staleReservations.length,alerts});
+  res.json({window_hours:24,totals:{...totals,cost_cents:Number(totals.cost_cents.toFixed(4)),success_rate:totals.requests?Number((totals.successes/totals.requests).toFixed(4)):1,fallback_rate:totals.requests?Number((totals.fallbacks/totals.requests).toFixed(4)):0,validation_failure_rate:totals.requests?Number((totals.validation_failures/totals.requests).toFixed(4)):0},by_task:sortRows([...byTask.values()]),by_route:sortRows([...byRoute.values()]),hourly:sortRows([...hourly.values()]).sort((a,b)=>a.hour.localeCompare(b.hour)),budgets:budgetRows,pending_reservations:pendingReservations.length,stale_reservations:staleReservations.length,alerts});
  });
- post('/admin/backup/verified',async(req,res)=>{const user=role(req,['superadmin','compliance']);const completed_at=text(req.body.completed_at,40),location_identifier=text(req.body.location_identifier,200),checksum=text(req.body.checksum,200);check(!Number.isNaN(Date.parse(completed_at)),400,'backup_timestamp_invalid','Provide a valid backup completion time.');await db.tx(async r=>{await r.put('backup_status','latest',{completed_at:new Date(completed_at).toISOString(),location_identifier,checksum,verified_by:user.id,verified_at:now()});await audit(r,user.id,'backup.verified',location_identifier);});res.json({saved:true});});
+ get('/admin/deletions',async(req,res)=>{
+  role(req,['superadmin','compliance']);
+  const current=Date.now(),recentCutoff=current-30*86400000;
+  const {requests,completions}=await db.tx(async r=>({requests:await r.list<any>('deletion_requests'),completions:await r.list<any>('deletion_completions')}));
+  const queue=requests.map(request=>{
+   const scheduled=Date.parse(request.not_before||''),blocked=Array.isArray(request.blocked_reasons)?request.blocked_reasons.filter((reason:unknown)=>typeof reason==='string').slice(0,10):[];
+   return{request_id:typeof request.request_id==='string'?request.request_id:null,status:request.status==='processing'?'processing':'pending',requested_at:request.requested_at||null,not_before:Number.isFinite(scheduled)?new Date(scheduled).toISOString():null,due:Number.isFinite(scheduled)&&scheduled<=current,attempts:Number.isInteger(request.attempts)?request.attempts:0,last_checked_at:request.last_checked_at||null,blocked_reasons:blocked,service_error:!!request.last_error};
+  }).sort((a,b)=>(a.not_before||'').localeCompare(b.not_before||''));
+  const proofs=completions.filter(item=>Date.parse(item.completed_at||'')>=recentCutoff).map(item=>({request_id:typeof item.request_id==='string'?item.request_id:null,requested_at:item.requested_at||null,completed_at:item.completed_at||null})).sort((a,b)=>(b.completed_at||'').localeCompare(a.completed_at||'')).slice(0,50);
+  res.json({summary:{total:queue.length,due:queue.filter(item=>item.due).length,blocked:queue.filter(item=>item.blocked_reasons.length||item.service_error).length,processing:queue.filter(item=>item.status==='processing').length,completed_30_days:proofs.length},identity_deletion_configured:!!(env.SUPABASE_URL&&env.SUPABASE_SERVICE_ROLE_KEY),queue,recent_completions:proofs,privacy_note:'Account identifiers, emails, support text and profile data are intentionally excluded.'});
+ });
+ get('/admin/subscription-webhooks',async(req,res)=>{
+  role(req,['superadmin','compliance']);
+  const current=Date.now(),windowStart=current-86400000,stalledBefore=current-10*60000;
+  const receipts=(await db.tx(r=>r.list<any>('subscription_webhook_receipts'))).filter(item=>Date.parse(item.last_received_at||'')>=windowStart).map(item=>({event_id:item.id,type:item.type,status:item.status,attempts:Number(item.attempts)||0,duplicate_count:Number(item.duplicate_count)||0,first_received_at:item.first_received_at||null,last_received_at:item.last_received_at||null,processed_at:item.processed_at||null,error_code:item.status==='failed'?(item.last_error_code==='provider_error'?'service_error':item.last_error_code||'service_error'):null,stalled:item.status==='processing'&&Date.parse(item.last_received_at||'')<stalledBefore})).sort((a,b)=>(b.last_received_at||'').localeCompare(a.last_received_at||''));
+  const failed=receipts.filter(item=>item.status==='failed').length,stalled=receipts.filter(item=>item.stalled).length;
+  res.json({window_hours:24,configured:!!(env.STRIPE_SECRET_KEY&&env.STRIPE_SUBSCRIPTION_WEBHOOK_SECRET),summary:{events:receipts.length,delivery_attempts:receipts.reduce((total,item)=>total+item.attempts,0),processed:receipts.filter(item=>item.status==='processed').length,ignored:receipts.filter(item=>item.status==='ignored').length,failed,stalled,duplicates:receipts.reduce((total,item)=>total+item.duplicate_count,0)},alerts:[failed?`${failed} signed subscription event${failed===1?'':'s'} failed processing`:null,stalled?`${stalled} signed subscription event${stalled===1?' is':'s are'} stalled`:null].filter(Boolean),receipts:receipts.slice(0,100),privacy_note:'Signed event identifiers, types and sanitized outcome codes only; no customer, payment method or subscription payload is returned.'});
+ });
+ post('/admin/backup/verified',async(req,res)=>{const user=role(req,['superadmin','compliance']);const completed_at=text(req.body.completed_at,40),location_identifier=text(req.body.location_identifier,200),checksum=text(req.body.checksum,200);const completed=Date.parse(completed_at);check(!Number.isNaN(completed)&&completed<=Date.now()+60000,400,'backup_timestamp_invalid','Provide a valid backup completion time that is not in the future.');await db.tx(async r=>{await r.put('backup_status','latest',{completed_at:new Date(completed).toISOString(),location_identifier,checksum,verified_by:user.id,verified_at:now()});await audit(r,user.id,'backup.verified',location_identifier);});res.json({saved:true});});
  post('/admin/operators/lookup',async(req,res)=>{
   const operator=role(req,['superadmin']);
   const email=text(req.body.email,254).toLowerCase();
@@ -275,7 +337,7 @@ export async function createPortal(options:PortalOptions){
   });
   res.json({account:updated});
  });
- get('/admin',async(req,res)=>{role(req,['superadmin','catalog_editor','sme','compliance','viewer']);res.json(await db.tx(async r=>({roles:req.account!.roles,products:await r.list('products'),rules:await r.list('rules'),knowledge:await r.list('knowledge'),orders:await r.list('orders'),tickets:await r.list('tickets'),partners:await r.list('partners'),jobs:await r.list('jobs'),audit:(await r.list('audit')).slice(-100),company:await r.get('settings','company')||null,deletion_requests:await r.list('deletion_requests')})));});
+ get('/admin',async(req,res)=>{const user=role(req,['superadmin','catalog_editor','sme','compliance','viewer']),canOperate=user.roles.some(item=>['superadmin','compliance'].includes(item));res.json(await db.tx(async r=>({roles:user.roles,products:await r.list('products'),rules:await r.list('rules'),knowledge:await r.list('knowledge'),orders:canOperate?(await r.list('orders')).map(publicOrder):[],tickets:canOperate?await r.list('tickets'):[],partners:canOperate?await r.list('partners'):[],jobs:canOperate?await r.list('jobs'):[],audit:(await r.list<any>('audit')).slice(-100).map(({id,action,at})=>({id,action,at})),company:await r.get('settings','company')||null})));});
  post('/admin/product',async(req,res)=>{const u=role(req,['catalog_editor','superadmin']);const b=req.body;const id=text(b.id,100),name=text(b.name,120);check(Number.isInteger(b.price_cents)&&b.price_cents>0&&b.price_cents<1000000,400,'invalid_price','Invalid product price.');check(Number.isInteger(b.stock)&&b.stock>=0,400,'invalid_stock','Invalid stock quantity.');check(['cleanser','toner','serum','treatment','moisturizer','sunscreen','eye'].includes(b.slot),400,'invalid_slot','Choose a supported routine slot.');check(Array.isArray(b.ingredients)&&b.ingredients.length>0&&b.ingredients.length<=100&&b.ingredients.every((i:any)=>typeof i==='string'&&/^[a-z0-9_]{1,80}$/.test(i)),400,'ingredients_required','Use normalized ingredient keys.');
   await db.tx(async r=>{const old=await r.get('products',id);await r.put('products',id,{id,name,description:text(b.description,1000),slot:b.slot,ingredients:b.ingredients,price_cents:b.price_cents,stock:b.stock,merchant_id:text(b.merchant_id,100),brand_id:text(b.brand_id||b.merchant_id,100),status:'draft',approved:false,sample:false,concern_tags:[],concern_weights:{},type_fit:{},updated_by:u.id,created_at:old?.created_at||now()});await audit(r,u.id,'product.draft',id);});res.json({saved:true});
  });
@@ -314,8 +376,8 @@ export async function createPortal(options:PortalOptions){
   const refund=await stripe.refunds.create({payment_intent:o.payment_intent_id},{idempotencyKey:'refund_'+id});
   await db.tx(async r=>{const fresh=await r.get('orders',id);fresh.refund_id=refund.id;fresh.status=refund.status==='succeeded'?'refunded':'refunding';await r.put('orders',id,fresh);await audit(r,u.id,'order.refund_requested',id);});res.json({status:refund.status});
  });
- app.use((err:any,req:express.Request,res:Response,_next:express.NextFunction)=>{const known=err instanceof Fault;const status=known?err.status:err.type==='entity.too.large'?413:500;res.status(status).json({error:{code:known?err.code:'request_failed',message:known?err.message:status===413?'The request is too large.':'The request could not be completed.',request_id:(req as HubRequest).requestId}});if(status>=500)console.error(JSON.stringify({request_id:(req as HubRequest).requestId,event:'request_failed',code:known?err.code:'internal'}));});
+ app.use((err:any,req:express.Request,res:Response,_next:express.NextFunction)=>{const known=err instanceof Fault;const status=known?err.status:err.type==='entity.too.large'?413:err.type==='entity.parse.failed'?400:500;res.status(status).json({error:{code:known?err.code:status===400?'invalid_json':'request_failed',message:known?err.message:status===413?'The request is too large.':status===400?'Send valid JSON.':'The request could not be completed.',request_id:(req as HubRequest).requestId}});if(status>=500)console.error(JSON.stringify({request_id:(req as HubRequest).requestId,event:'request_failed',code:known?err.code:'internal'}));});
  return app;
 }
-async function main(){const store=process.env.DATABASE_URL?await new PgStore(process.env.DATABASE_URL).init():new LocalStore(process.env.PORTAL_DB_PATH||'../../work/data/portal.sqlite');const app=await createPortal({store});const server=app.listen(Number(process.env.PORT||3100),process.env.HOST||'127.0.0.1',()=>console.log('MGT portal API listening at http://127.0.0.1:'+(process.env.PORT||3100)));const close=()=>server.close(()=>{void store.close().then(()=>process.exit(0));});process.on('SIGTERM',close);process.on('SIGINT',close);}
+async function main(){const migrate=startupMigrations(process.env);if(process.env.NODE_ENV==='production'&&!process.env.DATABASE_URL)throw new Error('A reviewed production database connection is required.');const store=process.env.DATABASE_URL?await new PgStore(process.env.DATABASE_URL).init(migrate):new LocalStore(process.env.PORTAL_DB_PATH||'../../work/data/portal.sqlite');const app=await createPortal({store});const server=app.listen(Number(process.env.PORT||3100),process.env.HOST||'127.0.0.1',()=>console.log('MGT portal API listening at http://127.0.0.1:'+(process.env.PORT||3100)));const close=()=>server.close(()=>{void store.close().then(()=>process.exit(0));});process.on('SIGTERM',close);process.on('SIGINT',close);}
 if(require.main===module)void main().catch(e=>{console.error(e.message);process.exit(1);});

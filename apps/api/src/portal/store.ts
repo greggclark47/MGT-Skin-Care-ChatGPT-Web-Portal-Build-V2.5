@@ -17,7 +17,14 @@ const schema='CREATE TABLE IF NOT EXISTS hub_records (scope TEXT NOT NULL, id TE
 export class PgStore implements Store{
  kind='postgres'; private pool:Pool;
  constructor(url:string){this.pool=new Pool({connectionString:url,max:10,connectionTimeoutMillis:5000,statement_timeout:10000});}
- async init(){await applyPortalMigrations(this.pool);return this;}
+ async init(migrate=false){
+  try{
+   if(migrate)await applyPortalMigrations(this.pool);
+   // Connecting an imported database must not implicitly choose a migration lineage.
+   await this.pool.query('SELECT scope,id,body FROM hub_records LIMIT 0');
+   return this;
+  }catch(error){await this.pool.end();throw error;}
+ }
  async tx<T>(fn:(r:Records)=>Promise<T>):Promise<T>{const c=await this.pool.connect();try{await c.query('BEGIN');const r:Records={
  get:async(s,i)=>{const q=await c.query('SELECT body FROM hub_records WHERE scope=$1 AND id=$2',[s,i]);return q.rows[0]?JSON.parse(q.rows[0].body):undefined;},
  put:async(s,i,v)=>{await c.query('INSERT INTO hub_records(scope,id,body) VALUES($1,$2,$3) ON CONFLICT(scope,id) DO UPDATE SET body=excluded.body',[s,i,JSON.stringify(v)]);},
@@ -27,6 +34,10 @@ export class PgStore implements Store{
  lock:async(key)=>{if(!/^[a-zA-Z0-9:_-]{1,240}$/.test(key))throw new Error('Invalid transaction lock key.');await c.query('SELECT pg_advisory_xact_lock(hashtext($1))',[key]);}
  };const result=await fn(r);await c.query('COMMIT');return result;}catch(e){await c.query('ROLLBACK');throw e;}finally{c.release();}}
  async close(){await this.pool.end();}
+}
+export function startupMigrations(env:NodeJS.ProcessEnv){
+ if(env.NODE_ENV==='production'&&env.PORTAL_AUTO_MIGRATE==='true')throw new Error('Production database changes require a separately reviewed migration.');
+ return env.PORTAL_AUTO_MIGRATE==='true';
 }
 // SQLite is a persistent local development adapter. Production requires PostgreSQL.
 // Only this queue accesses the connection; asynchronous callbacks cannot overlap transactions.

@@ -1,13 +1,15 @@
 # MGT Skin Care v2 — next-build export
 
-**Export version:** 1.0  
+**Export version:** 1.1  
 **Prepared:** 2026-09-20  
-**Source baseline:** local commit `e7f5e54` (demo presentation) on top of `7e0a867` (public data-boundary continuation)  
+**Source baseline:** local commit `b248b18` (migration-lineage gate) on top of `bdb0f82` (profile conflict recovery), `e7f5e54` (demo presentation), and `7e0a867` (public data-boundary continuation)  
 **Purpose:** hand off the remaining setup, implementation, verification, and release work without rebuilding completed portal behavior.
 
 ## 1. Current baseline
 
 The local portal has a passing v1.5 verification run. The dark retail presentation, USD placeholder pricing, connected applications, owner-approved guest access, local-first AI gateway, account controls, privacy operations, subscription receipt reconciliation, and public response redaction are present.
+
+This phase also adds `pnpm reconcile:migrations` and `pnpm test:lineage`. The tool produces SHA-256 manifests for the independent database and portal migration lineages and fails closed when a supplied target manifest has missing, unknown, reordered, or changed migrations. It does not connect to or mutate a target database.
 
 Verified locally:
 

@@ -7,7 +7,7 @@ const workflow = readFileSync(new URL("../../.github/workflows/verification.yml"
 test("continuous verification is triggered for review and protected branch changes", () => {
   assert.match(workflow, /^\s*pull_request:\s*$/m);
   assert.match(workflow, /^\s*push:\s*$/m);
-  assert.match(workflow, /^\s*- master\s*$/m);
+  assert.match(workflow, /^\s*- main\s*$/m);
 });
 
 test("continuous verification is read-only and runs the local release gate", () => {

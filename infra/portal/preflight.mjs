@@ -53,6 +53,7 @@ export function validateEnvironment(env) {
     errors.push("PORTAL_DOMAIN must be a production hostname without a scheme or path.");
   }
 
+  if (!digestImage(env.NODE_IMAGE)) errors.push("NODE_IMAGE must use an approved immutable @sha256 image digest.");
   if (!digestImage(env.OLLAMA_IMAGE)) errors.push("OLLAMA_IMAGE must use an approved immutable @sha256 image digest.");
   if (!digestImage(env.CADDY_IMAGE)) errors.push("CADDY_IMAGE must use an approved immutable @sha256 image digest.");
 

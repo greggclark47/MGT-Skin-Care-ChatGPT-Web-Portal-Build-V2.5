@@ -22,7 +22,7 @@ Copy infra/portal/env.example to infra/portal/.env and fill service values outsi
 
 Before building containers, run `pnpm infra:preflight`. It rejects placeholder origins, missing backend settings, unverified database TLS, automatic production migration, invalid worker/backup windows, incomplete notification-webhook configuration, partially enabled subscriptions, and floating container image tags. Configuration validation does not establish live readiness. Run `pnpm test:infra` after changing this contract.
 
-The Compose edge and Ollama images are required to use approved immutable `@sha256:` digests. Set `OLLAMA_IMAGE` and `CADDY_IMAGE` in the deployment environment after reviewing the exact image digests; floating tags such as `latest` and `2` are rejected by preflight.
+The application, edge, and Ollama images are required to use approved immutable `@sha256:` digests. Set `NODE_IMAGE`, `OLLAMA_IMAGE`, and `CADDY_IMAGE` in the deployment environment after reviewing the exact image digests; floating tags such as `latest` and `2` are rejected by preflight.
 
 The edge now sends compression and baseline security headers, exposes liveness and readiness separately, routes same-origin API and signed subscription webhook traffic directly to the API, and emits structured access logs. Compose rotates local JSON logs, waits for both API and web health before starting the edge, and gives Node services explicit shutdown windows.
 

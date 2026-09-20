@@ -19,4 +19,6 @@ tmp/
 output/
 .pnpm-store/
 *.zip
+MGT-Skin-Care-v2-Production-Status-2026-09-09.*
+MGT-Skin-Care-v2-phase-3-backup-manifest-2026-09-12.md
 *.tsbuildinfo

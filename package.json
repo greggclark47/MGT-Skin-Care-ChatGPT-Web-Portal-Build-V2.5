@@ -13,6 +13,7 @@
     "infra:preflight": "node --env-file-if-exists=infra/portal/.env infra/portal/preflight.mjs",
     "reconcile:migrations": "node infra/db/migration-lineage.mjs",
     "test:compose-contract": "node --test infra/portal/compose-contract.test.mjs",
+    "test:ci-contract": "node --test infra/portal/ci-contract.test.mjs",
     "test:infra": "node --test infra/portal/preflight.test.mjs",
     "test:lineage": "node --test infra/db/migration-lineage.test.mjs",
     "test:verification": "node infra/portal/verify.cjs"

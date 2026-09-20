@@ -1,4 +1,4 @@
-// Local verification harness v1.5. Never connects to configured production services.
+// Local verification harness v1.6. Never connects to configured production services.
 const fs=require('node:fs'),path=require('node:path'),{spawn}=require('node:child_process');
 const root=path.resolve(__dirname,'../..');
 const stamp=new Date().toISOString().replace(/[:.]/g,'-');
@@ -24,7 +24,7 @@ await run('web client recovery','apps/web',['src/__smoke__/hub-client.cjs']);
 await run('domain deterministic pipeline','packages/domain',['dist/__smoke__/pipeline.js']);
 for(const name of ['gateway','pricing'])await run('gateway '+name,'packages/ai-gateway',['dist/__smoke__/'+name+'.js']);
 const tests=['apps/api/test','packages/shared/test'].flatMap(dir=>fs.readdirSync(path.join(root,dir)).filter(f=>f.endsWith('.cjs')).map(f=>dir+'/'+f));
-await run('HTTP and persistence regressions','',['--test','--test-concurrency=1','--test-reporter=tap',...tests,'infra/portal/preflight.test.mjs']);
+await run('HTTP, persistence, and release-contract regressions','',['--test','--test-concurrency=1','--test-reporter=tap',...tests,'infra/portal/preflight.test.mjs','infra/portal/compose-contract.test.mjs','infra/portal/ci-contract.test.mjs','infra/db/migration-lineage.test.mjs']);
 // Build uses only the server-side local API origin already in next.config.js; no service secrets.
 const webBuilt=await run('web production build','apps/web',['node_modules/next/dist/bin/next','build']);
 if(webBuilt)await run('production web proxy journey','',['infra/portal/production-journey.cjs']);
@@ -58,10 +58,10 @@ for(const file of files(path.join(root,'apps/api/src')).filter(f=>f.endsWith('.t
   endpoints.push({file:path.relative(root,file),method:match[2].toUpperCase(),path:match[3],status:'UNTESTED',evidence:'Static route inventory; mounted behavior and all input classes require explicit coverage. Data-repository calls are excluded where identifiable.'});
  }
 }
-const report={version:'1.5',generated_at:new Date().toISOString(),scope:'Local fixtures only. Live services, browser interaction, PostgreSQL/RLS and imported-store reconciliation remain UNTESTED.',results,unit_inventory:inventory,endpoint_inventory:endpoints};
+const report={version:'1.6',generated_at:new Date().toISOString(),scope:'Local fixtures only. Live services, browser interaction, PostgreSQL/RLS and imported-store reconciliation remain UNTESTED.',results,unit_inventory:inventory,endpoint_inventory:endpoints};
 fs.writeFileSync(path.join(out,'results.json'),JSON.stringify(report,null,2));
 const escape=value=>String(value).replace(/\|/g,'\\|').replace(/\r?\n/g,' ');
-let md='# Verification evidence — v1.5\n\n[VERIFIED] Executed local results only. No production readiness claim.\n\n'+report.scope+'\n\n| Component | Test type | Status | Evidence |\n| --- | --- | --- | --- |\n';
+let md='# Verification evidence — v1.6\n\n[VERIFIED] Executed local results only. No production readiness claim.\n\n'+report.scope+'\n\n| Component | Test type | Status | Evidence |\n| --- | --- | --- | --- |\n';
 for(const r of results)md+=`| ${escape(r.name)} | ${r.hits?'Artifact scan':'Executed command'} | ${r.status} | ${escape(r.log||r.reason||r.hits?.join(', ')||'No matches')} |\n`;
 md+='\n## Individual reported assertions\n\n| Component | Test type | Status | Evidence |\n| --- | --- | --- | --- |\n';
 for(const r of results)for(const line of (r.output||'').split(/\r?\n/)){

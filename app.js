@@ -261,6 +261,21 @@ const demoFlows = {
 }</pre>
       <button class="flow-action" data-flow-action="export" type="button">Prepare demo export <span>↓</span></button>
     `
+  },
+  "Release evidence": {
+    kicker: "RELEASE EVIDENCE · SAMPLE VIEW",
+    title: "A clear handoff, not a guess",
+    step: "Verified locally · Live validation remains separate",
+    body: `
+      <p class="flow-intro">This sample shows the release evidence recorded before a build moves forward. It keeps local verification separate from real production approval.</p>
+      <div class="routine-preview">
+        <div><b>01</b><span>Portal release gate</span><small>Passed locally</small></div>
+        <div><b>02</b><span>Public artifact scan</span><small>Clear</small></div>
+        <div><b>03</b><span>Continuous verification</span><small>Configured for reviews and main updates</small></div>
+        <div><b>04</b><span>Live environment</span><small>Still requires credentials, service checks, and restore evidence</small></div>
+      </div>
+      <div class="flow-result"><span>RELEASE STATUS</span><h3>Ready for reviewed integration</h3><p>The source can move through review with recorded local evidence. Deployment stays blocked until the live environment proves its own readiness.</p><div class="flow-meta"><span>LOCAL EVIDENCE</span><span>NO LIVE CLAIMS</span><span>REVIEW REQUIRED</span></div></div>
+    `
   }
 };
 

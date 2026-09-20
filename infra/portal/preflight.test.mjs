@@ -20,7 +20,9 @@ const production = {
   BACKUP_MAX_AGE_HOURS: "26",
   NOTIFICATION_DELIVERY: "in_app",
   SUBSCRIPTIONS_ENABLED: "false",
-  SUBSCRIPTION_TERMS_APPROVED: "false"
+  SUBSCRIPTION_TERMS_APPROVED: "false",
+  OLLAMA_IMAGE: `ollama/ollama@sha256:${"a".repeat(64)}`,
+  CADDY_IMAGE: `caddy@sha256:${"b".repeat(64)}`
 };
 
 test("accepts the proposed external database configuration without proving live readiness", () => {
@@ -72,4 +74,11 @@ test("requires secure webhook delivery settings", () => {
   assert.equal(result.ok, false);
   assert.ok(result.errors.some((error) => error.startsWith("NOTIFICATION_WEBHOOK_URL")));
   assert.ok(result.errors.some((error) => error.startsWith("NOTIFICATION_WEBHOOK_TOKEN")));
+});
+
+test("rejects floating or placeholder container image tags", () => {
+  const result = validateEnvironment({ ...production, OLLAMA_IMAGE: "ollama/ollama:latest", CADDY_IMAGE: "caddy:2" });
+  assert.equal(result.ok, false);
+  assert.ok(result.errors.some((error) => error.startsWith("OLLAMA_IMAGE")));
+  assert.ok(result.errors.some((error) => error.startsWith("CADDY_IMAGE")));
 });

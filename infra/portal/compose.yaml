@@ -6,7 +6,7 @@ x-logging: &default-logging
 
 services:
   ollama:
-    image: ollama/ollama:latest
+    image: ${OLLAMA_IMAGE:?Set the approved Ollama image digest}
     volumes:
       - ollama:/root/.ollama
     environment:
@@ -72,7 +72,7 @@ services:
     stop_grace_period: 30s
     logging: *default-logging
   edge:
-    image: caddy:2
+    image: ${CADDY_IMAGE:?Set the approved Caddy image digest}
     ports: ["80:80", "443:443"]
     environment:
       PORTAL_DOMAIN: ${PORTAL_DOMAIN:?Set portal domain}

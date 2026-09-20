@@ -20,6 +20,10 @@ function positiveNumber(value, minimum, maximum) {
   return Number.isFinite(number) && number >= minimum && number <= maximum;
 }
 
+function digestImage(value) {
+  return /^[a-z0-9./_-]+@sha256:[a-f0-9]{64}$/.test(String(value || "").trim());
+}
+
 export function validateEnvironment(env) {
   const errors = [];
   const warnings = [];
@@ -48,6 +52,9 @@ export function validateEnvironment(env) {
   if (portalDomain && (portalDomain.includes("://") || portalDomain.includes("/") || placeholder.test(portalDomain))) {
     errors.push("PORTAL_DOMAIN must be a production hostname without a scheme or path.");
   }
+
+  if (!digestImage(env.OLLAMA_IMAGE)) errors.push("OLLAMA_IMAGE must use an approved immutable @sha256 image digest.");
+  if (!digestImage(env.CADDY_IMAGE)) errors.push("CADDY_IMAGE must use an approved immutable @sha256 image digest.");
 
   const supabaseUrl = requireValue("SUPABASE_URL");
   if (supabaseUrl && !validUrl(supabaseUrl, ["https:"])) errors.push("SUPABASE_URL must be a production HTTPS URL.");

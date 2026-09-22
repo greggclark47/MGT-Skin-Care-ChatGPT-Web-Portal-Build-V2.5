@@ -242,9 +242,33 @@ export async function createPortal(options:PortalOptions){
  ...['CONSUMER','VENDOR'].flatMap(a=>['MONTHLY','ANNUAL'].map(c=>({name:a.toLowerCase()+' '+c.toLowerCase()+' price',configured:!!(env['STRIPE_'+a+'_'+c+'_PRICE_ID']||(c==='MONTHLY'&&env['STRIPE_'+a+'_PRICE_ID']))}))),
  {name:'Subscription terms approved',configured:env.SUBSCRIPTION_TERMS_APPROVED==='true'&&!!company?.policies_published},
  {name:'Company details',configured:!!(company?.legal_name&&company?.support_email)},
- {name:'Subscriptions enabled',configured:env.SUBSCRIPTIONS_ENABLED==='true'},
- {name:'Verified encrypted backup',configured:backup?.status==='healthy'}],backup,note:'Configuration presence only. Live service and deployment checks are still required.'});});
- get('/admin/ai-routing',async(req,res)=>{role(req,['superadmin','compliance']);const since=Date.now()-86400000;const logs=await db.tx(async r=>(await r.entries<any>('ai_routing_log')).map(x=>x.value).filter(x=>Date.parse(x.created_at||'')>=since));const routes=new Map<string,any>();for(const log of logs){const key=`${log.task_type||'unknown'}`,row=routes.get(key)||{task:log.task_type||'unknown',requests:0,successes:0,fallbacks:0,validation_failures:0,cost_cents:0,latencies:[] as number[]};row.requests++;row.successes+=log.failure_reason?0:1;row.fallbacks+=log.used_fallback?1:0;row.validation_failures+=log.validation_failed?1:0;row.cost_cents+=Number(log.cost_cents)||0;if(Number.isFinite(log.latency_ms))row.latencies.push(log.latency_ms);routes.set(key,row);}const summary=[...routes.values()].map(row=>{const latencies=row.latencies.sort((a:number,b:number)=>a-b);return{route:routeLabel(row.task),requests:row.requests,successes:row.successes,fallbacks:row.fallbacks,validation_failures:row.validation_failures,cost_cents:Number(row.cost_cents.toFixed(4)),p95_latency_ms:latencies.length?latencies[Math.floor((latencies.length-1)*.95)]:0};}).sort((a,b)=>b.requests-a.requests||a.route.localeCompare(b.route));res.json({window_hours:24,requests:logs.length,cost_cents:Number(summary.reduce((total,row)=>total+row.cost_cents,0).toFixed(4)),routes:summary});});
+  {name:'Subscriptions enabled',configured:env.SUBSCRIPTIONS_ENABLED==='true'},
+  {name:'Verified encrypted backup',configured:backup?.status==='healthy'}],backup,note:'Configuration presence only. Live service and deployment checks are still required.'});});
+  get('/admin/catalog-health',async(req,res)=>{
+   role(req,['superadmin','catalog_editor','sme','compliance','viewer']);
+   const requiredSlots=['cleanser','treatment','moisturizer','sunscreen'];
+   const result=await db.tx(async r=>{
+    const products=await r.list<any>('products');
+    const rules=await r.list<any>('rules');
+    const active=products.filter(product=>product?.status==='active');
+    const approvedRules=new Set(rules.filter(rule=>rule?.status==='approved'&&rule?.sme_approved_by&&!rule?.sample).map(rule=>rule.ingredient_key));
+    const unreviewedIngredients=[...new Set(active.flatMap(product=>Array.isArray(product?.ingredients)?product.ingredients:[]).filter(ingredient=>!approvedRules.has(ingredient)))].sort().slice(0,50);
+    const invalidActive=active.filter(product=>!Array.isArray(product.ingredients)||product.ingredients.length===0||product.ingredients.some((ingredient:unknown)=>typeof ingredient!=='string'||!ingredient.trim()));
+    const slotCoverage=requiredSlots.map(slot=>{const rows=active.filter(product=>product.slot===slot);return{slot,active:rows.length,approved:rows.filter(product=>product.approved&&!product.sample).length,sample:rows.filter(product=>product.sample).length};});
+    const warnings:string[]=[];
+    if(demo)warnings.push('Demo mode is sample-only; approved production catalog data is still required.');
+    if(!products.length)warnings.push('No catalog products are loaded.');
+    if(!active.length)warnings.push('No active catalog products are available for matching.');
+    if(!demo&&products.some(product=>product.sample))warnings.push('Sample products are present in a production catalog.');
+    if(!demo&&products.some(product=>product.status==='active'&&(!product.approved||product.sample)))warnings.push('Active catalog products must be approved and non-sample.');
+    for(const row of slotCoverage)if(row.active===0)warnings.push(`Required routine slot has no active products: ${row.slot}.`);
+    if(invalidActive.length)warnings.push(`${invalidActive.length} active product${invalidActive.length===1?'':'s'} have missing ingredient data.`);
+    if(unreviewedIngredients.length)warnings.push(`${unreviewedIngredients.length} active ingredient key${unreviewedIngredients.length===1?'':'s'} lack an approved SME rule.`);
+    return{mode:demo?'demo':'production',ready:warnings.length===0,products:{total:products.length,active:active.length,approved:products.filter(product=>product.approved&&!product.sample).length,sample:products.filter(product=>product.sample).length,invalid_active:invalidActive.length},slot_coverage:slotCoverage,rules:{total:rules.length,approved:approvedRules.size,sample:rules.filter(rule=>rule.sample).length,unreviewed_ingredients:unreviewedIngredients},warnings,note:'Counts are metadata-only. Product names, customer profiles and vendor details are intentionally excluded.'};
+   });
+   res.json(result);
+  });
+  get('/admin/ai-routing',async(req,res)=>{role(req,['superadmin','compliance']);const since=Date.now()-86400000;const logs=await db.tx(async r=>(await r.entries<any>('ai_routing_log')).map(x=>x.value).filter(x=>Date.parse(x.created_at||'')>=since));const routes=new Map<string,any>();for(const log of logs){const key=`${log.task_type||'unknown'}`,row=routes.get(key)||{task:log.task_type||'unknown',requests:0,successes:0,fallbacks:0,validation_failures:0,cost_cents:0,latencies:[] as number[]};row.requests++;row.successes+=log.failure_reason?0:1;row.fallbacks+=log.used_fallback?1:0;row.validation_failures+=log.validation_failed?1:0;row.cost_cents+=Number(log.cost_cents)||0;if(Number.isFinite(log.latency_ms))row.latencies.push(log.latency_ms);routes.set(key,row);}const summary=[...routes.values()].map(row=>{const latencies=row.latencies.sort((a:number,b:number)=>a-b);return{route:routeLabel(row.task),requests:row.requests,successes:row.successes,fallbacks:row.fallbacks,validation_failures:row.validation_failures,cost_cents:Number(row.cost_cents.toFixed(4)),p95_latency_ms:latencies.length?latencies[Math.floor((latencies.length-1)*.95)]:0};}).sort((a,b)=>b.requests-a.requests||a.route.localeCompare(b.route));res.json({window_hours:24,requests:logs.length,cost_cents:Number(summary.reduce((total,row)=>total+row.cost_cents,0).toFixed(4)),routes:summary});});
  get('/admin/ai-economics',async(req,res)=>{
   role(req,['superadmin','compliance']);
   const since=Date.now()-86400000;

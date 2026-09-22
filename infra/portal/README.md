@@ -1,5 +1,7 @@
 # Backend and subscription infrastructure — September 7, 2026
 
+The phased build, test and production-readiness program is maintained in [`BUILD-READINESS-GUIDE.md`](../../BUILD-READINESS-GUIDE.md).
+
 ## Implemented
 - Existing customer tabs use /api/hub: profile/matching, routine simplification, saved retailer destinations, reminders, knowledge, coach, session/account, and support.
 - Administration pages now call the same verified-session API. A typed user ID no longer supplies identity. Roles must be provisioned in the accounts record by an operator. No public role-grant endpoint exists.

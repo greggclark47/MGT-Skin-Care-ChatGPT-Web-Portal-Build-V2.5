@@ -10,6 +10,7 @@ dist/
 .DS_Store
 work/data/
 work/verification/
+work/checkpoints/
 *.sqlite
 *.sqlite-shm
 *.sqlite-wal

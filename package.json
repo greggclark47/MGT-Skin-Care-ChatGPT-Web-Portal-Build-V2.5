@@ -18,6 +18,7 @@
     "test:lineage": "node --test infra/db/migration-lineage.test.mjs",
     "test:golden": "pnpm --filter @mgt/domain build && node --test packages/shared/test/golden-cases.cjs",
     "test:mobile-contract": "pnpm --filter @mgt/mobile test:contract",
+    "release:checkpoint": "node infra/portal/local-checkpoint.cjs",
     "test:verification": "node infra/portal/verify.cjs"
   }
 }

@@ -67,6 +67,15 @@ test('profile: sign-in never silently discards a different guest profile when th
  assert.equal(linked.status,409,'conflicting profiles require an explicit choice rather than silent deletion');
  assert.deepEqual(await f.db.tx(r=>r.entries('profiles')),before);
 });
+test('profile: explicit merge choice links the guest without reusing the verification code',async t=>{
+ const f=await fixture(t),owner=f.client(),guest=f.client();await owner.login();await owner.send('/api/hub/profile',input);
+ await guest.send('/api/hub/session');const guestProfile=await guest.send('/api/hub/profile',{...input,skin_type:'oily'});
+ assert.equal((await guest.send('/api/hub/auth/verify',{email:'owner@test.invalid',code:'123456'})).status,409);
+ const merged=await guest.send('/api/hub/auth/merge',{choice:'guest'});assert.equal(merged.status,200);assert.equal(merged.data.merged,'guest');
+ const session=await guest.send('/api/hub/session');assert.equal(session.data.account.email,'owner@test.invalid');
+ assert.deepEqual((await guest.send('/api/hub/profile')).data.profile,guestProfile.data.profile);
+ assert.equal((await f.db.tx(r=>r.list('profile_merge_pending'))).length,0);
+});
 test('session: removed account cannot retain its old actor through a stale cookie',async t=>{
  const f=await fixture(t),c=f.client();await c.login();await c.send('/api/hub/profile',input);
  await f.db.tx(r=>r.remove('accounts','owner@test.invalid'));

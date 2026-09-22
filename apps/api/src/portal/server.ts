@@ -17,6 +17,8 @@ import {operationalReadiness} from './operations';
 export interface PortalOptions{store:Store;env?:NodeJS.ProcessEnv;stripe?:StripeClient;coach?:SafeCoach;analysisGateway?:AiGateway;verifyOtp?:(email:string,otp:string)=>Promise<{id:string,email:string}>}
 const now=()=>new Date().toISOString();
 const emptyCart=()=>({items:[] as {product_id:string,quantity:number}[],revision:randomUUID()});
+const PROFILE_MERGE_SCOPES=['profiles','carts','reminders','saved_retailers','style_profiles'] as const;
+type PendingProfileMerge={id:string;guest_actor:string;account_id:string;email:string;created_at:string;expires_at:string};
 const OPERATOR_ROLES=['superadmin','catalog_editor','sme','compliance','viewer'] as const;
 const routeLabel=(task:unknown)=>({coach_answer:'Guided answers',operator_analysis:'Complex review',product_why:'Product explanations',coach_routine_command:'Routine guidance',routine_optimization_deep:'Deep routine review',premium_consultation:'Premium consultation',vision_attributes:'Visual attributes',embed:'Knowledge indexing'} as Record<string,string>)[String(task)]||'Other analysis';
 const validOperatorRoles=(value:unknown):value is string[]=>Array.isArray(value)&&value.length<=OPERATOR_ROLES.length&&value.every((item:unknown)=>typeof item==='string'&&OPERATOR_ROLES.includes(item as typeof OPERATOR_ROLES[number]))&&new Set(value).size===value.length;
@@ -128,22 +130,46 @@ export async function createPortal(options:PortalOptions){
   await db.tx(async r=>{await rate(r,'verify:'+hash(email),8,900000);await rate(r,'verify-session:'+req.actor,8,900000);});
   const verified=options.verifyOtp?await options.verifyOtp(email,otp):(await supa('verify',{email,token:otp,type:'email'})).user;
   check(verified?.id&&verified.email===email,401,'identity_invalid','Identity could not be verified.');
-  const secret=token(),sid=hash(secret);await db.tx(async r=>{
+  const secret=token(),sid=hash(secret);const merge=await db.tx(async r=>{
    await r.lock('identity:'+hash(verified.id));
    let user=await r.get('accounts',verified.id);if(!user){user={id:verified.id,email,roles:[],created_at:now()};await r.put('accounts',user.id,user);}
    const actor='user_'+user.id;
    for(const owner of [...new Set([req.actor,actor])].sort())await r.lock('profile:'+owner);
-   if(req.actor.startsWith('guest_'))for(const scope of ['profiles','carts','reminders','saved_retailers','style_profiles']){
+   if(req.actor.startsWith('guest_')){
+    const conflicts=[] as string[];
+    for(const scope of PROFILE_MERGE_SCOPES){
     const guest=await r.get(scope,req.actor),existing=await r.get(scope,actor);
-    check(!guest||!existing||JSON.stringify(guest)===JSON.stringify(existing),409,'profile_merge_conflict','Guest and account data differ. Both were kept; account linking needs a merge choice before continuing.');
+    if(guest&&existing&&JSON.stringify(guest)!==JSON.stringify(existing))conflicts.push(scope);
+    }
+    if(conflicts.length){
+     const pending:PendingProfileMerge={id:randomUUID(),guest_actor:req.actor,account_id:user.id,email:user.email,created_at:now(),expires_at:new Date(Date.now()+15*60*1000).toISOString()};
+     await r.put('profile_merge_pending',req.actor,{...pending,conflicts});
+     return {conflict:true};
+    }
    }
-   for(const scope of ['profiles','carts','reminders','saved_retailers','style_profiles']){const old=await r.get(scope,req.actor);if(old&&!(await r.get(scope,actor))){await r.put(scope,actor,old);}if(req.actor.startsWith('guest_'))await r.remove(scope,req.actor);}
+   for(const scope of PROFILE_MERGE_SCOPES){const old=await r.get(scope,req.actor);if(old&&!(await r.get(scope,actor))){await r.put(scope,actor,old);}if(req.actor.startsWith('guest_'))await r.remove(scope,req.actor);}
    const linked=await r.get('profiles',actor);if(linked?.revision)await r.put('profile_revisions',actor,{revision:linked.revision});
    if(req.actor.startsWith('guest_'))await r.remove('profile_revisions',req.actor);
    if(req.actor.startsWith('guest_')){for(const ticket of (await r.list('tickets')).filter((t:any)=>t.actor===req.actor)){await r.put('tickets',ticket.id,{...ticket,actor,email:user.email});}}
    await r.remove('sessions',req.sid);await r.put('sessions',sid,{id:sid,actor,userId:user.id,csrf:token(),expires:Date.now()+86400000});
+   return {conflict:false};
   });
+  if(merge.conflict)throw new Fault(409,'profile_merge_conflict','Guest and account data differ. Both were kept; choose which profile to keep before continuing.');
   res.cookie(prod?'__Host-mgt':'mgt',secret,{httpOnly:true,secure:prod,sameSite:'lax',path:'/',maxAge:86400000});res.json({signed_in:true});
+ });
+ post('/auth/merge',async(req,res)=>{
+  const choice=text(req.body.choice,20);check(choice==='guest'||choice==='account',400,'merge_choice_invalid','Choose the browser profile or the account profile.');
+  const secret=token(),sid=hash(secret);await db.tx(async r=>{
+   check(req.actor.startsWith('guest_'),409,'merge_not_pending','There is no browser profile waiting to be linked.');
+   const pending=await r.get<PendingProfileMerge>('profile_merge_pending',req.actor);check(pending&&Date.parse(pending.expires_at)>Date.now(),409,'merge_expired','This profile choice expired. Sign in again to create a new choice.');
+   const user=await r.get<any>('accounts',pending!.account_id);check(user&&user.email===pending!.email,409,'merge_account_missing','The account could not be found. Sign in again to continue.');
+   const actor='user_'+user.id;await r.lock('identity:'+hash(user.id));for(const owner of [req.actor,actor].sort())await r.lock('profile:'+owner);
+   for(const scope of PROFILE_MERGE_SCOPES){const guest=await r.get(scope,req.actor),existing=await r.get(scope,actor);if(choice==='guest'&&guest)await r.put(scope,actor,guest);else if(choice==='account'&&!existing&&guest)await r.put(scope,actor,guest);if(guest)await r.remove(scope,req.actor);}
+   const linked=await r.get<any>('profiles',actor);if(linked?.revision)await r.put('profile_revisions',actor,{revision:linked.revision});await r.remove('profile_revisions',req.actor);
+   for(const ticket of (await r.list<any>('tickets')).filter(t=>t.actor===req.actor))await r.put('tickets',ticket.id,{...ticket,actor,email:user.email});
+   await r.remove('profile_merge_pending',req.actor);await r.remove('sessions',req.sid);await r.put('sessions',sid,{id:sid,actor,userId:user.id,csrf:token(),expires:Date.now()+86400000});
+  });
+  res.cookie(prod?'__Host-mgt':'mgt',secret,{httpOnly:true,secure:prod,sameSite:'lax',path:'/',maxAge:86400000});res.json({signed_in:true,merged:choice});
  });
  post('/auth/logout',async(req,res)=>{await db.tx(r=>r.remove('sessions',req.sid));res.clearCookie(prod?'__Host-mgt':'mgt',{httpOnly:true,secure:prod,sameSite:'lax',path:'/'});res.json({signed_out:true});});
  get('/orders',async(req,res)=>{account(req);res.json({orders:await db.tx(async r=>(await r.list('orders')).filter(o=>o.actor===req.actor).map(publicOrder))});});

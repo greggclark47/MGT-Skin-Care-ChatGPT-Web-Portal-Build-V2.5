@@ -4,12 +4,13 @@ This guide turns the current gap analysis into an execution plan. It separates w
 
 ## Current baseline
 
-The verified local baseline is commit `0441531`.
+The verified local baseline is commit `13d0d2e`.
 
 - Domain, gateway, shared client, API and web builds pass.
 - The local release gate passes compilation, web smoke, API regressions, deterministic policy cases, the production proxy journey and the public artifact scan.
 - The browser Skin Match path has been exercised through all nine questions, consented save, results and AM/PM routine tabs.
 - `/api/hub/admin/catalog-health` reports catalog approval, required-slot coverage and ingredient-rule readiness without returning customer or vendor details.
+- The operations worker expires pending guest-profile merge decisions, and the reviewed-output gate covers five approved task types with zero blocked-claim or invalid-citation failures.
 - Local demo data is sample-only. It is not evidence of production catalog approval, provider connectivity, database isolation or deployment readiness.
 
 ## Phase 0 — change control and evidence
@@ -202,3 +203,13 @@ Release only when:
 5. Complete the reviewed output set and browser accessibility matrix.
 6. Configure commercial, notification and support services.
 7. Build the pinned container stack and execute the final staging release gate.
+
+## Phase 1–3 local continuation checkpoint
+
+Commit `13d0d2e` advances the repository-side portions of the next three phases:
+
+- **Phase 1 — application/data contracts:** guest/account conflicts now require an explicit merge decision, and catalog health remains exposed as a read-only release gate.
+- **Phase 2 — operations/recovery/privacy:** expired merge decisions are removed by the worker, and account deletion removes pending merge records tied to the account.
+- **Phase 3 — AI/output quality:** `packages/shared/test/golden-cases.json` and its test cover Skin Match, Routine Builder, Care Coach, product explanations, and operator analysis with safety, grounding, and required-phrase checks.
+
+The full local evidence run is `work/verification/2026-09-22T22-23-03-234Z/report.md`. Live database/RLS, identity provider, backup restore, model provider, and staging browser evidence remain open gates.

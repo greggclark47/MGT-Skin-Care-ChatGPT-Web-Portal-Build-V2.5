@@ -6,9 +6,9 @@ const root=path.resolve(__dirname,'../..');
 const stamp=new Date().toISOString().replace(/[:.]/g,'-');
 const outputDir=path.join(root,'work','checkpoints',stamp);
 fs.mkdirSync(outputDir,{recursive:true});
-const generatedNext=path.join(root,'apps','web','.next');
+const generatedNext=[path.join(root,'apps','web','.next'),path.join(root,'apps','web','.next-dev')];
 let generatedOutputCleaned=false;
-try{if(fs.existsSync(generatedNext)){fs.rmSync(generatedNext,{recursive:true,force:true});generatedOutputCleaned=true;}}catch(error){fs.writeFileSync(path.join(outputDir,'generated-output-cleanup.log'),String(error));}
+for(const outputPath of generatedNext){try{if(fs.existsSync(outputPath)){fs.rmSync(outputPath,{recursive:true,force:true});generatedOutputCleaned=true;}}catch(error){fs.writeFileSync(path.join(outputDir,'generated-output-cleanup.log'),String(error));}}
 const runner=process.platform==='win32'?'pnpm.cmd':'pnpm';
 const checks=[
  ['infrastructure preflight tests',['test:infra']],
@@ -47,7 +47,7 @@ fs.writeFileSync(path.join(outputDir,'results.json'),JSON.stringify(report,null,
 let markdown=`# MGT local release checkpoint\n\nGenerated: ${report.generated_at}\n\n- Branch: \`${branch||'unknown'}\`\n- Commit: \`${commit||'unknown'}\`\n- Local gates: **${localPass?'PASS':'FAIL'}**\n- Production preflight: **${preflight.status}**\n- Release decision: **${releaseReady?'READY FOR STAGING REVIEW':'NOT READY'}**\n\n| Gate | Status | Evidence |\n| --- | --- | --- |\n`;
 for(const item of results)markdown+=`| ${item.name} | ${item.status} | [${item.log}](./${item.log}) |\n`;
 markdown+=`| Production configuration preflight | ${preflight.status} | ${preflight.log?`[${preflight.log}](./${preflight.log})`:preflight.reason} |\n`;
-if(generatedOutputCleaned)markdown+='\nThe generated `apps/web/.next` folder was removed before verification to avoid a known OneDrive reparse-point build artifact; source files were not removed.\n';
+if(generatedOutputCleaned)markdown+='\nGenerated `apps/web/.next` and `.next-dev` output was removed before verification to avoid known OneDrive reparse-point build artifacts; source files were not removed.\n';
 if(report.latest_verification)markdown+=`\nLatest verification evidence: [${report.latest_verification}](../../${report.latest_verification.replaceAll('\\','/')})\n`;
 markdown+='\nThis checkpoint records repository-local evidence. A PASS does not establish live PostgreSQL/RLS isolation, identity-provider behavior, backup restoration, provider availability, device interaction, container startup, or deployment.\n';
 fs.writeFileSync(path.join(outputDir,'report.md'),markdown);

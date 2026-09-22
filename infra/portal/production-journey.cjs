@@ -18,7 +18,8 @@ async function main(){
   webServer=http.createServer(web.getRequestHandler());await listen(webServer,4320);
   let cookie='',csrf='';
   async function call(route,body){const response=await fetch(webOrigin+route,{method:body===undefined?'GET':'POST',headers:{cookie,origin:webOrigin,'content-type':'application/json','x-csrf-token':csrf},body:body===undefined?undefined:JSON.stringify(body),signal:AbortSignal.timeout(15000)});if(response.headers.get('set-cookie'))cookie=response.headers.get('set-cookie').split(';')[0];const data=await response.json();if(data.csrf)csrf=data.csrf;return{status:response.status,data};}
-  for(const route of ['/','/account','/skin-match','/my-skin','/routine','/subscription','/shop']){const response=await fetch(webOrigin+route);assert.equal(response.status,200,route);assert.match(await response.text(),/<html/);console.log('PASS production page '+route);}
+  const browserRoutes=['/','/account','/skin-match','/skin-match/results','/my-skin','/routine','/coach','/shop','/saved','/replenishment','/membership','/subscription','/orders','/support','/learn','/company','/trust','/privacy','/terms','/shipping','/partners','/studio','/studio/personal-color','/studio/makeup','/studio/haircare','/studio/hair-color','/studio/style','/studio/clothing','/admin'];
+  for(const route of browserRoutes){const response=await fetch(webOrigin+route);assert.equal(response.status,200,route);const html=await response.text();assert.match(html,/<html/);assert.match(html,/mgt-mark\.svg/,route+' shared logo');assert.match(html,/id="main"/,route+' main landmark');console.log('PASS production page '+route);}
   assert.equal((await call('/api/hub/session')).status,200);
   assert.equal((await call('/api/v1/subscriptions')).status,401);
   assert.equal((await call('/api/hub/auth/verify',{email:'journey@test.invalid',code:'123456'})).status,200);await call('/api/hub/session');

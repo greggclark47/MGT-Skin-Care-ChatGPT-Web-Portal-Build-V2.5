@@ -4,7 +4,7 @@ This guide turns the current gap analysis into an execution plan. It separates w
 
 ## Current baseline
 
-The verified local baseline is commit `5fc26ab`.
+The verified local baseline is commit `0441531`.
 
 - Domain, gateway, shared client, API and web builds pass.
 - The local release gate passes compilation, web smoke, API regressions, deterministic policy cases, the production proxy journey and the public artifact scan.
@@ -42,7 +42,7 @@ The verified local baseline is commit `5fc26ab`.
 
 ### 1B. Identity, sessions and RLS
 
-**Build:** map Supabase Auth users to portal accounts, define duplicate-email handling and preserve guest conflict safety.
+**Build:** map Supabase Auth users to portal accounts, define duplicate-email handling and preserve guest conflict safety. The local portal now records a short-lived pending merge decision after a verified conflict and requires the user to choose the browser or account profile before linking; no profile is silently discarded.
 
 **Environment:** configure `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, secure cookie/CSRF secrets and the HTTPS public origin.
 

@@ -16,6 +16,7 @@
     "test:ci-contract": "node --test infra/portal/ci-contract.test.mjs",
     "test:infra": "node --test infra/portal/preflight.test.mjs",
     "test:lineage": "node --test infra/db/migration-lineage.test.mjs",
+    "test:golden": "pnpm --filter @mgt/domain build && node --test packages/shared/test/golden-cases.cjs",
     "test:verification": "node infra/portal/verify.cjs"
   }
 }

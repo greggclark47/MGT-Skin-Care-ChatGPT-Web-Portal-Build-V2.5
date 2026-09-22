@@ -11,6 +11,7 @@ const {OperationalWorker,InAppNotificationDelivery,operationalReadiness,writeWor
   await records.put('sessions','expired',{expires:at-1});
   await records.put('sessions','active',{expires:at+86400000});
   await records.put('rate','expired',{reset:at-1});
+  await records.put('profile_merge_pending','guest_expired',{account_id:'other',guest_actor:'guest_expired',expires_at:new Date(at-1).toISOString()});
   await records.put('ai_routing_log','old',{at:'2026-07-01T00:00:00.000Z'});
   await records.put('ai_routing_log','recent',{at:'2026-09-11T00:00:00.000Z'});
   await records.put('deletion_completions','old_proof',{completed_at:'2024-01-01T00:00:00.000Z'});
@@ -37,6 +38,7 @@ const {OperationalWorker,InAppNotificationDelivery,operationalReadiness,writeWor
   assert.equal(await records.get('sessions','expired'),undefined);
   assert.ok(await records.get('sessions','active'));
   assert.equal(await records.get('rate','expired'),undefined);
+  assert.equal(await records.get('profile_merge_pending','guest_expired'),undefined);
   assert.equal(await records.get('ai_routing_log','old'),undefined);
   assert.ok(await records.get('ai_routing_log','recent'));
   assert.equal(await records.get('deletion_completions','old_proof'),undefined);

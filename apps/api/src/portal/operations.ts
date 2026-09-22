@@ -110,6 +110,7 @@ export class OperationalWorker{
   const policies=[
    ['sessions',0,(v:any)=>Number(v?.expires)],
    ['rate',0,(v:any)=>Number(v?.reset)],
+   ['profile_merge_pending',0,(v:any)=>timestamp(v?.expires_at)],
    ['ai_routing_log',int(this.env.OPERATIONS_AI_LOG_RETENTION_DAYS,30,1,3650),(v:any)=>timestamp(v?.at||v?.created_at||v?.timestamp)],
    ['notifications',int(this.env.OPERATIONS_NOTIFICATION_RETENTION_DAYS,90,1,3650),(v:any)=>timestamp(v?.delivered_at||v?.read_at||v?.updated_at)],
    ['billing_activity',int(this.env.OPERATIONS_BILLING_RETENTION_DAYS,730,30,3650),(v:any)=>timestamp(v?.at)],
@@ -213,6 +214,7 @@ export class OperationalWorker{
  private async eraseAccount(records:Records,request:any,at:number){
   const actor=request.actor,userId=request.user_id,tombstone=`deleted_${request.request_id}`;
   const account=await records.get<any>('accounts',userId);
+  for(const item of await records.entries<any>('profile_merge_pending'))if(item.value?.account_id===userId||item.value?.guest_actor===actor)await records.remove('profile_merge_pending',item.id);
   for(const item of await records.entries<any>('guest_invitations'))if(item.value.owner_actor===actor||item.value.guest_actor===actor||item.value.email===account?.email)await records.remove('guest_invitations',item.id);
   await records.remove('guest_memberships',actor);
   for(const scope of ['profiles','profile_revisions','style_profiles','reminders','saved_retailers','carts','memberships'])await records.remove(scope,actor);

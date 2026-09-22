@@ -4,13 +4,14 @@ This guide turns the current gap analysis into an execution plan. It separates w
 
 ## Current baseline
 
-The verified local baseline is commit `13d0d2e`.
+The verified local baseline is commit `8b3b84e`.
 
 - Domain, gateway, shared client, API and web builds pass.
 - The local release gate passes compilation, web smoke, API regressions, deterministic policy cases, the production proxy journey and the public artifact scan.
 - The browser Skin Match path has been exercised through all nine questions, consented save, results and AM/PM routine tabs.
 - `/api/hub/admin/catalog-health` reports catalog approval, required-slot coverage and ingredient-rule readiness without returning customer or vendor details.
 - The operations worker expires pending guest-profile merge decisions, and the reviewed-output gate covers five approved task types with zero blocked-claim or invalid-citation failures.
+- The referral boundary, immutable image/edge contracts, expanded browser route matrix, shared shell checks, and mobile Expo contract gate are included in the local release run.
 - Local demo data is sample-only. It is not evidence of production catalog approval, provider connectivity, database isolation or deployment readiness.
 
 ## Phase 0 — change control and evidence
@@ -213,3 +214,13 @@ Commit `13d0d2e` advances the repository-side portions of the next three phases:
 - **Phase 3 — AI/output quality:** `packages/shared/test/golden-cases.json` and its test cover Skin Match, Routine Builder, Care Coach, product explanations, and operator analysis with safety, grounding, and required-phrase checks.
 
 The full local evidence run is `work/verification/2026-09-22T22-23-03-234Z/report.md`. Live database/RLS, identity provider, backup restore, model provider, and staging browser evidence remain open gates.
+
+## Phase 4–6 local continuation checkpoint
+
+Commit `8b3b84e` advances the repository-side portions of the next three phases:
+
+- **Phase 4 — commercial/referral/support:** referral-only catalog contracts continue to reject internal checkout and preserve privacy-safe external destinations.
+- **Phase 5 — deployment/edge:** the production journey keeps immutable image, same-origin edge, health/readiness, and public-surface checks in the release gate.
+- **Phase 6 — browser/mobile/accessibility:** the proxy journey now renders 28 portal routes and checks the shared MGT mark plus main landmark on each; the mobile contract gate verifies Expo identity, `EXPO_PUBLIC_API_URL`, shared Skin Match data, accessibility roles, and tap targets.
+
+The full local evidence run is `work/verification/2026-09-22T22-32-48-419Z/report.md`. Device builds, simulator interaction, staging authentication, and live deployment remain environment-dependent.

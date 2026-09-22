@@ -4,7 +4,7 @@ This guide turns the current gap analysis into an execution plan. It separates w
 
 ## Current baseline
 
-The verified local baseline is commit `8b3b84e`.
+The verified local baseline is commit `ac428e6`.
 
 - Domain, gateway, shared client, API and web builds pass.
 - The local release gate passes compilation, web smoke, API regressions, deterministic policy cases, the production proxy journey and the public artifact scan.
@@ -224,3 +224,24 @@ Commit `8b3b84e` advances the repository-side portions of the next three phases:
 - **Phase 6 — browser/mobile/accessibility:** the proxy journey now renders 28 portal routes and checks the shared MGT mark plus main landmark on each; the mobile contract gate verifies Expo identity, `EXPO_PUBLIC_API_URL`, shared Skin Match data, accessibility roles, and tap targets.
 
 The full local evidence run is `work/verification/2026-09-22T22-32-48-419Z/report.md`. Device builds, simulator interaction, staging authentication, and live deployment remain environment-dependent.
+
+## Phase 7 — local release checkpoint automation
+
+The release checkpoint command packages the local evidence needed for a repeatable handoff:
+
+```text
+pnpm release:checkpoint
+```
+
+It runs the infrastructure, Compose, migration-lineage, reviewed-output, mobile-contract, and full-verification gates in sequence, then writes a timestamped report under `work/checkpoints/<timestamp>/`. Generated web build output is cleaned before the checks so OneDrive reparse-point artifacts cannot invalidate a clean local run. Use the strict form below when a release candidate must fail closed until production configuration is present:
+
+```text
+pnpm release:checkpoint -- --require-production
+```
+
+The latest checkpoint passed every local gate. Production preflight remains blocked because `infra/portal/.env` is not present, so the release decision is intentionally `NOT READY` until staging or production configuration is supplied and validated.
+
+Latest evidence:
+
+- `work/checkpoints/2026-09-22T22-40-32-598Z/report.md`
+- `work/verification/2026-09-22T22-40-36-064Z/report.md`

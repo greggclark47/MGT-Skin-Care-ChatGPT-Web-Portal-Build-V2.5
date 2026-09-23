@@ -4,7 +4,7 @@ This guide turns the current gap analysis into an execution plan. It separates w
 
 ## Current baseline
 
-The verified local baseline is commit `ce027d4`.
+The verified local baseline is commit `3a7416a`.
 
 - Domain, gateway, shared client, API and web builds pass.
 - The local release gate passes compilation, web smoke, API regressions, deterministic policy cases, the production proxy journey and the public artifact scan.
@@ -243,5 +243,13 @@ The latest checkpoint passed every local gate. Production preflight remains bloc
 
 Latest evidence:
 
-- `work/checkpoints/2026-09-22T22-49-39-671Z/report.md`
-- `work/verification/2026-09-22T22-49-43-151Z/report.md`
+- `work/checkpoints/2026-09-23T00-08-34-590Z/report.md`
+- `work/verification/2026-09-23T00-08-39-783Z/report.md`
+
+## Phase 8 — analytics and data-point contract
+
+The analytics SDK is now a usable workspace package rather than a stub. Its public entrypoint exports the event taxonomy and batching client, stamps privacy and retention classes from the registry, rejects unknown events and malformed required properties, preserves anonymous-to-user identity stitching, and requeues failed transports in order. The package has a reproducible TypeScript build and smoke suite, and the release checkpoint runs that suite before mobile and full verification.
+
+The contract is intentionally product-safe: coach message content is never required as an event property, photo events retain the shortest class, and callers cannot override registry privacy or retention metadata.
+
+Evidence: `pnpm test:analytics` and the `analytics SDK contract` row in `work/checkpoints/2026-09-23T00-08-34-590Z/report.md`.

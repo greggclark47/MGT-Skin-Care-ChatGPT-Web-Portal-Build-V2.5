@@ -173,4 +173,4 @@ Unresolved decisions are whether to enable OpenClaw after target-environment tes
 - Release evidence: `infra/portal/RELEASE-CHECKPOINT.md`, `work/checkpoints/`, `work/verification/`
 - Readiness plan: `BUILD-READINESS-GUIDE.md`
 - Product blueprint: `SkincareAIPlatformBlueprint.md`
-- Historical Drive source: [mgt-skincare-ai-infra-migration-v2.md](https://docs.google.com/document/d/1Oz7oNwUdV38KmD7fxoTZo-G_GQr1EUHjSNNS6uza2J4/edit)
+- Drive migration document: [mgt-skincare-ai-infra-migration-v2.md](https://docs.google.com/document/d/1Oz7oNwUdV38KmD7fxoTZo-G_GQr1EUHjSNNS6uza2J4/edit)

@@ -4,7 +4,7 @@ This guide turns the current gap analysis into an execution plan. It separates w
 
 ## Current baseline
 
-The latest locally checked assistant build is commit `518274b`; the last full seven-gate local verification for its API foundation is commit `8444aa7` at `work/verification/2026-09-23T01-18-44-476Z/report.md`. The Support-page follow-up passed focused API, web, proxy-journey and browser checks.
+The latest locally checked assistant build is commit `08c9ca4`; full local verification passed at `work/verification/2026-09-23T01-51-10-062Z/report.md`. The Support-page flow was also exercised in the browser at the preceding checkpoint. Live services, full accessibility, and SME content review remain open.
 
 - Domain, gateway, shared client, API and web builds pass.
 - The local release gate passes compilation, web smoke, API regressions, deterministic policy cases, the production proxy journey and the public artifact scan.
@@ -259,3 +259,7 @@ Evidence: `pnpm test:analytics` and the `analytics SDK contract` row in `work/ch
 Commit `8444aa7` adds a server-side assistant role contract without changing existing pages or the MGT mark. `POST /api/hub/assistant` supports deterministic onboarding/customer-care navigation and payment/account/medical handoffs. Routine and product education requests require a verified account and explicit AI consent, then reuse the reviewed Coach path. The assistant does not create support tickets, confirm payments, edit routines, or enable OpenClaw.
 
 The API build, focused portal and Coach checks, and full local verification passed. Evidence: `work/verification/2026-09-23T01-18-44-476Z/report.md`. Commit `518274b` then added a customer-facing guidance panel within the existing Support layout, with next-step links and reviewed-source display. General onboarding and retailer discovery work without an AI provider; reviewed skincare responses still require sign-in, consent, and available approved knowledge. API compilation, portal integration checks, web production build, 28-page proxy journey, and focused browser checks passed. Next, complete the reviewed role/evaluation set and validate accessibility, catalog, human support ownership, and optional OpenClaw staging behavior. Production remains **NOT READY** while `infra/portal/.env` and live service gates are open.
+
+## Phase 10 — assistant policy and fallback quality
+
+Commit `08c9ca4` adds 18 engineering candidate API cases for deterministic onboarding, support, retailer, payment, privacy, medical-safety, and prompt-injection routing. They verify blocked cases do not call an AI or payment provider. Missing reviewed knowledge and rejected model excerpts now return a clear Support handoff, without creating a ticket. The cases require SME and privacy sign-off; they are not approved clinical or product content. Full local verification passed at `work/verification/2026-09-23T01-51-10-062Z/report.md`, including the production web build, proxy journey, and zero-hit public artifact scan. Production remains **NOT READY** pending approved catalog data, live services, accessibility review, and human support ownership.

@@ -1,15 +1,15 @@
 # MGT Skin Care v2 — Next-Phase Implementation Plan
 
-**Version:** 1.0
+**Version:** 1.2
 **Revision date:** 2026-09-23
-**Planning baseline:** `codex/reconcile-main-2026-09-20` at `5eeb901`
-**Status:** Plan only; no application or infrastructure changes are included in this revision.
+**Planning baseline:** `codex/reconcile-main-2026-09-20`; Phase A checkpoints `8444aa7` and `518274b`
+**Status:** Phase A API and Support-page guidance locally verified; production remains **NOT READY**.
 
 ## 1. Purpose and decision boundary
 
 This plan defines the next work around the verified MGT Skin Care v2 referral portal. It uses [`mgt-skincare-ai-infra-migration-v2.md`](mgt-skincare-ai-infra-migration-v2.md), [`SkincareAIPlatformBlueprint.md`](SkincareAIPlatformBlueprint.md), `CURRENT-SCOPE.md`, `BUILD-READINESS-GUIDE.md`, `business/OPERATING-MODEL-AND-GTM.md`, the AI task registry, and the latest local release checkpoint.
 
-The current product boundary remains external referral. MGT does not collect a shopper's retailer purchase amount, create a retailer receipt, fulfill products, or handle retailer refunds. Existing checkout and commerce modules are retained behind server-side blocks. Subscription billing scaffolding is separate, disabled by default, and does not make product checkout active. Nothing in this plan enables a payment provider, creates a live campaign, turns on OpenClaw, or changes the logo, UX/UI, routes, APIs, tests, or configuration.
+The current product boundary remains external referral. MGT does not collect a shopper's retailer purchase amount, create a retailer receipt, fulfill products, or handle retailer refunds. Existing checkout and commerce modules are retained behind server-side blocks. Subscription billing scaffolding is separate, disabled by default, and does not make product checkout active. The Phase A build adds a bounded server-side assistant route, integration coverage, and a guidance panel within the existing Support page. It does not enable a payment provider, create a live campaign, turn on OpenClaw, or change the logo or shared page layout.
 
 Use these status labels in implementation and reporting:
 
@@ -24,8 +24,8 @@ Use these status labels in implementation and reporting:
 | Area | Verified state | Boundary for next phase |
 |---|---|---|
 | Product | Skin-match, routine, coach, learning, saved retailers, support and operations journeys are present in the local portal. The shop links to six independent external storefronts. | Keep the referral journey and established brand/layout stable. Retail purchase support remains with each retailer. |
-| AI | The gateway has typed tasks, local-first routing, hosted entitlement checks, budget reservations, response validation and telemetry. The registry routes local routine tasks through Ollama, DeepSeek local fallback, optional OpenClaw, and in some tasks an entitled low-effort GPT-5.6 Sol fallback. | Do not add a public model selector or promise model availability. OpenClaw is disabled until the target runtime is verified. |
-| Customer support | Portal support requests and operator replies exist. `support_draft` and `coach_answer` are registered task types. | AI may draft and explain; it must not impersonate staff, resolve refunds, or take irreversible account/payment actions. Provide a human support path. |
+| AI | The gateway has typed tasks, local-first routing, hosted entitlement checks, budget reservations, response validation and telemetry. The new assistant route sends only signed-in, consented routine/product questions to the existing reviewed Coach path. | Do not add a public model selector or promise model availability. OpenClaw remains disabled until the target runtime is verified. |
+| Customer support | Portal support requests and operator replies exist. The new Support-page panel uses deterministic onboarding, support, account, retailer and payment handoffs without sending a message or creating a ticket. | AI may explain reviewed skincare content; it must not impersonate staff, confirm charges, resolve refunds, or take irreversible account/payment actions. Live support delivery remains planned. |
 | Payments | Local tests cover billing/subscription behavior with a mocked Stripe client. Subscriptions are gated by `SUBSCRIPTIONS_ENABLED`, approved terms, prices, Stripe settings and signed webhooks. Product checkout is blocked under the current external-referral decision. | Distinguish subscription status/activity from a payment receipt. Retailer receipts and confirmations belong to the retailer. No payment collection until a separate business decision changes scope. |
 | GTM | An external-retailer operating model and GTM plan exists. Audience and positioning are hypotheses; no active partner contract, fee schedule, attribution or performance baseline is documented. | Start with low-cost learning and trust measures. Paid budgets, affiliate claims and profit forecasts require real margin and attribution evidence. |
 | Release | The 2026-09-23 checkpoint reports all seven local gates passed. Production is **NOT READY** because `infra/portal/.env` is absent and live service checks remain open. | Local pass status does not establish production readiness. |
@@ -46,6 +46,10 @@ Use these status labels in implementation and reporting:
 **OpenClaw qualification gate:** keep `OPENCLAW_ENABLED=false`; validate the approved immutable runtime, native Ollama `/api/chat` compatibility, model synchronization, tool allowlist, network isolation, timeouts, prompt-injection handling, content boundaries, data retention, redaction, fallback behavior and cost/latency. Begin with a no-tools, read-only assistant. Agent tools, external actions and customer-facing rollout require separate scoped approval and a staging review.
 
 **Exit evidence:** role/task map, reviewed policy cases, local adapter and fallback report, privacy-safe telemetry review, and a decision record for enabling OpenClaw in a non-production staging environment.
+
+**Phase A checkpoint:** Commit `8444aa7` adds `POST /api/hub/assistant` with explicit customer-care, onboarding, routine-guidance and product/referral roles. Safety, account, payment and retailer questions receive deterministic guidance or a handoff path without a provider or payment call. Routine/product education uses the existing reviewed Coach only after sign-in and explicit AI consent, with the existing rate, entitlement, budget and source controls. The API build, focused portal/Coach checks, and full local verification passed; evidence is `work/verification/2026-09-23T01-18-44-476Z/report.md`. This is an API foundation; it does not send support messages, expose an assistant in the current UI, enable OpenClaw, or validate live providers.
+
+**Support-page checkpoint:** Commit `518274b` adds a small guidance panel to `/support` using existing MGT components and the unchanged logo. It shows the server's next step and reviewed citations, distinguishes guidance from a saved support request, and permits deterministic retailer directions without an AI account or consent. A general “How do I get started?” question now routes to onboarding guidance. API compilation, portal integration checks, web production build, 28-page proxy journey, and browser checks of onboarding and retailer flows passed. The build still does not create tickets from guidance, enable OpenClaw, send external support messages, or verify live providers.
 
 ### Phase B — onboarding, care and human support (High; repository-ready, delivery environment-dependent)
 
@@ -136,3 +140,12 @@ Required implementation controls if subscription confirmations are approved: one
 6. Which Supabase, hosting, backup and provider accounts will be used for staging and production.
 
 Until these decisions and dependencies are evidenced, the plan remains planning material and the production release remains **NOT READY**.
+
+## 7. Improved next build order
+
+1. **Critical — reviewed answers and handoff quality:** add human-reviewed cases for each assistant role, payment ambiguity, missing sources, adverse reactions, account/privacy requests, and prompt injection. Keep the deterministic handoff before model routing and verify no provider call on blocked cases.
+2. **High — experience and accessibility:** extend the locally implemented Support-page guidance with reviewed onboarding/help cases, keyboard and screen-reader checks, clear empty/error states, and a direct entry from the onboarding journey if user testing warrants it. Keep the logo and page hierarchy intact.
+3. **High — support operations:** define ticket ownership, escalation reason, response state and safe operator visibility. Configure external delivery only after a provider and owner are chosen; record delivery outcome rather than implying a message was sent.
+4. **Critical — approved knowledge and runtime:** complete catalog/SME source coverage; run the existing gateway and optional OpenClaw path in staging with model inventory, privacy, timeout, schema, tool isolation, latency and rollback evidence. Keep `OPENCLAW_ENABLED=false` until the qualification decision.
+5. **High — measurement:** instrument consent-aware assistant entry, helpful next-step selection and handoff completion through the analytics registry without storing message content. Establish a baseline before paid marketing tests.
+6. **Blocked until business decision — payments and campaigns:** retain retailer payment/receipt boundaries. Specify any MGT subscription confirmation only after the offer, provider, signed events, terms and support owner are approved. Cap paid or affiliate experiments only after agreements and contribution metrics are available.

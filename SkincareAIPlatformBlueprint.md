@@ -1,6 +1,6 @@
 # Skincare AI Platform Blueprint
 
-**Version:** 2.1.1-planning
+**Version:** 2.1.2-planning
 **Revision date:** 2026-09-23  
 **Status:** Current implementation and production-readiness blueprint  
 **Product:** MGT Skin Care v2
@@ -183,7 +183,9 @@ The detailed execution sequence is in [`NEXT-PHASE-IMPLEMENTATION-PLAN.md`](NEXT
 
 Payment records remain separated by merchant. MGT does not issue confirmations or receipts for external retailer purchases. MGT product checkout remains blocked. Subscription code is separately gated and locally tested with a mocked provider; prices, benefits, terms, and live provider behavior are unverified. Future subscription confirmation must use signed provider events and provider-issued receipts or invoices, with owner-only status and sanitized operator visibility.
 
-GTM work starts with consent-aware measurement and low-cost owned/organic learning. Affiliate attribution, partner claims, sponsored placement, and paid campaigns require written terms, approved disclosures, baseline economics, and a budget cap. Financial optimization must retain recommendation quality, safety, accessibility, and privacy controls. These items are planned and do not change the current product or release status.
+GTM work starts with consent-aware measurement and low-cost owned/organic learning. Affiliate attribution, partner claims, sponsored placement, and paid campaigns require written terms, approved disclosures, baseline economics, and a budget cap. Financial optimization must retain recommendation quality, safety, accessibility, and privacy controls. These items are planned and do not change the current release status.
+
+The first assistant role contract is locally implemented at commit `8444aa7`. `POST /api/hub/assistant` returns deterministic onboarding, customer-care, account and payment guidance or a next-step handoff. Signed-in, consented routine/product questions reuse the reviewed Coach path. The API build, focused portal/Coach checks and full local verification passed at `work/verification/2026-09-23T01-18-44-476Z/report.md`. Commit `518274b` places a guidance panel in the existing Support page, displays next-step links and reviewed citations, and keeps general onboarding and retailer directions available without an AI provider. API compilation, portal checks, web production build, 28-page proxy journey, and focused browser checks passed. External support delivery and OpenClaw activation remain open.
 
 ## 14. Source map
 

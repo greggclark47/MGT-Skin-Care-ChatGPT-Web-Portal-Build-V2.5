@@ -2,7 +2,7 @@
 
 **Revision date:** 2026-09-23  
 **Repository branch:** `codex/reconcile-main-2026-09-20`  
-**Repository documentation commit:** `f6bddb1` before this rebuild
+**Resulting documentation commit:** `c28f75c`
 
 ## Deliverables
 
@@ -14,7 +14,8 @@
 
 - Current GitHub branch: [MGT Skin Care ChatGPT Web Portal Build V2.5](https://github.com/greggclark47/MGT-Skin-Care-ChatGPT-Web-Portal-Build-V2.5/tree/codex/reconcile-main-2026-09-20), verified at commit `f6bddb1`.
 - Connected Drive migration document: [mgt-skincare-ai-infra-migration-v2.md](https://docs.google.com/document/d/1Oz7oNwUdV38KmD7fxoTZo-G_GQr1EUHjSNNS6uza2J4/edit).
-- Connected Drive blueprint: [SkincareAIPlatformBlueprint](https://docs.google.com/document/d/1Ya7XweYOuCEasfXsEo0Z34gBxsXyKKvaDCnJyQSTcfk/edit).
+- Connected Drive historical blueprint: [SkincareAIPlatformBlueprint (Historical source - superseded 2026-09-23)](https://docs.google.com/document/d/1Ya7XweYOuCEasfXsEo0Z34gBxsXyKKvaDCnJyQSTcfk/edit).
+- Rebuilt Drive blueprint: [SkincareAIPlatformBlueprint](https://docs.google.com/document/d/15HYTlF-t48-22MKgvH1MTzD6jdV6HRSUxbHKNIt_z84/edit).
 - Repository scope and architecture: `CURRENT-SCOPE.md`, `infra/portal/README.md`, `BUILD-READINESS-GUIDE.md`.
 - Timestamped evidence: `infra/portal/RELEASE-CHECKPOINT.md`, `work/checkpoints/2026-09-23T00-08-34-590Z/report.md`, and `work/verification/2026-09-23T00-08-39-783Z/report.md`.
 - Active AI and analytics implementation: `packages/ai-gateway/src/task-registry.ts`, gateway/adapters, and `packages/analytics-sdk`.

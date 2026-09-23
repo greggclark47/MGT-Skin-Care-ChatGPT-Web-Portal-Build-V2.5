@@ -1,8 +1,8 @@
 # MGT Skin Care v2 — Next-Phase Implementation Plan
 
-**Version:** 1.0  
-**Revision date:** 2026-09-23  
-**Planning baseline:** `codex/reconcile-main-2026-09-20` at `5eeb901`  
+**Version:** 1.0
+**Revision date:** 2026-09-23
+**Planning baseline:** `codex/reconcile-main-2026-09-20` at `5eeb901`
 **Status:** Plan only; no application or infrastructure changes are included in this revision.
 
 ## 1. Purpose and decision boundary

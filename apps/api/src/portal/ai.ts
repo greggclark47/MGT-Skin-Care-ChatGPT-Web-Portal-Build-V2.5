@@ -104,9 +104,11 @@ export function gatewayFromEnv(env:NodeJS.ProcessEnv,store:Store,logSink:Routing
 }
 
 export function screenInput(message:string):string|null{
- if(/trouble breathing|cannot breathe|can't breathe|swollen (tongue|throat)|throat swelling/i.test(message))return 'This may need urgent medical help. Contact local emergency services now. This portal cannot assess or treat symptoms.';
- if(/diagnos|prescri|eczema|rosacea|cancer|infect|pregnan|breastfeed|bleeding|blister|burning|severe pain|allergic|allergy|rash/i.test(message))return 'A qualified clinician or pharmacist should help with that question. I can explain cosmetic routines, but cannot diagnose symptoms, assess allergies, or advise on treatments or pregnancy safety.';
- if(/ignore.{0,30}(instruction|rule)|system prompt|developer message|api.?key|jailbreak/i.test(message))return 'I can help with the skincare topics in the reviewed library. Please ask a cosmetic skincare question.';
+ // Urgent symptom wording follows NHS anaphylaxis guidance; the portal does not diagnose.
+ // https://www.nhs.uk/conditions/anaphylaxis/
+ if(/trouble breathing|difficulty breathing|shortness of breath|cannot breathe|can't breathe|wheezing|gasping for air|difficulty swallowing|struggling to swallow|throat feels tight|swollen (lips?|mouth|tongue|throat)|(?:lips?|mouth|throat|tongue) (?:are |is )?(?:suddenly )?(?:swollen|swelling)/i.test(message))return 'This may need urgent medical help. Contact local emergency services now. This portal cannot assess or treat symptoms.';
+ if(/diagnos|prescri|eczema|rosacea|cancer|infect|pregnan|breastfeed|bleeding|blister|burning|severe pain|allergic|allergy|rash|\b(?:hives|stinging|swelling|skin reaction|adverse reaction)\b|peeling after|irritation after|reaction after/i.test(message))return 'A qualified clinician or pharmacist should help with that question. I can explain cosmetic routines, but cannot diagnose symptoms, assess allergies, or advise on treatments or pregnancy safety.';
+ if(/ignore.{0,30}(instruction|rule)|system prompt|developer message|api.?key|jailbreak|hidden instructions|reveal.{0,30}instructions|override.{0,30}rules/i.test(message))return 'I can help with the skincare topics in the reviewed library. Please ask a cosmetic skincare question.';
  return null;
 }
 

@@ -221,8 +221,13 @@ export async function createPortal(options:PortalOptions){
   await db.tx(r=>rate(r,'assistant:'+req.actor,30,3600000));
   const route=routeAssistantRequest(req.body.role,message);
   if(route.kind!=='reviewed_ai')return res.json(route);
-  const answer=await reviewedAnswer(req,message);
-  res.json({...answer,role:route.role,category:route.category,next_step:answer.kind==='no_match'?{label:'Open Portal Support',path:'/support'}:null});
+  try{
+   const answer=await reviewedAnswer(req,message);
+   res.json({...answer,role:route.role,category:route.category,next_step:answer.kind==='no_match'?{label:'Open Portal Support',path:'/support'}:null});
+  }catch(error){
+   if(!(error instanceof Fault)||!['knowledge_pending','ai_not_configured','ai_unavailable'].includes(error.code))throw error;
+   res.json({role:route.role,kind:'handoff',category:'reviewed_unavailable',text:'A reviewed skincare answer is unavailable right now. Save a Portal Support request if you need help; this guidance has not contacted staff.',citations:[],next_step:{label:'Open Portal Support',path:'/support'}});
+  }
  });
  post('/admin/ai/analyze',async(req,res)=>{
   const operator=role(req,['superadmin','compliance']);

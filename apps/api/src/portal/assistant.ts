@@ -22,11 +22,11 @@ export function routeAssistantRequest(roleInput:unknown,message:string):Guidance
 
  if(/\b(subscription|membership|billing plan|mgt plan)\b/i.test(message))
   return guidance(role,'handoff','mgt_billing','I cannot verify an MGT charge or payment here. Review Plans & Billing for your account status. If it differs from your provider record, save a Portal Support request.',{label:'Review Plans & Billing',path:'/membership'});
- if(/\b(where (can|do) i (buy|shop|purchase)|shop for|which (store|retailer)|find (a|the) retailer)\b/i.test(message))
-  return guidance(role,'guidance','retailer_discovery','Explore the independent retailer links in Shop. Each retailer handles its own checkout, delivery, and returns; a listing does not establish an MGT partnership.',{label:'Explore retailers',path:'/shop'});
- if(/\b(payment|pay|paid|charg(?:e|ed|es)|card|transaction|receipt|invoice|refund|shipping|delivery|tracking|checkout|purchas(?:e|ed|es)|my order|order status|order confirmation|return (an? |my |the )?(order|item|product))\b/i.test(message))
+ if(/\b(payment|pay|paid|charg(?:e|ed|es)|card|transaction|receipt|invoice|refund|shipping|delivery|tracking|checkout|purchased|bought|purchase confirmation|my order|order status|order confirmation|return (an? |my |the )?(order|item|product))\b/i.test(message))
   return guidance(role,'handoff','payment_help','I cannot verify a payment here. For a retailer purchase, use its confirmation and contact that retailer for charges, shipping, returns, or refunds. For an MGT plan, review Plans & Billing or save a Portal Support request.',{label:'Retailer purchase help',path:'/orders'});
- if(/\b(sign[ -]?in|log[ -]?in|one[ -]?time code|verification code|delete my account|account deletion|export my data|data export|privacy request|merge (my )?profile)\b/i.test(message))
+ if(/\b(where (can|do) i (buy|shop|purchase)|shop for|which (store|retailer)|find (a|the) retailer|buy|purchase)\b/i.test(message))
+  return guidance(role,'guidance','retailer_discovery','Explore the independent retailer links in Shop. Each retailer handles its own checkout, delivery, and returns; a listing does not establish an MGT partnership.',{label:'Explore retailers',path:'/shop'});
+ if(/\b(sign[ -]?in|log[ -]?in|one[ -]?time code|verification code|delete my account|account deletion|export my data|data export|privacy request|merge (my )?profile|erase (my )?(data|account)|delete (my )?(data|(?:skin )?profile)|remove (my )?(data|(?:skin )?profile)|personal data|privacy settings|forget me)\b/i.test(message))
   return guidance(role,'handoff','account_help','Use Account to manage sign-in, data export, and deletion. If you need help with a portal record, save a Portal Support request; this assistant cannot change account data.',{label:'Open Account',path:'/account'});
 
  if(/\b(get started|first steps|start using|new here|onboard(?:ing)?)\b/i.test(message))

@@ -1,5 +1,5 @@
 'use client';
-import React,{useState} from 'react';
+import React,{useEffect,useRef,useState} from 'react';
 import Link from 'next/link';
 import {hub,useHub} from '../../lib/hub';
 import {AppFrame,LoadState} from '../../components/HubFrames';
@@ -15,8 +15,11 @@ export default function Support(){
  const [subject,setSubject]=useState(''),[message,setMessage]=useState(''),[feedback,setFeedback]=useState(''),[error,setError]=useState(''),[busy,setBusy]=useState(false);
  const [role,setRole]=useState<GuideRole>('customer_care'),[question,setQuestion]=useState(''),[consent,setConsent]=useState(false);
  const [guide,setGuide]=useState<GuideResult|null>(null),[guideError,setGuideError]=useState(''),[guideBusy,setGuideBusy]=useState(false);
+ const guideResultRef=useRef<HTMLDivElement>(null),guideErrorRef=useRef<HTMLParagraphElement>(null),requestFormRef=useRef<HTMLFormElement>(null);
  const reviewed=role==='routine_guidance'||role==='product_referral';
  const reviewedReady=!!session.data?.account&&session.data?.ai_configured===true;
+
+ useEffect(()=>{if(guideError)guideErrorRef.current?.focus();else if(guide)guideResultRef.current?.focus();},[guide,guideError]);
 
  async function askGuide(e:React.FormEvent){
   e.preventDefault();if(guideBusy||!question.trim())return;
@@ -41,7 +44,7 @@ export default function Support(){
   <section className="panel stack" aria-labelledby="guide-heading">
    <span className="eyebrow">QUICK PORTAL GUIDANCE</span><h2 id="guide-heading">Find your next step</h2>
    <p>Get directions for using the portal. A suggestion here does not submit a support request or confirm a retailer payment.</p>
-   <form className="stack" onSubmit={askGuide}>
+   <form className="stack" onSubmit={askGuide} aria-busy={guideBusy}>
     <label className="field">Help topic
      <select value={role} disabled={guideBusy} onChange={e=>{setRole(e.target.value as GuideRole);setGuide(null);setGuideError('');}}>{roleOptions.map(([value,label])=><option key={value} value={value}>{label}</option>)}</select>
     </label>
@@ -53,15 +56,15 @@ export default function Support(){
      {!session.loading&&!reviewedReady&&<p className="notice">Retailer and payment directions remain available. For reviewed skincare answers, <Link className="text-link" href="/account">sign in →</Link> and use the analysis service when it is available.</p>}
      <label className="check-label"><input type="checkbox" checked={consent} disabled={guideBusy} onChange={e=>setConsent(e.target.checked)}/>Allow the platform analysis service to process this question.</label>
     </>}
-    {guideError&&<p className="notice error" role="alert">{guideError}</p>}
+    {guideError&&<p ref={guideErrorRef} tabIndex={-1} className="notice error" role="alert">{guideError}</p>}
     <button className="button" disabled={guideBusy||!question.trim()}>{guideBusy?'Finding guidance…':'Find guidance'}</button>
    </form>
-   {guide&&<div className="notice" role="status"><p>{guide.text}</p>{guide.next_step&&<Link className="text-link" href={guide.next_step.path==='/support'?'#portal-request':guide.next_step.path}>{guide.next_step.label} →</Link>}{!!guide.citations?.length&&<div><h3>Reviewed sources</h3>{guide.citations.map(c=><blockquote key={c.knowledge_id}><p>{c.text}</p><a className="text-link" href={c.source_url} target="_blank" rel="noopener noreferrer">{c.title} ↗</a></blockquote>)}</div>}</div>}
+   {guide&&<div ref={guideResultRef} tabIndex={-1} className="notice" role="status"><p>{guide.text}</p>{guide.next_step&&(guide.next_step.path==='/support'?<a className="text-link" href="#portal-request" onClick={e=>{e.preventDefault();requestFormRef.current?.focus();}}>{guide.next_step.label} →</a>:<Link className="text-link" href={guide.next_step.path}>{guide.next_step.label} →</Link>)}{!!guide.citations?.length&&<div><h3>Reviewed sources</h3>{guide.citations.map(c=><blockquote key={c.knowledge_id}><p>{c.text}</p><a className="text-link" href={c.source_url} target="_blank" rel="noopener noreferrer">{c.title} ↗</a></blockquote>)}</div>}</div>}
   </section>
 
   {feedback&&<p className="notice success" role="status">{feedback}</p>}{error&&<p className="notice error" role="alert">{error}</p>}
-  <form id="portal-request" className="panel stack support-form" onSubmit={submit}>
-   <span className="eyebrow">NEW PORTAL REQUEST</span><h2>How can we help?</h2>
+  <form ref={requestFormRef} id="portal-request" tabIndex={-1} aria-labelledby="portal-request-heading" className="panel stack support-form" onSubmit={submit}>
+   <span className="eyebrow">NEW PORTAL REQUEST</span><h2 id="portal-request-heading">How can we help?</h2>
    <label className="field">Subject<input required maxLength={150} disabled={busy} value={subject} placeholder="A short summary of the issue" onChange={e=>setSubject(e.target.value)}/></label>
    <label className="field">Details<textarea required maxLength={4000} disabled={busy} value={message} placeholder="Describe what happened and which portal page you were using." aria-describedby="support-count" onChange={e=>setMessage(e.target.value)}/></label>
    <span className="muted" id="support-count">{message.length} / 4,000 characters</span>

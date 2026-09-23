@@ -21,10 +21,16 @@ async function main() {
   {
     const t = new CapturingTransport();
     const c = new AnalyticsClient({ anonymousId: 'anon-1', transport: t });
+    const invalidName = c.track(null as unknown as string);
+    check('invalid event name rejected', invalidName.accepted === false && invalidName.reason === 'invalid_event_name', invalidName);
+    const invalidProperties = c.track('routine.viewed', null as unknown as Record<string, unknown>);
+    check('invalid property shape rejected', invalidProperties.accepted === false && invalidProperties.reason === 'invalid_properties', invalidProperties);
     const unknown = c.track('made.up.event');
     check('unknown event rejected', unknown.accepted === false && unknown.reason === 'unknown_event:made.up.event', unknown);
     const missing = c.track('purchase.completed', { order_id: 'o1' }); // total_cents missing
     check('missing required property rejected', missing.accepted === false && missing.reason === 'missing_property:total_cents', missing);
+    const undefinedRequired = c.track('purchase.completed', { order_id: 'o1', total_cents: undefined });
+    check('undefined required property rejected', undefinedRequired.accepted === false && undefinedRequired.reason === 'missing_property:total_cents', undefinedRequired);
     const good = c.track('purchase.completed', { order_id: 'o1', total_cents: 4500 });
     check('valid event accepted', good.accepted === true);
   }

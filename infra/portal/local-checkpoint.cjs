@@ -15,6 +15,7 @@ const checks=[
  ['compose and image contracts',['test:compose-contract']],
  ['migration lineage contracts',['test:lineage']],
  ['reviewed output golden set',['test:golden']],
+ ['analytics SDK contract',['test:analytics']],
  ['mobile contract gate',['test:mobile-contract']],
  ['full local verification',['test:verification']]
 ];

@@ -1,6 +1,6 @@
 # Skincare AI Platform Blueprint
 
-**Version:** 2.1.0-current  
+**Version:** 2.1.1-planning
 **Revision date:** 2026-09-23  
 **Status:** Current implementation and production-readiness blueprint  
 **Product:** MGT Skin Care v2
@@ -176,3 +176,20 @@ References:
 - [Current scope](CURRENT-SCOPE.md)
 - [Portal infrastructure](infra/portal/README.md)
 - [Release checkpoints](infra/portal/RELEASE-CHECKPOINT.md)
+
+## 13. Next implementation phase
+
+The detailed execution sequence is in [`NEXT-PHASE-IMPLEMENTATION-PLAN.md`](NEXT-PHASE-IMPLEMENTATION-PLAN.md). It extends existing journeys with constrained customer-care, onboarding, routine-guidance, and product/referral education roles. The gateway remains the model-routing boundary. OpenClaw is optional and stays disabled until its runtime and tool boundaries pass qualification. Any new customer-facing flow must preserve explicit consent, approved-source grounding, deterministic routine changes, safe escalation, and human handoff.
+
+Payment records remain separated by merchant. MGT does not issue confirmations or receipts for external retailer purchases. MGT product checkout remains blocked. Subscription code is separately gated and locally tested with a mocked provider; prices, benefits, terms, and live provider behavior are unverified. Future subscription confirmation must use signed provider events and provider-issued receipts or invoices, with owner-only status and sanitized operator visibility.
+
+GTM work starts with consent-aware measurement and low-cost owned/organic learning. Affiliate attribution, partner claims, sponsored placement, and paid campaigns require written terms, approved disclosures, baseline economics, and a budget cap. Financial optimization must retain recommendation quality, safety, accessibility, and privacy controls. These items are planned and do not change the current product or release status.
+
+## 14. Source map
+
+- Implementation plan: [`NEXT-PHASE-IMPLEMENTATION-PLAN.md`](NEXT-PHASE-IMPLEMENTATION-PLAN.md)
+- Current scope: `CURRENT-SCOPE.md`
+- Business/GTM assumptions: `business/OPERATING-MODEL-AND-GTM.md`
+- Billing and subscription setup: `infra/portal/README.md`
+- OpenClaw and hosted model routing: `packages/ai-gateway/src/task-registry.ts`, `packages/ai-gateway/src/runtime.ts`
+- Release gates and evidence: `infra/portal/RELEASE-CHECKPOINT.md`, `BUILD-READINESS-GUIDE.md`

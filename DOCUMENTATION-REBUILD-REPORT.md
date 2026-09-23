@@ -48,3 +48,11 @@ No application, infrastructure, brand, route, API, test, or configuration files 
 ## Remaining gaps
 
 Production still requires environment configuration, live Supabase/Postgres/RLS and identity validation, backup restoration, model/provider availability and cost reconciliation, immutable container startup, approved catalog data, browser/WCAG/device checks, legal/vendor review, and a new release checkpoint. These are listed explicitly in both rebuilt documents.
+
+## Next-phase planning update — 2026-09-23
+
+Reviewed the rebuilt migration and blueprint against `CURRENT-SCOPE.md`, `BUILD-READINESS-GUIDE.md`, `infra/portal/README.md`, the active AI registry/runtime, billing and subscription code, GTM operating model, and the latest release checkpoint. Added `NEXT-PHASE-IMPLEMENTATION-PLAN.md` and aligned both local canonical documents and their existing Google Docs with its status labels and boundaries.
+
+The reconciliation distinguishes disabled, mocked-test subscription scaffolding from live payment capability; retailer purchases, confirmations and receipts remain with the external merchant, while MGT product checkout remains blocked. OpenClaw remains disabled pending qualification. GTM opportunities are hypotheses with no observed campaign baseline, contracted referral rates, or verified profit data. The latest seven-gate local pass does not change production status: it remains **NOT READY** because environment configuration and live service evidence are absent.
+
+No application, infrastructure, brand, route, API, test, or runtime configuration was changed. Verification consisted of repository/source reconciliation, Google Docs readback, diff review, and whitespace checks; no test suite was run because this update is documentation-only.

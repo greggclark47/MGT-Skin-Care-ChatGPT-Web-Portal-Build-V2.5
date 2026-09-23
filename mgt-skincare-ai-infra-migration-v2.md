@@ -1,10 +1,10 @@
 # MGT Skin Care — AI/LLM Infrastructure Migration v2
 
-**Version:** 2.1.0-current  
+**Version:** 2.1.1-planning
 **Revision date:** 2026-09-23  
 **Status:** Canonical documentation for the verified repository branch  
 **Repository branch:** `codex/reconcile-main-2026-09-20`  
-**Repository baseline:** `f6bddb1` (documentation revision); executable baseline `3a7416a`
+**Repository baseline:** `5eeb901` (documentation source review); executable baseline `3a7416a`
 
 This document reconciles the existing Drive migration document with the current MGT Skin Care v2 repository, local release checkpoints, and the current product boundary. It is the implementation-oriented source of truth for migration planning. It does not change application code, credentials, infrastructure state, branding, routes, or user experience.
 
@@ -45,7 +45,7 @@ In scope:
 
 Out of scope for this migration:
 
-- Direct product checkout, cart, fulfillment, refunds, payouts, Connect onboarding, or affiliate tracking.
+- Enabling direct product checkout, cart, fulfillment, refunds, payouts, Connect onboarding, or affiliate tracking. Legacy paths remain gated. Subscription billing scaffolding is separate, disabled by default, and does not establish an approved or live consumer billing offer.
 - Diagnostic or medical decision making.
 - A production claim for hosted model access, live databases, Docker startup, deployment, or browser/WCAG certification.
 - Silent migration of stale Gemini, Anthropic, or legacy OpenAI model claims into the active build.
@@ -165,12 +165,21 @@ The historical Drive blueprint also describes direct commerce, broad health/well
 
 Unresolved decisions are whether to enable OpenClaw after target-environment testing, which approved catalog and matching dataset will be used, which hosted model entitlements and provider spending limits will be purchased, and which deployment/backup/identity providers will be approved. No credentials or external validation are implied by this document.
 
-## 12. Source map
+## 12. Next implementation phase
+
+The detailed execution sequence is [`NEXT-PHASE-IMPLEMENTATION-PLAN.md`](NEXT-PHASE-IMPLEMENTATION-PLAN.md). It scopes customer-care, onboarding, routine-guidance, and product/referral education roles around existing journeys and the gateway. OpenClaw remains disabled until runtime, safety, privacy, latency, and failure behavior pass staging qualification. Agents may explain or draft; routine mutations remain deterministic and customer-confirmed. Agents cannot claim a retailer payment succeeded or take payment, refund, account, or medical actions.
+
+Payment status is separated by merchant: retailer confirmations and receipts belong to the retailer; MGT product checkout remains blocked; subscription billing has mocked local test coverage but remains disabled until prices, benefits, terms, and a provider environment are approved. A signed provider event, not a browser return page, is the basis for a future subscription confirmation. The GTM plan starts with consented, measurable owned/organic experiments and gates paid campaigns, affiliate claims, and profit reporting on measured baselines, written terms, and approved spend.
+
+These are planned requirements, not newly shipped capabilities. The latest local checkpoint passed seven gates, while production remains **NOT READY** because `infra/portal/.env` is absent and live data, provider, backup, container, catalog, and browser/accessibility gates remain open.
+
+## 13. Source map
 
 - AI registry and gateway: `packages/ai-gateway/src/task-registry.ts`, `packages/ai-gateway/src/gateway.ts`, `packages/ai-gateway/src/adapters/`
 - Analytics contract: `packages/analytics-sdk/src/index.ts`, `packages/analytics-sdk/package.json`
 - Portal scope: `CURRENT-SCOPE.md`, `infra/portal/README.md`
 - Release evidence: `infra/portal/RELEASE-CHECKPOINT.md`, `work/checkpoints/`, `work/verification/`
 - Readiness plan: `BUILD-READINESS-GUIDE.md`
+- Next implementation phase: `NEXT-PHASE-IMPLEMENTATION-PLAN.md`
 - Product blueprint: `SkincareAIPlatformBlueprint.md`
 - Drive migration document: [mgt-skincare-ai-infra-migration-v2.md](https://docs.google.com/document/d/1Oz7oNwUdV38KmD7fxoTZo-G_GQr1EUHjSNNS6uza2J4/edit)

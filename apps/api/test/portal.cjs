@@ -8,6 +8,7 @@ const {createPortal}=require('../dist/portal/server');const {LocalStore}=require
  try{
  const a=client(),b=client();const session=await a('/session');await b('/session');assert.equal(session.status,200);assert.equal(session.data.commerce.mode,'external_referral');assert.equal(session.data.payments_configured,false);
  const onboard=await a('/assistant',{role:'onboarding',message:'How do I get started?'});assert.equal(onboard.status,200);assert.equal(onboard.data.kind,'guidance');assert.equal(onboard.data.next_step.path,'/skin-match');
+ const generalOnboard=await a('/assistant',{role:'customer_care',message:'How do I get started?'});assert.equal(generalOnboard.status,200);assert.equal(generalOnboard.data.category,'onboarding');assert.equal(generalOnboard.data.next_step.path,'/skin-match');
  const payment=await a('/assistant',{role:'routine_guidance',message:'Was my retailer payment charged?'});assert.equal(payment.status,200);assert.equal(payment.data.kind,'handoff');assert.equal(payment.data.next_step.path,'/orders');assert.equal(assistantCalls,0);assert.equal(paymentCalls,0);
  const care=await a('/assistant',{role:'customer_care',message:'I need help with the portal'});assert.equal(care.status,200);assert.equal(care.data.next_step.path,'/support');assert.equal(assistantCalls,0);
  const medical=await a('/assistant',{role:'product_referral',message:'Can you diagnose this rash?'});assert.equal(medical.status,200);assert.equal(medical.data.category,'safety');assert.equal(assistantCalls,0);

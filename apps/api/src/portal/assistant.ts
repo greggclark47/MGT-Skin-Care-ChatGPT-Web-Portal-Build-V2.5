@@ -9,6 +9,8 @@ type Reviewed={role:AssistantRole;kind:'reviewed_ai';category:'routine'|'product
 
 const guidance=(role:AssistantRole,kind:Guidance['kind'],category:string,text:string,next_step:NextStep):Guidance=>
  ({role,kind,category,text,citations:[],next_step});
+const onboardingText='Start with Skin Match, review your result and routine, then explore and save independent retailers. You can manage your saved profile and privacy choices in Account.';
+const onboarding=(role:AssistantRole)=>guidance(role,'guidance','onboarding',onboardingText,{label:'Start Skin Match',path:'/skin-match'});
 
 // Caller-selected roles only choose a bounded lane. The message cannot grant tools, alter
 // entitlements, perform a transaction, or choose a provider. Risky topics take precedence.
@@ -27,7 +29,10 @@ export function routeAssistantRequest(roleInput:unknown,message:string):Guidance
  if(/\b(sign[ -]?in|log[ -]?in|one[ -]?time code|verification code|delete my account|account deletion|export my data|data export|privacy request|merge (my )?profile)\b/i.test(message))
   return guidance(role,'handoff','account_help','Use Account to manage sign-in, data export, and deletion. If you need help with a portal record, save a Portal Support request; this assistant cannot change account data.',{label:'Open Account',path:'/account'});
 
- if(role==='onboarding')return guidance(role,'guidance','onboarding','Start with Skin Match, review your result and routine, then explore and save independent retailers. You can manage your saved profile and privacy choices in Account.',{label:'Start Skin Match',path:'/skin-match'});
+ if(/\b(get started|first steps|start using|new here|onboard(?:ing)?)\b/i.test(message))
+  return onboarding(role);
+
+ if(role==='onboarding')return onboarding(role);
  if(role==='customer_care')return guidance(role,'handoff','portal_support','Use Portal Support to save a request and review any replies. A request is not submitted until you save the form; this assistant has not contacted a staff member.',{label:'Open Portal Support',path:'/support'});
  return {role,kind:'reviewed_ai',category:role==='routine_guidance'?'routine':'product_education'};
 }

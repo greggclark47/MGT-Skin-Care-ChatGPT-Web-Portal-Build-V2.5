@@ -4,7 +4,7 @@ This guide turns the current gap analysis into an execution plan. It separates w
 
 ## Current baseline
 
-The latest locally checked assistant build is commit `08c9ca4`; full local verification passed at `work/verification/2026-09-23T01-51-10-062Z/report.md`. The Support-page flow was also exercised in the browser at the preceding checkpoint. Live services, full accessibility, and SME content review remain open.
+The latest locally checked Support build is commit `f075a43`; web production build, proxy journey, and focused browser accessibility flow passed. The last full local verification passed for the assistant policy foundation at commit `08c9ca4`, with evidence at `work/verification/2026-09-23T01-51-10-062Z/report.md`. Live services, full accessibility, and SME content review remain open.
 
 - Domain, gateway, shared client, API and web builds pass.
 - The local release gate passes compilation, web smoke, API regressions, deterministic policy cases, the production proxy journey and the public artifact scan.
@@ -263,3 +263,7 @@ The API build, focused portal and Coach checks, and full local verification pass
 ## Phase 10 — assistant policy and fallback quality
 
 Commit `08c9ca4` adds 18 engineering candidate API cases for deterministic onboarding, support, retailer, payment, privacy, medical-safety, and prompt-injection routing. They verify blocked cases do not call an AI or payment provider. Missing reviewed knowledge and rejected model excerpts now return a clear Support handoff, without creating a ticket. The cases require SME and privacy sign-off; they are not approved clinical or product content. Full local verification passed at `work/verification/2026-09-23T01-51-10-062Z/report.md`, including the production web build, proxy journey, and zero-hit public artifact scan. Production remains **NOT READY** pending approved catalog data, live services, accessibility review, and human support ownership.
+
+## Phase 11 — Support guidance keyboard and focus flow
+
+Commit `f075a43` moves focus to a new guidance result or error and makes the Support handoff focus the labeled request form. It adds a busy state to the guidance form without changing shared styling, branding, or page routes. The web production build, 28-page proxy journey, and focused browser checks of answer, handoff, and sign-in error focus passed. This is a targeted accessibility improvement, not a complete WCAG or screen-reader audit. Production remains **NOT READY**.

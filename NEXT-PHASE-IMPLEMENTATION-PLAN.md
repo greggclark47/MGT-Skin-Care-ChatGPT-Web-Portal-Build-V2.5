@@ -1,9 +1,9 @@
 # MGT Skin Care v2 — Next-Phase Implementation Plan
 
-**Version:** 1.3
+**Version:** 1.4
 **Revision date:** 2026-09-23
-**Planning baseline:** `codex/reconcile-main-2026-09-20`; assistant checkpoints `8444aa7`, `518274b`, and `08c9ca4`
-**Status:** Phase A API, Support-page guidance, and engineering policy cases locally verified; production remains **NOT READY**.
+**Planning baseline:** `codex/reconcile-main-2026-09-20`; latest local Support checkpoint `f075a43`
+**Status:** Assistant API, Support guidance, engineering policy cases, and focused Support accessibility flow locally verified; production remains **NOT READY**.
 
 ## 1. Purpose and decision boundary
 
@@ -52,6 +52,8 @@ Use these status labels in implementation and reporting:
 **Support-page checkpoint:** Commit `518274b` adds a small guidance panel to `/support` using existing MGT components and the unchanged logo. It shows the server's next step and reviewed citations, distinguishes guidance from a saved support request, and permits deterministic retailer directions without an AI account or consent. A general “How do I get started?” question now routes to onboarding guidance. API compilation, portal integration checks, web production build, 28-page proxy journey, and browser checks of onboarding and retailer flows passed. The build still does not create tickets from guidance, enable OpenClaw, send external support messages, or verify live providers.
 
 **Policy and fallback checkpoint:** Commit `08c9ca4` adds 18 engineering candidate cases covering all four roles, mixed retailer/payment questions, privacy and account requests, adverse and urgent reactions, and prompt injection. The tests exercise the API boundary and verify deterministic cases make no AI or payment-provider call. The assistant now returns a support handoff when approved knowledge, configuration, or a verified model answer is unavailable; it still requires sign-in and consent before a reviewed answer. The cases are **not SME-approved content**. Full local verification passed at `work/verification/2026-09-23T01-51-10-062Z/report.md`. Urgent symptom wording was checked against [NHS anaphylaxis guidance](https://www.nhs.uk/conditions/anaphylaxis/); clinical review remains a release gate.
+
+**Support accessibility checkpoint:** Commit `f075a43` keeps the existing MGT Support layout and moves keyboard focus to a new guidance answer or error. The Support handoff moves focus to the labeled request form and does not submit it. The form exposes its busy state. Web production build and the 28-page proxy journey passed; a focused browser accessibility-tree and interaction check confirmed answer, handoff, and sign-in error focus. A full screen-reader, keyboard, mobile, contrast, and WCAG audit remains open.
 
 ### Phase B — onboarding, care and human support (High; repository-ready, delivery environment-dependent)
 
@@ -146,7 +148,7 @@ Until these decisions and dependencies are evidenced, the plan remains planning 
 ## 7. Improved next build order
 
 1. **Critical — policy sign-off and answer quality:** have an SME and privacy owner review the 18 engineering candidate cases in `apps/api/test/assistant-policy-cases.json`, add approved product and ingredient cases from the real catalog, and record acceptance criteria for false positives and unsupported claims. Keep deterministic handoffs before model routing and expand the matrix only with approved evidence.
-2. **High — experience and accessibility:** extend the locally implemented Support-page guidance with reviewed onboarding/help cases, keyboard and screen-reader checks, clear empty/error states, and a direct entry from the onboarding journey if user testing warrants it. Keep the logo and page hierarchy intact.
+2. **High — experience and accessibility:** complete full keyboard, screen-reader, mobile, contrast, and WCAG checks across onboarding and Support. Focus movement for guidance, error, and handoff is locally verified. Add a direct onboarding entry only if user testing supports it; keep the logo and page hierarchy intact.
 3. **High — support operations:** define ticket ownership, escalation reason, response state and safe operator visibility. Configure external delivery only after a provider and owner are chosen; record delivery outcome rather than implying a message was sent.
 4. **Critical — approved knowledge and runtime:** complete catalog/SME source coverage; run the existing gateway and optional OpenClaw path in staging with model inventory, privacy, timeout, schema, tool isolation, latency and rollback evidence. Keep `OPENCLAW_ENABLED=false` until the qualification decision.
 5. **High — measurement:** instrument consent-aware assistant entry, helpful next-step selection and handoff completion through the analytics registry without storing message content. Establish a baseline before paid marketing tests.

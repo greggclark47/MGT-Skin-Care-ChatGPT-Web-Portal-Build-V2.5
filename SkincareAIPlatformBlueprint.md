@@ -1,6 +1,6 @@
 # Skincare AI Platform Blueprint
 
-**Version:** 2.1.3-planning
+**Version:** 2.1.4-planning
 **Revision date:** 2026-09-23  
 **Status:** Current implementation and production-readiness blueprint  
 **Product:** MGT Skin Care v2
@@ -188,6 +188,8 @@ GTM work starts with consent-aware measurement and low-cost owned/organic learni
 The first assistant role contract is locally implemented at commit `8444aa7`. `POST /api/hub/assistant` returns deterministic onboarding, customer-care, account and payment guidance or a next-step handoff. Signed-in, consented routine/product questions reuse the reviewed Coach path. The API build, focused portal/Coach checks and full local verification passed at `work/verification/2026-09-23T01-18-44-476Z/report.md`. Commit `518274b` places a guidance panel in the existing Support page, displays next-step links and reviewed citations, and keeps general onboarding and retailer directions available without an AI provider. API compilation, portal checks, web production build, 28-page proxy journey, and focused browser checks passed. External support delivery and OpenClaw activation remain open.
 
 Commit `08c9ca4` hardens the assistant policy boundary with 18 engineering candidate API cases. It tests deterministic safety, payment, retailer, account and onboarding routing without AI or payment calls, plus missing-source, no-match, consent and rejected-excerpt behavior. Missing reviewed knowledge or a rejected model answer now produces a Support handoff. Full local verification passed at `work/verification/2026-09-23T01-51-10-062Z/report.md`. SME and privacy review of the candidate cases, approved catalog coverage and live service validation remain open.
+
+Commit `f075a43` improves keyboard focus in the Support guidance panel without changing the MGT logo or shared layout. New answers and errors receive focus, and the Support handoff focuses the labeled request form without creating a ticket. Web production build, 28-page proxy journey, and focused browser accessibility-tree checks passed. Full screen-reader and WCAG review remains open.
 
 ## 14. Source map
 

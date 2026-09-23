@@ -10,6 +10,7 @@ import {LocalStore,PgStore,startupMigrations,type Store,type Records} from './st
 import {check,Fault,hash,token,text,wrap,sessionMiddleware,rate,account,role,type HubRequest,type Session} from './security';
 import {initializeCatalog,match,quote,type Product} from './catalog';
 import {SafeCoach,gatewayFromEnv,StoreBudgetStore,StoreRoutingLogSink,screenInput,type Knowledge} from './ai';
+import {routeAssistantRequest} from './assistant';
 import type {AiGateway} from '@mgt/ai-gateway';
 import {stripeFromEnv,processStripeEvent,type StripeClient} from './payments';
 import {RETAILERS,SHOP_SEGMENTS,COMMERCE_MODEL} from './retailers';
@@ -72,7 +73,7 @@ export async function createPortal(options:PortalOptions){
  app.use(['/api/hub','/api/v1'],session);
  app.use(['/api/hub','/api/v1'],wrap(async(req,_res,next)=>{await db.tx(async r=>rate(r,'request:'+req.actor,180,60000));next();}));
  app.use(['/api/hub','/api/v1'],wrap(async(req,_res,next)=>{
-  const allowed=['/session','/auth/','/account/','/guest-access','/billing','/subscriptions','/entitlement','/company','/retailers','/catalog','/knowledge','/support'];
+  const allowed=['/session','/auth/','/account/','/guest-access','/billing','/subscriptions','/entitlement','/company','/retailers','/catalog','/knowledge','/support','/assistant'];
   if(!allowed.some(path=>req.path===path||req.path.startsWith(path.endsWith('/')?path:path+'/'))){
    await db.tx(async r=>{const invited=await r.get('guest_memberships',req.actor);check(!invited||!!await activeGuestAccess(r,req.actor)||(await ownEntitlement(r,req.actor)).premium,403,'guest_access_ended','Your invited access has ended. Review full access or ask the owner for a new invitation.');});
   }
@@ -206,11 +207,22 @@ export async function createPortal(options:PortalOptions){
  get('/notifications',async(req,res)=>{const notifications=await db.tx(async r=>(await r.entries<any>('notifications')).map(x=>x.value).filter(x=>x.actor===req.actor).sort((a,b)=>b.created_at.localeCompare(a.created_at)).slice(0,50));res.json({notifications});});
  post('/notifications/read',async(req,res)=>{const id=text(req.body.id,100);await db.tx(async r=>{await r.lock('notification:'+id);const notification=await r.get<any>('notifications',id);check(notification?.actor===req.actor,404,'notification_missing','Notification not found.');if(notification.status!=='delivered'&&notification.status!=='read')throw new Fault(409,'notification_pending','This notification is still being delivered.');await r.put('notifications',id,{...notification,status:'read',read_at:now(),updated_at:now()});});res.json({saved:true});});
  get('/knowledge',async(_req,res)=>res.json({articles:await db.tx(async r=>(await r.list('knowledge')).filter(a=>a.status==='approved'&&a.approved_by))}));
- post('/coach',async(req,res)=>{
-  const message=text(req.body.message,1800);const refusal=screenInput(message);if(refusal)return res.json({kind:'guidance',text:refusal,citations:[]});
+ const reviewedAnswer=async(req:HubRequest,message:string)=>{
   const user=account(req);check(req.body.ai_consent===true,400,'ai_consent','Please allow this message to be processed by the AI service.');
   const access=await db.tx(async r=>{const usage=await portalUsageAccount(r,req.actor,user.id);await rate(r,'ai-user:'+usage.userId,20,86400000);await rate(r,'ai-global',500,86400000);return {usage,premium:(await portalEntitlement(r,req.actor)).premium,articles:(await r.list<Knowledge>('knowledge')).filter(a=>a.status==='approved'&&a.approved_by)};});
-  const answer=await coach.answer(message,access.articles,access.usage.actor,access.premium);await db.tx(r=>audit(r,req.actor,'coach.answer','prompt-v2.1'));res.json(answer);
+  const answer=await coach.answer(message,access.articles,access.usage.actor,access.premium);await db.tx(r=>audit(r,req.actor,'coach.answer','prompt-v2.1'));return answer;
+ };
+ post('/coach',async(req,res)=>{
+  const message=text(req.body.message,1800);const refusal=screenInput(message);if(refusal)return res.json({kind:'guidance',text:refusal,citations:[]});
+  res.json(await reviewedAnswer(req,message));
+ });
+ post('/assistant',async(req,res)=>{
+  const message=text(req.body.message,1800);
+  await db.tx(r=>rate(r,'assistant:'+req.actor,30,3600000));
+  const route=routeAssistantRequest(req.body.role,message);
+  if(route.kind!=='reviewed_ai')return res.json(route);
+  const answer=await reviewedAnswer(req,message);
+  res.json({...answer,role:route.role,category:route.category,next_step:answer.kind==='no_match'?{label:'Open Portal Support',path:'/support'}:null});
  });
  post('/admin/ai/analyze',async(req,res)=>{
   const operator=role(req,['superadmin','compliance']);

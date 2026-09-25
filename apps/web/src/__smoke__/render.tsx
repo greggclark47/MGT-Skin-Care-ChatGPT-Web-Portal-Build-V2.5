@@ -3,6 +3,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { SkinMatchStep } from '../components/SkinMatchStep';
 import { ProductExplanationCard, humanizeReason } from '../components/ProductExplanation';
 import { MedicalDisclosure } from '../components/MedicalDisclosure';
+import { Brand } from '../components/Brand';
 import { CORE_STEPS, toggleChoice, progress, toProfileInput, isStepAnswered, type AnswerState } from '@mgt/shared';
 import { color } from '../components/theme-tokens';
 import type { ProductExplanation } from '@mgt/domain';
@@ -20,6 +21,13 @@ function renderStep(stepIndex: number, answers: AnswerState) {
       answers={answers} onAnswer={() => {}} onNext={() => {}} onBack={() => {}}
     />,
   );
+}
+
+console.log('\n== 0. Shared MGT brand shell ==');
+{
+  const html = renderToStaticMarkup(<Brand />);
+  check('shared brand uses the MGT mark asset', html.includes('src="/mgt-mark.svg"') && html.includes('class="brand-mark-image"'));
+  check('brand remains an accessible home link', html.includes('aria-label="MGT Skin Care home"') && html.includes('href="/"'));
 }
 
 console.log('\n== 1. Questionnaire covers the C9 inputs Phase 9 dropped ==');

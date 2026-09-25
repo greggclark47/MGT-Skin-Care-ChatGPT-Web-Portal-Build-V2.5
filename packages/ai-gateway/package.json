@@ -7,7 +7,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "smoke": "tsx src/__smoke__/gateway.ts && tsx src/__smoke__/pricing.ts"
+    "smoke": "tsc -p tsconfig.json && node dist/__smoke__/gateway.js && node dist/__smoke__/pricing.js"
   },
   "dependencies": {
     "@langchain/core": "^1.2.10",

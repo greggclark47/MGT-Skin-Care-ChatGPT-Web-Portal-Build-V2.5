@@ -110,10 +110,13 @@ export class OperationalWorker{
   const policies=[
    ['sessions',0,(v:any)=>Number(v?.expires)],
    ['rate',0,(v:any)=>Number(v?.reset)],
+   ['profile_merge_pending',0,(v:any)=>timestamp(v?.expires_at)],
    ['ai_routing_log',int(this.env.OPERATIONS_AI_LOG_RETENTION_DAYS,30,1,3650),(v:any)=>timestamp(v?.at||v?.created_at||v?.timestamp)],
    ['notifications',int(this.env.OPERATIONS_NOTIFICATION_RETENTION_DAYS,90,1,3650),(v:any)=>timestamp(v?.delivered_at||v?.read_at||v?.updated_at)],
    ['billing_activity',int(this.env.OPERATIONS_BILLING_RETENTION_DAYS,730,30,3650),(v:any)=>timestamp(v?.at)],
    ['subscription_webhook_receipts',int(this.env.OPERATIONS_WEBHOOK_RECEIPT_RETENTION_DAYS,90,7,3650),(v:any)=>timestamp(v?.last_received_at||v?.first_received_at)],
+   ['support_metrics',int(this.env.OPERATIONS_AGGREGATE_METRIC_RETENTION_DAYS,180,30,3650),(v:any)=>timestamp(v?.updated_at||v?.date)],
+   ['referral_metrics',int(this.env.OPERATIONS_AGGREGATE_METRIC_RETENTION_DAYS,180,30,3650),(v:any)=>timestamp(v?.updated_at||v?.date)],
    ['deletion_completions',int(this.env.OPERATIONS_DELETION_PROOF_RETENTION_DAYS,730,30,3650),(v:any)=>timestamp(v?.completed_at)],
    ['operation_runs',int(this.env.OPERATIONS_RUN_RETENTION_DAYS,90,1,3650),(v:any)=>timestamp(v?.completed_at||v?.started_at)]
   ] as const;
@@ -201,6 +204,7 @@ export class OperationalWorker{
   }
   const membership=await records.get<any>('memberships',actor);
   if(membership?.premium===true||['active','trialing','past_due','unpaid','incomplete','paused'].includes(membership?.status))blockers.push('active_legacy_membership');
+  if((await records.list<any>('subscription_pending')).some(item=>item.actor===actor))blockers.push('pending_subscription_change');
   if((await records.list<any>('orders')).some(order=>order.actor===actor&&!['canceled','refunded','fulfilled'].includes(order.status)))blockers.push('open_order');
   if((await records.entries<any>('ai_budget_reservations')).some(item=>this.belongsToUser(item.value?.budget_key,actor,userId)&&item.value?.status==='reserved'))blockers.push('pending_ai_charge');
   if((await records.entries<any>('partners')).some(item=>item.id===userId||item.value?.id===userId))blockers.push('vendor_account');
@@ -211,10 +215,14 @@ export class OperationalWorker{
  }
  private async eraseAccount(records:Records,request:any,at:number){
   const actor=request.actor,userId=request.user_id,tombstone=`deleted_${request.request_id}`;
-  for(const scope of ['profiles','style_profiles','reminders','saved_retailers','carts','memberships'])await records.remove(scope,actor);
+  const account=await records.get<any>('accounts',userId);
+  for(const item of await records.entries<any>('profile_merge_pending'))if(item.value?.account_id===userId||item.value?.guest_actor===actor)await records.remove('profile_merge_pending',item.id);
+  for(const item of await records.entries<any>('guest_invitations'))if(item.value.owner_actor===actor||item.value.guest_actor===actor||item.value.email===account?.email)await records.remove('guest_invitations',item.id);
+  await records.remove('guest_memberships',actor);
+  for(const scope of ['profiles','profile_revisions','style_profiles','reminders','saved_retailers','carts','memberships'])await records.remove(scope,actor);
   await records.remove('checkout_requests','premium_'+actor);
   for(const audience of ['consumer','vendor'])for(const scope of ['subscriptions','billing_attempts'])await records.remove(scope,`${actor}:${audience}`);
-  for(const scope of ['sessions','notifications','tickets','ai_routing_log','ai_budget','ai_budget_reservations','ai_budget_reconciliations','rate']){
+  for(const scope of ['sessions','notifications','tickets','ai_routing_log','ai_budget','ai_budget_reservations','ai_budget_reconciliations','rate','subscription_commands','subscription_pending']){
    for(const item of await records.entries<any>(scope)){
     const value=item.value;
     const owned=value?.actor===actor||value?.userId===userId||value?.user_id===actor||value?.user_id===userId||this.belongsToUser(item.id,actor,userId)||this.belongsToUser(value?.budget_key,actor,userId);

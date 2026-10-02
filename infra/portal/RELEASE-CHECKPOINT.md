@@ -1,5 +1,7 @@
 # AI release controls checkpoint
 
+2026-10-02 Path B execution-review preparation: Phases F501–F512 add command authority, approval ledger, dry-run, execution-log, release-window, freeze, customer communication, rollback command, first-hour, incident route, customer-impact, and support-handoff records. `pnpm infra:release-execution-review` remains `pending_launch_review` until the previous chain is ready and fails closed on changed or unsafe records. Local execution-review fixtures passed. No command was enabled or executed.
+
 2026-10-02 Path B launch-review preparation: Phases F491–F500 add release-window, freeze, ship-owner, operator, rollback-trigger, incident-route, first-hour, customer-impact, command-log, and closeout-timestamp records. `pnpm infra:release-launch-review` remains `pending_finalization` until the prior chain is ready and fails closed on changed or unsafe records. Local launch-review fixtures passed. No launch command, deployment, publication, or traffic change was performed.
 
 2026-10-02 Path B finalization preparation: Phases F481–F490 add decision, rollback, monitoring, support, customer communication, and audit-archive records to a checksum-bound finalization matrix. `pnpm infra:release-finalization` remains `pending_closeout` until the destination receipt chain is ready, and fails closed on unsafe or changed records. Local finalization fixtures passed. No external release, publication, deployment, or traffic change was performed.

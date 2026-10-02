@@ -1203,6 +1203,32 @@ This checkpoint does not create Stripe Prices, connect an account, collect a pay
 
 **F491–F500 local verification:** Launch-review fixtures prove pending behavior, ten-record acceptance, mutation detection, and fabricated-ready rejection. No launch command, deployment, publication, or traffic movement was performed.
 
+**Phase F501 — command-authority record:** Execution review requires a separate authority record before any command could be considered enabled.
+
+**Phase F502 — approval-ledger record:** Added an explicit approval-ledger artifact for execution review.
+
+**Phase F503 — dry-run record:** A reviewed dry-run artifact is now required and cannot be inferred from a local test pass.
+
+**Phase F504 — execution-log record:** Added a bounded execution-log target record without embedding executable commands.
+
+**Phase F505 — release-window record:** Execution review requires a reviewed release-window artifact.
+
+**Phase F506 — freeze-clearance record:** Freeze clearance is independently bound to the execution candidate.
+
+**Phase F507 — customer-communication record:** Customer communication timing is a distinct required artifact.
+
+**Phase F508 — rollback-command record:** Added a rollback-command ownership record without executing it.
+
+**Phase F509 — first-hour watch record:** First-hour monitoring is separately owned and reviewed.
+
+**Phase F510 — incident-route record:** Added incident-route evidence to the execution matrix.
+
+**Phase F511 — customer-impact watch record:** Customer-impact observation is a distinct execution-review input.
+
+**Phase F512 — support-handoff verifier:** Added `pnpm infra:release-execution-review`, which binds all twelve records to the launch-review checksum and reports only `blocked`, `pending_launch_review`, or `ready_for_execution_review`.
+
+**F501–F512 local verification:** Execution-review fixtures prove pending behavior, twelve-record acceptance, mutation detection, and fabricated-ready rejection. No command was enabled or executed; no deployment, publication, or traffic movement was performed.
+
 **Exit evidence:** approved positioning and claims, consent-compliant measurement plan, attribution rules, partner terms where relevant, campaign cap and stop rule, baseline report, and a post-test decision grounded in observed data.
 
 ### Phase E — data, AI economics and service qualification (Critical for production)

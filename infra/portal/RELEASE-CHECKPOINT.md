@@ -1,5 +1,7 @@
 # AI release controls checkpoint
 
+2026-10-02 Path B finalization preparation: Phases F481–F490 add decision, rollback, monitoring, support, customer communication, and audit-archive records to a checksum-bound finalization matrix. `pnpm infra:release-finalization` remains `pending_closeout` until the destination receipt chain is ready, and fails closed on unsafe or changed records. Local finalization fixtures passed. No external release, publication, deployment, or traffic change was performed.
+
 2026-10-02 Path B release-closeout preparation: Phases F477–F480 add bounded receipt freshness, archive/manifest revalidation, and a pending-only closeout dossier. `pnpm infra:release-closeout` can reach `release_closeout_ready` only when both destination receipts are fresh and bound to the same candidate and bundle checksum. Local closeout fixtures passed. No external release, publication, deployment, or traffic change was performed.
 
 2026-10-02 Path B destination-receipt preparation: Phases F473–F476 add a fail-closed receipt review for the exact GitHub commit and Google Drive archive. `pnpm infra:release-receipt` reports `awaiting_receipts` until both destinations supply observed metadata, and only reaches `export_complete` when both receipts bind the same candidate and bundle checksum. Local fixtures passed. No external push/upload receipt was fabricated.

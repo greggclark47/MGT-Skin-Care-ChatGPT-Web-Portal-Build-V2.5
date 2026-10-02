@@ -47,6 +47,8 @@ After a real push and Drive upload, record the observed destination receipts and
 
 Finally run `pnpm infra:release-closeout -- --manifest work/exports/release-export.json --review work/exports/release-receipt.json --output work/exports/release-closeout.json --max-receipt-age-minutes 1440`. It revalidates the manifest and receipt chain, rejects stale destination observations, and can only report `blocked`, `pending_receipts`, `stale_receipts`, or `release_closeout_ready`.
 
+The finalization matrix is `pnpm infra:release-finalization -- --manifest work/exports/release-export.json --closeout work/exports/release-closeout.json --review work/exports/release-receipt.json --records work/exports/finalization-records.json --output work/exports/release-finalization.json`. It binds six separate local records—decision, rollback, monitoring, support, customer communication, and audit archive—to the exact candidate and checksum chain. Missing receipts leave it `pending_closeout`; changed or unsafe records are `blocked`.
+
 Generate a starting draft with `pnpm infra:create-ship-packet -- --output path/to/draft.json`. The generator discovers only repository metadata, recent local report paths and valid immutable image digests; it never copies credentials or customer data and leaves all human approval fields pending.
 
 The application, edge, and Ollama images are required to use approved immutable `@sha256:` digests. Set `NODE_IMAGE`, `OLLAMA_IMAGE`, and `CADDY_IMAGE` in the deployment environment after reviewing the exact image digests; floating tags such as `latest` and `2` are rejected by preflight.

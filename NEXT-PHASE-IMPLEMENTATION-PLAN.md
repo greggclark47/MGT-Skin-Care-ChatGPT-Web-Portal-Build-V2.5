@@ -1159,6 +1159,28 @@ This checkpoint does not create Stripe Prices, connect an account, collect a pay
 
 **F477–F480 local verification:** Closeout fixtures prove missing-receipt handling, fresh dual-destination acceptance, stale receipt blocking, and rejection of an invented ready state. No external release, publication, deployment, or traffic movement was performed.
 
+**Phase F481 — finalization decision record:** Added a required local decision record bound to the exact export candidate and closeout checksum.
+
+**Phase F482 — rollback acceptance record:** Finalization requires a separate, locally inspectable rollback record with its own checksum and accountable owner.
+
+**Phase F483 — monitoring watch record:** Added a bounded monitoring/watch record so closeout cannot imply post-release observation without a named owner and reviewed artifact.
+
+**Phase F484 — support handoff record:** Support ownership and handoff evidence are now separate finalization inputs.
+
+**Phase F485 — customer communication record:** Customer-facing communication evidence is bound as a distinct artifact and cannot be inferred from a local pass.
+
+**Phase F486 — audit archive record:** Added an explicit archive-index record for the finalization package.
+
+**Phase F487 — six-record finalization matrix:** `pnpm infra:release-finalization` binds decision, rollback, monitoring, support, customer communication, and audit archive artifacts to the release candidate.
+
+**Phase F488 — finalization checksum chain:** The finalization document records the export bundle checksum and closeout receipt checksum, preventing detached records.
+
+**Phase F489 — pending-only finalization state:** Missing closeout or destination receipts leave the document `pending_closeout`; unsafe or mismatched records fail closed as `blocked`.
+
+**Phase F490 — finalization verifier:** The verifier re-hashes every finalization artifact and can only report `blocked`, `pending_closeout`, or `ready_for_finalization`; it never publishes, deploys, or moves traffic.
+
+**F481–F490 local verification:** Finalization fixtures prove pending behavior, six-record acceptance, mutation detection, unsafe/credential-like rejection, and checksum-chain validation. No external release, publication, deployment, or traffic movement was performed.
+
 **Exit evidence:** approved positioning and claims, consent-compliant measurement plan, attribution rules, partner terms where relevant, campaign cap and stop rule, baseline report, and a post-test decision grounded in observed data.
 
 ### Phase E — data, AI economics and service qualification (Critical for production)

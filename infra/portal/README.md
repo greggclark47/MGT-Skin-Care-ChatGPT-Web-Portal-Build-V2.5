@@ -137,3 +137,13 @@ Configure monthly and annual recurring Price IDs with the two named Premium vari
 The app creates a restricted Stripe billing-portal configuration: cancellations at period end, payment methods and invoices enabled, and paid subscription price changes limited to Premium's configured Prices with Stripe confirmation and prorated invoicing. Trial-cycle changes use a separate authenticated endpoint, leaving trial_end untouched and creating no prorations. Trial subscriptions cannot change Prices through the billing portal because that could end a trial early. During a trial, cancellation ends access at trial end without starting the paid cycle. In a paid period, access remains until the end of that period. Payment failures can still suspend access according to subscription status.
 
 Configure Stripe trial reminder emails and cancellation/renewal notices, publish matching terms, and use Stripe test clocks to validate trial-to-paid transitions, monthly and annual renewals, declines and end-of-period cancellation before launch. These transitions have mocked regression coverage here, not a live Stripe sandbox verification.
+### Post-execution review
+
+Build the post-execution review after the execution-review chain is ready:
+
+```text
+pnpm infra:release-post-execution-review
+```
+
+The review remains `pending_execution_review` until the exact candidate, execution review, and twelve post-execution records are available. It fails closed on changed artifacts, unsafe records, or fabricated readiness.
+

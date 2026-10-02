@@ -10,7 +10,7 @@ import { validateReleaseLaunchReview } from "./release-launch-review.mjs";
 const SHA = /^[a-f0-9]{40}$/i;
 const CHECKSUM = /^sha256:[a-f0-9]{64}$/i;
 const REVIEW_VERSION = "1.0";
-const EXECUTION_RECORD_IDS = Object.freeze([
+export const EXECUTION_RECORD_IDS = Object.freeze([
   "command_authority",
   "approval_ledger",
   "dry_run",

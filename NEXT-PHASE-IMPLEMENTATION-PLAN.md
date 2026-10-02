@@ -1229,6 +1229,20 @@ This checkpoint does not create Stripe Prices, connect an account, collect a pay
 
 **F501–F512 local verification:** Execution-review fixtures prove pending behavior, twelve-record acceptance, mutation detection, and fabricated-ready rejection. No command was enabled or executed; no deployment, publication, or traffic movement was performed.
 
+**Phase F513 — execution authorization record:** Added the post-execution review boundary for the exact operator authorization.
+**Phase F514 — command transcript record:** Binds the executed command transcript to the candidate bundle.
+**Phase F515 — deployment attestation record:** Captures deployment identity without treating it as live readiness proof.
+**Phase F516 — health probe record:** Requires a redacted health/readiness probe artifact.
+**Phase F517 — smoke-test record:** Records the post-deploy smoke-test result.
+**Phase F518 — traffic-shift record:** Records any approved traffic movement as an auditable artifact.
+**Phase F519 — error-budget record:** Captures the first post-release error-budget observation.
+**Phase F520 — support-ack record:** Requires support ownership acknowledgement.
+**Phase F521 — incident-log record:** Preserves incident routing and an empty-or-linked incident log.
+**Phase F522 — rollback-readiness record:** Verifies rollback command readiness after execution.
+**Phase F523 — first-day review:** Records the first-day operational review.
+**Phase F524 — final-closeout verifier:** Added `pnpm infra:release-post-execution-review`, binding all twelve post-execution records to the execution-review checksum and reporting only `blocked`, `pending_execution_review`, or `ready_for_post_execution_review`.
+**F513–F524 local verification:** Post-execution fixtures prove pending behavior, twelve-record acceptance, mutation detection, and fabricated-ready rejection. No deployment, publication, traffic movement, or rollback command was executed.
+
 **Exit evidence:** approved positioning and claims, consent-compliant measurement plan, attribution rules, partner terms where relevant, campaign cap and stop rule, baseline report, and a post-test decision grounded in observed data.
 
 ### Phase E — data, AI economics and service qualification (Critical for production)

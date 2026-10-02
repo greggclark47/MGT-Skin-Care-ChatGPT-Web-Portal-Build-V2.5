@@ -1,0 +1,18 @@
+{
+  "version": "1.0",
+  "candidate_commit": "9e587e4b016956c70f1635cf49ef5933c178be3c",
+  "bundle_checksum": "sha256:d98bd37b6905c8e3e93ba43b6240817cd7c268cb4e86fb1db47105da1729704c",
+  "closeout_checksum": "sha256:23facb13c4c32543a548b4ab3123feb34667ac1010972377e2dabc880013f756",
+  "generated_at": "2026-10-02T18:54:54.699Z",
+  "status": "pending_closeout",
+  "entries": [],
+  "errors": [
+    "decision record is required",
+    "rollback record is required",
+    "monitoring record is required",
+    "support record is required",
+    "customer_communications record is required",
+    "audit_archive record is required"
+  ],
+  "finalization_checksum": "sha256:5a34b052157f97d58f8b4a0255974695b5436a3ad0d25a7445fbee33af572ad3"
+}

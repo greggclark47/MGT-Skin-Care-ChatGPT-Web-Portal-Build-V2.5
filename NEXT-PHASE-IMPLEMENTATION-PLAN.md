@@ -1139,6 +1139,16 @@ This checkpoint does not create Stripe Prices, connect an account, collect a pay
 
 **F469–F472 local verification:** Export fixtures prove deterministic manifest creation, mutation detection, traversal and credential-like input rejection, and fail-closed destination completion rules. The export workflow prepares GitHub and Google Drive handoff metadata only; it does not fabricate an upload, publish a release, deploy, or change traffic.
 
+**Phase F473 — GitHub push receipt contract:** Added a receipt review that accepts a GitHub confirmation only when the observed repository, branch, commit, and timestamp bind to the export manifest’s exact candidate.
+
+**Phase F474 — Google Drive upload receipt contract:** The review accepts a Drive confirmation only with connector-observed file ID, HTTPS URL, archive checksum, byte count, and a past observation time. Missing browser or connector evidence remains pending.
+
+**Phase F475 — dual-destination checksum binding:** GitHub and Drive receipts both bind to the same export bundle checksum, preventing a repository revision and Drive archive from silently diverging.
+
+**Phase F476 — export completion review:** Added `pnpm infra:release-receipt`, which reports only `blocked`, `awaiting_receipts`, or `export_complete`. It cannot invent a push, upload, publication, deployment, or traffic change.
+
+**F473–F476 local verification:** Receipt fixtures prove pending-only behavior, exact candidate and checksum binding, Drive metadata requirements, and rejection of fabricated completion. No external destination receipt was invented or recorded.
+
 **Exit evidence:** approved positioning and claims, consent-compliant measurement plan, attribution rules, partner terms where relevant, campaign cap and stop rule, baseline report, and a post-test decision grounded in observed data.
 
 ### Phase E — data, AI economics and service qualification (Critical for production)

@@ -1129,6 +1129,16 @@ This checkpoint does not create Stripe Prices, connect an account, collect a pay
 
 **F465–F468 local verification:** Production-evidence fixtures prove a complete 23-artifact production manifest and reject modified, credential-like, and gate-detached artifacts. This is local evidence-integrity preparation only. No production origin, live evidence, human approval, deployment, traffic movement, or publication was performed.
 
+**Phase F469 — release export manifest:** Added `pnpm infra:release-export`, which binds the accepted release documentation and optional local archive to the exact candidate commit. It records bounded file checksums and byte counts, rejects traversal, unsupported files, binary text, credential-like values, and oversized artifacts, and can remain `blocked` when a requested export input is missing or unsafe.
+
+**Phase F470 — destination binding:** The export manifest records the observed GitHub remotes and candidate branch/commit as `pending_push`, and records a Google Drive file name with no invented folder, file ID, or URL as `pending_upload`. It does not claim that either destination has received the export.
+
+**Phase F471 — shared export checksum:** The manifest derives one canonical bundle checksum across its candidate, entries, and destination declarations. Any destination receipt must therefore be tied to the same export contents instead of an independently assembled archive.
+
+**Phase F472 — post-export verification:** The verifier re-hashes every local export entry and requires observed Drive metadata before an upload can be marked complete. A `pushed` GitHub destination must bind the exact candidate commit; an `uploaded` Drive destination must include the connector-observed file ID and HTTPS URL.
+
+**F469–F472 local verification:** Export fixtures prove deterministic manifest creation, mutation detection, traversal and credential-like input rejection, and fail-closed destination completion rules. The export workflow prepares GitHub and Google Drive handoff metadata only; it does not fabricate an upload, publish a release, deploy, or change traffic.
+
 **Exit evidence:** approved positioning and claims, consent-compliant measurement plan, attribution rules, partner terms where relevant, campaign cap and stop rule, baseline report, and a post-test decision grounded in observed data.
 
 ### Phase E — data, AI economics and service qualification (Critical for production)

@@ -25,7 +25,9 @@ re-run it whenever a pricing or cost assumption changes.
 - `docs` — supplementary docs
 
 ## Status
-Local implementation is reported complete through F468; production remains gated on
-live environment evidence, named owners, and release sign-off. See
+Local implementation is reported complete through F472; production remains gated on
+live environment evidence, named owners, and release sign-off. The release export
+manifest prepares the same checksum-bound handoff for GitHub and Google Drive while
+keeping destination completion explicit. See
 `claude/skincare-master-blueprint-v2.md` Section R for the F436–F535 ship plan and
 Section Q for the original build order.

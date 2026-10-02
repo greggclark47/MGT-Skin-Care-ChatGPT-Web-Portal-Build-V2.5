@@ -1,9 +1,9 @@
 {
   "version": "1.0",
-  "candidate_commit": "73f1ceccc267a0394f2c66904f588355af76e27f",
-  "bundle_checksum": "sha256:8c40bccc113f033d2465f09de9b9b162dcd28124a3b5073eaff45065a078bc21",
-  "closeout_checksum": "sha256:d43c2de5d0ec4c7ef4d2ba3aaaf5b6196dfce40cd1fe83bdedff3d49af7436a9",
-  "generated_at": "2026-10-02T19:00:52.434Z",
+  "candidate_commit": "6ebf0f287f925dd4bf0c4e1c2fb283fb2e43fa8e",
+  "bundle_checksum": "sha256:c9566c4a300d49686b08e98444e937c51041ceab29b9ad7c50a222f02c4a6a45",
+  "closeout_checksum": "sha256:b51a40632d40b8d582f5397081bf9778010f23b9c24a90e832117e8c00dae3cd",
+  "generated_at": "2026-10-02T19:06:37.182Z",
   "status": "pending_closeout",
   "entries": [],
   "errors": [
@@ -14,5 +14,5 @@
     "customer_communications record is required",
     "audit_archive record is required"
   ],
-  "finalization_checksum": "sha256:5fe265e9501f264934d833c242fbd6b1a12197afcddc2d796377b04e0aa18122"
+  "finalization_checksum": "sha256:89433ae1b242c7c6223906d09f23374063a3369987e4dc6b00a72894421a9d2d"
 }

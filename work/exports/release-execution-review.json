@@ -1,0 +1,24 @@
+{
+  "version": "1.0",
+  "candidate_commit": "6ebf0f287f925dd4bf0c4e1c2fb283fb2e43fa8e",
+  "bundle_checksum": "sha256:c9566c4a300d49686b08e98444e937c51041ceab29b9ad7c50a222f02c4a6a45",
+  "launch_review_checksum": "sha256:391b8b185251d12992ca70c868e838820dffb1f1b367501cd10db11701445c27",
+  "generated_at": "2026-10-02T19:06:37.351Z",
+  "status": "pending_launch_review",
+  "entries": [],
+  "errors": [
+    "command_authority record is required",
+    "approval_ledger record is required",
+    "dry_run record is required",
+    "execution_log record is required",
+    "release_window record is required",
+    "freeze_clearance record is required",
+    "customer_communication record is required",
+    "rollback_command record is required",
+    "first_hour_watch record is required",
+    "incident_route record is required",
+    "customer_impact_watch record is required",
+    "support_handoff record is required"
+  ],
+  "execution_review_checksum": "sha256:4e4f7bc186e39dc6e57473c53393dbb84d44ea1671cf61936db1eabd46afb263"
+}

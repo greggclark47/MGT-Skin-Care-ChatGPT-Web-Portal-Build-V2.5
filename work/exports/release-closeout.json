@@ -1,12 +1,12 @@
 {
   "version": "1.0",
-  "candidate_commit": "9e587e4b016956c70f1635cf49ef5933c178be3c",
-  "bundle_checksum": "sha256:d98bd37b6905c8e3e93ba43b6240817cd7c268cb4e86fb1db47105da1729704c",
-  "generated_at": "2026-10-02T18:54:54.582Z",
+  "candidate_commit": "73f1ceccc267a0394f2c66904f588355af76e27f",
+  "bundle_checksum": "sha256:8c40bccc113f033d2465f09de9b9b162dcd28124a3b5073eaff45065a078bc21",
+  "generated_at": "2026-10-02T19:00:52.374Z",
   "max_receipt_age_minutes": 1440,
   "receipt_ages_minutes": {},
   "status": "pending_receipts",
-  "receipt_checksum": "sha256:23facb13c4c32543a548b4ab3123feb34667ac1010972377e2dabc880013f756",
+  "receipt_checksum": "sha256:d43c2de5d0ec4c7ef4d2ba3aaaf5b6196dfce40cd1fe83bdedff3d49af7436a9",
   "errors": [
     "both destination receipts are required before closeout"
   ]

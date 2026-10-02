@@ -45,6 +45,8 @@ For the GitHub/Google Drive handoff, run `pnpm infra:release-export -- --output 
 
 After a real push and Drive upload, record the observed destination receipts and run `pnpm infra:release-receipt -- --manifest work/exports/release-export.json --github-receipt work/exports/github-receipt.json --drive-receipt work/exports/google-drive-receipt.json --output work/exports/release-receipt.json`. The review binds both receipts to the same candidate and archive checksum; without both receipts it remains `awaiting_receipts`, and any mismatch is `blocked`.
 
+Finally run `pnpm infra:release-closeout -- --manifest work/exports/release-export.json --review work/exports/release-receipt.json --output work/exports/release-closeout.json --max-receipt-age-minutes 1440`. It revalidates the manifest and receipt chain, rejects stale destination observations, and can only report `blocked`, `pending_receipts`, `stale_receipts`, or `release_closeout_ready`.
+
 Generate a starting draft with `pnpm infra:create-ship-packet -- --output path/to/draft.json`. The generator discovers only repository metadata, recent local report paths and valid immutable image digests; it never copies credentials or customer data and leaves all human approval fields pending.
 
 The application, edge, and Ollama images are required to use approved immutable `@sha256:` digests. Set `NODE_IMAGE`, `OLLAMA_IMAGE`, and `CADDY_IMAGE` in the deployment environment after reviewing the exact image digests; floating tags such as `latest` and `2` are rejected by preflight.

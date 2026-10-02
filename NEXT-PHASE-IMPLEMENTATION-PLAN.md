@@ -1149,6 +1149,16 @@ This checkpoint does not create Stripe Prices, connect an account, collect a pay
 
 **F473–F476 local verification:** Receipt fixtures prove pending-only behavior, exact candidate and checksum binding, Drive metadata requirements, and rejection of fabricated completion. No external destination receipt was invented or recorded.
 
+**Phase F477 — receipt freshness policy:** Closeout now requires each destination receipt to fall within an explicit 1–10080 minute freshness window.
+
+**Phase F478 — archive revalidation:** The closeout contract revalidates the export manifest and receipt review before accepting the archive checksum, byte count, candidate, and bundle checksum chain.
+
+**Phase F479 — pending-only release closeout:** Added a closeout dossier that reports `blocked`, `pending_receipts`, `stale_receipts`, or `release_closeout_ready`; it contains no publish, deploy, or traffic action.
+
+**Phase F480 — closeout verifier:** Added `pnpm infra:release-closeout`, which fails closed when the receipt review is incomplete, stale, mismatched, or fabricated.
+
+**F477–F480 local verification:** Closeout fixtures prove missing-receipt handling, fresh dual-destination acceptance, stale receipt blocking, and rejection of an invented ready state. No external release, publication, deployment, or traffic movement was performed.
+
 **Exit evidence:** approved positioning and claims, consent-compliant measurement plan, attribution rules, partner terms where relevant, campaign cap and stop rule, baseline report, and a post-test decision grounded in observed data.
 
 ### Phase E — data, AI economics and service qualification (Critical for production)

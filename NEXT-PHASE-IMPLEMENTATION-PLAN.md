@@ -1181,6 +1181,28 @@ This checkpoint does not create Stripe Prices, connect an account, collect a pay
 
 **F481–F490 local verification:** Finalization fixtures prove pending behavior, six-record acceptance, mutation detection, unsafe/credential-like rejection, and checksum-chain validation. No external release, publication, deployment, or traffic movement was performed.
 
+**Phase F491 — launch-window contract:** Added a bounded local record for the approved release window.
+
+**Phase F492 — freeze-clearance contract:** Launch review now requires explicit freeze-clearance evidence rather than inferring it from a local pass.
+
+**Phase F493 — ship-owner and operator records:** Named ship owner and operator records are separate required artifacts.
+
+**Phase F494 — rollback-trigger record:** Added an explicit rollback-trigger and decision-owner artifact.
+
+**Phase F495 — incident-route record:** The launch review requires a local, checksum-bound incident route artifact.
+
+**Phase F496 — first-hour watch record:** Added first-hour monitoring ownership and reviewed evidence.
+
+**Phase F497 — customer-impact watch record:** Customer-impact monitoring is a separate required record.
+
+**Phase F498 — command-log archive record:** Launch review requires a named command-log archive artifact without embedding executable commands.
+
+**Phase F499 — closeout timestamp record:** Added a separate post-review closeout timestamp artifact.
+
+**Phase F500 — launch-review verifier:** Added `pnpm infra:release-launch-review`, which binds ten launch records to the finalization checksum chain and reports only `blocked`, `pending_finalization`, or `ready_for_launch_review`.
+
+**F491–F500 local verification:** Launch-review fixtures prove pending behavior, ten-record acceptance, mutation detection, and fabricated-ready rejection. No launch command, deployment, publication, or traffic movement was performed.
+
 **Exit evidence:** approved positioning and claims, consent-compliant measurement plan, attribution rules, partner terms where relevant, campaign cap and stop rule, baseline report, and a post-test decision grounded in observed data.
 
 ### Phase E — data, AI economics and service qualification (Critical for production)

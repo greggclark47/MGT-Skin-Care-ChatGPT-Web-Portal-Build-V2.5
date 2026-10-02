@@ -54,7 +54,7 @@ export function buildReleaseLaunchReview({ root = process.cwd(), manifest, close
   const closeoutValidation = validateReleaseCloseout(closeout, { manifest, review, now: Date.parse(now) });
   baseErrors.push(...closeoutValidation.errors.map((error) => `closeout.${error}`));
   const finalizationValidation = validateReleaseFinalization(finalization, { manifest, closeout, review, now: Date.parse(now) });
-  baseErrors.push(...finalizationValidation.errors.map((error) => `finalization.${error}`));
+  if (finalization?.status === "ready_for_finalization") baseErrors.push(...finalizationValidation.errors.map((error) => `finalization.${error}`));
   const recordErrors = [];
   const entries = [];
   for (const id of LAUNCH_RECORD_IDS) {

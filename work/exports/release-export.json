@@ -1,8 +1,8 @@
 {
   "version": "1.0",
-  "candidate_commit": "c03497f6a4cea02d9249addbd1e2d0c9a4f55941",
+  "candidate_commit": "63c23790daf005626e9d339843695ba7e53095f3",
   "branch": "codex/reconcile-main-2026-09-20",
-  "generated_at": "2026-10-02T18:26:23.160Z",
+  "generated_at": "2026-10-02T18:27:03.200Z",
   "status": "ready_for_export",
   "destinations": {
     "github": {
@@ -12,11 +12,11 @@
         "https://github.com/greggclark47/MGT-Skin-Care-ChatGPT-Web-Portal-Build-V2.5.git"
       ],
       "branch": "codex/reconcile-main-2026-09-20",
-      "commit": "c03497f6a4cea02d9249addbd1e2d0c9a4f55941"
+      "commit": "63c23790daf005626e9d339843695ba7e53095f3"
     },
     "google_drive": {
       "status": "pending_upload",
-      "file_name": "MGT-Skin-Care-v2-c03497f6a4ce-export.zip",
+      "file_name": "MGT-Skin-Care-v2-63c23790daf0-export.zip",
       "folder_id": null,
       "file_id": null,
       "web_url": null
@@ -55,10 +55,10 @@
       "id": "work_exports_mgt_skin_care_v2_f476_export_zip",
       "reference": "work/exports/MGT-Skin-Care-v2-F476-export.zip",
       "kind": "archive",
-      "checksum": "sha256:d1eb86528f2d5154caa852ab2e490cf4ba08cc9c2407e46d84bac9d2de8c0cab",
-      "bytes": 4118926
+      "checksum": "sha256:04027fe133ae099202b4284225c34a60d8c650e1ea38f2841b66e10153261950",
+      "bytes": 4119386
     }
   ],
   "errors": [],
-  "bundle_checksum": "sha256:70108731bb469ef570474010a19547c57879b488a8d41915b4e7e4ffd3f5c602"
+  "bundle_checksum": "sha256:12543ac12af76d5cfe5cce2cef3921190c1e6bfd31c6f7beb58af185e72483ca"
 }

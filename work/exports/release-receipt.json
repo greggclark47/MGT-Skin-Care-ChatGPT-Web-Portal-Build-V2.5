@@ -1,8 +1,8 @@
 {
   "version": "1.0",
-  "candidate_commit": "63c23790daf005626e9d339843695ba7e53095f3",
-  "bundle_checksum": "sha256:12543ac12af76d5cfe5cce2cef3921190c1e6bfd31c6f7beb58af185e72483ca",
-  "generated_at": "2026-10-02T18:27:03.504Z",
+  "candidate_commit": "4dfa3db9d72686f05272fff9bf376dded74b21a6",
+  "bundle_checksum": "sha256:71993f05ff97ca272ea1d3fa77ca6afcc86f079590de4f6b0f7db39c9b569488",
+  "generated_at": "2026-10-02T18:42:07.166Z",
   "status": "awaiting_receipts",
   "receipts": {
     "github": {
@@ -13,5 +13,5 @@
     }
   },
   "errors": [],
-  "receipt_checksum": "sha256:479f5ced93ab25af7c2b46ea30b2846723da8a8014f240c10f31d8fba3891e8c"
+  "receipt_checksum": "sha256:1c59502147f8127492ffec596259a40f05710226537ca1167372ad6ef80da31b"
 }

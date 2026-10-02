@@ -1,0 +1,13 @@
+{
+  "version": "1.0",
+  "candidate_commit": "4dfa3db9d72686f05272fff9bf376dded74b21a6",
+  "bundle_checksum": "sha256:71993f05ff97ca272ea1d3fa77ca6afcc86f079590de4f6b0f7db39c9b569488",
+  "generated_at": "2026-10-02T18:42:07.290Z",
+  "max_receipt_age_minutes": 1440,
+  "receipt_ages_minutes": {},
+  "status": "pending_receipts",
+  "receipt_checksum": "sha256:1c59502147f8127492ffec596259a40f05710226537ca1167372ad6ef80da31b",
+  "errors": [
+    "both destination receipts are required before closeout"
+  ]
+}

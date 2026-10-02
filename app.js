@@ -124,6 +124,17 @@ function activateConsolePanel(name) {
   });
 }
 
+function activateEvidenceFilter(filter) {
+  $$('[data-evidence-filter]').forEach((button) => {
+    const active = button.dataset.evidenceFilter === filter;
+    button.classList.toggle('active', active);
+    button.setAttribute('aria-pressed', String(active));
+  });
+  $$('[data-evidence-status]').forEach((row) => {
+    row.hidden = filter !== 'all' && row.dataset.evidenceStatus !== filter;
+  });
+}
+
 function updateDeletionDemo() {
   state.deletionScheduled = !state.deletionScheduled;
   $("#deletionState").hidden = !state.deletionScheduled;
@@ -276,6 +287,291 @@ const demoFlows = {
       </div>
       <div class="flow-result"><span>RELEASE STATUS</span><h3>Ready for reviewed integration</h3><p>The source can move through review with recorded local evidence. Deployment stays blocked until the live environment proves its own readiness.</p><div class="flow-meta"><span>LOCAL EVIDENCE</span><span>NO LIVE CLAIMS</span><span>REVIEW REQUIRED</span></div></div>
     `
+  },
+  "Ship packet": {
+    kicker: "SHIP PACKET · SAMPLE FLOW",
+    title: "A release handoff with no hidden gaps",
+    step: "F111–F120 · Draft packet preview",
+    body: `
+      <p class="flow-intro">The generator captures the exact candidate and local evidence paths, then leaves owners, approvals, live evidence, rollback, and monitoring for accountable reviewers.</p>
+      <div class="routine-preview">
+        <div><b>01</b><span>Candidate identity</span><small>Branch + commit captured</small></div>
+        <div><b>02</b><span>Evidence map</span><small>Phase-bound references required</small></div>
+        <div><b>03</b><span>Approval quorum</span><small>Five launch roles pending</small></div>
+        <div><b>04</b><span>Publish decision</span><small>Blocked until readiness passes</small></div>
+      </div>
+      <div class="flow-result"><span>DEMO PACKET STATUS</span><h3>Drafted, not approved</h3><p>This preview contains sample records only. A completed packet must match the deployment image digests, carry reviewed evidence, name a rollback target, and pass the live readiness gate.</p><div class="flow-meta"><span>SECRET-FREE DRAFT</span><span>FAIL-CLOSED</span><span>HUMAN REVIEW</span></div></div>
+    `
+  },
+  "Launch monitoring": {
+    kicker: "LAUNCH WATCH · SAMPLE FLOW",
+    title: "Keep the first week observable",
+    step: "F106–F108 · Monitoring preview",
+    body: `
+      <p class="flow-intro">A real launch needs named owners, a staffed incident path, and evidence at each watch point. This preview contains no live alerts or operational credentials.</p>
+      <div class="routine-preview">
+        <div><b>15M</b><span>Edge + health checks</span><small>Owner pending</small></div>
+        <div><b>1H</b><span>Errors + support queue</span><small>Owner pending</small></div>
+        <div><b>24H</b><span>Data + billing review</span><small>Owner pending</small></div>
+        <div><b>7D</b><span>Closeout + rollback review</span><small>Owner pending</small></div>
+      </div>
+      <div class="flow-result"><span>DEMO MONITORING STATUS</span><h3>Defined, not staffed</h3><p>The cadence is ready for accountable owners and live incident references. No monitoring subscription, alert, or rollback action was created by this demo.</p><div class="flow-meta"><span>FOUR WATCH POINTS</span><span>NO LIVE ALERTS</span><span>OWNER REQUIRED</span></div></div>
+    `
+  },
+  "Launch plan": {
+    kicker: "LAUNCH PLAN · SAMPLE FLOW",
+    title: "Make the decision visible",
+    step: "F136–F145 · Launch handoff preview",
+    body: `
+      <p class="flow-intro">A launch plan turns monitoring, incident response, rollback, and closeout into named handoff work. This preview is a sample record and cannot approve a release.</p>
+      <div class="routine-preview">
+        <div><b>01</b><span>Incident path</span><small>Owner + channel pending</small></div>
+        <div><b>02</b><span>Rollback rehearsal</span><small>Previous release pending</small></div>
+        <div><b>03</b><span>Known issues</span><small>Customer impact review pending</small></div>
+        <div><b>04</b><span>Closeout</span><small>Seven-day owner pending</small></div>
+      </div>
+      <div class="flow-result"><span>DEMO LAUNCH DECISION</span><h3>Hold publication</h3><p>The sample plan remains incomplete until live configuration, accountable ownership, rollback evidence, and staffed monitoring are reviewed.</p><div class="flow-meta"><span>NO APPROVAL ACTION</span><span>ROLLBACK VISIBLE</span><span>HUMAN DECISION</span></div></div>
+    `
+  },
+  "Release decision": {
+    kicker: "RELEASE DECISION · SAMPLE FLOW",
+    title: "Record the decision without guessing",
+    step: "F146–F160 · Closeout preview",
+    body: `
+      <p class="flow-intro">A decision record links the candidate, approvals, rollback evidence, and closeout owner. This sample remains a hold and cannot approve or publish a release.</p>
+      <div class="routine-preview">
+        <div><b>01</b><span>Candidate</span><small>F160 local evidence</small></div>
+        <div><b>02</b><span>Approvals</span><small>Five roles pending</small></div>
+        <div><b>03</b><span>Rollback</span><small>Rehearsal pending</small></div>
+        <div><b>04</b><span>Closeout</span><small>Seven-day owner pending</small></div>
+      </div>
+      <div class="flow-result"><span>DEMO DECISION STATUS</span><h3>Hold · incomplete</h3><p>The record is ready for human review only. No approval, deployment, notification, or closeout record was created by this demo.</p><div class="flow-meta"><span>LOGGED SAMPLE</span><span>NO LIVE MUTATION</span><span>HUMAN REVIEW</span></div></div>
+    `
+  },
+  "Publish readiness": {
+    kicker: "PUBLISH READINESS · SAMPLE FLOW",
+    title: "Prepare the package, keep publishing blocked",
+    step: "F161–F175 · Publish review preview",
+    body: `
+      <p class="flow-intro">The publish package gathers local evidence, live blockers, owner signoff, support readiness, and rollback authorization. This sample cannot deploy or notify anyone.</p>
+      <div class="routine-preview">
+        <div><b>01</b><span>Local candidate</span><small>F175 packaged</small></div>
+        <div><b>02</b><span>Live evidence</span><small>Missing</small></div>
+        <div><b>03</b><span>Owner signoff</span><small>Incomplete</small></div>
+        <div><b>04</b><span>Rollback authorization</span><small>Pending</small></div>
+      </div>
+      <div class="flow-result"><span>DEMO PUBLISH STATUS</span><h3>Blocked · no publish</h3><p>The package is ready to review only. No deployment, customer notification, traffic change, credential action, or release closeout was performed by this demo.</p><div class="flow-meta"><span>REVIEW PACKAGE</span><span>NO DEPLOYMENT</span><span>OWNER SIGNOFF REQUIRED</span></div></div>
+    `
+  },
+  "Staging readiness": {
+    kicker: "STAGING READINESS · SAMPLE FLOW",
+    title: "Rehearse the release without promoting it",
+    step: "F176–F190 · Staging review preview",
+    body: `
+      <p class="flow-intro">A staging rehearsal needs a real deployment URL, immutable image digests, restore evidence, assistive-technology validation, and operator coverage. This sample creates none of those records.</p>
+      <div class="routine-preview">
+        <div><b>01</b><span>Local source</span><small>F190 verified</small></div>
+        <div><b>02</b><span>Deployment proof</span><small>Missing</small></div>
+        <div><b>03</b><span>Data restore</span><small>Missing</small></div>
+        <div><b>04</b><span>Operator rehearsal</span><small>Pending</small></div>
+      </div>
+      <div class="flow-result"><span>DEMO STAGING STATUS</span><h3>Blocked · no staging</h3><p>The rehearsal checklist is ready for review only. No staging environment, credential connection, data seed, traffic promotion, alert, or rollback action was created by this demo.</p><div class="flow-meta"><span>REHEARSAL PACKAGE</span><span>NO TRAFFIC CHANGE</span><span>LIVE EVIDENCE REQUIRED</span></div></div>
+    `
+  },
+  "Production handoff": {
+    kicker: "PRODUCTION HANDOFF · SAMPLE FLOW",
+    title: "Hold cutover until the real evidence exists",
+    step: "F191–F205 · Go-live handoff preview",
+    body: `
+      <p class="flow-intro">A production handoff needs reviewed edge routing, credential ownership, data restoration, observability, support coverage, accessibility proof, and rollback authority. This preview cannot touch live systems.</p>
+      <div class="routine-preview">
+        <div><b>01</b><span>Local package</span><small>F205 verified</small></div>
+        <div><b>02</b><span>DNS + edge</span><small>Missing</small></div>
+        <div><b>03</b><span>Secrets + data</span><small>Missing</small></div>
+        <div><b>04</b><span>Support + rollback</span><small>Pending</small></div>
+      </div>
+      <div class="flow-result"><span>DEMO PRODUCTION STATUS</span><h3>Blocked · no production</h3><p>The handoff is ready for review only. No DNS change, credential connection, deployment, enrollment, customer traffic, alert, rollback, approval, or production publication was performed by this demo.</p><div class="flow-meta"><span>GO-LIVE PACKAGE</span><span>NO CUSTOMER TRAFFIC</span><span>CUTOVER BLOCKED</span></div></div>
+    `
+  },
+  "Launch exception": {
+    kicker: "LAUNCH EXCEPTION · SAMPLE FLOW",
+    title: "Make overrides explicit and rare",
+    step: "F206–F220 · Exception review preview",
+    body: `
+      <p class="flow-intro">A launch exception needs named authority, a narrow scope, accepted risk, expiry, mitigation, rollback evidence, and a closeout owner. This sample cannot override a blocked gate.</p>
+      <div class="routine-preview">
+        <div><b>01</b><span>Local package</span><small>F220 verified</small></div>
+        <div><b>02</b><span>Authority</span><small>Missing</small></div>
+        <div><b>03</b><span>Risk scope</span><small>Pending</small></div>
+        <div><b>04</b><span>Rollback + expiry</span><small>Missing</small></div>
+      </div>
+      <div class="flow-result"><span>DEMO EXCEPTION STATUS</span><h3>Denied · no exception</h3><p>The exception record is ready for review only. No launch block was overridden, no approval was created, no customer traffic changed, and no release was published by this demo.</p><div class="flow-meta"><span>NO OVERRIDE</span><span>OWNER REQUIRED</span><span>TIME-BOXED RISK</span></div></div>
+    `
+  },
+  "Post-launch review": {
+    kicker: "POST-LAUNCH REVIEW · SAMPLE FLOW",
+    title: "Close the loop only after live evidence exists",
+    step: "F221–F235 · Closeout review preview",
+    body: `
+      <p class="flow-intro">A closeout record needs monitoring, support, data, accessibility, rollback and customer-impact evidence. This sample cannot close a release or claim a launch happened.</p>
+      <div class="routine-preview">
+        <div><b>01</b><span>Local package</span><small>F235 verified</small></div>
+        <div><b>02</b><span>Launch evidence</span><small>Missing</small></div>
+        <div><b>03</b><span>Customer impact</span><small>Pending</small></div>
+        <div><b>04</b><span>Final decision</span><small>Blocked</small></div>
+      </div>
+      <div class="flow-result"><span>DEMO CLOSEOUT STATUS</span><h3>Blocked · no closeout</h3><p>The closeout record is ready for review only. No live launch was claimed, no incident was resolved, no rollback decision was made, and no release was closed by this demo.</p><div class="flow-meta"><span>NO LIVE CLAIM</span><span>OWNER REVIEW REQUIRED</span><span>CLOSEOUT BLOCKED</span></div></div>
+    `
+  },
+  "Evidence archive": {
+    kicker: "EVIDENCE ARCHIVE · SAMPLE FLOW",
+    title: "Keep the release record durable",
+    step: "F236–F255 · Archive review preview",
+    body: `
+      <p class="flow-intro">An evidence archive needs reviewed release, exception, closeout, retention, integrity and audit references. This sample cannot mark production evidence complete or create a durable archive.</p>
+      <div class="routine-preview">
+        <div><b>01</b><span>Local package</span><small>F255 verified</small></div>
+        <div><b>02</b><span>Retention owner</span><small>Missing</small></div>
+        <div><b>03</b><span>Evidence index</span><small>Incomplete</small></div>
+        <div><b>04</b><span>Audit freeze</span><small>Blocked</small></div>
+      </div>
+      <div class="flow-result"><span>DEMO ARCHIVE STATUS</span><h3>Blocked · no archive</h3><p>The archive package is ready for review only. No live evidence was frozen, no immutable archive was created, no retention owner was assigned, and no audit handoff was completed by this demo.</p><div class="flow-meta"><span>NO ARCHIVE CLAIM</span><span>RETENTION OWNER REQUIRED</span><span>AUDIT BLOCKED</span></div></div>
+    `
+  },
+  "Audit remediation": {
+    kicker: "AUDIT REMEDIATION · SAMPLE FLOW",
+    title: "Turn blockers into accountable follow-up",
+    step: "F256–F275 · Remediation review preview",
+    body: `
+      <p class="flow-intro">A remediation register needs owners, due dates, severity, retest evidence, residual-risk notes and reviewer closure. This sample cannot fix findings or close audit work.</p>
+      <div class="routine-preview">
+        <div><b>01</b><span>Local package</span><small>F275 verified</small></div>
+        <div><b>02</b><span>Owner assignment</span><small>Missing</small></div>
+        <div><b>03</b><span>Retest evidence</span><small>Pending</small></div>
+        <div><b>04</b><span>Reviewer closure</span><small>Blocked</small></div>
+      </div>
+      <div class="flow-result"><span>DEMO REMEDIATION STATUS</span><h3>Blocked · no closure</h3><p>The remediation register is ready for review only. No finding was fixed, no owner was assigned, no retest evidence was accepted, and no audit item was closed by this demo.</p><div class="flow-meta"><span>NO FIX CLAIM</span><span>OWNER REQUIRED</span><span>CLOSURE BLOCKED</span></div></div>
+    `
+  },
+  "Governance review": {
+    kicker: "GOVERNANCE REVIEW · SAMPLE FLOW",
+    title: "Hold the final decision until every owner is present",
+    step: "F276–F295 · Governance review preview",
+    body: `
+      <p class="flow-intro">A governance review needs quorum, risk disposition, remediation evidence, customer-impact review and a final go/hold/rollback decision. This sample cannot approve launch or accept risk.</p>
+      <div class="routine-preview">
+        <div><b>01</b><span>Local package</span><small>F295 verified</small></div>
+        <div><b>02</b><span>Decision quorum</span><small>Incomplete</small></div>
+        <div><b>03</b><span>Risk disposition</span><small>Pending</small></div>
+        <div><b>04</b><span>Proceed criteria</span><small>Blocked</small></div>
+      </div>
+      <div class="flow-result"><span>DEMO GOVERNANCE STATUS</span><h3>Blocked · no decision</h3><p>The governance record is ready for review only. No risk was accepted, no decision quorum was met, no launch was approved, and no release decision was made by this demo.</p><div class="flow-meta"><span>NO APPROVAL CLAIM</span><span>QUORUM REQUIRED</span><span>DECISION BLOCKED</span></div></div>
+    `
+  },
+  "Release council": {
+    kicker: "RELEASE COUNCIL · SAMPLE FLOW",
+    title: "Record council readiness without forcing an outcome",
+    step: "F296–F315 · Council review preview",
+    body: `
+      <p class="flow-intro">A release council needs required attendance, reviewed evidence, role-level votes, minutes, action owners and a follow-up date. This sample cannot record a release outcome.</p>
+      <div class="routine-preview">
+        <div><b>01</b><span>Local package</span><small>F315 verified</small></div>
+        <div><b>02</b><span>Attendance</span><small>Incomplete</small></div>
+        <div><b>03</b><span>Decision record</span><small>Missing</small></div>
+        <div><b>04</b><span>Minutes + actions</span><small>Blocked</small></div>
+      </div>
+      <div class="flow-result"><span>DEMO COUNCIL STATUS</span><h3>Blocked · no outcome</h3><p>The council record is ready for review only. No attendance quorum was met, no vote was captured, no minutes were approved, and no release outcome was recorded by this demo.</p><div class="flow-meta"><span>NO OUTCOME CLAIM</span><span>COUNCIL REQUIRED</span><span>FOLLOW-UP BLOCKED</span></div></div>
+    `
+  },
+  "Executive signoff": {
+    kicker: "EXECUTIVE SIGNOFF · SAMPLE FLOW",
+    title: "Keep final authorization accountable",
+    step: "F316–F335 · Executive signoff preview",
+    body: `
+      <p class="flow-intro">Executive signoff needs sponsor authority, business readiness, rollback ownership, publication controls and a signed decision. This sample cannot authorize launch.</p>
+      <div class="routine-preview">
+        <div><b>01</b><span>Local package</span><small>F335 verified</small></div>
+        <div><b>02</b><span>Sponsor authority</span><small>Missing</small></div>
+        <div><b>03</b><span>Business readiness</span><small>Pending</small></div>
+        <div><b>04</b><span>Authorization record</span><small>Blocked</small></div>
+      </div>
+      <div class="flow-result"><span>DEMO SIGNOFF STATUS</span><h3>Blocked · no signoff</h3><p>The signoff record is ready for review only. No sponsor was assigned, no business readiness was accepted, no rollback authority was granted, and no executive authorization was recorded by this demo.</p><div class="flow-meta"><span>NO AUTHORIZATION CLAIM</span><span>SPONSOR REQUIRED</span><span>SIGNOFF BLOCKED</span></div></div>
+    `
+  },
+  "Publication authorization": {
+    kicker: "PUBLICATION AUTHORIZATION · SAMPLE FLOW",
+    title: "Keep publish action explicitly authorized",
+    step: "F336–F355 · Publication authorization preview",
+    body: `
+      <p class="flow-intro">Publication authorization needs a named owner, command path, approved timing, rollback watch and audit capture before any publish action can run. This sample cannot publish the release.</p>
+      <div class="routine-preview">
+        <div><b>01</b><span>Local package</span><small>F355 verified</small></div>
+        <div><b>02</b><span>Publish owner</span><small>Missing</small></div>
+        <div><b>03</b><span>Release window</span><small>Pending</small></div>
+        <div><b>04</b><span>Authorization</span><small>Blocked</small></div>
+      </div>
+      <div class="flow-result"><span>DEMO PUBLICATION STATUS</span><h3>Blocked · no authorization</h3><p>The publication record is ready for review only. No publish owner was assigned, no command was enabled, no publication timing was approved, and no publication was executed by this demo.</p><div class="flow-meta"><span>NO PUBLICATION CLAIM</span><span>OWNER REQUIRED</span><span>AUTHORIZATION BLOCKED</span></div></div>
+    `
+  },
+  "Production finalization": {
+    kicker: "PRODUCTION FINALIZATION · SAMPLE FLOW",
+    title: "Finish pre and post-production evidence without claiming release",
+    step: "F356–F375 · Production finalization preview",
+    body: `
+      <p class="flow-intro">Production finalization needs live pre-production evidence, cutover rehearsal, first-hour watch and closeout proof before the release can be considered publishable. This sample cannot finalize production.</p>
+      <div class="routine-preview">
+        <div><b>01</b><span>Local package</span><small>F375 verified</small></div>
+        <div><b>02</b><span>Pre-production proof</span><small>Missing</small></div>
+        <div><b>03</b><span>Post-production watch</span><small>Pending</small></div>
+        <div><b>04</b><span>Final closeout</span><small>Blocked</small></div>
+      </div>
+      <div class="flow-result"><span>DEMO FINALIZATION STATUS</span><h3>Blocked · no finalization</h3><p>The finalization record is ready for review only. No live preflight was supplied, no cutover was rehearsed, no first-hour watch was completed, and no post-production closeout was recorded by this demo.</p><div class="flow-meta"><span>NO FINALIZATION CLAIM</span><span>LIVE EVIDENCE REQUIRED</span><span>CLOSEOUT BLOCKED</span></div></div>
+    `
+  },
+  "Operational acceptance": {
+    kicker: "OPERATIONAL ACCEPTANCE · SAMPLE FLOW",
+    title: "Collect owner acceptance without opening production",
+    step: "F376–F395 · Operational acceptance preview",
+    body: `
+      <p class="flow-intro">Operational acceptance needs named owner acceptance, service readiness, risk acceptance and post-release evidence before production operation can be accepted. This sample cannot accept the release.</p>
+      <div class="routine-preview">
+        <div><b>01</b><span>Local package</span><small>F395 verified</small></div>
+        <div><b>02</b><span>Owner acceptance</span><small>Missing</small></div>
+        <div><b>03</b><span>Service readiness</span><small>Pending</small></div>
+        <div><b>04</b><span>Acceptance record</span><small>Blocked</small></div>
+      </div>
+      <div class="flow-result"><span>DEMO ACCEPTANCE STATUS</span><h3>Blocked · no acceptance</h3><p>The acceptance record is ready for review only. No owner accepted operation, no live SLO baseline was supplied, no residual risk was accepted, and no post-release closeout was recorded by this demo.</p><div class="flow-meta"><span>NO ACCEPTANCE CLAIM</span><span>OWNERS REQUIRED</span><span>OPERATION BLOCKED</span></div></div>
+    `
+  },
+  "Release certification": {
+    kicker: "RELEASE CERTIFICATION · SAMPLE FLOW",
+    title: "Prepare certification without claiming ship-ready status",
+    step: "F396–F415 · Release certification preview",
+    body: `
+      <p class="flow-intro">Release certification needs live evidence, an approval ledger, exception disposition, archive integrity and a named certifier before any ship-ready claim can be made. This sample cannot certify the release.</p>
+      <div class="routine-preview">
+        <div><b>01</b><span>Local package</span><small>F415 verified</small></div>
+        <div><b>02</b><span>Evidence package</span><small>Missing</small></div>
+        <div><b>03</b><span>Approval ledger</span><small>Pending</small></div>
+        <div><b>04</b><span>Certification</span><small>Blocked</small></div>
+      </div>
+      <div class="flow-result"><span>DEMO CERTIFICATION STATUS</span><h3>Blocked · no certification</h3><p>The certification package is ready for review only. No live evidence bundle was supplied, no approval ledger was completed, no exception disposition was certified, and no ship-ready record was created by this demo.</p><div class="flow-meta"><span>NO CERTIFICATION CLAIM</span><span>LIVE EVIDENCE REQUIRED</span><span>SHIP-READY BLOCKED</span></div></div>
+    `
+  },
+  "Ship authorization": {
+    kicker: "SHIP AUTHORIZATION · SAMPLE FLOW",
+    title: "Prepare command authority without enabling release",
+    step: "F416–F435 · Ship authorization preview",
+    body: `
+      <p class="flow-intro">Ship authorization needs a named owner, command approver, go-live controls, rollback command and post-ship watch before any release command can be enabled. This sample cannot authorize shipment.</p>
+      <div class="routine-preview">
+        <div><b>01</b><span>Local package</span><small>F435 verified</small></div>
+        <div><b>02</b><span>Command authority</span><small>Missing</small></div>
+        <div><b>03</b><span>Go-live controls</span><small>Pending</small></div>
+        <div><b>04</b><span>Ship command</span><small>Blocked</small></div>
+      </div>
+      <div class="flow-result"><span>DEMO SHIP STATUS</span><h3>Blocked · no ship authorization</h3><p>The ship record is ready for review only. No ship owner was assigned, no command was enabled, no release window was approved, and no shipment was authorized by this demo.</p><div class="flow-meta"><span>NO SHIP CLAIM</span><span>COMMAND OWNER REQUIRED</span><span>RELEASE COMMAND BLOCKED</span></div></div>
+    `
   }
 };
 
@@ -404,6 +700,12 @@ document.addEventListener("click", (event) => {
   const consoleTab = event.target.closest(".console-tab");
   if (consoleTab) {
     activateConsolePanel(consoleTab.dataset.panel);
+    return;
+  }
+
+  const evidenceFilter = event.target.closest('[data-evidence-filter]');
+  if (evidenceFilter) {
+    activateEvidenceFilter(evidenceFilter.dataset.evidenceFilter);
     return;
   }
 

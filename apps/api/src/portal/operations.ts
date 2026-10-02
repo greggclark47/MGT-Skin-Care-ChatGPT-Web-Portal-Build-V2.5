@@ -198,16 +198,13 @@ export class OperationalWorker{
   const account=await records.get<any>('accounts',userId);
   if(Array.isArray(account?.roles)&&account.roles.length)blockers.push('operator_access_assigned');
   const terminalSubscriptions=new Set(['canceled','incomplete_expired']);
-  for(const audience of ['consumer','vendor']){
-   const subscription=await records.get<any>('subscriptions',`${actor}:${audience}`);
-   if(subscription&&(subscription.customer_id||subscription.subscription_id)&&!terminalSubscriptions.has(subscription.status))blockers.push(`active_${audience}_subscription`);
-  }
+  const subscription=await records.get<any>('subscriptions',`${actor}:consumer`);
+  if(subscription&&(subscription.customer_id||subscription.subscription_id)&&!terminalSubscriptions.has(subscription.status))blockers.push('active_consumer_subscription');
   const membership=await records.get<any>('memberships',actor);
   if(membership?.premium===true||['active','trialing','past_due','unpaid','incomplete','paused'].includes(membership?.status))blockers.push('active_legacy_membership');
   if((await records.list<any>('subscription_pending')).some(item=>item.actor===actor))blockers.push('pending_subscription_change');
   if((await records.list<any>('orders')).some(order=>order.actor===actor&&!['canceled','refunded','fulfilled'].includes(order.status)))blockers.push('open_order');
   if((await records.entries<any>('ai_budget_reservations')).some(item=>this.belongsToUser(item.value?.budget_key,actor,userId)&&item.value?.status==='reserved'))blockers.push('pending_ai_charge');
-  if((await records.entries<any>('partners')).some(item=>item.id===userId||item.value?.id===userId))blockers.push('vendor_account');
   return [...new Set(blockers)];
  }
  private belongsToUser(value:unknown,actor:string,userId:string){
@@ -221,7 +218,7 @@ export class OperationalWorker{
   await records.remove('guest_memberships',actor);
   for(const scope of ['profiles','profile_revisions','style_profiles','reminders','saved_retailers','carts','memberships'])await records.remove(scope,actor);
   await records.remove('checkout_requests','premium_'+actor);
-  for(const audience of ['consumer','vendor'])for(const scope of ['subscriptions','billing_attempts'])await records.remove(scope,`${actor}:${audience}`);
+  for(const scope of ['subscriptions','billing_attempts'])await records.remove(scope,`${actor}:consumer`);
   for(const scope of ['sessions','notifications','tickets','ai_routing_log','ai_budget','ai_budget_reservations','ai_budget_reconciliations','rate','subscription_commands','subscription_pending']){
    for(const item of await records.entries<any>(scope)){
     const value=item.value;

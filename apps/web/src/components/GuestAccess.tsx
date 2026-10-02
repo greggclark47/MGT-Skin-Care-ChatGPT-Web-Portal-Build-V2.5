@@ -33,7 +33,7 @@ function GuestControls({token,clearToken}:{token:string;clearToken:()=>void}){
    <label><input type="checkbox" checked={confirmed} disabled={busy==='invite'||occupied} onChange={e=>setConfirmed(e.target.checked)}/> I approve this guest and the selected access.</label>
    <button className="button primary" type="submit" disabled={busy==='invite'||occupied||!confirmed}>{busy==='invite'?'Creating invitation…':'Create invitation'}</button>
   </form>}
-  {link&&<div role="status"><label className="field">Invitation link — shown only now<input readOnly value={link} onFocus={e=>e.target.select()}/></label></div>}
+  {link&&<div role="status" aria-live="polite" aria-atomic="true"><label className="field">Invitation link — shown only now<input readOnly value={link} onFocus={e=>e.target.select()}/></label></div>}
   <GuestInvitationList invitations={state.data?.invitations||[]} busy={busy} onRevoke={id=>void act('revoke',{id,confirm:true},'revoke:'+id)}/>
  </>;
 }

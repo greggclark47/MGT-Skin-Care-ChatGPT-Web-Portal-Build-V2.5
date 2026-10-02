@@ -31,7 +31,7 @@ export default function Support(){
   e.preventDefault();if(guideBusy||!question.trim())return;
   const submittedQuestion=question.trim();
   setGuideBusy(true);setGuideError('');setGuide(null);setGuideQuestion('');
-  try{const result=await hub('/assistant',{role,message:submittedQuestion,ai_consent:reviewed&&consent});setGuideQuestion(submittedQuestion);setGuide(result);}
+  try{if(reviewed&&consent)await hub('/account/consents',{consent_type:'ai_disclosure',granted:true});const result=await hub('/assistant',{role,message:submittedQuestion});setGuideQuestion(submittedQuestion);setGuide(result);}
   catch(e){setGuideError((e as Error).message);}
   finally{setGuideBusy(false);}
  }
@@ -67,7 +67,7 @@ export default function Support(){
     {guideError&&<p id="guide-error" ref={guideErrorRef} tabIndex={-1} className="notice error" role="alert">{guideError}</p>}
     <button className="button" type="submit" disabled={guideBusy||!question.trim()}>{guideBusy?'Finding guidance…':'Find guidance'}</button>
    </form>
-   {guide&&<div ref={guideResultRef} tabIndex={-1} className="notice" role="status"><p>{guide.text}</p>{guide.next_step&&(guide.next_step.path==='/support'?<a className="text-link" href="#portal-request" onClick={e=>{e.preventDefault();recordNextStep('/support');requestFormRef.current?.focus();}}>{guide.next_step.label} →</a>:<Link className="text-link" href={guide.next_step.path} onClick={()=>recordNextStep(guide.next_step!.path)}>{guide.next_step.label} →</Link>)}{guide.next_step?.path==='/support'&&guideQuestion&&!message.trim()&&<p><button type="button" className="text-button" onClick={()=>{setMessage(guideQuestion);setRequestType(requestTypeForRole[role]);setRequestSource('guided_handoff');requestSubjectRef.current?.focus();}}>Use my question as request details</button><span className="muted"> Review it below before saving.</span></p>}{!!guide.citations?.length&&<div><h3>Reviewed sources</h3>{guide.citations.map(c=><blockquote key={c.knowledge_id}><p>{c.text}</p><a className="text-link" href={c.source_url} target="_blank" rel="noopener noreferrer">{c.title} ↗</a></blockquote>)}</div>}</div>}
+   {guide&&<div ref={guideResultRef} tabIndex={-1} className="notice" role="status" aria-live="polite" aria-atomic="true"><p>{guide.text}</p>{guide.next_step&&(guide.next_step.path==='/support'?<a className="text-link" href="#portal-request" onClick={e=>{e.preventDefault();recordNextStep('/support');requestFormRef.current?.focus();}}>{guide.next_step.label} →</a>:<Link className="text-link" href={guide.next_step.path} onClick={()=>recordNextStep(guide.next_step!.path)}>{guide.next_step.label} →</Link>)}{guide.next_step?.path==='/support'&&guideQuestion&&!message.trim()&&<p><button type="button" className="text-button" onClick={()=>{setMessage(guideQuestion);setRequestType(requestTypeForRole[role]);setRequestSource('guided_handoff');requestSubjectRef.current?.focus();}}>Use my question as request details</button><span className="muted"> Review it below before saving.</span></p>}{!!guide.citations?.length&&<div><h3>Reviewed sources</h3>{guide.citations.map(c=><blockquote key={c.knowledge_id}><p>{c.text}</p><a className="text-link" href={c.source_url} target="_blank" rel="noopener noreferrer" referrerPolicy="no-referrer">{c.title} ↗<span className="sr-only">, opens a new tab</span></a></blockquote>)}</div>}</div>}
   </section>
 
   {feedback&&<p className="notice success support-reference" role="status">{feedback}</p>}{error&&<p id="support-error" className="notice error" role="alert">{error}</p>}

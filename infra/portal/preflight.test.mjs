@@ -19,6 +19,10 @@ const production = {
   WORKER_READINESS_MAX_AGE_SECONDS: "300",
   BACKUP_MAX_AGE_HOURS: "26",
   NOTIFICATION_DELIVERY: "in_app",
+  SUPPORT_OWNER_NAME: "MGT Support Lead",
+  SUPPORT_OWNER_EMAIL: "support-lead@mgtskincare.test",
+  ACCESSIBILITY_VALIDATION_REPORT_URL: "https://evidence.mgtskincare.test/a11y/report",
+  ACCESSIBILITY_VALIDATED_AT: "2026-09-01T00:00:00.000Z",
   SUBSCRIPTIONS_ENABLED: "false",
   SUBSCRIPTION_TERMS_APPROVED: "false",
   NODE_IMAGE: `node@sha256:${"c".repeat(64)}`,
@@ -62,22 +66,18 @@ test("requires the complete billing contract when subscriptions are enabled", ()
   assert.equal(result.ok, false);
   assert.ok(result.errors.some((error) => error.includes("SUBSCRIPTION_TERMS_APPROVED")));
   assert.ok(result.errors.some((error) => error.startsWith("STRIPE_SECRET_KEY")));
-  assert.ok(result.errors.some((error) => error.startsWith("STRIPE_PROFESSIONAL_ANNUAL_PRICE_ID")));
+  assert.ok(result.errors.some((error) => error.startsWith("STRIPE_PREMIUM_ANNUAL_PRICE_ID")));
 });
 
-test("accepts the complete three-plan subscription configuration", () => {
+test("accepts the locked Premium subscription configuration", () => {
   const result = validateEnvironment({
     ...production,
     SUBSCRIPTIONS_ENABLED: "true",
     SUBSCRIPTION_TERMS_APPROVED: "true",
     STRIPE_SECRET_KEY: "sk_live_configured",
     STRIPE_SUBSCRIPTION_WEBHOOK_SECRET: "whsec_configured",
-    STRIPE_ESSENTIAL_MONTHLY_PRICE_ID: "price_essential_month",
-    STRIPE_ESSENTIAL_ANNUAL_PRICE_ID: "price_essential_year",
-    STRIPE_PERSONALIZED_MONTHLY_PRICE_ID: "price_personalized_month",
-    STRIPE_PERSONALIZED_ANNUAL_PRICE_ID: "price_personalized_year",
-    STRIPE_PROFESSIONAL_MONTHLY_PRICE_ID: "price_professional_month",
-    STRIPE_PROFESSIONAL_ANNUAL_PRICE_ID: "price_professional_year"
+    STRIPE_PREMIUM_MONTHLY_PRICE_ID: "price_premium_month",
+    STRIPE_PREMIUM_ANNUAL_PRICE_ID: "price_premium_year"
   });
   assert.equal(result.ok, true);
 });
@@ -92,6 +92,21 @@ test("requires secure webhook delivery settings", () => {
   assert.equal(result.ok, false);
   assert.ok(result.errors.some((error) => error.startsWith("NOTIFICATION_WEBHOOK_URL")));
   assert.ok(result.errors.some((error) => error.startsWith("NOTIFICATION_WEBHOOK_TOKEN")));
+});
+
+test("requires named support ownership and deployed accessibility evidence", () => {
+  const result = validateEnvironment({
+    ...production,
+    SUPPORT_OWNER_NAME: "",
+    SUPPORT_OWNER_EMAIL: "support@example.invalid",
+    ACCESSIBILITY_VALIDATION_REPORT_URL: "http://localhost/a11y",
+    ACCESSIBILITY_VALIDATED_AT: "2999-01-01T00:00:00.000Z"
+  });
+  assert.equal(result.ok, false);
+  assert.ok(result.errors.some((error) => error.startsWith("SUPPORT_OWNER_NAME")));
+  assert.ok(result.errors.some((error) => error.startsWith("SUPPORT_OWNER_EMAIL")));
+  assert.ok(result.errors.some((error) => error.startsWith("ACCESSIBILITY_VALIDATION_REPORT_URL")));
+  assert.ok(result.errors.some((error) => error.startsWith("ACCESSIBILITY_VALIDATED_AT")));
 });
 
 test("rejects floating or placeholder container image tags", () => {

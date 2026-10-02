@@ -8,7 +8,7 @@ export default function Coach(){
  const ready=state.data?.ai_configured===true&&!!state.data?.account;
  const starters=['What does a moisturizer do?','How does sunscreen fit into a morning routine?','What should I know about niacinamide?'];
  function chooseQuestion(question:string){setMessage(question);setError('');composer.current?.parentElement?.querySelector('textarea')?.focus();}
- async function send(e:React.FormEvent){e.preventDefault();if(busy||!ready||!consent||!message.trim())return;const question=message.trim();setBusy(true);setError('');try{const answer=await hub('/coach',{message:question,ai_consent:consent});setMessages(m=>[...m,{question,answer}]);setMessage('');}catch(e){setError((e as Error).message);}finally{setBusy(false);}}
+ async function send(e:React.FormEvent){e.preventDefault();if(busy||!ready||!consent||!message.trim())return;const question=message.trim();setBusy(true);setError('');try{await hub('/account/consents',{consent_type:'ai_disclosure',granted:true});const answer=await hub('/coach',{message:question});setMessages(m=>[...m,{question,answer}]);setMessage('');}catch(e){setError((e as Error).message);}finally{setBusy(false);}}
  return <AppFrame title="Skin Coach"><p className="lead">A space for your skincare questions.</p><p>Explore cosmetic skincare questions using the reviewed library. This service cannot diagnose symptoms or prescribe treatment.</p>
  <LoadState {...state} retry={state.reload}/>
  {!state.loading&&!state.error&&!state.data?.ai_configured&&<p className="notice">The platform analysis service is not connected yet. Answers will be available after service configuration and knowledge review.</p>}

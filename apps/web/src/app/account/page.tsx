@@ -2,12 +2,30 @@
 import React,{useState} from 'react';
 import Link from 'next/link';
 import {HubError,hub,useHub} from '../../lib/hub';
-import {AppFrame,LoadState} from '../../components/HubFrames';
+import {AppFrame,LoadState,Timestamp} from '../../components/HubFrames';
 import {ConfirmDialog} from '../../components/ConfirmDialog';
 import {GuestAccess} from '../../components/GuestAccess';
 import {AccountDeletionPanel} from '../../components/CustomerStatusPanels';
 
 type AccountAction='email'|'verify'|'logout'|'merge-guest'|'merge-account'|'privacy-request'|'privacy-cancel'|'';
+
+function AiDisclosureControls(){
+ const state=useHub('/account/consents');
+ const [busy,setBusy]=useState(false),[error,setError]=useState('');
+ const disclosure=state.data?.ai_disclosure;
+ const granted=disclosure?.granted===true;
+ async function setDisclosure(next:boolean){
+  if(busy)return;setBusy(true);setError('');
+  try{await hub('/account/consents',{consent_type:'ai_disclosure',granted:next});await state.reload();}
+  catch(e){setError((e as Error).message);}finally{setBusy(false);}
+ }
+ return <section className="panel" aria-labelledby="analysis-permission-heading" aria-busy={busy||state.loading}>
+  <span className="eyebrow">ANALYSIS PERMISSION</span><h2 id="analysis-permission-heading">Platform analysis</h2>
+  <LoadState {...state} retry={state.reload}/>
+  {!state.loading&&!state.error&&<><p>{granted?'Permission is currently recorded for platform analysis.':'No active permission is recorded for platform analysis.'}</p>{disclosure?.captured_at&&<p className="muted">Recorded <Timestamp value={disclosure.captured_at}/>{disclosure.version?' · '+disclosure.version:''}</p>}<button className="button" type="button" disabled={busy} onClick={()=>void setDisclosure(!granted)}>{busy?'Saving…':granted?'Withdraw permission':'Allow analysis service'}</button></>}
+  {error&&<p className="notice error" role="alert">{error}</p>}
+ </section>;
+}
 
 export default function Account(){
  const state=useHub('/session');
@@ -40,6 +58,7 @@ export default function Account(){
    <section className="panel account-panel"><span className="eyebrow">CONNECTED ACCOUNT</span><h2>Welcome back.</h2><p className="account-email">{state.data.account.email}</p><div className="actions"><Link className="button primary" href="/my-skin">View my profile</Link><button disabled={busy} type="button" className="button" onClick={()=>void act('/auth/logout',{},'logout')}>{busyAction==='logout'?'Signing out…':'Sign out'}</button></div></section>
    <div className="actions"><Link className="button" href="/subscription">Your subscriptions</Link><Link className="button" href="/membership">Plans & Billing</Link></div>
    <section className="account-tools" aria-label="Account tools"><a href="/api/hub/account/export"><strong>Download my data <span aria-hidden="true">↓</span></strong><span>Export the information saved to your account.</span></a><Link href="/orders"><strong>Retailer purchase help <span aria-hidden="true">→</span></strong><span>Find where to ask about payments, delivery and returns.</span></Link></section>
+   <AiDisclosureControls/>
    <AccountDeletionPanel deletion={deletion} busy={busy} onRequest={()=>setPrivacyAction('request')} onCancel={()=>setPrivacyAction('cancel')}/>
    <ConfirmDialog open={privacyAction!==null} title={privacyAction==='cancel'?'Keep this account?':'Delete this account?'} busy={busy} onCancel={()=>setPrivacyAction(null)} onConfirm={()=>void privacy(privacyAction==='cancel'?'/account/deletion-cancel':'/account/deletion-request',privacyAction==='cancel'?'privacy-cancel':'privacy-request')} confirmLabel={privacyAction==='cancel'?'Keep my account':'Schedule deletion'}><p>{privacyAction==='cancel'?'This cancels the pending deletion and keeps your account and saved portal data.':'Deletion begins after 30 days. Before then, download your data or cancel this request from this page.'}</p></ConfirmDialog>
   </>:<form className="panel stack account-panel" aria-busy={busy} aria-describedby={error?'account-error':undefined} onSubmit={e=>{e.preventDefault();void act(sent?'/auth/verify':'/auth/email',sent?{email:email.trim(),code}:{email:email.trim()},sent?'verify':'email');}}><span className="eyebrow">{sent?'STEP 2 OF 2 · VERIFY':'STEP 1 OF 2 · EMAIL'}</span><h2>{sent?'Check your inbox.':'Keep your skincare connected.'}</h2><p>{sent?'Enter the verification code sent to your email address.':'Sign in with a code sent to your email. Your current browser’s profile can be linked to your account.'}</p>{!state.data.auth_configured&&<p className="notice">Email sign-in is awaiting service configuration. Your sample profile can still be saved in this browser’s portal session.</p>}<label className="field">Email address<input type="email" required autoComplete="email" disabled={busy||sent} value={email} aria-invalid={!!error&&!sent} onChange={e=>{setEmail(e.target.value);if(error)setError('');}}/></label>{sent&&<label className="field">Verification code<input className="verification-code" required inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6,8}" maxLength={8} disabled={busy} value={code} onChange={e=>{setCode(e.target.value);if(error)setError('');}} aria-invalid={!!error} aria-describedby={error?'code-help account-error':'code-help'}/><span className="muted" id="code-help">Enter the 6–8 digit code from your email.</span></label>}<button className="button primary" type="submit" disabled={busy||!state.data.auth_configured}>{busyAction==='email'?'Sending code…':busyAction==='verify'?'Verifying code…':sent?'Verify and sign in':'Email me a code'}</button>{sent&&<button type="button" className="text-button" disabled={busy} onClick={()=>{setSent(false);setCode('');setMessage('');setError('');}}>Use a different email or request a new code</button>}</form>)}

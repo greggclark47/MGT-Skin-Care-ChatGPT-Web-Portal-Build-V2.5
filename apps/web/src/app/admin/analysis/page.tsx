@@ -55,7 +55,7 @@ export default function AnalysisPage(){
  const allowed=admin.data?.roles?.some((role:string)=>['superadmin','compliance'].includes(role));
  async function submit(event:React.FormEvent){
   event.preventDefault();setBusy(true);setError('');setResult(null);
-  try{setResult(await hub('/admin/ai/analyze',{question,ai_consent:consent}));}
+  try{await hub('/account/consents',{consent_type:'ai_disclosure',granted:true});setResult(await hub('/admin/ai/analyze',{question}));}
   catch(err){setError((err as Error).message);}
   finally{setBusy(false);}
  }

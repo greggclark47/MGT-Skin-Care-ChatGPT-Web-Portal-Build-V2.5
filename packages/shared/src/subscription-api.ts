@@ -1,7 +1,7 @@
 // Subscription contract v1.1. Public fields are product-owned; account identity is session-bound.
 export type SubscriptionStatus = 'trialing'|'active'|'past_due'|'canceled'|'incomplete'|'incomplete_expired'|'unpaid'|'paused'|'unknown';
 export interface PortalSubscription {
-  id: string; audience: 'consumer'|'vendor'; status: SubscriptionStatus;
+  id: string; audience: 'consumer'; status: SubscriptionStatus;
   current_period_end: string|null; cancel_at_period_end: boolean;
   platform_managed: boolean; can_cancel: boolean; can_resume: boolean; pending_command: string|null;
 }
@@ -31,7 +31,7 @@ const object = (value: unknown): value is Record<string,any> => !!value && typeo
 const opaque = (value: unknown, prefix: string): value is string => typeof value === 'string' && new RegExp('^'+prefix+'_[a-f0-9]{40}$').test(value);
 const date = (value: unknown): value is string|null => value === null || typeof value === 'string' && /^\d{4}-\d{2}-\d{2}T/.test(value) && Number.isFinite(Date.parse(value));
 function subscription(value: unknown): PortalSubscription {
-  if (!object(value) || !opaque(value.id,'ss') || !['consumer','vendor'].includes(value.audience) ||
+  if (!object(value) || !opaque(value.id,'ss') || value.audience !== 'consumer' ||
       !['trialing','active','past_due','canceled','incomplete','incomplete_expired','unpaid','paused','unknown'].includes(value.status) ||
       !date(value.current_period_end) || ['cancel_at_period_end','platform_managed','can_cancel','can_resume'].some(key=>typeof value[key] !== 'boolean') ||
       !(value.pending_command === null || opaque(value.pending_command,'cmd'))) throw new SubscriptionApiError('invalid_response');

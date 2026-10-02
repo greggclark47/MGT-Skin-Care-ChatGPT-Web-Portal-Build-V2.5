@@ -22,5 +22,6 @@ fs.mkdirSync(output, { recursive: true });
 for (const name of ['index.html', 'app.js', 'styles.css']) {
   fs.copyFileSync(path.join(root, name), path.join(output, name));
 }
+fs.copyFileSync(path.join(root, 'mgt-mark.svg'), path.join(output, 'mgt-mark.svg'));
 fs.cpSync(path.join(root, 'images'), path.join(output, 'images'), { recursive: true });
 console.log('Built root static preview in dist');

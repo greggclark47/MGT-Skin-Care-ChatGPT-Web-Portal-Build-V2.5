@@ -38,6 +38,7 @@ infra/db/reset-and-test.sh                # wipe + apply + run the DB-backed smo
 | `0004_ingredient_rules.sql` | `ingredient_rules` — the versioned sensitivity-ceiling safety matrix, plus its seed rows. Authoritative. |
 | `0005_orders_extensions.sql` | Order columns and `fulfillment_jobs`. Must run after 0002 creates `orders`. |
 | `0006_knowledge_rag.sql` | `knowledge.embeddings` + `knowledge.match()`. Must run after 0003 creates `knowledge.objects`. |
+| `0007_compliance_release_controls.sql` | Durable consent timestamps, consent RLS, an active-consent guard, and append-only skin-match/subscription event records. Fails closed if active consent history needs reconciliation. |
 
 ### Requirements
 

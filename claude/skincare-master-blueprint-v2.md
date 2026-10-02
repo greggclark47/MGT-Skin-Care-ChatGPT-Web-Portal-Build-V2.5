@@ -2,12 +2,13 @@
 
 | | |
 |---|---|
-| **Version** | 2.0.0 |
-| **Date** | 2026-09-05 |
-| **Status** | Section 0 (Phase 0 Delta Audit) complete; gate decisions C1/C3/C4/C10 taken 2026-09-05. All sections (0, A–Q) complete; verified 2026-09-05 (locked-decision scan, compliance-language scan, cross-section arithmetic, DDL executed on PG16, financial model re-run). |
-| **Locked decisions (2026-09-05)** | C1: Free + Premium at **$14.99/mo** (annual **$149.99** — [assumption], Phase 7's Glow Annual, ~17% discount; confirm). C3: vendor portal + Connect payouts **deferred** to 12-month expansion. C4: AI Coach fine-tuning on chat data **removed**. C10: primary accent **violet #7C3AED**. |
+| **Version** | 2.0.2 |
+| **Date** | 2026-09-29 |
+| **Status** | Section 0 (Phase 0 Delta Audit) complete; gate decisions C1/C3/C4/C10 taken 2026-09-05. All sections (0, A–Q) were verified 2026-09-05 (locked-decision scan, compliance-language scan, cross-section arithmetic, DDL executed on PG16, financial model re-run). Directive update 2.0.2 adds the compliance resolution, migration decision, and production-readiness gate model in Section R; reported local implementation is complete through F435, while live-environment evidence remains outstanding. |
+| **Locked decisions (2026-09-05; reaffirmed 2026-09-29)** | C1: Free + Premium at **$14.99/mo** and **$149.99/year**. C3: vendor portal + Connect payouts **deferred** to 12-month expansion. C4: AI Coach fine-tuning on chat data **removed**. C10: primary accent **violet #7C3AED**. |
 | **Supersedes** | `claude/skincare-pivot-blueprint.md` (v1, Sept 1 2026, the "SkincareAIPlatformBlueprint" PDF) as the working plan. v1 remains the strategic source of truth; where v2 departs from v1 the departure is stated and justified inline. |
 | **Inputs** | v1 blueprint; Phase 0 discovery report (Sept 3); skincare-rebuild build logs Phases 1, 3–10; actual Phase 9/10 code; legacy MGT Health build logs Phases 6–67 (esp. Phase 59 consolidation findings, Phases 66–67). GitHub repo not accessible from this session — audited from Drive + project logs only. |
+| **v2.0.2 update authority** | MGT Skin Care v2 AI Directive Prompt 2.0.2 (2026-09-29). It supplements the v2.0.0 blueprint; where it is more specific about release evidence or compliance gates, it controls. |
 | **Owner** | Gregg Clark — CEO/CTO/CFO |
 | **Convention** | Tags: **[sourced]** = traceable to a build log, migration, or the v1 blueprint; **[assumption]** = my inference, to be confirmed; **[decision required]** = yours. Compliance framing is cosmetic-only / no-disease-claims throughout; nothing here is legal or financial advice. |
 
@@ -48,7 +49,7 @@ The honest Phase 0 conclusion: **the rebuild's Phases 1–10 are a set of well-f
 
 | # | Conflict | Positions | Recommendation | Status |
 |---|---|---|---|---|
-| C1 | **Subscription tiers and prices** — five incompatible schemes | Legacy DB: free / premium_m $9.99 / premium_y $99.90 / provider $29.99. v1 blueprint: Free + Premium $9.99. Phase 0 report: Premium "$39.99 or similar". Phase 4: Essential + Premium (Stripe price env vars only). Phase 7: Glow Monthly $14.99 / Glow Annual $149.99 / Pro Monthly $29.99 / Pro Annual $299.99. RevenueCat entitlements: premium/fitness/skincare/nutrition/family. Mobile: free/basic/premium/enterprise. | Two tiers per v1: **Free** and **Premium**. Phase 7's four SKUs contradict v1's "collapse to 2 tiers" and reintroduce the modular-SKU pattern from the Health app. One RevenueCat entitlement id: `premium`. | **Decided 2026-09-05: Free + Premium $14.99/mo** (annual $149.99 [assumption]). Section N re-models at this price. |
+| C1 | **Subscription tiers and prices** — five incompatible schemes | Legacy DB: free / premium_m $9.99 / premium_y $99.90 / provider $29.99. v1 blueprint: Free + Premium $9.99. Phase 0 report: Premium "$39.99 or similar". Phase 4: Essential + Premium (Stripe price env vars only). Phase 7: Glow Monthly $14.99 / Glow Annual $149.99 / Pro Monthly $29.99 / Pro Annual $299.99. RevenueCat entitlements: premium/fitness/skincare/nutrition/family. Mobile: free/basic/premium/enterprise. | Two tiers per v1: **Free** and **Premium**. Phase 7's four SKUs contradict v1's "collapse to 2 tiers" and reintroduce the modular-SKU pattern from the Health app. One RevenueCat entitlement id: `premium`. | **Decided 2026-09-05 and reaffirmed 2026-09-29: Free + Premium $14.99/mo / $149.99/year.** Section N models this locked decision. |
 | C2 | **LLM provider strategy** | Earlier provider plans were fragmented across three routers. Master prompt: provider-agnostic, never hard-code one. The active build uses a single local-first gateway with Ollama as the default runtime, DeepSeek as the local reasoning tier, OpenClaw as an optional Ollama-compatible orchestration endpoint, and Sonnet as entitlement-gated hosted escalation. | Provider-agnostic router. Default assignments: high-frequency copy and classification → Ollama fast model; local reasoning fallback → DeepSeek through Ollama; vision → Ollama vision model; premium consultation → Claude Sonnet 5; embeddings → Ollama `nomic-embed-text`. Every assignment is configuration, not caller code. | Decided for the current build |
 | C3 | **Vendor portal + Stripe Connect payouts (Phase 8)** | v1: dropship / brand-fulfilled, "do not build a general marketplace / third-party seller platform" in months 1–6. Master prompt §16: one unified storefront; §29 don't over-engineer. Phase 8 built `vendor_profiles`, `commission_rates`, `vendor_payouts`, Connect transfers, a vendor web portal. | **DEFER** to the 12-month expansion. A brand-fulfilled partner is paid on invoice, not via Connect transfers; the portal is marketplace machinery. Keep the migration in the repo behind a feature flag so it isn't lost. | **Decided 2026-09-05: deferred.** |
 | C4 | **AI Coach fine-tuning on chat data (Phase 8)** | Master prompt §29: no full MLOps platform; §11: every data use needs a documented purpose, retention, privacy class. Phase 8 exports `chat_messages` to OpenAI fine-tuning jobs. v1 privacy section has no consent basis for training on user conversations. | **REMOVE** from active scope. Prompt engineering + RAG achieves the quality target for Tier 1 tasks at this scale; training on user chat logs needs a consent basis and a counsel review that hasn't happened. Revisit only with a documented purpose and opt-in. | **Decided 2026-09-05: removed.** |
@@ -191,7 +192,7 @@ The positioning line carries forward from v1 unchanged: *"Personalized skincare 
 
 ### A.2 Business model
 
-Two revenue lines, both live from launch week. **Product margin** on brand-fulfilled (dropship) skincare sold through one owned storefront — no owned inventory in months 1–6, no marketplace, no private label. **Premium subscription** at $14.99/month ($149.99/year [assumption]) covering full re-personalization, replenishment automation, priority Skincare Coach access, the Tier-3 consultation, and member pricing. Free tier keeps the whole Skin Match and a browsable routine so the funnel top stays wide; the paywall sits at the point where ongoing intelligence begins, not at the first result. [sourced: v1 revenue strategy; C1 decision]
+Two revenue lines, both live from launch week. **Product margin** on brand-fulfilled (dropship) skincare sold through one owned storefront — no owned inventory in months 1–6, no marketplace, no private label. **Premium subscription** at $14.99/month ($149.99/year) covering full re-personalization, replenishment automation, priority Skincare Coach access, the Tier-3 consultation, and member pricing. Free tier keeps the whole Skin Match and a browsable routine so the funnel top stays wide; the paywall sits at the point where ongoing intelligence begins, not at the first result. [sourced: v1 revenue strategy; C1 decision]
 
 The commercial engine is *Shop My Routine* (master prompt §16): the routine is the cart. A completed Skin Match yields a pre-built, compatibility-checked, budget-aware cart; the purchase populates the routine tracker; the routine tracker drives replenishment; replenishment drives repeat revenue. Everything else — bundles, swaps, "cheaper alternative," coach answers — is a way to keep a user inside that loop.
 
@@ -570,7 +571,7 @@ Web Checkout Sessions (Phase 4 guest flow) remain as an alternative entry for th
 
 ### F.3 Subscription flow
 
-Web: `POST /api/subscriptions/checkout {plan}` → Stripe Checkout in subscription mode with `customer` from `stripe_customers` (Phase 7 `getOrCreateCustomer`), trial per config, `metadata.user_id`. Webhooks `customer.subscription.created|updated|deleted`, `invoice.paid`, `invoice.payment_failed` → `subscriptions` upsert keyed `(provider, provider_subscription_id)` + `subscription_events` insert (immutable) → `EntitlementResolver.recompute(user_id)`. Cancel/reactivate via Phase 7 service; Billing Portal for payment-method updates. Mobile: RevenueCat SDK purchase → RC webhook `POST /webhooks/revenuecat` (HMAC, legacy `rc_webhook_events` idempotency merged into `webhook_events`) → same `subscriptions` upsert with `provider='apple'|'google'` → recompute. Plans: `premium_monthly` $14.99, `premium_annual` $149.99 [assumption]; Stripe Price ids and RC product ids stored in `subscription_plans` (legacy table, reseeded to two rows).
+Web: `POST /api/subscriptions/checkout {plan}` → Stripe Checkout in subscription mode with `customer` from `stripe_customers` (Phase 7 `getOrCreateCustomer`), trial per config, `metadata.user_id`. Webhooks `customer.subscription.created|updated|deleted`, `invoice.paid`, `invoice.payment_failed` → `subscriptions` upsert keyed `(provider, provider_subscription_id)` + `subscription_events` insert (immutable) → `EntitlementResolver.recompute(user_id)`. Cancel/reactivate via Phase 7 service; Billing Portal for payment-method updates. Mobile: RevenueCat SDK purchase → RC webhook `POST /webhooks/revenuecat` (HMAC, legacy `rc_webhook_events` idempotency merged into `webhook_events`) → same `subscriptions` upsert with `provider='apple'|'google'` → recompute. Plans: `premium_monthly` $14.99, `premium_annual` $149.99; Stripe Price ids and RC product ids stored in `subscription_plans` (legacy table, reseeded to two rows).
 
 ### F.4 Entitlement model
 
@@ -705,7 +706,7 @@ Hours ~640 · Cost ~$37,000 · **Risks:** cart/routine state model gets complica
 | Integrations | Beta cohort tooling (TestFlight/Play internal, web allowlist), uptime monitoring |
 | Dependencies | SC-P3 gate; counsel engaged since SC-P2 |
 
-Hours ~440 · Cost ~$25,500 · **Risks:** counsel sign-off slips (mitigate: drafts submitted week 9); beta reveals weak core value (treated as a legitimate no-go, per v1). **KPIs:** 0 open critical/high security findings; 6/6 counsel items signed; beta (50–150 users): Skin Match completion ≥ 60%, result-to-cart ≥ 15%, Skin-Match-to-purchase ≥ 5%, routine check-in on ≥ 40% of days in week 1, AI cost/user ≤ $0.02, p95 results latency ≤ 2 s, unsupported-claim rate 0 on sampled outputs. **Gate → SC-P5:** counsel sign-off in hand; security clean; beta completion and purchase KPIs met or a documented decision to revise and re-run beta.
+Hours ~440 · Cost ~$25,500 · **Risks:** counsel sign-off slips (mitigate: drafts submitted week 9); beta reveals weak core value (treated as a legitimate no-go, per v1). **KPIs:** 0 open critical/high security findings; 8/8 counsel items signed; beta (50–150 users): Skin Match completion ≥ 60%, result-to-cart ≥ 15%, Skin-Match-to-purchase ≥ 5%, routine check-in on ≥ 40% of days in week 1, AI cost/user ≤ $0.02, p95 results latency ≤ 2 s, unsupported-claim rate 0 on sampled outputs. **Gate → SC-P5:** counsel sign-off in hand; security clean; beta completion and purchase KPIs met or a documented decision to revise and re-run beta.
 
 ### SC-P5 — Commercial Launch (Weeks 17–20)
 
@@ -770,7 +771,7 @@ Codes: `validation_failed` 400 · `unauthorized` 401 · `entitlement_required` 4
 | POST | `/auth/signup` | S | Create account; body `{email, password, anonymous_id?, session_token?}` → links pre-account session and events |
 | POST | `/auth/login` · `/auth/refresh` · `/auth/logout` | P/U | Supabase-backed (legacy) |
 | GET/PATCH | `/me` | U | Profile fields, `is_guest` |
-| POST | `/me/consents` | U | `{type, version, granted}` → `consents` row |
+| POST | `/me/consents` | U | `{consent_type, version, granted}` → `consents` row |
 | GET | `/me/consents` | U | Current consent state |
 | POST | `/me/export` · GET `/me/export/:id` · GET `/me/export/download/:token` | U/P | Phase 7 |
 | DELETE | `/me/account` · DELETE `/me/account/cancel` | U | Phase 7, 30-day grace |
@@ -1437,7 +1438,7 @@ Computed by `model.py` (kept alongside this document; re-run when any assumption
 
 | Assumption | LEAN | BASE | GROWTH | Source |
 |---|---|---|---|---|
-| Premium price (monthly / annual) | $14.99 / $149.99 | same | same | C1 decision; annual [assumption] |
+| Premium price (monthly / annual) | $14.99 / $149.99 | same | same | C1 locked decision |
 | Annual share of subscriptions | 25% | 25% | 25% | [assumption] |
 | Mobile (IAP) share of subscriptions | 60% | 60% | 60% | [assumption] |
 | IAP commission | 15% | 15% | 15% | small-business programme tier [assumption — 30% above $1M] |
@@ -1625,7 +1626,7 @@ Ordered developer task list. Each item names its phase and, where useful, the ex
 34. Model A/B via `ab_split`; `routine_optimization_deep`; cost dashboard + alerts; user-signal → eval-case pipeline.
 35. Security: RLS audit script, dependency/secret scans, photo-deletion CI test, rate-limit and AI-abuse tests, load test at 5× beta. Fix all critical/high.
 36. Privacy: export/deletion hardened (Phase 66 safeguards), retention job classes live, consent log UI.
-37. Compliance: counsel sign-off on six items; copy review; click-to-cancel review of replenishment.
+37. Compliance: counsel sign-off on the eight-item R.6 checklist; copy review; click-to-cancel review of replenishment.
 38. Beta cohort tooling and instrumentation; run beta 50–150 users; weekly eval + funnel review. **Gate SC-P4.**
 
 **SC-P5 — Commercial Launch**
@@ -1640,19 +1641,245 @@ Ordered developer task list. Each item names its phase and, where useful, the ex
 
 ---
 
-## Consolidated open items
+## R. Directive Update 2.0.2 — Compliance, Migration Decision, and Production Readiness
 
-| # | Item | Owner | Blocking |
+This update converts the 2026-09-29 directive into build and release requirements without reopening C1, C3, C4, or C10. It is intentionally explicit about the distinction between a control described in the blueprint, a control that still needs implementation, and a decision or evidence activity that no software change can substitute for.
+
+### R.1 Baseline and release position
+
+The reported local implementation position is **F435 complete** with local verification and checkpoint gates passing. This is not a production approval: production remains blocked until configuration, independent deployment evidence, named ownership, and release sign-off are complete. The remaining numbered work is therefore F436–F535, not another local UI expansion.
+
+`BI` below means **Blueprint-Integrated**: the design is already specified and only needs to be proven in its deployment context. `BG` means **Blueprint Gap — Add to Build**: this update adds the implementation or gate requirement. `II` means **Independent Implementation**: it is an operational, legal, or organizational action with an owner and deadline rather than a software feature.
+
+### R.2 Compliance resolution register
+
+| Directive item | Classification and exact current location | v2.0.2 requirement / phase |
+|---|---|---|
+| AI disclosure consent gate before any AI Coach interaction | **BG.** D.2 defines `consents`; G.6 and I.3 disclose AI assistance; neither requires a recorded acceptance before `POST /coach/conversations/:id/messages`. | In SC-P2, add the active `ai_disclosure` consent check in R.3. No Coach request, consultation, or streaming connection may reach the gateway without it. Verify in F476–F495. |
+| Photo consent modal, explicit opt-in, and deletion within 30 seconds | **BI.** D.5 specifies ≤30 s primary deletion and a one-hour backstop; G.6 specifies the modal; I.3 requires consent for the photo endpoint; SC-P2 item 20 requires a CI deletion test. | Preserve the explicit opt-in and write a deletion timestamp to `photo_analysis_audit`. F476–F495 must prove the deployed flow, including object-store purge evidence. |
+| Medical escalation flag when input crosses a clinical boundary | **BI.** G.6, I.3 Coach response shape, L.2 safety preamble, and L.4 validator all specify `escalate: true`. | Keep the keyword sweep independent of model output. F476–F495 requires a synthetic escalation suite that proves the safe fallback, escalation event, and no raw clinical text in logs. |
+| Runtime filter for blocked terms and equivalents | **BI.** L.2 lists the prohibited terms and L.4 requires a blocked-term scan on every string field. | Maintain one versioned canonical lexicon, including inflections and equivalents, for `diagnose`, `treat`, `prescribe`, `cure`, `eczema`, `psoriasis`, and `rosacea`. Its contract tests are a release gate in SC-P4 and F476–F495. |
+| Cosmetic-only / no-disease-claims posture across AI, product copy, and marketing | **BG.** A.1, G.5, G.6, L.2, and M.2 set the posture, but they do not define a release-control for product and marketing copy. | Add the content-release policy in R.3: static scan plus human approval is required for all user-visible AI prompts, product copy, CRM copy, store listings, paid ads, and landing pages. SC-P4 builds the control; SC-P5 and F496–F515 enforce it. |
+| PHI exclusion and written classification | **BG.** C.3 and the no-medical-service language limit scope, but a free-text Coach can receive health-regulated content unless the request path handles it before persistence. | Adopt the written classification in R.4 and implement the non-clinical input boundary in SC-P2. Counsel must confirm the classification before the SC-P4 gate. |
+| Enforced retention: selfie ≤30 s; Coach 12 mo; personal analytics 24 mo; audit 6 yr; webhooks 90 d | **BI.** D.5 sets every named period; D.3/K define personal analytics; SC-P4 requires retention jobs and a dry run. | F476–F495 must capture scheduled-job logs, a controlled expiry result for each class, and the current database/storage configuration. Missing proof blocks launch. |
+| WCAG 2.1 AA across screens and modals, with deployed report | **II.** G.5 specifies accessible controls and SC-P4 includes beta hardening, but a deployed report is an external validation artifact. | Accessibility owner commissions or runs the audit, remediates critical findings, and files a dated deployed report before F496–F515 can clear. |
+| Billing evidence package before Billing is live | **BG.** H SC-P1/SC-P3/SC-P5 specifies test-mode, reconciliation, and live switch, but not an approval package. | Add the Billing evidence package in R.7. Billing remains feature-flagged off until it is complete and signed. Build the manifest in SC-P4; verify it in F456–F495. |
+| AI Coach evidence package before AI is live | **BG.** E.6–E.8 and L.6 define routing, budgets, and evaluation but not a release package. | Add the AI evidence package in R.7. AI remains feature-flagged off until it is complete and signed. Build the manifest in SC-P4; verify it in F456–F495. |
+| Click-to-cancel: in-app web cancellation, mobile store deep link, counsel review | **BI.** G.4 requires cancellation no harder than opt-in; I.3 defines web cancel/reactivate and a mobile store deep link; H SC-P4 includes counsel review. | F476–F495 must record web and mobile path tests. Counsel signs the result under the eight-item checklist before F496–F515. |
+| Active `prevent_mutation()` on `skin_match_answers`, all `*_audit`, and `webhook_events` | **BG.** C.3 and J require the trigger pattern, but J only illustrates the `skin_match_answers` trigger and does not prove activation across every required table. | Apply the trigger migration in R.3 and run mutation-attempt tests in SC-P4 and F476–F495. |
+| RLS audit: every user-scoped table has owner policy and production service-role path | **BG.** C.3 and J show a policy pattern; SC-P4 calls for an audit script, but the full table-by-table audit and production proof are not defined. | Add the audit policy and test requirements in R.3. The production report with zero gaps is mandatory in F476–F495. |
+| Counsel sign-off on an eight-item checklist before the SC-P4 gate | **BG.** H SC-P4 and Q item 37 only require six checklist items. | Replace the six-item checkpoint with the eight-item checklist in R.6. Counsel owner signs it before the SC-P4 gate can be marked passed and again in the final ship packet. |
+
+### R.3 Required build deltas and enforceable controls
+
+The following is the normative addendum for the canonical migration and API layer. Apply it as an additive migration after the existing consolidation migration, after reconciling exact column names against the deployed schema; it is not a substitute for a migration rehearsal.
+
+```sql
+-- 20260929000007_sc_p4_compliance_and_release_controls.sql
+alter table public.consents
+  add column if not exists source text not null default 'app',
+  add column if not exists captured_at timestamptz not null default now(),
+  add column if not exists revoked_at timestamptz;
+
+create unique index if not exists consents_active_user_type_uidx
+  on public.consents (user_id, consent_type)
+  where granted and revoked_at is null;
+
+create or replace function public.has_active_consent(required_type text)
+returns boolean
+language sql
+stable
+security invoker
+as $$
+  select exists (
+    select 1
+    from public.consents
+    where user_id = auth.uid()
+      and consent_type = required_type
+      and granted
+      and revoked_at is null
+  );
+$$;
+
+create or replace function public.prevent_mutation()
+returns trigger
+language plpgsql
+as $$
+begin
+  raise exception '% is immutable', tg_table_name using errcode = '55000';
+end;
+$$;
+
+do $$
+declare
+  protected_table text;
+begin
+  foreach protected_table in array array[
+    'skin_match_answers', 'webhook_events', 'photo_analysis_audit',
+    'admin_audit_log', 'subscription_events', 'notification_log',
+    'order_admin_actions'
+  ]
+  loop
+    if to_regclass(format('public.%I', protected_table)) is not null
+      and not exists (
+        select 1 from pg_trigger
+        where tgrelid = to_regclass(format('public.%I', protected_table))
+          and tgname = 'trg_immutable_' || protected_table
+          and not tgisinternal
+      ) then
+      execute format(
+        'create trigger %I before update or delete on public.%I for each row execute function public.prevent_mutation()',
+        'trg_immutable_' || protected_table, protected_table
+      );
+    end if;
+  end loop;
+end;
+$$;
+```
+
+`POST /me/consents` remains the only consent-write endpoint. It must accept `{ consent_type: 'ai_disclosure'|'photo', version, granted }`, capture the displayed policy version and source, and create a new audit row or revoke the current row. The Coach controller must call `requireActiveConsent('ai_disclosure')` before it persists a message, opens a stream, invokes a tool, or invokes the AI gateway. The photo route must call `requireActiveConsent('photo')` before accepting multipart bytes. A missing or withdrawn AI consent returns `403 consent_required`; a missing photo consent returns `403 photo_consent_required`. A request-body boolean such as `ai_consent: true` is not sufficient because it has no durable version, timestamp, or revocation record.
+
+Only `terms`, `privacy`, `ai_disclosure`, `photo`, and `marketing` are accepted for new consent writes. The legacy `training_optin` value is retained only as historical data and must be rejected by the API because C4 removes AI Coach fine-tuning on chat data from scope.
+
+The clinical-boundary classifier runs before persistence for every free-text Coach and support request. A boundary match returns the static cosmetic-safety response with `escalate: true`, emits only the minimal `ai.escalation_shown` event, and prevents raw clinical text from being retained in Coach messages, analytics, provider prompts, or error reporting. The blocked-term validator remains a post-generation control as well; pre-persistence classification and post-generation filtering defend different paths.
+
+For every table with `user_id`, the required owner policy is equivalent to the following. The deployed API service role is used only on trusted server/worker paths and never exposed to a browser or mobile client; its bypass capability is verified by an authenticated integration test rather than by a client-facing policy.
+
+```sql
+alter table public.example_user_scoped_table enable row level security;
+create policy example_user_scoped_table_owner
+  on public.example_user_scoped_table
+  for all to authenticated
+  using (user_id = auth.uid())
+  with check (user_id = auth.uid());
+```
+
+The RLS audit must enumerate every `user_id` table, compare it to the policy inventory, and run three assertions per table: user A can operate on A's records, user A cannot read or mutate user B's records, and a trusted service-role worker can perform its documented job. The report lists tables, policies, test timestamp, migration version, and the result of each assertion; any gap is a production blocker.
+
+The content-release policy is a release control rather than a data table: all user-visible product copy, AI prompt text, marketing copy, store listing text, and campaign creative must pass the versioned blocked-term and unsupported-claim scan, then have a recorded approval by the Product/Compliance owner before publication. A content change without both records cannot ship. This policy is deliberately broader than the live AI validator because static copy can make the same prohibited claims.
+
+### R.4 Written data classification and PHI exclusion
+
+MGT Skin Care is designed to process consumer account data, cosmetic preferences, product/routine selections, purchase and subscription records, voluntary cosmetic feedback, and coarse non-identifying photo attributes. It is **not** designed to request, infer, diagnose, treat, prescribe for, or retain medical conditions, health records, provider information, insurance information, medication histories, biometric face templates, or other health-regulated information. The application has no telehealth workflow, no covered-provider workflow, and no disease-oriented product claims.
+
+That design intent is not proof that a free-text user will never submit health information. Until the pre-persistence clinical-boundary control in R.3 is deployed and demonstrated, the project must be classified as **PHI exclusion not yet proven in production**. The application must display the cosmetic-only boundary, redirect clinical concerns to appropriate care, avoid retaining clinical-boundary text, and keep provider/Sentry logs scrubbed. Counsel owns the final legal classification, including any jurisdiction-specific privacy or biometric analysis; engineering owns the technical controls and evidence.
+
+### R.5 Migration cost and complexity analysis
+
+The comparison below uses the existing Section H blended rate of **$58/hour**. It compares the full equivalent program from a clean starting point, not the remaining live-readiness work after F435. Path B is therefore the Section H baseline of 2,860 hours. Cost figures are planning estimates, not vendor quotes.
+
+| Workstream | Path A — Legacy Health App migration | Path B — v2 consolidation rebuild |
+|---|---:|---:|
+| Lineage discovery, domain boundary, and data inventory | 260 h | 40 h |
+| Schema, migration, and RLS consolidation | 900 h | 520 h |
+| Adapter layers and health-to-skincare semantic translation | 870 h | 0 h |
+| Identity, billing, AI, and API integration | 750 h | 560 h |
+| Web/mobile product-surface consolidation | 470 h | 640 h |
+| Tests, evaluation, security, retention, and beta hardening | 650 h | 440 h |
+| Cutover, reconciliation, launch, and optimization | 340 h | 660 h |
+| **Total** | **4,240 h** | **2,860 h** |
+| **Blended-rate cost** | **$245,920** | **$165,880** (Section H rounds to $166,000) |
+
+Path B avoids about **1,380 hours / $80,040** of adapter and legacy-reconciliation work before any business value is added. Its existing F435 local-build position makes the practical difference larger: the remaining work is chiefly external environment validation rather than the 2,860-hour historical build estimate.
+
+| Six-month hosting, database, storage, and Redis cost | LEAN | BASE | GROWTH |
+|---|---:|---:|---:|
+| Path B — Section N baseline | $3,450 | $10,200 | $16,500 |
+| Path A — estimate with dual legacy/v2 environments until cutover | $5,175 | $15,300 | $24,750 |
+
+The infrastructure rows intentionally exclude development, legal, marketing, support, payment processing, and contingency. Path A assumes a 50% uplift while the legacy database, adapter environment, and cutover rehearsal coexist; validate that uplift with the chosen hosting and Supabase plans before contracting.
+
+| Complexity factor | Path A — Legacy Health App migration | Path B — v2 consolidation rebuild |
+|---|---|---|
+| Migrations | At least 22 legacy migrations plus adapter/cutover migrations; collision-prone | One canonical SC-P1 consolidation migration, then small additive migrations |
+| Tables and policies | 106 tables and 163 RLS policies before skincare additions | About 50–60 purpose-scoped v2 tables with one policy inventory and no retained health domain |
+| Extension and operational risk | High: legacy types/functions, historical policy assumptions, and health-domain data shape | Moderate: clean Supabase PG16 with `pgvector` and `pg_cron`; risk concentrated in migration rehearsal and environment parity |
+| Data import scope | Customer and operational records require reconciliation, lineage decisions, and deletion-policy review | Reference products, ingredients, and brands only; no legacy consumer-data import by default |
+
+| Path | Top failure mode | Likelihood | Impact | Mitigation |
+|---|---|---|---|---|
+| A | Health-domain semantics or historical data leak into the cosmetic product | High | Critical | Maintain two systems until independent data-classification and purge review passes; do not adapt clinical entities. |
+| A | RLS/identity drift across 163 legacy policies and adapters | High | Critical | Table-level policy inventory, two-user isolation suite, service-role-path tests, and staged cutover rehearsal. |
+| A | Billing or entitlement duplication during adapter transition | Medium | High | One entitlement resolver, immutable webhook ledger, provider replay tests, and reconciliation before live billing. |
+| B | Canonical migration differs from deployed Supabase behavior | Medium | High | Apply twice on clean PG16/Supabase branch, record row counts/checksums, and rehearse rollback. |
+| B | Reference catalog lacks attributes needed for safe matching | Medium | High | Enforce ingestion validation, SME sign-off, and no-match fallbacks; do not infer unsupported attributes. |
+| B | Live evidence or owner sign-off delays launch | High | High | Start F436 evidence collection immediately, assign named owners, and use the ship packet as the sole go/no-go record. |
+
+**Recommendation: Path B — v2 consolidation rebuild.** It is the lower-cost, lower-scope route; preserves C1's two-tier commercial model; avoids reintroducing C3's marketplace machinery and C4's chat-data fine-tuning; and protects the cosmetic-only posture by importing only skincare reference data. Most importantly, the project is already reported locally complete through F435, so Path A would replace release validation with a new multi-quarter migration risk.
+
+### R.6 Production readiness plan, F436–F535
+
+| Phase range | Primary objective | Trigger to begin | Clear condition | Accountable owner type |
+|---|---|---|---|---|
+| F436–F455 | Production and staging provisioning, secret injection, and service health | Hosting, Supabase, DNS/TLS, and secret-manager choices are written down | Both environments are reachable; secrets are injected outside Git; `/healthz` and `/readyz` pass | Platform / Release owner |
+| F456–F475 | Staging evidence collection and named ownership | Staging deploy is live and immutable image digest is known | Evidence rows exist for each required check and every release role accepts responsibility | Release owner |
+| F476–F495 | Data/RLS validation, restore drill, support route, accessibility, and browser/device evidence | Staging evidence framework is populated | Production-shaped tests pass; restore time is recorded; support and accessibility evidence are filed | Data, Support, Accessibility, QA owners |
+| F496–F515 | Final ship packet, go/no-go approval, and rollback rehearsal | All technical and compliance evidence is complete | Signed ship packet, approved rollback target, and successful staged rollback rehearsal | Release lead and decision-maker |
+| F516–F535 | Post-publish monitoring setup and approved launch-window execution | Go/no-go is signed and on-call rotation is confirmed | 15-minute, 1-hour, 24-hour, and 7-day checks are captured; launch closeout is signed | Incident commander / Release owner |
+
+Time to ship is **5–10 business days** only if accounts, credentials, owners, and evidence are ready now and Billing plus AI Coach remain disabled. A realistic estimate is **2–4 weeks** for normal procurement, approvals, and an accessibility review. Enabling Billing, AI Coach, OpenClaw, or paid campaign flows at initial launch adds **1–3 weeks** because each needs its own evidence package; no schedule pressure may waive that requirement.
+
+The following statuses record the known release posture from this directive, not an inspection of external vendor accounts.
+
+| Primary blocker | Current status | Owner type | Specific closure action |
 |---|---|---|---|
-| O1 | Confirm Premium annual price ($149.99 assumed) | Gregg | Stripe/RevenueCat product config (SC-P1) |
-| O5 | Confirm no live customer data in legacy DB | Gregg | SC-P1 migration plan |
-| O6 | GitHub repo URL + access so SC-P1 consolidation can run against real code, not Drive copies | Gregg | SC-P1 start |
-| O7 | Phase 2 build log missing — was there a Phase 2, or did Phase 3 build on Phase 1 directly? | Gregg | Audit completeness (minor) |
-| O8 | Counsel engagement per v1 legal checklist (HIPAA applicability, BIPA, ToS/AI disclosure, cosmetic claims, click-to-cancel, state access rights) | Gregg | SC-P4 beta gate |
+| Production hosting, compute, and TLS | Blocked / no filed evidence | Platform owner | Select hosting target; deploy immutable image; capture URL, image digest, TLS, and health/readiness results. |
+| Production `.env` and secrets in a secret manager | Blocked / no filed evidence | Platform + Security owner | Populate production secrets outside Git; keep Billing and AI keys present but feature flags off; record secret-injection test without values. |
+| Supabase production project on PG16 with `pgvector` and `pg_cron` | Blocked / no filed evidence | Data owner | Create project, enable extensions, record project/environment identifiers, and run extension checks. |
+| Consolidation migration and row-count verification | Blocked / no filed evidence | Data owner | Apply canonical migration, import only approved reference data, record table counts/checksums and migration version. |
+| Separate staging Supabase project with matching migrations | Blocked / no filed evidence | Data owner | Create separate staging project; compare ordered migration ledger and extension state with production. |
+| Backup and restore drill | Blocked / no filed evidence | Data + Platform owner | Restore to an isolated target, record recovery point, elapsed restore time, validation query results, and restore SLA. |
+| Immutable image digest and TLS certificate evidence | Blocked / no filed evidence | Platform owner | Store digest, build provenance, deployment revision, certificate host/expiry, and readiness result in the ship packet. |
+| Production RLS audit with zero gaps | Blocked / no filed evidence | Data + Security owner | Run the R.3 inventory and two-user/service-role suite against production; attach the unredacted report to the ship packet. |
+| Named release, support, data, platform, and accessibility owners | Blocked / names not confirmed | Decision-maker | Assign one accountable person and an escalation backup to every role. |
+| Deployed WCAG 2.1 AA report | Blocked / no filed evidence | Accessibility owner | Audit all production screens and modals, remediate critical findings, and file the dated report. |
+| Live support route and test ticket | Blocked / no filed evidence | Support owner | Configure helpdesk/escalation queue; submit a test ticket; record first-response time and escalation path. |
+| Final ship packet and signatures | Blocked / incomplete until all evidence exists | Release lead | Assemble the packet described in R.7 and obtain release lead, decision-maker, and data-owner signatures. |
+| Staging rollback rehearsal | Blocked / no filed evidence | Platform + Release owner | Roll back to a named prior image/database target; record decision threshold, elapsed time, and post-rollback health. |
+| Approved launch window and on-call rotation | Blocked / no filed evidence | Decision-maker + Incident commander | Approve date, timezone, coverage, communication channel, and rollback threshold. |
+| 15 min / 1 h / 24 h / 7 d monitoring runbooks | Blocked / no filed evidence | Incident commander | Publish runbooks with named check owners, dashboards, thresholds, and a place to record results. |
+
+**Hard production constraint.** Stripe live mode, RevenueCat production, and the AI Coach must remain disabled in production until their separate evidence packages are complete and signed. Ship both feature flags as `off`; enable each only through its own documented approval. This constraint is not overridable by timeline or business justification.
+
+The expanded counsel checklist is: (1) cosmetic-only claims and clinical-boundary language; (2) PHI/data classification; (3) AI disclosure and consent; (4) photo/biometric and deletion controls; (5) retention, deletion, export, and state access rights; (6) click-to-cancel and subscription disclosures; (7) marketing, influencer, and endorsement review; (8) incident, escalation, and support notice obligations. Counsel signs the checklist before the SC-P4 gate is marked passed and its current version is attached to the final packet.
+
+### R.7 Evidence packages, decision record, and required clarifications
+
+The Billing evidence package contains: Stripe live-mode account verification, production Price IDs for the locked Free/Premium model, RevenueCat production products/entitlement mapping, signed webhook verification, replay/idempotency results, entitlement reconciliation, web cancellation test, mobile deep-link test, and owner approval. The AI evidence package contains: provider-key validation without secret disclosure, feature-flag state, circuit-breaker and fallback proof, per-user budgets, blocked-term and escalation results, evaluation-harness green report, provider/log data-minimization review, and owner approval.
+
+Every evidence row in the ship packet must have these fields: gate, requirement, accountable owner, UTC timestamp, environment, action or command, expected result, actual result, immutable evidence link or checksum, blocker state, and rollback reference. The release lead treats the packet as the single source of truth; screenshots without environment, timestamp, and owner are not sufficient evidence.
+
+The following written decisions are required before production planning can be finalized:
+
+| Open item | Required written answer |
+|---|---|
+| O9 — Hosting target | Managed container, Vercel, self-managed VPS, or other; name the platform and account owner. |
+| O10 — Supabase structure | Separate staging and production projects, or another approved isolation model. |
+| O11 — Secret manager | GitHub Actions, Doppler, AWS Secrets Manager, Vercel environment variables, or other. |
+| O12 — Deployment system | GitHub Actions CI/CD, a manual deployment procedure, or other; include who may deploy. |
+| O13 — Support route owner | Named helpdesk/escalation queue owner and backup. |
+| O14 — Accessibility reviewer | Internal owner or engaged third-party auditor. |
+| O15 — Backup and restore | Backup location, isolated restore destination, recovery point objective, and restore SLA. |
+| O16 — Launch subscription strategy | Billing enabled only after its evidence package, or disabled with a waitlist. |
+| O17 — Launch AI Coach strategy | AI enabled only after its evidence package, or disabled with a waitlist. |
+| O18 — Release authority | Named release lead, decision-maker, rollback authority, and incident commander. |
+| O19 — Launch window | Date, time, timezone, on-call roster, and an explicit rollback threshold. |
 
 ---
 
-## Change log
+## S. Consolidated open items
+
+| # | Item | Owner | Blocking |
+|---|---|---|---|
+| O5 | Confirm no live customer data in legacy DB | Gregg | SC-P1 migration plan |
+| O6 | GitHub repo URL + access so SC-P1 consolidation can run against real code, not Drive copies | Gregg | SC-P1 start |
+| O7 | Phase 2 build log missing — was there a Phase 2, or did Phase 3 build on Phase 1 directly? | Gregg | Audit completeness (minor) |
+| O8 | Counsel engagement and eight-item sign-off (R.6) | Gregg | SC-P4 gate and final ship packet |
+| O9–O19 | Production planning decisions listed in R.7 | Decision-maker / named owners | F436–F455 start and final go/no-go |
+
+---
+
+## T. Change log
 
 | Version | Date | Change |
 |---|---|---|
@@ -1661,4 +1888,5 @@ Ordered developer task list. Each item names its phase and, where useful, the ex
 | 2.0.0-draft.3 | 2026-09-05 | Sections A, C–G |
 | 2.0.0-draft.4 | 2026-09-05 | Sections H–L |
 | 2.0.0 | 2026-09-05 | Sections M–Q, financial model (`model.py`), change log. Verification: no contradictions of C1/C3/C4/C10 outside the conflict register; no "HIPAA compliant" or diagnostic claims; `sensitive` absent from `skin_type`; phase hours sum to 2,860 and phase costs match hours × $58; Section N figures match `model_out.json`; Section J DDL runs clean on PostgreSQL 16 (extensions shimmed). |
+| 2.0.2 | 2026-09-29 | Directive update: classified compliance controls as BI/BG/II; added consent, non-clinical-input, immutability, RLS-audit, content-release, and eight-item counsel requirements; documented Path A vs Path B cost/complexity analysis; added F436–F535 production-readiness plan, evidence packages, blockers, and required decisions. C1/C3/C4/C10 reaffirmed without revision. |
 

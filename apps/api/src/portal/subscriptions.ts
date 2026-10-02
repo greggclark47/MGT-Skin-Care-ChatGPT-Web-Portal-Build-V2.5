@@ -33,11 +33,10 @@ const sourceKnown = (record: SubscriptionRecord) => record.source === undefined 
 
 async function ownedRecords(records: Records, actor: string): Promise<Owned[]> {
   const result: Owned[] = [];
-  for (const audience of ['consumer','vendor']) {
-    const key = actor + ':' + audience;
-    const record = await records.get<SubscriptionRecord>('subscriptions', key);
-    if (record?.subscription_id) result.push({scope:'subscriptions',key,audience,record});
-  }
+  const audience = 'consumer';
+  const key = actor + ':' + audience;
+  const record = await records.get<SubscriptionRecord>('subscriptions', key);
+  if (record?.subscription_id) result.push({scope:'subscriptions',key,audience,record});
   const legacy = await records.get<SubscriptionRecord>('memberships',actor);
   if (legacy?.subscription_id && !result.some(item => item.record.subscription_id === legacy.subscription_id)) {
     result.push({scope:'memberships',key:actor,audience:'consumer',record:legacy});

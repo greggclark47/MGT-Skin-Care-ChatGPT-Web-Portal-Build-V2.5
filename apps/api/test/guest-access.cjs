@@ -30,7 +30,7 @@ test('guest invitations: verified intended email, 30-day acceptance, private pro
  const again=await f.guest('/guest-access/accept',{token:inv.token,confirm:true});assert.equal(again.data.access.expires_at,access.expires_at,'replay never extends access');
 });
 test('guest invitations: matching plan uses owner AI budget and shared rate limit; downgrade removes paid access',async t=>{
- const f=await fixture(t),inv=await f.invite('match_owner');await f.guest('/guest-access/accept',{token:inv.token,confirm:true});
+ const f=await fixture(t),inv=await f.invite('match_owner');await f.guest('/guest-access/accept',{token:inv.token,confirm:true});await f.guest('/account/consents',{consent_type:'ai_disclosure',granted:true});await f.owner('/account/consents',{consent_type:'ai_disclosure',granted:true});
  assert.equal((await f.guest('/coach',{message:'How do I simplify a cosmetic routine?',ai_consent:true})).status,200);
  assert.deepEqual(f.calls[0],{actor:'user_owner',premium:true});assert.equal(await f.budget.spentToday('user_owner','tier3_premium'),1);assert.equal(await f.budget.spentToday('user_guest','tier3_premium'),0);
  await f.db.tx(r=>r.put('rate','ai-user:owner',{count:20,reset:Date.now()+86400000}));

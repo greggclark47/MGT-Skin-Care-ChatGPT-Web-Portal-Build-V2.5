@@ -3,7 +3,7 @@ const {test}=require('node:test');const assert=require('node:assert/strict');
 const Stripe=require('stripe');const {createPortal}=require('../dist/portal/server');const {LocalStore}=require('../dist/portal/store');
 async function fixture(t){
  const db=new LocalStore(':memory:'),signer=new Stripe('sk_test_fixture');
- const env={NODE_ENV:'test',PUBLIC_ORIGIN:'http://portal.test',SUBSCRIPTIONS_ENABLED:'true',STRIPE_SECRET_KEY:'sk_test_fixture',STRIPE_SUBSCRIPTION_WEBHOOK_SECRET:'whsec_fixture',STRIPE_CONSUMER_PRICE_ID:'price_test'};
+ const env={NODE_ENV:'test',PUBLIC_ORIGIN:'http://portal.test',SUBSCRIPTIONS_ENABLED:'true',STRIPE_SECRET_KEY:'sk_test_fixture',STRIPE_SUBSCRIPTION_WEBHOOK_SECRET:'whsec_fixture',STRIPE_PREMIUM_MONTHLY_PRICE_ID:'price_test',STRIPE_PREMIUM_ANNUAL_PRICE_ID:'price_test_year'};
  let remote={id:'sub_private',customer:'cus_private',metadata:{kind:'mgt_subscription',actor:'user_owner:consumer',audience:'consumer'},items:{data:[{price:{id:'price_test'}}]},status:'active',cancel_at_period_end:false,current_period_end:Math.floor(Date.now()/1000)+3600},updates=0,fail=false;
  const stripe={webhooks:signer.webhooks,subscriptions:{retrieve:async()=>structuredClone(remote),update:async(_id,patch)=>{if(fail)throw Error('private upstream credential error');updates++;remote={...remote,...patch};return structuredClone(remote);}}};
  const app=await createPortal({store:db,env,stripe,verifyOtp:async email=>({id:email.startsWith('owner')?'owner':'other',email})});

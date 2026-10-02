@@ -5,7 +5,7 @@ import { buildManifest, collectMigrations, reconcileManifest, validateTargetMani
 test("migration manifest inventories both independent lineages with hashes", () => {
   const manifest = buildManifest({ databaseDir: "infra/db/migrations", portalDir: "infra/portal/migrations" });
   assert.equal(manifest.schema, "mgt.migration-lineage.v1");
-  assert.ok(manifest.lineages.database.length >= 7);
+  assert.ok(manifest.lineages.database.length >= 8);
   assert.ok(manifest.lineages.portal.length >= 1);
   assert.ok(manifest.lineages.database.every((entry) => /^[a-f0-9]{64}$/.test(entry.sha256)));
 });

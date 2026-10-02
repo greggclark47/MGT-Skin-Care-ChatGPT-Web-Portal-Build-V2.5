@@ -24,6 +24,16 @@ function digestImage(value) {
   return /^[a-z0-9./_-]+@sha256:[a-f0-9]{64}$/.test(String(value || "").trim());
 }
 
+function validEmail(value) {
+  return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(String(value || "").trim()) && !placeholder.test(value);
+}
+
+function validIsoDate(value) {
+  const text = String(value || "").trim();
+  const time = Date.parse(text);
+  return /^\d{4}-\d{2}-\d{2}T/.test(text) && Number.isFinite(time) && time <= Date.now();
+}
+
 export function validateEnvironment(env) {
   const errors = [];
   const warnings = [];
@@ -92,18 +102,24 @@ export function validateEnvironment(env) {
     requireValue("NOTIFICATION_WEBHOOK_TOKEN");
   }
 
+  const supportOwnerName = requireValue("SUPPORT_OWNER_NAME");
+  if (supportOwnerName && supportOwnerName.length < 2) errors.push("SUPPORT_OWNER_NAME must identify the accountable support owner.");
+  const supportOwnerEmail = requireValue("SUPPORT_OWNER_EMAIL");
+  if (supportOwnerEmail && !validEmail(supportOwnerEmail)) errors.push("SUPPORT_OWNER_EMAIL must be a valid production support owner email.");
+
+  const accessibilityReport = requireValue("ACCESSIBILITY_VALIDATION_REPORT_URL");
+  if (accessibilityReport && !validUrl(accessibilityReport, ["https:"])) errors.push("ACCESSIBILITY_VALIDATION_REPORT_URL must be a production HTTPS evidence URL.");
+  const accessibilityAt = requireValue("ACCESSIBILITY_VALIDATED_AT");
+  if (accessibilityAt && !validIsoDate(accessibilityAt)) errors.push("ACCESSIBILITY_VALIDATED_AT must be a past ISO timestamp.");
+
   if (!["true", "false"].includes(String(env.SUBSCRIPTIONS_ENABLED).toLowerCase())) errors.push("SUBSCRIPTIONS_ENABLED must be true or false.");
   if (isTrue(env.SUBSCRIPTIONS_ENABLED)) {
     if (!isTrue(env.SUBSCRIPTION_TERMS_APPROVED)) errors.push("SUBSCRIPTION_TERMS_APPROVED must be true before subscriptions are enabled.");
     for (const key of [
       "STRIPE_SECRET_KEY",
       "STRIPE_SUBSCRIPTION_WEBHOOK_SECRET",
-      "STRIPE_ESSENTIAL_MONTHLY_PRICE_ID",
-      "STRIPE_ESSENTIAL_ANNUAL_PRICE_ID",
-      "STRIPE_PERSONALIZED_MONTHLY_PRICE_ID",
-      "STRIPE_PERSONALIZED_ANNUAL_PRICE_ID",
-      "STRIPE_PROFESSIONAL_MONTHLY_PRICE_ID",
-      "STRIPE_PROFESSIONAL_ANNUAL_PRICE_ID"
+      "STRIPE_PREMIUM_MONTHLY_PRICE_ID",
+      "STRIPE_PREMIUM_ANNUAL_PRICE_ID"
     ]) requireValue(key);
   } else {
     warnings.push("Subscriptions are disabled.");

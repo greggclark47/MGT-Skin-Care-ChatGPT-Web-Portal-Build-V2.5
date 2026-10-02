@@ -51,8 +51,9 @@ test('assistant candidate policy cases stay bounded before model and payment rou
    await r.put('accounts',user.id,user);
    for(const session of await r.entries('sessions'))await r.put('sessions',session.id,{...session.value,userId:user.id});
   });
-  const withoutConsent=await call('/assistant',{role:'routine_guidance',message:'What does a moisturizer do?',ai_consent:false});
-  assert.equal(withoutConsent.status,400);assert.equal(withoutConsent.data.error.code,'ai_consent');
+  const withoutConsent=await call('/assistant',{role:'routine_guidance',message:'What does a moisturizer do?',ai_consent:true});
+  assert.equal(withoutConsent.status,403);assert.equal(withoutConsent.data.error.code,'consent_required');
+  assert.equal((await call('/account/consents',{consent_type:'ai_disclosure',granted:true})).status,200);
   const unavailable=await call('/assistant',{role:'routine_guidance',message:'What does a moisturizer do?',ai_consent:true});
   assert.equal(unavailable.status,200);assert.equal(unavailable.data.category,'reviewed_unavailable');assert.equal(unavailable.data.next_step.path,'/support');assert.equal(modelCalls,0);
   await db.tx(r=>r.put('knowledge','moisturizer_approved',{id:'moisturizer_approved',title:'Moisturizer',body:quote,source_url:'https://example.test/reviewed',status:'approved',approved_by:'fixture-reviewer',version:1}));

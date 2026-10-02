@@ -1243,6 +1243,20 @@ This checkpoint does not create Stripe Prices, connect an account, collect a pay
 **Phase F524 — final-closeout verifier:** Added `pnpm infra:release-post-execution-review`, binding all twelve post-execution records to the execution-review checksum and reporting only `blocked`, `pending_execution_review`, or `ready_for_post_execution_review`.
 **F513–F524 local verification:** Post-execution fixtures prove pending behavior, twelve-record acceptance, mutation detection, and fabricated-ready rejection. No deployment, publication, traffic movement, or rollback command was executed.
 
+**Phase F525 — customer confirmation:** Added a customer-facing confirmation record bound to the exact candidate.
+**Phase F526 — support metrics:** Captures support volume and unresolved queue state.
+**Phase F527 — billing reconciliation:** Records billing and entitlement reconciliation after release.
+**Phase F528 — analytics check:** Verifies analytics continuity without retaining customer payloads.
+**Phase F529 — access review:** Records post-release access ownership review.
+**Phase F530 — backup verification:** Confirms backup evidence is present and inspectable.
+**Phase F531 — dependency health:** Records dependency health and known-risk disposition.
+**Phase F532 — security review:** Adds a post-release security review record.
+**Phase F533 — privacy review:** Adds a privacy and data-handling review record.
+**Phase F534 — performance review:** Captures post-release performance evidence.
+**Phase F535 — retrospective:** Records the operational retrospective owner and timestamp.
+**Phase F536 — release archive verifier:** Added `pnpm infra:release-closure-review`, binding twelve closure records to the post-execution checksum and reporting only `blocked`, `pending_post_execution_review`, or `ready_for_closure_review`.
+**F525–F536 local verification:** Closure fixtures prove pending behavior, twelve-record acceptance, mutation detection, and fabricated-ready rejection. No customer data, production traffic, or live credentials were used.
+
 **Exit evidence:** approved positioning and claims, consent-compliant measurement plan, attribution rules, partner terms where relevant, campaign cap and stop rule, baseline report, and a post-test decision grounded in observed data.
 
 ### Phase E — data, AI economics and service qualification (Critical for production)

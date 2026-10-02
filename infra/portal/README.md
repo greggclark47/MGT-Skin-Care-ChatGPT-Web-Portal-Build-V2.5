@@ -147,3 +147,13 @@ pnpm infra:release-post-execution-review
 
 The review remains `pending_execution_review` until the exact candidate, execution review, and twelve post-execution records are available. It fails closed on changed artifacts, unsafe records, or fabricated readiness.
 
+### Closure review
+
+Build the closure review after post-execution review is ready:
+
+```text
+pnpm infra:release-closure-review
+```
+
+The review remains `pending_post_execution_review` until the exact candidate and twelve closure records are available.
+

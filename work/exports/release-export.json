@@ -1,0 +1,64 @@
+{
+  "version": "1.0",
+  "candidate_commit": "ab4b92eb0d1cdff977c9f06eebdaff45ca17539d",
+  "branch": "codex/reconcile-main-2026-09-20",
+  "generated_at": "2026-10-02T19:50:20.476Z",
+  "status": "ready_for_export",
+  "destinations": {
+    "github": {
+      "status": "pending_push",
+      "repository": [
+        "https://github.com/greggclark47/MGT-Skin-Care-v2.git",
+        "https://github.com/greggclark47/MGT-Skin-Care-ChatGPT-Web-Portal-Build-V2.5.git"
+      ],
+      "branch": "codex/reconcile-main-2026-09-20",
+      "commit": "ab4b92eb0d1cdff977c9f06eebdaff45ca17539d"
+    },
+    "google_drive": {
+      "status": "pending_upload",
+      "file_name": "MGT-Skin-Care-v2-ab4b92eb0d1c-export.zip",
+      "folder_id": null,
+      "file_id": null,
+      "web_url": null
+    }
+  },
+  "entries": [
+    {
+      "id": "readme_md",
+      "reference": "README.md",
+      "kind": "text",
+      "checksum": "sha256:545b99e094a917045858158a0b24cf9aed7bc69eace14749cf89058859724081",
+      "bytes": 1773
+    },
+    {
+      "id": "next_phase_implementation_plan_md",
+      "reference": "NEXT-PHASE-IMPLEMENTATION-PLAN.md",
+      "kind": "text",
+      "checksum": "sha256:68ee9a0c9305d912ed52443c17da226227c3293aea0f44f64ae3a46ae31a0c93",
+      "bytes": 152361
+    },
+    {
+      "id": "infra_portal_readme_md",
+      "reference": "infra/portal/README.md",
+      "kind": "text",
+      "checksum": "sha256:d858fa488d5502774bcec4d0b6e5a7cb081622765522cff3bf0b822d101f9ba8",
+      "bytes": 30800
+    },
+    {
+      "id": "infra_portal_release_checkpoint_md",
+      "reference": "infra/portal/RELEASE-CHECKPOINT.md",
+      "kind": "text",
+      "checksum": "sha256:3234498ddbe702fde902f234ea28a10c4e80f9328571686722a4ef2111a1266e",
+      "bytes": 68356
+    },
+    {
+      "id": "work_exports_mgt_skin_care_v2_f536_export_zip",
+      "reference": "work/exports/MGT-Skin-Care-v2-F536-export.zip",
+      "kind": "archive",
+      "checksum": "sha256:b1ae2afd0b9f4c0b422662ee673018498a325cd399998cc4fe8a58345ded8d2a",
+      "bytes": 4149759
+    }
+  ],
+  "errors": [],
+  "bundle_checksum": "sha256:7d0cb67680ff6e72422089a52ec144472b158019fbfff0e9d07016b4d9399a8a"
+}

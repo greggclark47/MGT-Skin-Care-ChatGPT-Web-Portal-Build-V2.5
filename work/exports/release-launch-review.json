@@ -1,0 +1,22 @@
+{
+  "version": "1.0",
+  "candidate_commit": "ab4b92eb0d1cdff977c9f06eebdaff45ca17539d",
+  "bundle_checksum": "sha256:7d0cb67680ff6e72422089a52ec144472b158019fbfff0e9d07016b4d9399a8a",
+  "finalization_checksum": "sha256:7340446dc1fa48f003b9c68b541846d8c9a6ca745ceaeabb5d1113456271ea35",
+  "generated_at": "2026-10-02T19:50:20.919Z",
+  "status": "pending_finalization",
+  "entries": [],
+  "errors": [
+    "launch_window record is required",
+    "freeze_clearance record is required",
+    "ship_owner record is required",
+    "operator record is required",
+    "rollback_trigger record is required",
+    "incident_route record is required",
+    "first_hour_watch record is required",
+    "customer_impact_watch record is required",
+    "command_log_archive record is required",
+    "closeout_timestamp record is required"
+  ],
+  "launch_review_checksum": "sha256:355e76860eb8a617e4e2d81409e62d6ced1c0d23d3db54626244b211f503aad0"
+}

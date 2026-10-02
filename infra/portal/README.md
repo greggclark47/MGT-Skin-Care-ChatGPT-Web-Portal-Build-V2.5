@@ -1,42 +1,97 @@
 # Backend and subscription infrastructure — September 7, 2026
 
+The phased build, test and production-readiness program is maintained in [`BUILD-READINESS-GUIDE.md`](../../BUILD-READINESS-GUIDE.md).
+
 ## Implemented
 - Existing customer tabs use /api/hub: profile/matching, routine simplification, saved retailer destinations, reminders, knowledge, coach, session/account, and support.
 - Administration pages now call the same verified-session API. A typed user ID no longer supplies identity. Roles must be provisioned in the accounts record by an operator. No public role-grant endpoint exists.
-- Consumer and vendor subscription placements share /membership but have separate Stripe Price IDs, customer records, checkout attempts, and status records.
-- Product checkout, payouts, refunds and vendor transfers remain blocked. Buying a vendor subscription does not establish a commercial partnership or publish a listing.
-- Subscription pricing and paid feature entitlements remain TBD. No existing tab is paywalled, and no paid benefits are promised yet.
+- One consumer Premium membership shares `/membership`, with separately configured monthly and annual Stripe Prices. Customer, checkout-attempt, and confirmed status records are isolated to that consumer membership.
+- Product checkout, partner onboarding, connected-account payouts, refunds and vendor transfers remain blocked or deferred. The partner API namespace returns a clear deferred response until commercial readiness is approved.
+- Premium enrollment remains closed without complete approval and configuration. No existing tab is paywalled, and no paid benefits are promised beyond the approved membership description.
+- The membership page no longer uses personalized plan recommendations. It presents the single Premium offer and cannot enroll or charge a customer by selection alone.
+- Shop outbound opens and saved-list changes are counted only as daily aggregate engagement. Authorized operations roles can view a 30-day retailer and segment summary; it contains no customer identity, skin profile, search, free text, order, amount, revenue or profit data. These counters expire after 180 days by default through `OPERATIONS_AGGREGATE_METRIC_RETENTION_DAYS`.
+- Assistant guidance results and selections of approved portal next steps are also stored as daily aggregate counters. The operations panel shows guidance by bounded role and the aggregate Support handoff funnel. It does not store the submitted question, customer identity, account details or ticket text in those metrics, and the counts are not unique-customer or service-outcome measures.
 
 ## Stripe setup
-1. Use a Stripe sandbox/test account first. Create separate recurring consumer and vendor Prices after prices and benefits are approved.
-2. Set STRIPE_CONSUMER_PRICE_ID and STRIPE_VENDOR_PRICE_ID. Set STRIPE_SECRET_KEY server-side only.
-3. Configure the Stripe customer portal for payment methods, invoices and cancellation. Set business identity and terms URL in Stripe.
+1. Use a Stripe sandbox/test account first. After Premium benefits, the $14.99 monthly / $149.99 annual prices, trial terms, and support ownership are approved, create the two recurring Prices.
+2. Set `STRIPE_PREMIUM_MONTHLY_PRICE_ID` and `STRIPE_PREMIUM_ANNUAL_PRICE_ID`. Keep `STRIPE_SECRET_KEY` server-side only.
+3. The app creates a restricted customer-portal configuration for payment methods, provider invoices, end-of-period cancellation, and Premium monthly/annual changes. Set the business identity and terms URL in the Stripe account.
 4. Register /webhooks/subscriptions on the API (the included edge configuration forwards it). Subscribe to checkout.session.completed and customer.subscription.created, updated and deleted. Store its signing secret in STRIPE_SUBSCRIPTION_WEBHOOK_SECRET.
 5. Finalize company legal_name, support_email and policies_published in settings/company, then set SUBSCRIPTION_TERMS_APPROVED=true and SUBSCRIPTIONS_ENABLED=true.
 6. Test checkout, decline, renewal failure, cancellation, portal access and replayed events in the sandbox before configuring live credentials. Browser return URLs never activate access.
 
-Current local tests use a mocked Stripe client with real signature verification. No Stripe account has been provisioned, prices created, payments collected, or live webhooks validated.
+Current local tests use a mocked Stripe client with real signature verification. They cover the Premium catalog, configured-price validation, Checkout metadata, trial handling, portal access, signed-event confirmation, duplicate delivery, ownership, and sanitized activity. No Stripe account has been provisioned, prices created, payments collected, or live webhooks validated.
+
+The 2026-09-25 provisional plans checkpoint passed every local release gate at `work/verification/2026-09-25T16-05-56-744Z/report.md`: 70 HTTP/persistence/release-contract tests, production web build, 29-route proxy journey, accessibility-theme contract, and a zero-hit public artifact vendor scan. This is local fixture evidence only.
 
 ## Deployment scaffold
-Copy infra/portal/env.example to infra/portal/.env and fill service values outside source control. DATABASE_URL credentials must be URI-encoded if using reserved characters. Run Docker Compose from infra/portal after assigning a domain with DNS pointing at the host. Only the TLS edge publishes host ports. Database storage and TLS certificates use named volumes. API uses PostgreSQL in production and refuses demo mode or HTTP public origins. Web-to-API forwarding is set at build time.
+Copy infra/portal/env.example to infra/portal/.env and fill service values outside source control. DATABASE_URL must identify the reviewed Supabase database, use verified TLS, and URI-encode reserved characters in credentials. API and worker use the same external database. Compose no longer provisions an independent database; existing local database volumes have not been deleted. Only the TLS edge publishes host ports. API refuses demo mode or HTTP public origins in production. Web-to-API forwarding is set at build time. Do not deploy before schema/identity reconciliation and role-based RLS checks.
 
-Dockerfiles and Compose are prepared but have not been container-built or deployed here. Pin image digests and review network/secret management in the deployment environment. The portal applies its own checked-in migrations from `infra/portal/migrations` and records them in `portal_schema_migrations`; the older phase SQL migrations remain separate and must not be mixed into this adapter. The generic hub_records adapter now uses short, record-scoped advisory locks for concurrent changes instead of a single global database lock.
+Before building containers, run `pnpm infra:preflight`. It rejects placeholder origins, missing backend settings, unverified database TLS, automatic production migration, invalid worker/backup windows, incomplete notification-webhook configuration, missing named support ownership, missing deployed accessibility evidence, partially enabled subscriptions, and floating container image tags. Configuration validation does not establish live readiness. Run `pnpm test:infra` after changing this contract.
+
+`pnpm test:compliance-contract` protects the repository-local Path B controls: the single Premium catalog and two-price configuration, durable AI-disclosure enforcement and revocation, consent controls before reviewed requests, deferred partner/payout APIs, and the additive RLS/append-only migration. It is source-contract evidence only; target-database RLS behavior and deployed provider behavior still require staging evidence.
+
+After the local gates have run, `pnpm infra:readiness` creates a secret-free F71–F80 status packet. It separates configuration and local-test results from pending live evidence such as target-project RLS validation, backup restoration, deployed accessibility, container startup, sandbox webhooks, and provider qualification. Add `-- --require-ready` when a release process should fail unless every required phase is `pass` or `not_applicable`.
+
+The publish runbook is [`FULL-SHIP-PLAN.md`](./FULL-SHIP-PLAN.md). It is the required handoff for candidate freeze, staging, live evidence, go/no-go, immutable image publication, smoke checks, rollback and post-launch monitoring. The readiness CLI accepts only explicit non-secret `RELEASE_EVIDENCE_*` flags; those flags must be set from attached evidence and must not be used to bypass a failed preflight.
+
+Use [`ship-packet.example.json`](./ship-packet.example.json) as the release-record shape. Validate a completed packet with `pnpm infra:ship-packet -- path/to/ship-packet.json --require-ready`; it fails closed unless the readiness packet, candidate identity, owners, evidence references, image digests, rollback target and monitoring checks are complete.
+
+Every ship packet now includes a `staging_evidence` ledger for F437–F460. Its four required records bind the isolated staging target, secret-injection proof without values, immutable artifact plus health/readiness result, and release-owned evidence ledger to the exact candidate commit and image digests. The ledger also requires a target-isolation record, a safe `/healthz` and `/readyz` probe, an attestation, and a six-item local artifact manifest for deployment, isolation, secret-injection, preflight, probe, and rollback evidence. The manifest accepts only bounded UTF-8 `.json`, `.log`, `.md`, or `.txt` files below `10 MiB` under `work/` or `infra/`; it rejects traversal, links, binary content, placeholders, and credential-like text. Its preflight and probe hashes must match the attestation, and every staging record must use the same rollback artifact. Run `pnpm infra:staging-probe -- --origin https://staging.example --output work/staging/probe.json` only against an approved staging origin; the probe writes status and timing only, never response bodies. After the actual ledger fields and local evidence files are complete, run `pnpm infra:staging-artifacts -- --ledger path/to/ship-packet.json --output work/staging/staging-evidence.json`, then `pnpm infra:staging-review -- --ledger work/staging/staging-evidence.json --output work/staging/review.json`. The review canonicalizes and hashes the ledger, re-hashes every artifact, and emits only candidate identity, statuses, counts, and redacted errors. Next run `pnpm infra:staging-handoff -- --ledger work/staging/staging-evidence.json --review work/staging/review.json --output work/staging/handoff.json --max-review-age-minutes 60`. It re-reads both files, enforces their exact checksum binding and the stated freshness window, and can only return `blocked` or `pending_human_promotion_approval`. Named release and platform approvers must each create a checksum-bound approval record, with the same future execution window, before `pnpm infra:staging-authorization -- --handoff work/staging/handoff.json --release-approval work/approvals/release.json --platform-approval work/approvals/platform.json --output work/staging/authorization.json --max-approval-age-minutes 60` can return `pending_operator_execution`. A named operator may then create a non-secret receipt and post-operation safe-probe artifact. `pnpm infra:staging-execution-review -- --authorization work/staging/authorization.json --receipt work/staging/execution-receipt.json --probe work/staging/post-execution-probe.json --output work/staging/execution-review.json` validates the recorded receipt against the authorization checksum, approved window, local operation record, and probe. Its only successful state is `awaiting_external_release_gate`; it does not verify the real-world operation or approve production, deploy, publish, or change traffic. `pnpm test:staging-evidence`, `pnpm test:staging-pipeline`, `pnpm test:staging-artifacts`, `pnpm test:staging-authorization`, and `pnpm test:staging-execution-review` reject placeholders, mutable or mismatched images, changed files, stale or mismatched reviews/approvals, incomplete records, unresolved blockers, failed health/readiness, window violations, and invented approved states.
+
+The final production gate is separate from staging. Create it with `createProductionGateTemplate`, complete the production-only target, eight live evidence rows, five owner approvals, and the explicit decision record, then review it with `pnpm infra:production-gate -- --gate work/production/gate.json --output work/production/gate-review.json`. The validator rejects staging origins, mismatched candidate/image continuity, missing or unresolved production evidence, credential-like values, and a `go` decision without every check and owner approval passing. Its report is status-only: `blocked`, `held`, `pending_human_go_no_go`, or `go_recorded`; it never publishes, deploys, or moves traffic. Once the gate is complete, run `pnpm infra:production-evidence -- --gate work/production/gate.json --output work/production/evidence.json` to bind its staging dossier, eight evidence rows, eight rollback records, five owner decisions, and the go/no-go record to locally inspectable checksums. The manifest accepts only safe bounded text files under `work/` or `infra/`; it does not fetch remote material, validate a host, or make a launch decision. Use `pnpm test:production-gate` and `pnpm test:production-evidence` for the contract suites.
+
+For the GitHub/Google Drive handoff, run `pnpm infra:release-export -- --output work/exports/release-export.json`. It binds the accepted release documents, and an optional local `.zip`, to the exact candidate commit with one canonical bundle checksum. GitHub remotes are recorded as `pending_push`; Google Drive is recorded as `pending_upload` without invented folder IDs or URLs. `pnpm test:release-export` re-hashes the entries and rejects changed files, traversal, credential-like content, and destination states that lack observed completion metadata. Mark a Drive upload complete only after a connected Drive readback supplies its real file ID and HTTPS URL.
+
+After a real push and Drive upload, record the observed destination receipts and run `pnpm infra:release-receipt -- --manifest work/exports/release-export.json --github-receipt work/exports/github-receipt.json --drive-receipt work/exports/google-drive-receipt.json --output work/exports/release-receipt.json`. The review binds both receipts to the same candidate and archive checksum; without both receipts it remains `awaiting_receipts`, and any mismatch is `blocked`.
+
+Finally run `pnpm infra:release-closeout -- --manifest work/exports/release-export.json --review work/exports/release-receipt.json --output work/exports/release-closeout.json --max-receipt-age-minutes 1440`. It revalidates the manifest and receipt chain, rejects stale destination observations, and can only report `blocked`, `pending_receipts`, `stale_receipts`, or `release_closeout_ready`.
+
+The finalization matrix is `pnpm infra:release-finalization -- --manifest work/exports/release-export.json --closeout work/exports/release-closeout.json --review work/exports/release-receipt.json --records work/exports/finalization-records.json --output work/exports/release-finalization.json`. It binds six separate local records—decision, rollback, monitoring, support, customer communication, and audit archive—to the exact candidate and checksum chain. Missing receipts leave it `pending_closeout`; changed or unsafe records are `blocked`.
+
+The launch-review matrix is `pnpm infra:release-launch-review -- --manifest work/exports/release-export.json --closeout work/exports/release-closeout.json --review work/exports/release-receipt.json --finalization work/exports/release-finalization.json --records work/exports/launch-records.json --output work/exports/release-launch-review.json`. It binds ten launch controls—window, freeze, owner, operator, rollback trigger, incident route, first-hour watch, customer-impact watch, command-log archive, and closeout timestamp—to the finalization checksum. It remains `pending_finalization` until the earlier chain is ready.
+
+The execution-review matrix is `pnpm infra:release-execution-review -- --manifest work/exports/release-export.json --closeout work/exports/release-closeout.json --review work/exports/release-receipt.json --finalization work/exports/release-finalization.json --launch-review work/exports/release-launch-review.json --records work/exports/execution-records.json --output work/exports/release-execution-review.json`. It binds twelve execution controls to the launch-review checksum and remains `pending_launch_review` until the prior chain is ready.
+
+Generate a starting draft with `pnpm infra:create-ship-packet -- --output path/to/draft.json`. The generator discovers only repository metadata, recent local report paths and valid immutable image digests; it never copies credentials or customer data and leaves all human approval fields pending.
+
+The application, edge, and Ollama images are required to use approved immutable `@sha256:` digests. Set `NODE_IMAGE`, `OLLAMA_IMAGE`, and `CADDY_IMAGE` in the deployment environment after reviewing the exact image digests; floating tags such as `latest` and `2` are rejected by preflight.
+
+The edge now sends compression and baseline security headers, exposes liveness and readiness separately, routes same-origin API and signed subscription webhook traffic directly to the API, and emits structured access logs. Compose rotates local JSON logs, waits for both API and web health before starting the edge, and gives Node services explicit shutdown windows.
+
+Dockerfiles and Compose remain unvalidated in containers. Pin image digests and review network/secret management before deployment. `PORTAL_AUTO_MIGRATE=false` is required in production. The portal only checks its required storage columns at startup; migration application is a separately reviewed operation after inspecting both migration lineages. Local development may explicitly opt into the existing migration helper. No migration history has been reconciled against a live project here.
+
+## Continuous verification
+The repository runs the same secret-free local release gate on pull requests and pushes to `main`. It installs only the locked dependency graph, validates deployment and migration contracts, and creates fresh local verification evidence. It does not run production preflight, contact any external service, build containers, deploy, or receive production credentials.
 
 ## Local-first AI setup
-The portal uses one shared gateway. Ollama is the default runtime for high-frequency tasks, DeepSeek runs as the local reasoning fallback through Ollama, OpenClaw can be enabled as an Ollama-compatible orchestration endpoint, and GPT-5.6 Sol is the opt-in escalation for explicitly entitled premium work. LangChain Core bounds and serializes the retrieved context; it does not create an additional model call. Routing telemetry and daily AI spend caps are persisted through the same Supabase/Postgres store as the portal, rather than resetting on an API restart.
+The portal uses one shared gateway. Ollama is the default runtime for high-frequency tasks, DeepSeek runs as the local reasoning fallback through Ollama, OpenClaw can be enabled in native Ollama mode, and GPT-5.6 Sol is the opt-in escalation for explicitly entitled premium work. LangChain Core bounds and serializes the retrieved context; it does not create an additional model call. Routing telemetry and daily AI spend caps are persisted through the same Supabase/Postgres store as the portal, rather than resetting on an API restart.
 
-The Compose file includes Ollama with a persistent model volume. After starting the stack, pull only the models needed by the current feature set:
+The shared portal shell preserves the Skip to content link and moves keyboard focus to the main landmark after in-portal navigation. Opening the mobile menu focuses its first primary destination; Escape closes it and returns focus to Menu. The production proxy journey also verifies the Skip link, labeled primary and policy navigation, main landmark, and image alternative-text attributes on every portal route. These are local accessibility safeguards, not substitutes for a full assistive-technology or WCAG audit.
+
+`node infra/portal/accessibility-theme-contract.cjs` calculates WCAG contrast for the declared normal-text theme-token pairs, requiring 4.5:1 in both themes, and protects the reduced-motion, forced-color, and visible-focus rules. It is included in `node infra/portal/verify.cjs`. Component-state, image, zoom/reflow, browser, and assistive-technology review remain separate release evidence.
+
+The shared shell also maintains route-specific browser titles, politely announces in-portal page changes, and moves focus to the new main content. Support, Coach, and account forms expose busy and associated error states, while the application error boundary focuses its recovery heading. These behaviors preserve the visible MGT experience and still require deployed browser and assistive-technology validation.
+
+Shared confirmation dialogs restore opener focus and expose their title, description and busy state. Retailer comparisons, Shop filters, reviewed-library search and Replenishment totals now connect their controls and politely announced status text. These improvements do not alter retailer ranking, catalog content, reminders, purchases or commercial boundaries.
+
+Membership selectors, renewal confirmations, guest invitations, the shared Beauty & Style profile and confirmed billing activity now expose clearer grouping, busy/error relationships, status announcements and focus return. Subscription status continues to depend on authoritative signed events; portal activity is not a payment receipt.
+
+Operator controls now associate gated-action reasons, use keyboard-reachable pressed buttons for knowledge and ingredient-rule selection, connect role-management and AI/reconciliation forms to their busy/error state, and announce advisory analysis results. Authorization, approval, audit and cost controls are unchanged.
+
+The Compose file includes Ollama with a persistent model volume, bounded parallelism, model residency controls, and a one-shot `model-sync` profile. After setting approved model tags in the environment, synchronize only the models needed by the current feature set:
 
 ```text
-docker compose up -d postgres ollama
-docker compose exec ollama ollama pull llama3.2:3b
-docker compose exec ollama ollama pull deepseek-r1:8b
-docker compose exec ollama ollama pull nomic-embed-text
-docker compose exec ollama ollama pull llava:latest
+docker compose up -d ollama
+docker compose --profile model-sync run --rm model-sync
 docker compose up -d api web edge
 ```
 
-Keep `OPENCLAW_ENABLED=false` until the OpenClaw-compatible endpoint has been installed and tested. Hosted OpenAI escalation is optional; keep its key unset to run the portal entirely on the local stack. Supabase remains the identity and production data system of record: provide its Auth URL/key and a production PostgreSQL connection in the server environment only. The worker also needs `SUPABASE_SERVICE_ROLE_KEY` to complete requested identity deletion; keep that privileged key server-side and never expose it to the web build.
+The Codex build lane is not an Ollama model or a public portal runtime. It remains the controlled engineering/escalation path behind the server boundary; Ollama handles routine portal traffic. Do not add a public `codex` endpoint or expose a model/provider label to the client.
+
+Caddy now persists its configuration state separately from certificates and validates the mounted Caddyfile in its healthcheck. The edge still remains the only service publishing host ports.
+
+Keep `OPENCLAW_ENABLED=false` until the OpenClaw runtime has been installed and tested against Ollama's native `/api/chat` endpoint. Set `OPENCLAW_API_MODE=openai-completions` only for a separately verified compatible proxy. Hosted OpenAI escalation is optional; keep its key unset to run the portal entirely on the local stack. Supabase remains the identity and production data system of record: provide its Auth URL/key and a production PostgreSQL connection in the server environment only. The worker also needs `SUPABASE_SERVICE_ROLE_KEY` to complete requested identity deletion; keep that privileged key server-side and never expose it to the web build.
 
 ## Tab coverage and remaining external setup
 | Area | Backend | Remaining |
@@ -48,12 +103,16 @@ Keep `OPENCLAW_ENABLED=false` until the OpenClaw-compatible endpoint has been in
 | Coach | Reviewed-library local-first gateway with Ollama, DeepSeek fallback, LangChain context pipeline and Supabase-backed telemetry | Ollama models, reviewed content, optional hosted escalation validation |
 | Learn | Approved knowledge records | Editorial publishing |
 | Account | Supabase OTP, secure cookie session, data export, and delayed account deletion with cancellation and operational blockers | Auth provider, email delivery, service-role identity deletion, and live lifecycle validation |
-| Support | Requests and admin replies | External helpdesk delivery and staffing |
+| Support | Typed requests, shared references, customer-visible lifecycle, assigned operator updates and aggregate flow metrics | External helpdesk delivery and named staffing |
 | Plans & Billing | Stripe checkout, portal and signed status webhooks | Both plan prices, benefits, terms and Stripe setup |
 | Admin | Session roles, exact-email operator role management, privacy-safe deletion operations, knowledge/rule drafting and approval, support replies | Initial superadmin bootstrap; full product management UI remains incomplete |
 | Company / policies / partners | Existing informational routes | Final legal content and agreements |
 
 Operator access at `/admin/operators` lets an existing superadmin find an account that has completed sign-in and assign only the five supported portal roles. It never creates an account or grants a role from a client-provided identity. The server checks the operator's current role inside the update transaction, prevents self-edits, rejects stale revisions or out-of-band role changes, and records each change with its prior and new roles. A trusted administrator must still provision the first superadmin after verifying that account outside this portal; there is no public bootstrap endpoint.
+
+Portal Support accepts only the five approved request types and records whether a request began in the form or an explicit guidance handoff. Customers see a server-generated reference and the states `open`, `in_review`, `waiting_customer` and `closed`; operator identity and internal source fields are excluded from customer responses. Superadmin and compliance operators can assign a request to themselves by updating it, move it through those states, and add timestamped customer replies. A reply is required when waiting for the customer, resolving, or reopening a request. The operations dashboard reports 30-day aggregate guidance, handoff, intake and update counts without customer questions, ticket text, identifiers or email addresses. These portal records do not establish external delivery or a response-time commitment.
+
+An operator may also mark one fixed internal escalation reason while updating a request: content safety, account/privacy, billing scope, retailer purchase, technical issue, specialist review or other. The reason and assignment stay out of the customer response and account export. The operations dashboard reports aggregate reason counts only; it does not establish named staffing, an external helpdesk handoff, or a response-time commitment.
 
 ## Operations worker and backup verification
 Compose now runs a separate worker every 60 seconds. It expires sessions and stale rate limits, retains AI-routing logs, notifications, billing activity and run records according to the environment settings, creates one durable replenishment notification per due reminder, and delivers it in-app by default. Set `NOTIFICATION_DELIVERY=webhook` only after configuring an HTTPS endpoint and token; failed deliveries are leased and retried up to three times without duplicate delivery. The worker writes a health heartbeat after each successful run, and its container becomes unhealthy when that heartbeat is stale.
@@ -71,10 +130,30 @@ Run `pnpm --filter @mgt/api test:operations` and `pnpm --filter @mgt/api test:re
 Validation: API compilation, web build, existing referral suite and new billing suite. Remaining: real Stripe sandbox lifecycle, production PostgreSQL, container startup, browser interactions and deployment.
 
 ## Trial and billing-cycle update
-New eligible consumer and vendor subscriptions use a 14-day free trial with payment_method_collection=always. The first paid billing period begins at trial end. No upfront subscription payment is collected. Trial eligibility is once per signed-in account and subscription audience, based on stored history and Stripe subscription history.
+New eligible Premium subscriptions use a 14-day free trial with payment_method_collection=always. The first paid billing period begins at trial end. No upfront subscription payment is collected. Trial eligibility is once per signed-in account, based on stored history and Stripe subscription history.
 
-Configure monthly and annual recurring Price IDs using STRIPE_CONSUMER_MONTHLY_PRICE_ID, STRIPE_CONSUMER_ANNUAL_PRICE_ID, STRIPE_VENDOR_MONTHLY_PRICE_ID and STRIPE_VENDOR_ANNUAL_PRICE_ID. The older CONSUMER_PRICE_ID and VENDOR_PRICE_ID remain monthly fallbacks. Monthly Prices must recur every month and annual Prices every year, interval_count=1. Prices remain TBD; no prices were created.
+Configure monthly and annual recurring Price IDs with the two named Premium variables listed above. Monthly Prices must recur every month and annual Prices every year, with `interval_count=1`. The approved product prices are $14.99/month and $149.99/year; no Prices have been created in this repository.
 
-The app creates a restricted Stripe billing-portal configuration: cancellations at period end, payment methods and invoices enabled, paid subscription price changes limited to that audience's configured Prices with Stripe confirmation and prorated invoicing. Trial-cycle changes use a separate authenticated endpoint, leaving trial_end untouched and creating no prorations. Trial subscriptions cannot change Prices through the billing portal because that could end a trial early. During a trial, cancellation ends access at trial end without starting the paid cycle. In a paid period, access remains until the end of that period. Payment failures can still suspend access according to subscription status.
+The app creates a restricted Stripe billing-portal configuration: cancellations at period end, payment methods and invoices enabled, and paid subscription price changes limited to Premium's configured Prices with Stripe confirmation and prorated invoicing. Trial-cycle changes use a separate authenticated endpoint, leaving trial_end untouched and creating no prorations. Trial subscriptions cannot change Prices through the billing portal because that could end a trial early. During a trial, cancellation ends access at trial end without starting the paid cycle. In a paid period, access remains until the end of that period. Payment failures can still suspend access according to subscription status.
 
 Configure Stripe trial reminder emails and cancellation/renewal notices, publish matching terms, and use Stripe test clocks to validate trial-to-paid transitions, monthly and annual renewals, declines and end-of-period cancellation before launch. These transitions have mocked regression coverage here, not a live Stripe sandbox verification.
+### Post-execution review
+
+Build the post-execution review after the execution-review chain is ready:
+
+```text
+pnpm infra:release-post-execution-review
+```
+
+The review remains `pending_execution_review` until the exact candidate, execution review, and twelve post-execution records are available. It fails closed on changed artifacts, unsafe records, or fabricated readiness.
+
+### Closure review
+
+Build the closure review after post-execution review is ready:
+
+```text
+pnpm infra:release-closure-review
+```
+
+The review remains `pending_post_execution_review` until the exact candidate and twelve closure records are available.
+

@@ -17,10 +17,10 @@ export function sessionMiddleware(store:Store,origin:string,production:boolean){
    const sessionId=raw&&/^[a-f0-9]{64}$/.test(raw)?hash(raw):undefined;
    if(sessionId)await db.lock('session:'+sessionId);
    let s=sessionId?await db.get<Session>('sessions',sessionId):undefined;
-   if(s&&s.expires<Date.now()){await db.remove('sessions',s.id);s=undefined;}
+   if(s&&s.expires<=Date.now()){await db.remove('sessions',s.id);s=undefined;}
+   if(s?.userId){const user=await db.get('accounts',s.userId);if(user)req.account=user;else{await db.remove('sessions',s.id);s=undefined;}}
    if(!s){const secret=token();s={id:hash(secret),actor:'guest_'+token(),csrf:token(),expires:Date.now()+86400000};
     await db.put('sessions',s.id,s);res.cookie(cookie,secret,{httpOnly:true,secure:production,sameSite:'lax',path:'/',maxAge:86400000});}
-   if(s.userId){const user=await db.get('accounts',s.userId);if(user)req.account=user;else{delete s.userId;}}
    return s;
   });
   req.sid=session.id;req.actor=session.actor;req.csrf=session.csrf;

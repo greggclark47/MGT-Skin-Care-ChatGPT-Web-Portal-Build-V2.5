@@ -1,8 +1,8 @@
 import type { SkinProfileInput, Routine, ProfileVector, AvoidFlags } from '@mgt/domain';
 
 // One API client shared by web and mobile (Section C.1: "no separate business logic per
-// platform"). Every call goes to the Express API — the Next.js app never talks to Stripe,
-// RevenueCat or an AI provider directly (Section C.1's first rule).
+// platform"). Every call goes to the Express API — the clients never call external
+// billing or analysis services directly (Section C.1's first rule).
 
 export interface SkinMatchResult {
   session_id: string;
@@ -25,18 +25,28 @@ export class ApiClient {
       headers: { 'content-type': 'application/json', ...(token ? { authorization: `Bearer ${token}` } : {}) },
       body: JSON.stringify(body),
     });
-    const json = await res.json();
-    if (!res.ok) throw new ApiError(json as ApiErrorShape, res.status);
-    return json as T;
+    return this.readResponse<T>(res);
   }
 
   private async get<T>(path: string, token?: string): Promise<T> {
     const res = await this.fetchImpl(`${this.baseUrl}${path}`, {
       headers: token ? { authorization: `Bearer ${token}` } : {},
     });
-    const json = await res.json();
-    if (!res.ok) throw new ApiError(json as ApiErrorShape, res.status);
-    return json as T;
+    return this.readResponse<T>(res);
+  }
+
+  private async readResponse<T>(res: Response): Promise<T> {
+    let payload: unknown;
+    try {
+      payload = await res.json();
+    } catch {
+      if (!res.ok) throw new ApiError(null, res.status);
+      throw new ApiError({ error: {
+        code: 'invalid_response', message: 'The platform returned an unreadable response.', request_id: 'unknown',
+      } }, res.status);
+    }
+    if (!res.ok) throw new ApiError(payload, res.status);
+    return payload as T;
   }
 
   // Pre-account: no token needed. The returned session_id is what binds the anonymous
@@ -51,7 +61,7 @@ export class ApiClient {
 
   priceCart(sessionId: string, premium = false) {
     return this.get<{ pricing: { total_cents: number; subtotal_cents: number; shipping_cents: number } }>(
-      `/api/cart/${sessionId}/price?premium=${premium}`,
+      `/api/cart/${encodeURIComponent(sessionId)}/price?premium=${premium}`,
     );
   }
 
@@ -64,16 +74,21 @@ export class ApiClient {
   }
 
   orderStatus(orderId: string) {
-    return this.get<{ status: string }>(`/api/checkout/orders/${orderId}/status`);
+    return this.get<{ status: string }>(`/api/checkout/orders/${encodeURIComponent(orderId)}/status`);
   }
 }
 
 export class ApiError extends Error {
   readonly code: string;
   readonly requestId: string;
-  constructor(payload: ApiErrorShape, public status: number) {
-    super(payload?.error?.message ?? 'Request failed');
-    this.code = payload?.error?.code ?? 'unknown';
-    this.requestId = payload?.error?.request_id ?? 'unknown';
+  constructor(payload: unknown, public status: number) {
+    const record = payload !== null && typeof payload === 'object'
+      ? payload as Record<string, unknown> : {};
+    const envelope = record.error !== null && typeof record.error === 'object'
+      ? record.error as Record<string, unknown> : {};
+    super(typeof envelope.message === 'string' ? envelope.message : 'Request failed');
+    this.code = typeof envelope.code === 'string' ? envelope.code
+      : typeof record.error === 'string' ? record.error : 'unknown';
+    this.requestId = typeof envelope.request_id === 'string' ? envelope.request_id : 'unknown';
   }
 }

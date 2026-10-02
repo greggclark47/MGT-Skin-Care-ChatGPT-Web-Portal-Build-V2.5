@@ -5,7 +5,7 @@ explainable AI-assisted recommendations, and multi-brand commerce with subscript
 replenishment.
 
 ## Source of truth
-`claude/skincare-master-blueprint-v2.md` (v2.0.0) is the canonical build specification:
+`claude/skincare-master-blueprint-v2.md` (v2.0.2) is the canonical build specification:
 architecture, database schema, API spec, event taxonomy, AI prompt architecture,
 financial model, and the six-month build order (SC-P0–SC-P6). Read it before making
 structural changes.
@@ -25,5 +25,9 @@ re-run it whenever a pricing or cost assumption changes.
 - `docs` — supplementary docs
 
 ## Status
-SC-P1 scaffold. See `claude/skincare-master-blueprint-v2.md` Section Q for the full
-build order and Section H for phase objectives/gates.
+Local implementation is reported complete through F536; production remains gated on
+live environment evidence, named owners, and release sign-off. The release export
+manifest prepares the same checksum-bound handoff for GitHub and Google Drive while
+keeping destination completion explicit. See
+`claude/skincare-master-blueprint-v2.md` Section R for the F436–F535 ship plan and
+Section Q for the original build order.

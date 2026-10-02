@@ -1,0 +1,178 @@
+{
+  "version": "1.2",
+  "generated_at": "REPLACE_WITH_PAST_ISO_TIMESTAMP",
+  "expires_at": "REPLACE_WITH_FUTURE_ISO_TIMESTAMP",
+  "candidate": {
+    "commit": "REPLACE_WITH_40_CHARACTER_COMMIT_SHA",
+    "branch": "main",
+    "checkpoint_report": "work/checkpoints/REPLACE_WITH_TIMESTAMP/report.md",
+    "verification_report": "work/verification/REPLACE_WITH_TIMESTAMP/report.md",
+    "hosted_ci_url": "https://github.com/REPLACE_WITH_OWNER/REPLACE_WITH_REPOSITORY/actions/runs/REPLACE_WITH_RUN"
+  },
+  "owners": {
+    "release": "REPLACE_WITH_RELEASE_OWNER",
+    "support": "REPLACE_WITH_SUPPORT_OWNER",
+    "data": "REPLACE_WITH_DATA_OWNER",
+    "platform": "REPLACE_WITH_PLATFORM_OWNER",
+    "accessibility": "REPLACE_WITH_ACCESSIBILITY_OWNER"
+  },
+  "approvals": [
+    { "role": "release", "decision": "go", "approver": "REPLACE_WITH_RELEASE_OWNER", "reviewed_at": "REPLACE_WITH_PAST_ISO_TIMESTAMP", "reference": "work/approvals/release.md" },
+    { "role": "support", "decision": "go", "approver": "REPLACE_WITH_SUPPORT_OWNER", "reviewed_at": "REPLACE_WITH_PAST_ISO_TIMESTAMP", "reference": "work/approvals/support.md" },
+    { "role": "data", "decision": "go", "approver": "REPLACE_WITH_DATA_OWNER", "reviewed_at": "REPLACE_WITH_PAST_ISO_TIMESTAMP", "reference": "work/approvals/data.md" },
+    { "role": "platform", "decision": "go", "approver": "REPLACE_WITH_PLATFORM_OWNER", "reviewed_at": "REPLACE_WITH_PAST_ISO_TIMESTAMP", "reference": "work/approvals/platform.md" },
+    { "role": "accessibility", "decision": "go", "approver": "REPLACE_WITH_ACCESSIBILITY_OWNER", "reviewed_at": "REPLACE_WITH_PAST_ISO_TIMESTAMP", "reference": "work/approvals/accessibility.md" }
+  ],
+  "images": {
+    "node": "node@sha256:REPLACE_WITH_64_HEX_DIGEST",
+    "ollama": "ollama/ollama@sha256:REPLACE_WITH_64_HEX_DIGEST",
+    "caddy": "caddy@sha256:REPLACE_WITH_64_HEX_DIGEST"
+  },
+  "staging_evidence": {
+    "version": "1.2",
+    "environment": "staging",
+    "target": {
+      "version": "1.0",
+      "environment": "staging",
+      "candidate_commit": "REPLACE_WITH_40_CHARACTER_COMMIT_SHA",
+      "origin": "https://REPLACE_WITH_STAGING_ORIGIN",
+      "deployment_reference": "work/staging/REPLACE_WITH_DEPLOYMENT_REPORT.md",
+      "isolation_reference": "work/staging/REPLACE_WITH_ISOLATION_REPORT.md",
+      "secret_injection_reference": "work/staging/REPLACE_WITH_SECRET_INJECTION_REPORT.md",
+      "images": {
+        "node": "node@sha256:REPLACE_WITH_64_HEX_DIGEST",
+        "ollama": "ollama/ollama@sha256:REPLACE_WITH_64_HEX_DIGEST",
+        "caddy": "caddy@sha256:REPLACE_WITH_64_HEX_DIGEST"
+      }
+    },
+    "health_probe": {
+      "version": "1.0",
+      "origin": "https://REPLACE_WITH_STAGING_ORIGIN",
+      "captured_at": "REPLACE_WITH_PAST_ISO_TIMESTAMP",
+      "status": "pending",
+      "checks": [
+        { "pathname": "/healthz", "expected_status": 200, "actual_status": null, "service_status": null, "duration_ms": null, "status": "pending" },
+        { "pathname": "/readyz", "expected_status": 200, "actual_status": null, "service_status": null, "duration_ms": null, "status": "pending" }
+      ]
+    },
+    "attestation": {
+      "version": "1.0",
+      "candidate_commit": "REPLACE_WITH_40_CHARACTER_COMMIT_SHA",
+      "target_origin": "https://REPLACE_WITH_STAGING_ORIGIN",
+      "images": {
+        "node": "node@sha256:REPLACE_WITH_64_HEX_DIGEST",
+        "ollama": "ollama/ollama@sha256:REPLACE_WITH_64_HEX_DIGEST",
+        "caddy": "caddy@sha256:REPLACE_WITH_64_HEX_DIGEST"
+      },
+      "generated_at": "REPLACE_WITH_PAST_ISO_TIMESTAMP",
+      "status": "pending",
+      "preflight": { "status": "pending", "reference": "work/staging/REPLACE_WITH_PREFLIGHT_REPORT.md", "checksum": "sha256:REPLACE_WITH_64_HEX_CHECKSUM" },
+      "probe": { "status": "pending", "reference": "work/staging/REPLACE_WITH_PROBE_REPORT.json", "checksum": "sha256:REPLACE_WITH_64_HEX_CHECKSUM" }
+    },
+    "artifacts": {
+      "version": "1.0",
+      "candidate_commit": "REPLACE_WITH_40_CHARACTER_COMMIT_SHA",
+      "generated_at": "REPLACE_WITH_PAST_ISO_TIMESTAMP",
+      "status": "pending",
+      "entries": [
+        { "id": "deployment", "reference": "work/staging/REPLACE_WITH_DEPLOYMENT_REPORT.md", "checksum": "sha256:REPLACE_WITH_64_HEX_CHECKSUM", "bytes": null },
+        { "id": "isolation", "reference": "work/staging/REPLACE_WITH_ISOLATION_REPORT.md", "checksum": "sha256:REPLACE_WITH_64_HEX_CHECKSUM", "bytes": null },
+        { "id": "secret_injection", "reference": "work/staging/REPLACE_WITH_SECRET_INJECTION_REPORT.md", "checksum": "sha256:REPLACE_WITH_64_HEX_CHECKSUM", "bytes": null },
+        { "id": "preflight", "reference": "work/staging/REPLACE_WITH_PREFLIGHT_REPORT.md", "checksum": "sha256:REPLACE_WITH_64_HEX_CHECKSUM", "bytes": null },
+        { "id": "probe", "reference": "work/staging/REPLACE_WITH_PROBE_REPORT.json", "checksum": "sha256:REPLACE_WITH_64_HEX_CHECKSUM", "bytes": null },
+        { "id": "rollback", "reference": "work/rollback/REPLACE_WITH_STAGING_ROLLBACK_EVIDENCE.md", "checksum": "sha256:REPLACE_WITH_64_HEX_CHECKSUM", "bytes": null }
+      ]
+    },
+    "records": [
+      {
+        "id": "staging_provisioning",
+        "phase": "F437",
+        "gate": "Staging target isolation",
+        "requirement": "A separate staging origin and deployment target are provisioned outside production.",
+        "owner": "REPLACE_WITH_PLATFORM_OWNER",
+        "captured_at": "REPLACE_WITH_PAST_ISO_TIMESTAMP",
+        "environment": "staging",
+        "action": "REPLACE_WITH_RECORDED_ACTION_OR_COMMAND",
+        "expected_result": "REPLACE_WITH_EXPECTED_RESULT",
+        "actual_result": "REPLACE_WITH_ACTUAL_RESULT",
+        "status": "pending",
+        "reference": "work/staging/REPLACE_WITH_STAGING_PROVISIONING_EVIDENCE.md",
+        "checksum": "sha256:REPLACE_WITH_64_HEX_CHECKSUM",
+        "blocker_state": "pending",
+        "rollback_reference": "work/rollback/REPLACE_WITH_STAGING_ROLLBACK_EVIDENCE.md"
+      },
+      {
+        "id": "secret_injection",
+        "phase": "F438",
+        "gate": "Secret injection boundary",
+        "requirement": "Required values are injected through the approved secret manager without copying values into source control or evidence.",
+        "owner": "REPLACE_WITH_PLATFORM_OWNER",
+        "captured_at": "REPLACE_WITH_PAST_ISO_TIMESTAMP",
+        "environment": "staging",
+        "action": "REPLACE_WITH_RECORDED_ACTION_OR_COMMAND",
+        "expected_result": "REPLACE_WITH_EXPECTED_RESULT",
+        "actual_result": "REPLACE_WITH_ACTUAL_RESULT",
+        "status": "pending",
+        "reference": "work/staging/REPLACE_WITH_SECRET_INJECTION_EVIDENCE.md",
+        "checksum": "sha256:REPLACE_WITH_64_HEX_CHECKSUM",
+        "blocker_state": "pending",
+        "rollback_reference": "work/rollback/REPLACE_WITH_STAGING_ROLLBACK_EVIDENCE.md"
+      },
+      {
+        "id": "artifact_health",
+        "phase": "F439",
+        "gate": "Immutable artifact and health",
+        "requirement": "The exact candidate images are deployed and staging /healthz and /readyz return the recorded healthy result.",
+        "owner": "REPLACE_WITH_PLATFORM_OWNER",
+        "captured_at": "REPLACE_WITH_PAST_ISO_TIMESTAMP",
+        "environment": "staging",
+        "action": "REPLACE_WITH_RECORDED_ACTION_OR_COMMAND",
+        "expected_result": "REPLACE_WITH_EXPECTED_RESULT",
+        "actual_result": "REPLACE_WITH_ACTUAL_RESULT",
+        "status": "pending",
+        "reference": "work/staging/REPLACE_WITH_ARTIFACT_HEALTH_EVIDENCE.md",
+        "checksum": "sha256:REPLACE_WITH_64_HEX_CHECKSUM",
+        "blocker_state": "pending",
+        "rollback_reference": "work/rollback/REPLACE_WITH_STAGING_ROLLBACK_EVIDENCE.md"
+      },
+      {
+        "id": "evidence_ledger",
+        "phase": "F440",
+        "gate": "Staging evidence ledger",
+        "requirement": "The release owner records attributable, immutable staging evidence for the exact candidate and rollback target.",
+        "owner": "REPLACE_WITH_RELEASE_OWNER",
+        "captured_at": "REPLACE_WITH_PAST_ISO_TIMESTAMP",
+        "environment": "staging",
+        "action": "REPLACE_WITH_RECORDED_ACTION_OR_COMMAND",
+        "expected_result": "REPLACE_WITH_EXPECTED_RESULT",
+        "actual_result": "REPLACE_WITH_ACTUAL_RESULT",
+        "status": "pending",
+        "reference": "work/staging/REPLACE_WITH_EVIDENCE_LEDGER.md",
+        "checksum": "sha256:REPLACE_WITH_64_HEX_CHECKSUM",
+        "blocker_state": "pending",
+        "rollback_reference": "work/rollback/REPLACE_WITH_STAGING_ROLLBACK_EVIDENCE.md"
+      }
+    ]
+  },
+  "evidence": [
+    {
+      "id": "support_workflow",
+      "phase": "F73",
+      "status": "pass",
+      "reference": "https://evidence.example.com/support",
+      "reviewed_at": "REPLACE_WITH_PAST_ISO_TIMESTAMP",
+      "reviewer": "REPLACE_WITH_SUPPORT_OWNER"
+    }
+  ],
+  "rollback": {
+    "previous_release": "REPLACE_WITH_LAST_APPROVED_RELEASE",
+    "reference": "work/rollback/REPLACE_WITH_TIMESTAMP/report.md",
+    "verified_at": "REPLACE_WITH_PAST_ISO_TIMESTAMP"
+  },
+  "monitoring": {
+    "owner": "REPLACE_WITH_LAUNCH_MONITOR",
+    "incident_channel": "REPLACE_WITH_INCIDENT_CHANNEL",
+    "launch_window_start": "REPLACE_WITH_LAUNCH_WINDOW_ISO_TIMESTAMP",
+    "checks": ["15m", "1h", "24h", "7d"]
+  }
+}

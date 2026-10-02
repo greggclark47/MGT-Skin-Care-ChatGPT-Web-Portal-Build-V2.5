@@ -1,9 +1,9 @@
 {
   "version": "1.0",
-  "candidate_commit": "1093e4ecf1ace596dc94f83714ff7b7f13943a11",
-  "bundle_checksum": "sha256:88819b18022844aca8e3a41c5589382ba13867d6fecee9dca688e197fef646bb",
-  "execution_review_checksum": "sha256:8dbcbeb1a4827fc0bb571e8ae1a33143536cfcfa7636c68906765f71185551ed",
-  "generated_at": "2026-10-02T19:28:23.381Z",
+  "candidate_commit": "ab4b92eb0d1cdff977c9f06eebdaff45ca17539d",
+  "bundle_checksum": "sha256:7d0cb67680ff6e72422089a52ec144472b158019fbfff0e9d07016b4d9399a8a",
+  "execution_review_checksum": "sha256:c3728760b0009d8202d2be74fb7e75f2a9c0a300ff5e2cafc9c50f917d84a255",
+  "generated_at": "2026-10-02T19:50:21.049Z",
   "status": "pending_execution_review",
   "entries": [],
   "errors": [
@@ -20,5 +20,5 @@
     "first_day_review record is required",
     "final_closeout record is required"
   ],
-  "post_execution_review_checksum": "sha256:2faf2a21a10f4ee0ad5f5c6f46e2c83690e598f9ff7a451617fafc330da6c31b"
+  "post_execution_review_checksum": "sha256:33a9a6b957689ffc6a1e04db32adb783eeff1d04f806b45e2175cf1f03e2e62e"
 }

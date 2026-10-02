@@ -1,9 +1,9 @@
 {
   "version": "1.0",
-  "candidate_commit": "1093e4ecf1ace596dc94f83714ff7b7f13943a11",
-  "bundle_checksum": "sha256:88819b18022844aca8e3a41c5589382ba13867d6fecee9dca688e197fef646bb",
-  "launch_review_checksum": "sha256:fe2bfae66626a6f46a567cb7e1f8fbd42212eeaa172e718dcad026dfda1b5d92",
-  "generated_at": "2026-10-02T19:28:23.271Z",
+  "candidate_commit": "ab4b92eb0d1cdff977c9f06eebdaff45ca17539d",
+  "bundle_checksum": "sha256:7d0cb67680ff6e72422089a52ec144472b158019fbfff0e9d07016b4d9399a8a",
+  "launch_review_checksum": "sha256:355e76860eb8a617e4e2d81409e62d6ced1c0d23d3db54626244b211f503aad0",
+  "generated_at": "2026-10-02T19:50:20.982Z",
   "status": "pending_launch_review",
   "entries": [],
   "errors": [
@@ -20,5 +20,5 @@
     "customer_impact_watch record is required",
     "support_handoff record is required"
   ],
-  "execution_review_checksum": "sha256:8dbcbeb1a4827fc0bb571e8ae1a33143536cfcfa7636c68906765f71185551ed"
+  "execution_review_checksum": "sha256:c3728760b0009d8202d2be74fb7e75f2a9c0a300ff5e2cafc9c50f917d84a255"
 }

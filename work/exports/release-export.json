@@ -1,0 +1,57 @@
+{
+  "version": "1.0",
+  "candidate_commit": "95b699848f18a4055ab31e40f8a96854b986cf7f",
+  "branch": "codex/reconcile-main-2026-09-20",
+  "generated_at": "2026-10-02T18:12:15.639Z",
+  "status": "ready_for_export",
+  "destinations": {
+    "github": {
+      "status": "pending_push",
+      "repository": [
+        "https://github.com/greggclark47/MGT-Skin-Care-v2.git",
+        "https://github.com/greggclark47/MGT-Skin-Care-ChatGPT-Web-Portal-Build-V2.5.git"
+      ],
+      "branch": "codex/reconcile-main-2026-09-20",
+      "commit": "95b699848f18a4055ab31e40f8a96854b986cf7f"
+    },
+    "google_drive": {
+      "status": "pending_upload",
+      "file_name": "MGT-Skin-Care-v2-95b699848f18-export.zip",
+      "folder_id": null,
+      "file_id": null,
+      "web_url": null
+    }
+  },
+  "entries": [
+    {
+      "id": "readme_md",
+      "reference": "README.md",
+      "kind": "text",
+      "checksum": "sha256:75685ac9bab0715d867b51ce7078feaa257073a2744fb2035ff84ec8c385b67f",
+      "bytes": 1773
+    },
+    {
+      "id": "next_phase_implementation_plan_md",
+      "reference": "NEXT-PHASE-IMPLEMENTATION-PLAN.md",
+      "kind": "text",
+      "checksum": "sha256:eebbfa31ceacb5d1396878522259267c2775df17d73a3f60f915d9841378383c",
+      "bytes": 141818
+    },
+    {
+      "id": "infra_portal_readme_md",
+      "reference": "infra/portal/README.md",
+      "kind": "text",
+      "checksum": "sha256:d00ee13533cb9bc2dcaec1845841ca4c633981b4d6e13c309b65d86705b8180f",
+      "bytes": 27580
+    },
+    {
+      "id": "infra_portal_release_checkpoint_md",
+      "reference": "infra/portal/RELEASE-CHECKPOINT.md",
+      "kind": "text",
+      "checksum": "sha256:db33f4895af636de9d72bc4ed9c40938a69ad82c0e302fb145db6426b244c1eb",
+      "bytes": 66025
+    }
+  ],
+  "errors": [],
+  "bundle_checksum": "sha256:ab30b2cd6a6d622ecb0ebfc2281c5cd5e3f1f7fa81f472eebff3b8b93e127807"
+}

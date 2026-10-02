@@ -1,0 +1,24 @@
+{
+  "version": "1.0",
+  "candidate_commit": "1093e4ecf1ace596dc94f83714ff7b7f13943a11",
+  "bundle_checksum": "sha256:88819b18022844aca8e3a41c5589382ba13867d6fecee9dca688e197fef646bb",
+  "execution_review_checksum": "sha256:8dbcbeb1a4827fc0bb571e8ae1a33143536cfcfa7636c68906765f71185551ed",
+  "generated_at": "2026-10-02T19:28:23.381Z",
+  "status": "pending_execution_review",
+  "entries": [],
+  "errors": [
+    "execution_authorization record is required",
+    "command_transcript record is required",
+    "deployment_attestation record is required",
+    "health_probe record is required",
+    "smoke_test record is required",
+    "traffic_shift record is required",
+    "error_budget record is required",
+    "support_ack record is required",
+    "incident_log record is required",
+    "rollback_readiness record is required",
+    "first_day_review record is required",
+    "final_closeout record is required"
+  ],
+  "post_execution_review_checksum": "sha256:2faf2a21a10f4ee0ad5f5c6f46e2c83690e598f9ff7a451617fafc330da6c31b"
+}

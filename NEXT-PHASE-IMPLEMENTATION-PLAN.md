@@ -1627,6 +1627,15 @@ This checkpoint does not create Stripe Prices, connect an account, collect a pay
 **Phases F971–F975 — launch integrity:** Added launch window, incident route, Drive receipt, GitHub receipt, and `pnpm infra:production-evidence-reconciliation-review`, stopping at `pending_evidence_matrix`, `pending_reconciliation_records`, or `ready_for_production_reconciliation`.
 **F951–F975 local verification:** Reconciliation fixtures prove pending behavior, twenty-five-record acceptance, mutation detection, checksum binding, and fabricated-ready rejection. No live receipt, deployment, or traffic change was accepted.
 
+**Phases F976–F980 — launch target:** Added production target, domain/TLS, edge-route, API-health, and web-health records.
+**Phases F981–F985 — runtime readiness:** Added readiness, image provenance, configuration, secret injection, and database connectivity records.
+**Phases F986–F990 — data and operations:** Added migration, RLS, backup freshness, restore drill, and worker heartbeat records.
+**Phases F991–F995 — service validation:** Added monitoring, support route, deployed accessibility, customer smoke, and admin smoke records.
+**Phases F996–F1000 — policy and safety:** Added privacy, security, billing scope, AI scope, and notification scope records.
+**Phases F1001–F1005 — supervised launch:** Added incident channel, rollback command, launch owner, launch window, and go/no-go records.
+**Phases F1006–F1010 — receipt and archive:** Added operator identity, execution receipt, post-launch probe, archive receipt, and `pnpm infra:production-launch-readiness-review`, stopping at `pending_reconciliation_review`, `pending_launch_records`, or `ready_for_production_launch`.
+**F976–F1010 local verification:** Launch-readiness fixtures prove pending behavior, thirty-five-record acceptance, mutation detection, checksum binding, and fabricated-ready rejection. No command, deployment, traffic change, or live receipt was executed.
+
 **Phase F815 — release scope confirmation:** Added release-scope authorization evidence.
 **Phase F816 — release window confirmation:** Added release-window authorization evidence.
 **Phase F817 — change freeze confirmation:** Added change-freeze authorization evidence.

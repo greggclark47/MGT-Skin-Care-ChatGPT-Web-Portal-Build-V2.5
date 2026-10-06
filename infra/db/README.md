@@ -21,6 +21,12 @@ It also rejects malformed target shapes, duplicate names, invalid IDs, and inval
 target manifest must contain migration metadata only; never export secrets, customer rows, tokens,
 or database dumps. This check is evidence for review, not permission to apply changes.
 
+There is intentionally no root command that mutates a staging or production database. Apply the
+reviewed SQL files through the database owner's approved change process, keep
+`PORTAL_AUTO_MIGRATE=false`, and record the resulting target manifest and transcript. The former
+`pnpm migrate` entry referenced a file that did not exist and has been removed rather than replaced
+with an unreviewed production mutation path.
+
 Apply every file in `migrations/` in **numeric order**. The full set has been verified to
 apply cleanly to a fresh PostgreSQL 16 (see "History" below — it did not, before 2026-09-06).
 

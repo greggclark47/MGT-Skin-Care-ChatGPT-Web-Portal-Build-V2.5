@@ -10,7 +10,6 @@
     "dev": "pnpm -r --parallel dev",
     "lint": "pnpm -r lint",
     "test": "pnpm -r test",
-    "migrate": "node infra/db/migrate.js",
     "infra:preflight": "node --env-file-if-exists=infra/portal/.env infra/portal/preflight.mjs",
     "infra:readiness": "node --env-file-if-exists=infra/portal/.env infra/portal/release-readiness.mjs",
     "infra:ship-packet": "node --env-file-if-exists=infra/portal/.env infra/portal/ship-packet.mjs",

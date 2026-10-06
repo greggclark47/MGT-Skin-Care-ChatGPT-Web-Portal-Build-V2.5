@@ -26,6 +26,7 @@ for(const name of ['gateway','pricing'])await run('gateway '+name,'packages/ai-g
 const tests=['apps/api/test','packages/shared/test','apps/mobile/test'].flatMap(dir=>fs.readdirSync(path.join(root,dir)).filter(f=>f.endsWith('.cjs')).map(f=>dir+'/'+f));
 const portalContractTests=fs.readdirSync(path.join(root,'infra','portal')).filter(file=>file.endsWith('.test.mjs')).sort().map(file=>'infra/portal/'+file);
 await run('HTTP, persistence, and release-contract regressions','',['--test','--test-concurrency=1','--test-reporter=tap',...tests,...portalContractTests,'infra/db/migration-lineage.test.mjs','infra/db/production-audit.test.mjs']);
+await run('tracked source credential scan','',['infra/portal/tracked-secret-scan.mjs']);
 await run('accessibility theme contract','',['infra/portal/accessibility-theme-contract.cjs']);
 // Build uses only the server-side local API origin already in next.config.js; no service secrets.
 // OneDrive can leave generated Next.js files as reparse placeholders that make Node's readlink

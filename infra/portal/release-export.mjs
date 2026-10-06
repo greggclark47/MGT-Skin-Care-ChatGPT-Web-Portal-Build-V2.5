@@ -1,8 +1,10 @@
 import { createHash } from "node:crypto";
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { scanTrackedSource } from "./tracked-secret-scan.mjs";
 
 const SHA = /^[a-f0-9]{40}$/i;
 const CHECKSUM = /^sha256:[a-f0-9]{64}$/i;
@@ -84,6 +86,18 @@ function gitRemotes(root) {
   return [...new Set(output.split(/\r?\n/).map((line) => line.match(/^\S+\s+(\S+)\s+\(fetch\)$/)?.[1]).filter(Boolean))];
 }
 
+function gitArchiveChecksum(root, commit) {
+  const temporary = fs.mkdtempSync(path.join(os.tmpdir(), "mgt-release-archive-"));
+  const archive = path.join(temporary, "candidate.zip");
+  try {
+    const result = spawnSync("git", ["archive", "--format=zip", `--output=${archive}`, commit], { cwd: root, encoding: "utf8", windowsHide: true });
+    if (result.status !== 0 || !fs.existsSync(archive)) throw new Error("Unable to reproduce the candidate archive from Git.");
+    return `sha256:${createHash("sha256").update(fs.readFileSync(archive)).digest("hex")}`;
+  } finally {
+    fs.rmSync(temporary, { recursive: true, force: true });
+  }
+}
+
 function destinationTemplate({ root, candidateCommit, branch } = {}) {
   return {
     github: {
@@ -114,6 +128,14 @@ export function buildReleaseExport({ root = process.cwd(), candidateCommit = "",
       entries.push({ id: reference.replace(/[^A-Za-z0-9]+/g, "_").replace(/^_|_$/g, "").toLowerCase(), ...inspectReleaseArtifact({ root, reference }) });
     } catch (error) {
       errors.push(`${reference}: ${error.message}`);
+    }
+  }
+  if (archiveReference) {
+    const archive = entries.find((entry) => entry.reference === archiveReference);
+    try {
+      if (archive?.checksum !== gitArchiveChecksum(root, commit)) errors.push(`${archiveReference}: archive must exactly reproduce candidate commit ${commit}`);
+    } catch (error) {
+      errors.push(`${archiveReference}: ${error.message}`);
     }
   }
   const manifest = {
@@ -168,6 +190,13 @@ export function verifyReleaseExport({ root = process.cwd(), manifest } = {}) {
       errors.push(`${entry?.id || "entry"} could not be verified: ${error.message}`);
     }
   }
+  for (const entry of Array.isArray(manifest?.entries) ? manifest.entries.filter((candidate) => candidate?.kind === "archive") : []) {
+    try {
+      if (text(entry.checksum) !== gitArchiveChecksum(root, text(manifest?.candidate_commit))) errors.push(`${entry.id} archive does not reproduce the candidate commit`);
+    } catch (error) {
+      errors.push(`${entry?.id || "archive"} provenance could not be verified: ${error.message}`);
+    }
+  }
   const validation = validateReleaseExport(manifest);
   errors.push(...validation.errors);
   return { ok: errors.length === 0, errors: [...new Set(errors)], verified };
@@ -189,6 +218,8 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   } else {
     try {
       const root = path.resolve(fileURLToPath(new URL("../..", import.meta.url)));
+      const credentialFindings = scanTrackedSource(root);
+      if (credentialFindings.length) throw new Error(`Tracked source credential scan found ${credentialFindings.length} potential finding(s); run tracked-secret-scan.mjs for redacted locations.`);
       const manifest = buildReleaseExport({ root, references: references ? references.split(",") : DEFAULT_EXPORT_REFERENCES, archiveReference: archive });
       const destination = path.resolve(root, output);
       fs.mkdirSync(path.dirname(destination), { recursive: true });

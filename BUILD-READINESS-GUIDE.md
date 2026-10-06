@@ -4,7 +4,13 @@ This guide turns the current gap analysis into an execution plan. It separates w
 
 ## Current baseline
 
-The latest locally checked Support build is commit `f075a43`; web production build, proxy journey, and focused browser accessibility flow passed. The last full local verification passed for the assistant policy foundation at commit `08c9ca4`, with evidence at `work/verification/2026-09-23T01-51-10-062Z/report.md`. Live services, full accessibility, and SME content review remain open.
+The current release branch has a commit-bound local checkpoint in `work/checkpoints/` and a
+full verification report in `work/verification/`. Every repository-local gate passes, including
+builds, regressions, migration lineage, database audit contracts, runtime hardening, the
+production proxy journey, accessibility contracts, mobile contracts, and the tracked-source
+credential scan. Use the newest checkpoint rather than the historical phase evidence below.
+Live services, deployed accessibility, the production catalog/ingredient decision, and human
+approval remain open.
 
 - Domain, gateway, shared client, API and web builds pass.
 - The local release gate passes compilation, web smoke, API regressions, deterministic policy cases, the production proxy journey and the public artifact scan.
@@ -12,6 +18,12 @@ The latest locally checked Support build is commit `f075a43`; web production bui
 - `/api/hub/admin/catalog-health` reports catalog approval, required-slot coverage and ingredient-rule readiness without returning customer or vendor details.
 - The operations worker expires pending guest-profile merge decisions, and the reviewed-output gate covers five approved task types with zero blocked-claim or invalid-citation failures.
 - The referral boundary, immutable image/edge contracts, expanded browser route matrix, shared shell checks, and mobile Expo contract gate are included in the local release run.
+- The database lineage now includes service-only RLS and canonical ingredient-seed alignment;
+  the portal lineage protects its server-side document store from browser database roles.
+- The full verifier removes generated Next.js output before production compilation so OneDrive
+  reparse placeholders cannot make results depend on command order.
+- Every tracked source file is scanned for high-confidence credential material without printing
+  matched values.
 - Local demo data is sample-only. It is not evidence of production catalog approval, provider connectivity, database isolation or deployment readiness.
 
 ## Phase 0 — change control and evidence
@@ -20,7 +32,8 @@ The latest locally checked Support build is commit `f075a43`; web production bui
 
 1. Work from a feature branch and keep the working tree clean before each checkpoint.
 2. Do not place secrets, customer data, database dumps, generated dependency folders or provider payloads in source control.
-3. Record each gate in `infra/portal/RELEASE-CHECKPOINT.md` with date, commit, command and evidence path.
+3. Record durable control changes in `infra/portal/RELEASE-CHECKPOINT.md`; each executed run
+   writes its exact commit, command results, and evidence path under `work/checkpoints/`.
 4. Use `pnpm test:verification` for the secret-free local gate. It deliberately does not claim live readiness.
 5. Merge the verification workflow to `main`, then confirm a GitHub-hosted run succeeds before calling CI continuous.
 
@@ -239,12 +252,9 @@ It runs the infrastructure, Compose, migration-lineage, reviewed-output, mobile-
 pnpm release:checkpoint -- --require-production
 ```
 
-The latest checkpoint passed every local gate. Production preflight remains blocked because `infra/portal/.env` is not present, so the release decision is intentionally `NOT READY` until staging or production configuration is supplied and validated.
-
-Latest evidence:
-
-- `work/checkpoints/2026-09-23T00-08-34-590Z/report.md`
-- `work/verification/2026-09-23T00-08-39-783Z/report.md`
+The newest checkpoint is authoritative for the current candidate and passes every local gate.
+Production preflight remains blocked when `infra/portal/.env` is absent, so the release decision
+is intentionally `NOT READY` until staging or production configuration is supplied and validated.
 
 ## Phase 8 — analytics and data-point contract
 

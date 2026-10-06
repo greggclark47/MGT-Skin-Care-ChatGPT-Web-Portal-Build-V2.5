@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { spawnSync } from "node:child_process";
 import {
   buildReleaseExport,
   releaseExportChecksum,
@@ -64,4 +65,24 @@ test("requires observed Drive metadata before marking upload complete", () => {
   const result = validateReleaseExport(manifest, { now: Date.parse("2026-01-02T00:00:00.000Z") });
   assert.equal(result.ok, false);
   assert.match(result.errors.join("; "), /observed file_id/);
+});
+
+test("accepts only an archive reproduced from the exact candidate commit", () => {
+  const root = fixture();
+  fs.mkdirSync(path.join(root, "work", "exports"), { recursive: true });
+  for (const args of [
+    ["init", "-q"],
+    ["add", "."],
+    ["-c", "user.name=MGT Test", "-c", "user.email=test@invalid.local", "commit", "-qm", "fixture"]
+  ]) assert.equal(spawnSync("git", args, { cwd: root, windowsHide: true }).status, 0);
+  const commit = spawnSync("git", ["rev-parse", "HEAD"], { cwd: root, encoding: "utf8", windowsHide: true }).stdout.trim();
+  const reference = "work/exports/candidate.zip";
+  assert.equal(spawnSync("git", ["archive", "--format=zip", `--output=${path.join(root, reference)}`, commit], { cwd: root, windowsHide: true }).status, 0);
+  const manifest = buildReleaseExport({ root, candidateCommit: commit, references: ["README.md"], archiveReference: reference, now: "2026-01-01T00:00:00.000Z" });
+  assert.equal(manifest.status, "ready_for_export");
+  assert.equal(verifyReleaseExport({ root, manifest }).ok, true);
+  fs.appendFileSync(path.join(root, reference), "changed");
+  const changed = buildReleaseExport({ root, candidateCommit: commit, references: ["README.md"], archiveReference: reference, now: "2026-01-01T00:00:00.000Z" });
+  assert.equal(changed.status, "blocked");
+  assert.match(changed.errors.join("; "), /exactly reproduce/);
 });

@@ -48,8 +48,11 @@ test("edge applies browser security policy and suppresses server identity", () =
 });
 
 test("application containers use a read-only reduced-privilege runtime", () => {
-  assert.equal((compose.match(/read_only: true/g) || []).length, 3);
-  assert.equal((compose.match(/no-new-privileges:true/g) || []).length, 3);
-  assert.equal((compose.match(/cap_drop:\s*\n\s*- ALL/g) || []).length, 3);
+  assert.equal((compose.match(/read_only: true/g) || []).length, 4);
+  assert.equal((compose.match(/no-new-privileges:true/g) || []).length, 4);
+  assert.equal((compose.match(/cap_drop:\s*\n\s*- ALL/g) || []).length, 4);
   assert.equal((compose.match(/\/tmp:rw,noexec,nosuid,size=64m/g) || []).length, 3);
+  const edgeBlock = compose.slice(compose.indexOf("  edge:"), compose.lastIndexOf("\nvolumes:"));
+  assert.match(edgeBlock, /\/tmp:rw,noexec,nosuid,size=32m/);
+  assert.match(edgeBlock, /cap_add:\s*\n\s*- NET_BIND_SERVICE/);
 });

@@ -56,8 +56,10 @@ export function validateComplianceContract(sources) {
   add(
     "deferred_partner_surface",
     server.includes("feature_deferred")
-      && ["/api/hub/partners", "/api/hub/admin/partner", "/api/hub/admin/payout"].every((route) => server.includes(route)),
-    "Partner onboarding and payout APIs must remain explicitly deferred until their release evidence is approved.",
+      && ["/api/hub/partners", "/api/hub/admin/partner", "/api/hub/admin/payout"].every((route) => server.includes(route))
+      && !["stripe.accounts.", "stripe.accountLinks.", "stripe.transfers.", "stripe.refunds."].some((operation) => server.includes(operation))
+      && !["post('/partners/onboard'", "get('/partners/me'", "post('/admin/partner/approve'", "post('/admin/payout'", "post('/admin/refund'", "post('/admin/fulfill'"].some((route) => server.includes(route)),
+    "Partner, fulfillment, refund, connected-account, and payout APIs must remain explicitly deferred and absent from the compiled server until their release evidence is approved.",
   );
   add(
     "retired_billing_paths_removed",

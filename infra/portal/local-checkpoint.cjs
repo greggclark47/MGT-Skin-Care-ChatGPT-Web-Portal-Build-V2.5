@@ -10,7 +10,7 @@ const generatedNext=[path.join(root,'apps','web','.next'),path.join(root,'apps',
 let generatedOutputCleaned=false;
 for(const outputPath of generatedNext){try{if(fs.existsSync(outputPath)){fs.rmSync(outputPath,{recursive:true,force:true});generatedOutputCleaned=true;}}catch(error){fs.writeFileSync(path.join(outputDir,'generated-output-cleanup.log'),String(error));}}
 const checks=[
- ['infrastructure, ship-packet, production gate, compliance and demo tests',[['',['--test','infra/portal/preflight.test.mjs','infra/portal/release-readiness.test.mjs','infra/portal/ship-plan.test.mjs','infra/portal/ship-packet.test.mjs','infra/portal/create-ship-packet.test.mjs','infra/portal/demo-contract.test.mjs','infra/portal/compliance-contract.test.mjs','infra/portal/staging-evidence.test.mjs','infra/portal/staging-pipeline.test.mjs','infra/portal/staging-artifacts.test.mjs','infra/portal/staging-promotion-authorization.test.mjs','infra/portal/staging-execution-review.test.mjs','infra/portal/production-gate.test.mjs']]]],
+ ['complete portal contract suite',[['',['infra/portal/run-contract-tests.cjs']]]],
  ['compose and image contracts',[['',['--test','infra/portal/compose-contract.test.mjs']]]],
  ['migration lineage contracts',[['',['--test','infra/db/migration-lineage.test.mjs']]]],
  ['reviewed output golden set',[

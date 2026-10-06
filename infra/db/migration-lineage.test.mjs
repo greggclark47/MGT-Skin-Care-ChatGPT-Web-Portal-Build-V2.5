@@ -1,4 +1,6 @@
 import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
 import { test } from "node:test";
 import { buildManifest, collectMigrations, reconcileManifest, validateTargetManifest } from "./migration-lineage.mjs";
 
@@ -43,4 +45,18 @@ test("target manifests fail closed when their shape, hash, or uniqueness is inva
   assert.ok(shape.errors.some((error) => error.includes("must be an array")));
   const local = { lineages: { database: [], portal: [] } };
   assert.equal(reconcileManifest(local, malformed).failures[0].type, "invalid_target_manifest");
+});
+
+test("database migrations contain every canonical ingredient-rule seed", () => {
+  const source = fs.readFileSync("packages/domain/src/engines/ingredient-rules.ts", "utf8");
+  const seedBlock = source.match(/export const SEED_INGREDIENT_RULES[\s\S]*?= \[([\s\S]*?)\n\];/)?.[1] || "";
+  const canonicalKeys = [...seedBlock.matchAll(/ingredient_key:\s*'([^']+)'/g)].map((match) => match[1]).sort();
+  const migrationText = fs.readdirSync("infra/db/migrations")
+    .filter((name) => /^\d{4}_.+\.sql$/.test(name))
+    .sort()
+    .map((name) => fs.readFileSync(path.join("infra/db/migrations", name), "utf8"))
+    .join("\n");
+  const missing = canonicalKeys.filter((key) => !migrationText.includes(`'${key}'`));
+  assert.equal(canonicalKeys.length, 15);
+  assert.deepEqual(missing, []);
 });

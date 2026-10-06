@@ -49,13 +49,14 @@ GitHub references:
 | Customer-data isolation baseline | Migration `0008_customer_data_rls.sql` enables owner-scoped RLS across customer tables and keeps provider, Stripe-mapping, and AI-routing records service-only. A redacted, read-only structural audit now fails closed on missing policies, triggers, extensions, or portal migrations. |
 | Portal document-store isolation | Portal migration `0002_hub_records_rls.sql` makes the server-side session/account/profile/support/billing store service-only. The structural audit verifies both this boundary and the application connection's RLS authority without exposing its role name. |
 | Service-table isolation | Migration `0009_service_table_rls.sql` closes direct browser-role access to public catalog, model configuration, webhook, admin, audit, fulfillment, and migration-ledger tables that are served only through the API. |
-| Migration consolidation | The repository uses an ordered `0000`–`0009` database lineage and `0001`–`0002` portal lineage with clean-database and repeat-application contract tests. |
+| Migration consolidation | The repository uses an ordered `0000`–`0010` database lineage and `0001`–`0002` portal lineage with clean-database and repeat-application contract tests. |
 | Subscription architecture | Free/Premium comparison, monthly/annual Prices, Product binding, explicit test/live mode, recurring consent, Checkout, billing portal, and signed webhooks are implemented fail-closed. |
 | Billing mode visibility | Customer session state and operator readiness distinguish MGT product commerce from subscription billing configuration. |
 | Release evidence integrity | Staging, production, export, receipt, launch, monitoring, and closeout artifacts are checksum-bound and contract-tested. |
 | Accessibility baseline | Theme contrast, reduced motion, forced colors, focus behavior, semantic components, and production build accessibility contracts pass locally. |
 | Runtime hardening | API, worker, and web containers are read-only with dropped capabilities and no-new-privileges; the edge supplies CSP and cross-origin protections; public readiness is redacted; enabled local AI must report all required models. |
 | Backup readiness contract | Backup records require a valid SHA-256 checksum plus a recent HTTPS-referenced restore drill. Production readiness fails when either the backup or restore proof is stale. |
+| Ingredient seed parity | The deterministic fallback now derives from the canonical versioned 15-rule seed. Forward migration `0010_ingredient_rule_seed_alignment.sql` adds the previously omitted zinc-oxide rule used by the sunscreen seed product, and a contract prevents code/migration seed drift. |
 
 ## Known blockers and their solutions
 
@@ -71,6 +72,7 @@ GitHub references:
 | P1 | Support readiness | Portal support exists locally, but no staffed production response test is recorded. | Configure the production delivery/queue, submit a test request, confirm response and escalation timing, and attach the transcript without customer data. |
 | P1 | Stripe live evidence | No live Product/Price lookup, Checkout, customer portal, signed delivery, cancellation, retry, refund-policy, or reconciliation evidence. | Decide whether subscriptions launch on day one. If yes, configure approved live identifiers and run the F440 billing evidence set. If no, keep `SUBSCRIPTIONS_ENABLED=false`; billing becomes non-gating. |
 | P1 | AI provider evidence | No live provider availability, budget, latency, failure, or escalation-rate report. | Decide whether AI launches on day one. If yes, configure the approved providers and run the eval/provider evidence set. If no, keep AI unconfigured and preserve the visible unavailable state. |
+| P1 | Full ingredient matrix | The canonical reviewed seed contains 15 rules; the blueprint calls for 34. No approved source for the remaining 19 rules is present locally. | An SME must supply and approve the remaining rules, or formally approve the 15-rule launch scope. Import only approved rows and require every active catalog ingredient to appear in the approved matrix. |
 | P1 | Monitoring and launch window | No staffed observation window, incident channel, rollback rehearsal, or 15-minute/1-hour/24-hour/7-day owner record. | Complete staging rehearsal, approve the launch window, and fill the existing checksum-bound monitoring and closeout records. |
 | P2 | Google Drive release archive | Drive contains the planning sources, but the current GitHub release checkpoint has not been archived there. | After the next release commit, export a credential-free release bundle and upload it into `MGT Skin Care V2`; verify the Drive file ID, URL, size, and checksum before marking the export complete. |
 

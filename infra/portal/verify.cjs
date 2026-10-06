@@ -28,6 +28,10 @@ const portalContractTests=fs.readdirSync(path.join(root,'infra','portal')).filte
 await run('HTTP, persistence, and release-contract regressions','',['--test','--test-concurrency=1','--test-reporter=tap',...tests,...portalContractTests,'infra/db/migration-lineage.test.mjs','infra/db/production-audit.test.mjs']);
 await run('accessibility theme contract','',['infra/portal/accessibility-theme-contract.cjs']);
 // Build uses only the server-side local API origin already in next.config.js; no service secrets.
+// OneDrive can leave generated Next.js files as reparse placeholders that make Node's readlink
+// fail with EINVAL on the next build. These directories contain build output only, so every
+// verification run removes them before compiling and never relies on a previous command to do it.
+for(const generated of ['.next','.next-dev'])fs.rmSync(path.join(root,'apps','web',generated),{recursive:true,force:true,maxRetries:3,retryDelay:100});
 const webBuilt=await run('web production build','apps/web',['node_modules/next/dist/bin/next','build']);
 if(webBuilt)await run('production web proxy journey','',['infra/portal/production-journey.cjs']);
 else results.push({name:'production web proxy journey',status:'UNTESTED',reason:'The required production build failed.'});

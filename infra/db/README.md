@@ -47,6 +47,7 @@ infra/db/reset-and-test.sh                # wipe + apply + run the DB-backed smo
 | `0007_compliance_release_controls.sql` | Durable consent timestamps, consent RLS, an active-consent guard, and append-only skin-match/subscription event records. Fails closed if active consent history needs reconciliation. |
 | `0008_customer_data_rls.sql` | Completes owner-scoped RLS for customer data, protects related child rows, and keeps provider/AI implementation records service-only. |
 | `0009_service_table_rls.sql` | Enables RLS without browser-role policies on public catalog, configuration, webhook, admin, audit, fulfillment, and migration-ledger tables served only through the API. |
+| `0010_ingredient_rule_seed_alignment.sql` | Adds the reviewed zinc-oxide seed through a forward-only migration so the database covers the canonical 15-rule seed and the sunscreen seed product. Existing reviewed zinc-oxide history is preserved. |
 
 ### Requirements
 

@@ -46,7 +46,8 @@ GitHub references:
 | Medical-boundary pathway | Medical and urgent inputs now return a structured escalation type, prevent provider calls, and stop the active Coach topic until the customer starts a different cosmetic question. |
 | Blocked medical claims | Domain and gateway validators reject blocked claims; gateway fallbacks and reviewed-output tests run in the release suite. |
 | Append-only records | Checked-in migration `0007_compliance_release_controls.sql` installs immutable triggers for skin-match answers and subscription events. |
-| Migration consolidation | The repository uses an ordered `0000`–`0007` migration lineage with clean-database and repeat-application contract tests. |
+| Customer-data isolation baseline | Migration `0008_customer_data_rls.sql` enables owner-scoped RLS across customer tables and keeps provider, Stripe-mapping, and AI-routing records service-only. A redacted, read-only structural audit now fails closed on missing policies, triggers, extensions, or portal migrations. |
+| Migration consolidation | The repository uses an ordered `0000`–`0008` migration lineage with clean-database and repeat-application contract tests. |
 | Subscription architecture | Free/Premium comparison, monthly/annual Prices, Product binding, explicit test/live mode, recurring consent, Checkout, billing portal, and signed webhooks are implemented fail-closed. |
 | Billing mode visibility | Customer session state and operator readiness distinguish MGT product commerce from subscription billing configuration. |
 | Release evidence integrity | Staging, production, export, receipt, launch, monitoring, and closeout artifacts are checksum-bound and contract-tested. |
@@ -57,7 +58,7 @@ GitHub references:
 | Priority | Blocker | What is missing | Solution / exit evidence |
 | --- | --- | --- | --- |
 | P0 | Production environment | No approved production `.env`, host, domain, secret manager, or deployed origin is recorded. | Select the hosting target and domain, create `infra/portal/.env` from `env.example` in the deployment secret manager, run preflight, and retain the redacted result. Never commit secrets. |
-| P0 | Production database and identity | No live Supabase/Postgres project, migration transcript, RLS isolation result, or real identity lifecycle transcript. | Provision separate staging and production projects; apply the checked-in migration lineage; run RLS, immutability, account export/deletion, and concurrency checks; attach redacted evidence. |
+| P0 | Production database and identity | The checked-in RLS baseline and structural audit are complete, but no live Supabase/Postgres project, migration transcript, authenticated cross-account isolation result, or real identity lifecycle transcript exists. | Provision separate staging and production projects; apply the checked-in migration lineage; run `pnpm infra:database-audit -- --output work/staging/database-audit.json`, then run authenticated RLS, immutability, account export/deletion, and concurrency checks; attach redacted evidence. |
 | P0 | Immutable deployment | No approved Node/Caddy/Ollama image digests or container-startup proof for the target host. | Resolve immutable digests, build the exact candidate, deploy to isolated staging, and record startup, `/healthz`, `/readyz`, TLS, and edge-route results. |
 | P0 | Backup recovery | No target-system backup and restore rehearsal. | Create an encrypted backup, restore it into an isolated target, verify row counts and application readiness, and record recovery time and checksum. |
 | P0 | Legal approval | Eight counsel items remain organizationally open in the Drive readiness response. | Obtain dated approval for AI disclosure, cosmetic claims, cancellation, data access, PHI exclusion, photo scope, retention, and knowledge-evidence policy. Photo approval is not a launch gate while photo functionality remains disabled. |
@@ -75,7 +76,7 @@ GitHub references:
 2. Decide day-one scope for subscriptions, hosted AI, notifications, and photo functionality. Default uncertain services to disabled.
 3. Assign the eight launch owners and select hosting, domain, Supabase projects, secret manager, support route, and launch window.
 4. Populate production configuration outside Git and run `node infra/portal/preflight.mjs`.
-5. Provision isolated staging and production services; apply the ordered migrations.
+5. Provision isolated staging and production services; apply the ordered migrations and run the read-only structural database audit.
 6. Run staging probes, customer journeys, RLS/identity checks, backup restore, accessibility review, support test, and optional billing/AI evidence.
 7. Complete the production gate, evidence manifest, human approvals, execution review, receipt verification, and rollback rehearsal already implemented under `infra/portal`.
 8. Deploy only the approved commit and immutable digests. Stop on any failed readiness, RLS, restore, accessibility, support, provider, or rollback gate.

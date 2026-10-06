@@ -13,6 +13,7 @@ const checks=[
  ['complete portal contract suite',[['',['infra/portal/run-contract-tests.cjs']]]],
  ['compose and image contracts',[['',['--test','infra/portal/compose-contract.test.mjs']]]],
  ['migration lineage contracts',[['',['--test','infra/db/migration-lineage.test.mjs']]]],
+ ['production database audit contracts',[['',['--test','infra/db/production-audit.test.mjs']]]],
  ['reviewed output golden set',[
   ['packages/domain',['node_modules/typescript/bin/tsc','-p','tsconfig.json']],
   ['',['--test','packages/shared/test/golden-cases.cjs']]

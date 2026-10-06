@@ -39,6 +39,7 @@ infra/db/reset-and-test.sh                # wipe + apply + run the DB-backed smo
 | `0005_orders_extensions.sql` | Order columns and `fulfillment_jobs`. Must run after 0002 creates `orders`. |
 | `0006_knowledge_rag.sql` | `knowledge.embeddings` + `knowledge.match()`. Must run after 0003 creates `knowledge.objects`. |
 | `0007_compliance_release_controls.sql` | Durable consent timestamps, consent RLS, an active-consent guard, and append-only skin-match/subscription event records. Fails closed if active consent history needs reconciliation. |
+| `0008_customer_data_rls.sql` | Completes owner-scoped RLS for customer data, protects related child rows, and keeps provider/AI implementation records service-only. |
 
 ### Requirements
 
@@ -50,6 +51,18 @@ infra/db/reset-and-test.sh                # wipe + apply + run the DB-backed smo
   foreign keys and RLS policies granted to Supabase's roles.
 
 ## Testing
+
+Before staging approval, run the read-only structural audit against the reviewed target. It
+opens a read-only transaction, emits no connection string, role name, database name, customer
+row or provider payload, and fails closed on missing RLS, owner-read policies, service-only
+boundaries, append-only triggers, required extensions, PostgreSQL version, or portal migrations:
+
+```
+pnpm infra:database-audit -- --output work/staging/database-audit.json
+```
+
+An output status of `pass` is structural evidence only. Run authenticated cross-account RLS
+probes, identity lifecycle tests, concurrent-write tests and the restore drill separately.
 
 `reset-and-test.sh` runs `persistence`, `dual-backend`, `admin-persistence`, and
 `ingredient-rules-persistence` against a real database, each from a freshly-migrated state.

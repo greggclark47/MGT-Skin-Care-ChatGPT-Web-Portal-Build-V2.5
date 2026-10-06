@@ -1608,6 +1608,18 @@ This checkpoint does not create Stripe Prices, connect an account, collect a pay
 **Phase F850 — provider scope:** Added `pnpm infra:production-environment-review`, binding twenty-five environment records and stopping at `pending_prerequisite_review` until F816–F825 and live configuration are ready.
 **F826–F850 local verification:** Environment fixtures prove pending behavior, twenty-five-record acceptance, mutation detection, and fabricated-ready rejection. No secrets or live provider calls were used.
 
+**Phases F851–F860 — configuration evidence matrix:** Bound runtime identity, demo isolation, origin, domain, database, migration, image, worker, backup, and notification evidence.
+**Phases F861–F870 — hosting evidence matrix:** Bound hosting account, project separation, DNS, TLS, edge, API, web, health, and readiness evidence.
+**Phases F871–F880 — database evidence matrix:** Bound database identity, migration, RLS, session, role, rollback, concurrency, retention, and deletion evidence.
+**Phases F881–F890 — security evidence matrix:** Bound secret manager, rotation, scans, redaction, transport, CSRF, origin, limits, audit, and incident evidence.
+**Phases F891–F900 — identity evidence matrix:** Bound signup, signin, expiry, reset, deletion, owner visibility, admin, superadmin, operator, and consent evidence.
+**Phases F901–F910 — operations evidence matrix:** Bound worker, heartbeat, staleness, backup, restore, monitoring, alert, and rollback evidence.
+**Phases F911–F920 — support evidence matrix:** Bound support ownership, coverage, ticket lifecycle, privacy, audit, and escalation evidence.
+**Phases F921–F930 — accessibility evidence matrix:** Bound keyboard, focus, Escape, screen reader, contrast, zoom, mobile, browser, motion, and forced-colors evidence.
+**Phases F931–F940 — optional-scope evidence matrix:** Bound catalog, content, billing, Stripe, webhook, AI, consent, spend, notification, and partner-disclosure evidence.
+**Phases F941–F950 — release-governance evidence matrix:** Added `pnpm infra:production-evidence-matrix-review`, binding 100 records and stopping at `pending_environment_review`, `pending_evidence_records`, or `ready_for_production_evidence` without deploying or claiming live readiness.
+**F851–F950 local verification:** The 100-record matrix proves pending behavior, complete-record acceptance, mutation detection, checksum binding, and fabricated-ready rejection. No live credentials, customer data, deployment, or traffic change was used.
+
 **Phase F815 — release scope confirmation:** Added release-scope authorization evidence.
 **Phase F816 — release window confirmation:** Added release-window authorization evidence.
 **Phase F817 — change freeze confirmation:** Added change-freeze authorization evidence.

@@ -259,6 +259,8 @@ The F816–F825 prerequisite review can be generated with `pnpm infra:production
 
 The F826–F850 environment review can be generated with `pnpm infra:production-environment-review -- --prerequisite-review work/production/prerequisite-review.json --output work/production/environment-review.json`. It binds twenty-five production runtime fields and remains pending until the prerequisite review is ready.
 
+The F851–F950 evidence matrix can be generated with `pnpm infra:production-evidence-matrix-review -- --environment-review work/production/environment-review.json --output work/production/evidence-matrix-review.json`. It binds 100 records across the production evidence surface and remains fail-closed until live evidence exists.
+
 Build the production authorization review after reconciliation is ready:
 
 `pnpm infra:production-authorization-review -- --manifest work/exports/release-export.json --production-reconciliation work/exports/production-reconciliation-review.json --records work/exports/production-authorization-records.json --output work/exports/production-authorization-review.json`

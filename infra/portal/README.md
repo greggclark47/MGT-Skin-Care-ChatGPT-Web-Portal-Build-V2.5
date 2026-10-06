@@ -157,3 +157,131 @@ pnpm infra:release-closure-review
 
 The review remains `pending_post_execution_review` until the exact candidate and twelve closure records are available.
 
+Build the closure-approval dossier after the closure review is ready:
+
+`pnpm infra:release-closure-approval -- --manifest work/exports/release-export.json --closure-review work/exports/release-closure-review.json --records work/exports/closure-approval-records.json --output work/exports/release-closure-approval.json`
+
+The dossier covers F537–F546 and remains `pending_closure_review` until the closure review is ready. It reaches only `ready_for_release_decision` after ten checksum-bound approval and operations records are present. It does not publish, deploy, change traffic, or prove live production readiness.
+
+Build the release-decision review after the closure-approval dossier is ready:
+
+`pnpm infra:release-decision-review -- --manifest work/exports/release-export.json --closure-approval work/exports/release-closure-approval.json --records work/exports/release-decision-records.json --output work/exports/release-decision-review.json`
+
+The F547–F558 review remains `pending_closure_approval` until the exact approval dossier is ready. It reaches only `ready_for_release_authorization` after twelve checksum-bound decision records are present. It is not a deployment authorization and does not perform or prove a live release.
+
+Build the operator-authorization review after the release-decision review is ready:
+
+`pnpm infra:release-authorization-review -- --manifest work/exports/release-export.json --decision-review work/exports/release-decision-review.json --records work/exports/release-authorization-records.json --output work/exports/release-authorization-review.json`
+
+The F559–F573 review remains `pending_decision_review` until the exact decision review is ready. It reaches only `ready_for_operator_authorization` after fifteen checksum-bound authorization-readiness records are present. It does not issue, execute, or prove a deployment authorization.
+
+Build the execution-request review after the operator-authorization review is ready:
+
+`pnpm infra:release-execution-request-review -- --manifest work/exports/release-export.json --authorization-review work/exports/release-authorization-review.json --records work/exports/release-execution-request-records.json --output work/exports/release-execution-request-review.json`
+
+The F574–F585 review remains `pending_authorization_review` until the exact authorization review is ready. It reaches only `ready_for_execution_request` after twelve checksum-bound scope and safety records are present. It is not an execution command, deployment receipt, or live release proof.
+
+Build the execution-receipt review after the execution-request review is ready:
+
+`pnpm infra:release-execution-receipt-review -- --manifest work/exports/release-export.json --execution-request-review work/exports/release-execution-request-review.json --records work/exports/release-execution-receipt-records.json --output work/exports/release-execution-receipt-review.json`
+
+The F586–F597 review remains `pending_execution_request` until the exact execution-request review is ready. It reaches only `ready_for_execution_receipt` after twelve checksum-bound pre-action records are present. It does not create a receipt, execute a command, or prove a live release.
+
+Build the external-execution intake review after the execution-receipt review is ready:
+
+`pnpm infra:release-execution-intake-review -- --manifest work/exports/release-export.json --execution-receipt-review work/exports/release-execution-receipt-review.json --records work/exports/release-execution-intake-records.json --output work/exports/release-execution-intake-review.json`
+
+The F598–F609 review remains `pending_execution_receipt` until the exact execution-receipt review is ready. It reaches only `ready_for_external_execution_intake` after twelve checksum-bound receipt-schema records are present. It does not create a receipt, execute a command, or prove a live release.
+
+Build the receipt-verification review after the external-execution intake review is ready:
+
+`pnpm infra:release-execution-receipt-verification -- --manifest work/exports/release-export.json --execution-intake-review work/exports/release-execution-intake-review.json --records work/exports/release-receipt-verification-records.json --output work/exports/release-receipt-verification.json`
+
+The F610–F629 review remains `pending_external_execution_intake` until the exact intake review is ready. It reaches only `ready_for_receipt_verification` after twenty checksum-bound verification records are present. It does not accept a receipt, execute a command, or prove a live release by itself.
+
+Build the final-release verification after receipt verification is ready:
+
+`pnpm infra:final-release-verification -- --manifest work/exports/release-export.json --receipt-verification work/exports/release-receipt-verification.json --records work/exports/final-release-verification-records.json --output work/exports/final-release-verification.json`
+
+The F630–F649 review remains `pending_receipt_verification` until the exact receipt verification is ready. It reaches only `ready_for_final_release_review` after twenty checksum-bound production evidence and closure records are present. It does not publish, deploy, or independently prove production readiness.
+
+Build the production-decision review after final-release verification is ready:
+
+`pnpm infra:production-decision-review -- --manifest work/exports/release-export.json --final-release-verification work/exports/final-release-verification.json --records work/exports/production-decision-records.json --output work/exports/production-decision-review.json`
+
+The F650–F669 review remains `pending_final_release_review` until the exact final-release verification is ready. It reaches only `ready_for_production_decision` after twenty checksum-bound decision records are present. It does not deploy, publish, or convert local evidence into a production release.
+
+Build the production launch-readiness review after the production-decision review is ready:
+
+`pnpm infra:production-launch-readiness -- --manifest work/exports/release-export.json --production-decision work/exports/production-decision-review.json --records work/exports/production-launch-records.json --output work/exports/production-launch-readiness.json`
+
+The F670–F689 review remains `pending_production_decision` until the exact production-decision review is ready. It reaches only `ready_for_launch_window` after twenty checksum-bound launch controls are present. It does not deploy, publish, or change traffic.
+
+Build the launch-execution review after launch readiness is ready:
+
+`pnpm infra:production-launch-execution-review -- --manifest work/exports/release-export.json --launch-readiness work/exports/production-launch-readiness.json --records work/exports/launch-execution-records.json --output work/exports/launch-execution-review.json`
+
+The F690–F719 review remains `pending_launch_window` until the exact launch-readiness review is ready. It reaches only `ready_for_launch_execution_review` after thirty checksum-bound pre-execution controls are present. It does not execute commands, deploy, publish, or change traffic.
+
+Build the launch-observation review after launch-execution review is ready:
+
+`pnpm infra:production-launch-observation-review -- --manifest work/exports/release-export.json --launch-execution work/exports/launch-execution-review.json --records work/exports/launch-observation-records.json --output work/exports/launch-observation-review.json`
+
+The F720–F754 review remains `pending_launch_execution_review` until the exact launch-execution review is ready. It reaches only `ready_for_launch_observation` after thirty-five checksum-bound supervised-launch controls are present. It does not execute, deploy, publish, or change traffic.
+
+Build the post-launch monitoring review after launch observation is ready:
+
+`pnpm infra:post-launch-monitoring-review -- --manifest work/exports/release-export.json --launch-observation work/exports/launch-observation-review.json --records work/exports/post-launch-monitoring-records.json --output work/exports/post-launch-monitoring-review.json`
+
+The F755–F764 review remains `pending_launch_observation` until the exact launch-observation review is ready. It reaches only `ready_for_post_launch_review` after the 15-minute, one-hour, 24-hour, seven-day, error, latency, support, backup, incident, and closure-hold records are present. It does not prove that a production launch occurred.
+
+Build the production stabilization review after post-launch monitoring is ready:
+
+`pnpm infra:production-stabilization-review -- --manifest work/exports/release-export.json --post-launch-monitoring work/exports/post-launch-monitoring-review.json --records work/exports/production-stabilization-records.json --output work/exports/production-stabilization-review.json`
+
+The F765–F779 review remains `pending_post_launch_review` until the exact post-launch monitoring review is ready. It reaches only `ready_for_production_stabilization_review` after sustained observation windows, SLO, support, backup, rollback, customer-impact, billing-integrity, privacy-access, and final-closure records are present. It does not deploy, publish, change traffic, or convert local records into live production proof.
+
+Build the production closeout review after stabilization is ready:
+
+`pnpm infra:production-closeout-review -- --manifest work/exports/release-export.json --production-stabilization work/exports/production-stabilization-review.json --records work/exports/production-closeout-records.json --output work/exports/production-closeout-review.json`
+
+The F780–F799 review remains `pending_production_stabilization_review` until the exact stabilization review is ready. It reaches only `ready_for_production_closeout_review` after final endpoint, data, security, billing, support, accessibility, privacy, monitoring, rollback, and owner-attestation records are present. It does not deploy, publish, change traffic, or convert local records into live production proof.
+
+Build the production reconciliation review after closeout is ready:
+
+`pnpm infra:production-reconciliation-review -- --manifest work/exports/release-export.json --production-closeout work/exports/production-closeout-review.json --records work/exports/production-reconciliation-records.json --output work/exports/production-reconciliation-review.json`
+
+The F800–F814 review remains `pending_production_closeout_review` until the exact closeout review is ready. It reaches only `ready_for_production_reconciliation` after GitHub/Drive receipt, candidate, staging, target, image, ownership, accessibility, backup, billing, monitoring, rollback, and final reconciliation records are present. It does not deploy, publish, change traffic, or convert local records into live production proof.
+
+Build the production authorization review after reconciliation is ready:
+
+`pnpm infra:production-authorization-review -- --manifest work/exports/release-export.json --production-reconciliation work/exports/production-reconciliation-review.json --records work/exports/production-authorization-records.json --output work/exports/production-authorization-review.json`
+
+The F815–F839 review remains `pending_production_reconciliation` until the exact reconciliation review is ready. It reaches only `ready_for_production_authorization` after scope, window, freeze, infrastructure, data, support, accessibility, privacy, optional provider, monitoring, rollback, incident, communication, and final go/no-go records are present. It does not deploy, publish, change traffic, or convert local records into live production proof.
+
+Build the production execution-readiness review after authorization is ready:
+
+`pnpm infra:production-execution-readiness-review -- --manifest work/exports/release-export.json --production-authorization work/exports/production-authorization-review.json --records work/exports/production-execution-readiness-records.json --output work/exports/production-execution-readiness-review.json`
+
+The F840–F864 review remains `pending_production_authorization` until the exact authorization review is ready. It reaches only `ready_for_production_execution` after operator, approval, session, window, candidate, artifact, host, edge, secret-store, database, migration, backup, rollback, monitoring, support, communication, optional provider, stop-criteria, and execution-hold records are present. It does not execute, deploy, publish, change traffic, or convert local records into live production proof.
+
+Build the production execution review after execution readiness is ready:
+
+`pnpm infra:production-execution-review -- --manifest work/exports/release-export.json --production-execution-readiness work/exports/production-execution-readiness-review.json --records work/exports/production-execution-records.json --output work/exports/production-execution-review.json`
+
+The F865–F889 review remains `pending_production_execution` until the exact execution-readiness review is ready. It reaches only `ready_for_production_execution_review` after operator, timestamp, scope, target, candidate, artifact, image, deployment, migration, backup, health, readiness, route, auth, database, RLS, worker, support, optional provider, monitoring, alert, rollback-watch, and execution-hold records are present. It does not execute, deploy, publish, change traffic, or convert local records into live production proof.
+
+Build the production execution-receipt review after execution review is ready:
+
+`pnpm infra:production-execution-receipt-review -- --manifest work/exports/release-export.json --production-execution work/exports/production-execution-review.json --records work/exports/production-execution-receipt-records.json --output work/exports/production-execution-receipt-review.json`
+
+The F890–F914 review remains `pending_production_execution_review` until the exact execution review is ready. It reaches only `ready_for_production_execution_receipt` after operator, timestamp, scope, target, candidate, artifact, image, deployment, migration, backup, health, readiness, route, auth, database, RLS, worker, support, optional provider, monitoring, alert, rollback, and final receipt-hold records are present. It does not execute, deploy, publish, change traffic, or fabricate a live receipt.
+
+Build the production receipt-verification review after execution receipts are ready:
+
+`pnpm infra:production-receipt-verification-review -- --manifest work/exports/release-export.json --production-execution-receipt work/exports/production-execution-receipt-review.json --records work/exports/production-receipt-verification-records.json --output work/exports/production-receipt-verification-review.json`
+
+The F915–F949 review remains `pending_production_execution_receipt` until the exact execution-receipt review is ready. It reaches only `ready_for_production_receipt_verification` after receipt integrity and freshness, operator, execution, candidate, artifact, infrastructure, route, data, support, optional provider, monitoring, rollback, audit, communication, accessibility, privacy, and final-hold records are present. It does not execute, deploy, publish, change traffic, or fabricate live evidence.
+
+The remaining build is aligned to [`PRODUCTION-SHIP-PLAN-ALIGNMENT.md`](../../PRODUCTION-SHIP-PLAN-ALIGNMENT.md), which incorporates the linked Production Ship Todo Plan across scope/economics, ownership, hosting, secrets, database, backups, catalog, accessibility, support, billing, AI, notifications, staging, production evidence, launch decisions, supervised execution, observation, and closure. The alignment document is a checklist and evidence map; it does not replace live verification or production approval.
+

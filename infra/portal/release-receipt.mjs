@@ -37,11 +37,18 @@ function githubReceiptErrors(manifest, receipt, now) {
   const errors = [];
   if (!receipt) return errors;
   if (receipt.status !== "confirmed") errors.push("github receipt status must be confirmed");
-  if (!SHA.test(text(receipt.commit)) || text(receipt.commit) !== text(manifest.candidate_commit)) errors.push("github receipt commit must match the export candidate");
-  if (!validPastIso(receipt.observed_at, now)) errors.push("github receipt observed_at must be a past ISO timestamp");
   if (PLACEHOLDER.test(JSON.stringify(receipt))) errors.push("github receipt must not contain placeholders");
   const repositories = Array.isArray(manifest.destinations?.github?.repository) ? manifest.destinations.github.repository : [];
-  if (text(receipt.repository) && repositories.length && !repositories.includes(text(receipt.repository))) errors.push("github receipt repository must match an observed export remote");
+  const observations = Array.isArray(receipt.repositories) ? receipt.repositories : receipt.repository ? [receipt] : [];
+  if (!observations.length) errors.push("github receipt must include observed repository metadata");
+  for (const observation of observations) {
+    if (!SHA.test(text(observation.commit)) || text(observation.commit) !== text(manifest.candidate_commit)) errors.push("github receipt commit must match the export candidate");
+    if (!validPastIso(observation.observed_at, now)) errors.push("github receipt observed_at must be a past ISO timestamp");
+    if (repositories.length && !repositories.includes(text(observation.repository))) errors.push("github receipt repository must match an observed export remote");
+  }
+  const observedRepositories = observations.map((observation) => text(observation.repository)).filter(Boolean);
+  if (new Set(observedRepositories).size !== observedRepositories.length) errors.push("github receipt repositories must be unique");
+  for (const repository of repositories) if (!observedRepositories.includes(repository)) errors.push(`github receipt is missing configured repository ${repository}`);
   return errors;
 }
 

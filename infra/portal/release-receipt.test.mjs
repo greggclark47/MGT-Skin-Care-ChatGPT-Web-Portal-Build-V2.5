@@ -65,3 +65,21 @@ test("rejects fabricated completion without observed Drive URL and id", () => {
   assert.equal(review.status, "blocked");
   assert.match(review.errors.join("; "), /file_id|HTTPS web_url/);
 });
+
+test("requires a matching receipt for every configured GitHub repository", () => {
+  const value = manifest();
+  value.destinations.github.repository.push("https://github.com/example/second.git");
+  value.bundle_checksum = releaseExportChecksum(value);
+  const data = receipts();
+  data.drive.bundle_checksum = value.bundle_checksum;
+  let review = buildReleaseReceiptReview({ manifest: value, githubReceipt: data.github, googleDriveReceipt: data.drive, now: "2026-01-02T00:00:00.000Z" });
+  assert.equal(review.status, "blocked");
+  assert.match(review.errors.join("; "), /missing configured repository/);
+  data.github = {
+    status: "confirmed",
+    repositories: value.destinations.github.repository.map((repository) => ({ repository, branch: "codex/test", commit: COMMIT, observed_at: "2026-01-01T01:00:00.000Z" }))
+  };
+  review = buildReleaseReceiptReview({ manifest: value, githubReceipt: data.github, googleDriveReceipt: data.drive, now: "2026-01-02T00:00:00.000Z" });
+  assert.equal(review.status, "export_complete");
+  assert.equal(validateReleaseReceiptReview(review, { manifest: value, now: Date.parse("2026-01-02T00:00:00.000Z") }).ok, true);
+});

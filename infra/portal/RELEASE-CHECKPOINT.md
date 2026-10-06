@@ -1,5 +1,7 @@
 # AI release controls checkpoint
 
+2026-10-06 multi-remote receipt checkpoint: release receipt validation now requires an observed candidate-commit receipt for every GitHub repository listed in the export manifest. A push to only one configured remote cannot satisfy the GitHub destination when two repositories are in scope.
+
 2026-10-06 deferred-commerce removal checkpoint: Referral-only launch boundaries now remove the dormant fulfillment, partner-onboarding, connected-account approval, payout, transfer-reversal, and product-refund handlers from the compiled portal server. The explicit deferred/retailer-owned boundary responses remain in place, and the compliance contract fails if those routes or Stripe Connect/refund operations return. Premium membership billing remains the only enabled Stripe workflow.
 
 2026-10-06 production data/runtime hardening: customer, portal-document, catalog, configuration, admin, audit, analytics, and knowledge relations now have explicit RLS boundaries and a redacted structural audit. The API, worker, web, and edge contracts enforce fail-closed preflight, reduced-privilege runtime settings, safe readiness output, enabled-model health, backup-plus-restore freshness, and anonymous-session throttling. The disposable-database runner applies both migration lineages and includes behavioral owner, cross-account, anonymous, and service-only isolation checks. Live PostgreSQL and container execution remain target-system evidence.

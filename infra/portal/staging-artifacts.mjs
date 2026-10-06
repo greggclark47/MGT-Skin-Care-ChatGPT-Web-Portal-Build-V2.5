@@ -7,7 +7,7 @@ const SHA = /^[0-9a-f]{40}$/i;
 const CHECKSUM = /^sha256:[a-f0-9]{64}$/i;
 const SAFE_LOCAL_REFERENCE = /^(?:work|infra)\/[A-Za-z0-9._/-]+$/;
 const PLACEHOLDER = /REPLACE_WITH|YOUR-|example\.com|localhost|127\.0\.0\.1/i;
-const SECRET_VALUE = /(?:sk_(?:live|test)_[A-Za-z0-9]+|whsec_[A-Za-z0-9]+|postgres(?:ql)?:\/\/[^\s:@]+:[^\s@]+@|(?:OPENAI|SUPABASE|STRIPE)_[A-Z_]*\s*=\s*\S+)/i;
+const SECRET_VALUE = /(?:sk_(?:live|test)_[A-Za-z0-9]+|whsec_[A-Za-z0-9]+|postgres(?:ql)?:\/\/[^\s:@]+:[^\s@]+@|(?:OPENAI|SUPABASE|STRIPE)_[A-Z_]*(?:KEY|SECRET)[A-Z_]*\s*=\s*\S+)/i;
 const TEXT_EXTENSIONS = new Set([".json", ".log", ".md", ".txt"]);
 const MAX_EVIDENCE_BYTES = 10 * 1024 * 1024;
 

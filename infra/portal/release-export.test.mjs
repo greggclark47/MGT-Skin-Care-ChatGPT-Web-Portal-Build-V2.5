@@ -49,6 +49,13 @@ test("blocks traversal and credential-like exports", () => {
   assert.match(manifest.errors.join("; "), /credential-like/);
 });
 
+test("allows documented non-secret provider flags", () => {
+  const root = fixture();
+  fs.writeFileSync(path.join(root, "infra", "portal", "flags.md"), "STRIPE_LIVE_MODE=false\nSUPABASE_URL=https://project.invalid\n");
+  const manifest = buildReleaseExport({ root, candidateCommit: COMMIT, references: ["infra/portal/flags.md"], now: "2026-01-01T00:00:00.000Z" });
+  assert.equal(manifest.status, "ready_for_export");
+});
+
 test("requires observed Drive metadata before marking upload complete", () => {
   const root = fixture();
   const manifest = buildReleaseExport({ root, candidateCommit: COMMIT, references: ["README.md"], now: "2026-01-01T00:00:00.000Z" });

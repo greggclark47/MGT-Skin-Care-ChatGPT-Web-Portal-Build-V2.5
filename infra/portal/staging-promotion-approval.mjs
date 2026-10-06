@@ -2,7 +2,7 @@ import { stagingPromotionHandoffChecksum } from "./staging-promotion-handoff.mjs
 
 const CHECKSUM = /^sha256:[a-f0-9]{64}$/i;
 const PLACEHOLDER = /REPLACE_WITH|YOUR-|example\.com|localhost|127\.0\.0\.1/i;
-const SECRET_VALUE = /(?:sk_(?:live|test)_[A-Za-z0-9]+|whsec_[A-Za-z0-9]+|postgres(?:ql)?:\/\/[^\s:@]+:[^\s@]+@|(?:OPENAI|SUPABASE|STRIPE)_[A-Z_]*\s*=\s*\S+)/i;
+const SECRET_VALUE = /(?:sk_(?:live|test)_[A-Za-z0-9]+|whsec_[A-Za-z0-9]+|postgres(?:ql)?:\/\/[^\s:@]+:[^\s@]+@|(?:OPENAI|SUPABASE|STRIPE)_[A-Z_]*(?:KEY|SECRET)[A-Z_]*\s*=\s*\S+)/i;
 
 export const STAGING_PROMOTION_APPROVAL_VERSION = "1.0";
 export const STAGING_PROMOTION_APPROVAL_ROLES = Object.freeze(["release", "platform"]);

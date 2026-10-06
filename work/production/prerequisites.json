@@ -1,7 +1,7 @@
 {
   "version": "1.0",
-  "candidate_commit": "703977b353dc4e7fbda40a7037ee907685c16c23",
-  "generated_at": "2026-10-06T18:04:37.290Z",
+  "candidate_commit": "9cd08b0bb36ad89e6e8d0c2a64dd9385067b3496",
+  "generated_at": "2026-10-06T18:07:11.323Z",
   "local": {
     "backend_build": "verified_by_ci_build",
     "portal_tests": "verified_by_local_suite",
@@ -94,5 +94,5 @@
   ],
   "status": "blocked_on_configuration",
   "next_action": "Populate a production environment outside source control and rerun the preflight.",
-  "prerequisites_checksum": "sha256:38107ac12e44a2773d99674c4c9b034b319761adc3c1c7d57d814431db2dbcc7"
+  "prerequisites_checksum": "sha256:4a1043a958b77909da7687aa5bd6e44df7321a28807e73147887a9a10dbb95be"
 }

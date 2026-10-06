@@ -261,6 +261,8 @@ The F826–F850 environment review can be generated with `pnpm infra:production-
 
 The F851–F950 evidence matrix can be generated with `pnpm infra:production-evidence-matrix-review -- --environment-review work/production/environment-review.json --output work/production/evidence-matrix-review.json`. It binds 100 records across the production evidence surface and remains fail-closed until live evidence exists.
 
+The F951–F975 reconciliation review can be generated with `pnpm infra:production-evidence-reconciliation-review -- --evidence-matrix work/production/evidence-matrix-review.json --output work/production/reconciliation-review.json`. It cross-checks 25 continuity, ownership, artifact, rollback, launch, and destination-receipt records.
+
 Build the production authorization review after reconciliation is ready:
 
 `pnpm infra:production-authorization-review -- --manifest work/exports/release-export.json --production-reconciliation work/exports/production-reconciliation-review.json --records work/exports/production-authorization-records.json --output work/exports/production-authorization-review.json`

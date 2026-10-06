@@ -1620,6 +1620,13 @@ This checkpoint does not create Stripe Prices, connect an account, collect a pay
 **Phases F941–F950 — release-governance evidence matrix:** Added `pnpm infra:production-evidence-matrix-review`, binding 100 records and stopping at `pending_environment_review`, `pending_evidence_records`, or `ready_for_production_evidence` without deploying or claiming live readiness.
 **F851–F950 local verification:** The 100-record matrix proves pending behavior, complete-record acceptance, mutation detection, checksum binding, and fabricated-ready rejection. No live credentials, customer data, deployment, or traffic change was used.
 
+**Phases F951–F955 — matrix integrity:** Added matrix checksum, candidate, bundle, configuration, and hosting reconciliation.
+**Phases F956–F960 — data integrity:** Added database, security, identity, operations, and support reconciliation.
+**Phases F961–F965 — experience integrity:** Added accessibility, optional scope, owner, timestamp, and reference-path reconciliation.
+**Phases F966–F970 — artifact integrity:** Added artifact checksum, rollback reference, environment separation, staging continuity, and production-target reconciliation.
+**Phases F971–F975 — launch integrity:** Added launch window, incident route, Drive receipt, GitHub receipt, and `pnpm infra:production-evidence-reconciliation-review`, stopping at `pending_evidence_matrix`, `pending_reconciliation_records`, or `ready_for_production_reconciliation`.
+**F951–F975 local verification:** Reconciliation fixtures prove pending behavior, twenty-five-record acceptance, mutation detection, checksum binding, and fabricated-ready rejection. No live receipt, deployment, or traffic change was accepted.
+
 **Phase F815 — release scope confirmation:** Added release-scope authorization evidence.
 **Phase F816 — release window confirmation:** Added release-window authorization evidence.
 **Phase F817 — change freeze confirmation:** Added change-freeze authorization evidence.

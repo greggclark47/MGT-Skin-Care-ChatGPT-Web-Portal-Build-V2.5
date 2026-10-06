@@ -265,6 +265,8 @@ The F951–F975 reconciliation review can be generated with `pnpm infra:producti
 
 The F976–F1010 launch-readiness review can be generated with `pnpm infra:production-launch-readiness-review -- --reconciliation-review work/production/reconciliation-review.json --output work/production/launch-readiness-review.json`. It binds 35 final production launch records and remains fail-closed until reconciliation and live evidence are ready.
 
+The F1011–F1110 post-launch review can be generated with `pnpm infra:production-post-launch-review -- --launch-readiness work/production/launch-readiness-review.json --output work/production/post-launch-review.json`. It binds 100 supervised execution, observation, monitoring, customer, support, recovery, and archive records.
+
 Build the production authorization review after reconciliation is ready:
 
 `pnpm infra:production-authorization-review -- --manifest work/exports/release-export.json --production-reconciliation work/exports/production-reconciliation-review.json --records work/exports/production-authorization-records.json --output work/exports/production-authorization-review.json`

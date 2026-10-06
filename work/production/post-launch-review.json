@@ -1,8 +1,8 @@
 {
   "version": "1.0",
-  "candidate_commit": "f6fd47ee05ed68f33532999de883da26c42b84b1",
-  "launch_readiness_checksum": "sha256:4062580511bfddc34ea428d71f0ce4d7cd5c044936eabc1a85573d3e62b3be91",
-  "generated_at": "2026-10-06T18:14:13.854Z",
+  "candidate_commit": "675f5f7e1ac79fd7f85a29c47697553357aee1f7",
+  "launch_readiness_checksum": "sha256:4d2734bf3c69481d2ddc127504988c38bd7137a78554e878e0fc7f2d55ccdd1c",
+  "generated_at": "2026-10-06T18:15:34.929Z",
   "status": "blocked",
   "groups": {
     "execution": 10,
@@ -120,5 +120,5 @@
     "archive_checksum record is required",
     "stabilization_attestation record is required"
   ],
-  "production_post_launch_checksum": "sha256:a772f4be4055f94c61ad4f95cc00c43eee8a76265abe2d7cb595d6ce7ca19c0b"
+  "production_post_launch_checksum": "sha256:2f8c98d5470912f114becbb40443fd2afe80d320796e9ccde75c19d74f9e15ed"
 }

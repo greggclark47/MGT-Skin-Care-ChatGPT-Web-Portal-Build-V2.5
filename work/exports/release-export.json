@@ -1,8 +1,8 @@
 {
   "version": "1.0",
-  "candidate_commit": "ab4b92eb0d1cdff977c9f06eebdaff45ca17539d",
+  "candidate_commit": "6ed0b09678e85262c15f8bab7aae7dc3cc0d5807",
   "branch": "codex/reconcile-main-2026-09-20",
-  "generated_at": "2026-10-02T19:50:20.476Z",
+  "generated_at": "2026-10-06T16:48:10.990Z",
   "status": "ready_for_export",
   "destinations": {
     "github": {
@@ -12,11 +12,11 @@
         "https://github.com/greggclark47/MGT-Skin-Care-ChatGPT-Web-Portal-Build-V2.5.git"
       ],
       "branch": "codex/reconcile-main-2026-09-20",
-      "commit": "ab4b92eb0d1cdff977c9f06eebdaff45ca17539d"
+      "commit": "6ed0b09678e85262c15f8bab7aae7dc3cc0d5807"
     },
     "google_drive": {
       "status": "pending_upload",
-      "file_name": "MGT-Skin-Care-v2-ab4b92eb0d1c-export.zip",
+      "file_name": "MGT-Skin-Care-v2-6ed0b09678e8-export.zip",
       "folder_id": null,
       "file_id": null,
       "web_url": null
@@ -27,38 +27,38 @@
       "id": "readme_md",
       "reference": "README.md",
       "kind": "text",
-      "checksum": "sha256:545b99e094a917045858158a0b24cf9aed7bc69eace14749cf89058859724081",
+      "checksum": "sha256:9afb489dc744613a6703fe007c467c764419b85790f2c4bbd47342b0b274e486",
       "bytes": 1773
     },
     {
       "id": "next_phase_implementation_plan_md",
       "reference": "NEXT-PHASE-IMPLEMENTATION-PLAN.md",
       "kind": "text",
-      "checksum": "sha256:68ee9a0c9305d912ed52443c17da226227c3293aea0f44f64ae3a46ae31a0c93",
-      "bytes": 152361
+      "checksum": "sha256:eaf62ab7f70f588939aada61657391c341b14468178cd7a71bfc57c408bc655c",
+      "bytes": 192234
     },
     {
       "id": "infra_portal_readme_md",
       "reference": "infra/portal/README.md",
       "kind": "text",
-      "checksum": "sha256:d858fa488d5502774bcec4d0b6e5a7cb081622765522cff3bf0b822d101f9ba8",
-      "bytes": 30800
+      "checksum": "sha256:4a5e9eeefa899c82427ff7bd4825492a4e862a36d347091c8184e270c3026966",
+      "bytes": 46574
     },
     {
       "id": "infra_portal_release_checkpoint_md",
       "reference": "infra/portal/RELEASE-CHECKPOINT.md",
       "kind": "text",
-      "checksum": "sha256:3234498ddbe702fde902f234ea28a10c4e80f9328571686722a4ef2111a1266e",
-      "bytes": 68356
+      "checksum": "sha256:120c3e8caeadef8e0a6e89d7daaf642a7beb3053b2ba6f316ab093dd5b20d8d0",
+      "bytes": 80571
     },
     {
-      "id": "work_exports_mgt_skin_care_v2_f536_export_zip",
-      "reference": "work/exports/MGT-Skin-Care-v2-F536-export.zip",
+      "id": "work_exports_mgt_skin_care_v2_f814_export_zip",
+      "reference": "work/exports/MGT-Skin-Care-v2-F814-export.zip",
       "kind": "archive",
-      "checksum": "sha256:b1ae2afd0b9f4c0b422662ee673018498a325cd399998cc4fe8a58345ded8d2a",
-      "bytes": 4149759
+      "checksum": "sha256:23211890464879918bd789bb9d59a868d41d4a73da0bb0d7e8e1b447d96c958b",
+      "bytes": 4258613
     }
   ],
   "errors": [],
-  "bundle_checksum": "sha256:7d0cb67680ff6e72422089a52ec144472b158019fbfff0e9d07016b4d9399a8a"
+  "bundle_checksum": "sha256:7f6e092578792f957e0ba3935dc8d65254a914190b528fbebec378bc1a117249"
 }

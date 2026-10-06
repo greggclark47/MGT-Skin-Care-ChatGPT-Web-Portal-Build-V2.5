@@ -1,0 +1,27 @@
+{
+  "version": "1.0",
+  "candidate_commit": "6ed0b09678e85262c15f8bab7aae7dc3cc0d5807",
+  "bundle_checksum": "sha256:7f6e092578792f957e0ba3935dc8d65254a914190b528fbebec378bc1a117249",
+  "post_launch_monitoring_checksum": "sha256:6b08333d31544368c2a6c21cf3b5642a334a70c00014c63dac8267a5af6d625f",
+  "generated_at": "2026-10-06T16:48:13.558Z",
+  "status": "pending_post_launch_review",
+  "entries": [],
+  "errors": [
+    "sustained_fifteen_minute_review record is required",
+    "sustained_one_hour_review record is required",
+    "sustained_four_hour_review record is required",
+    "sustained_twenty_four_hour_review record is required",
+    "sustained_seven_day_review record is required",
+    "incident_queue_review record is required",
+    "error_budget_review record is required",
+    "latency_slo_review record is required",
+    "support_sla_review record is required",
+    "backup_restore_readiness record is required",
+    "rollback_rehearsal_review record is required",
+    "customer_impact_review record is required",
+    "billing_integrity_review record is required",
+    "privacy_access_review record is required",
+    "final_release_closure_decision record is required"
+  ],
+  "production_stabilization_checksum": "sha256:e950d5d12dfbf44ce7cf1a8619688baa76485a69776cdb8b007656178204d966"
+}

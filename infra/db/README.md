@@ -46,6 +46,7 @@ infra/db/reset-and-test.sh                # wipe + apply + run the DB-backed smo
 | `0006_knowledge_rag.sql` | `knowledge.embeddings` + `knowledge.match()`. Must run after 0003 creates `knowledge.objects`. |
 | `0007_compliance_release_controls.sql` | Durable consent timestamps, consent RLS, an active-consent guard, and append-only skin-match/subscription event records. Fails closed if active consent history needs reconciliation. |
 | `0008_customer_data_rls.sql` | Completes owner-scoped RLS for customer data, protects related child rows, and keeps provider/AI implementation records service-only. |
+| `0009_service_table_rls.sql` | Enables RLS without browser-role policies on public catalog, configuration, webhook, admin, audit, fulfillment, and migration-ledger tables served only through the API. |
 
 ### Requirements
 
@@ -61,7 +62,8 @@ infra/db/reset-and-test.sh                # wipe + apply + run the DB-backed smo
 Before staging approval, run the read-only structural audit against the reviewed target. It
 opens a read-only transaction, emits no connection string, role name, database name, customer
 row or provider payload, and fails closed on missing RLS, owner-read policies, service-only
-boundaries, append-only triggers, required extensions, PostgreSQL version, or portal migrations:
+boundaries, application-role RLS authority, append-only triggers, required extensions,
+PostgreSQL version, or portal migrations:
 
 ```
 pnpm infra:database-audit -- --output work/staging/database-audit.json
@@ -70,8 +72,11 @@ pnpm infra:database-audit -- --output work/staging/database-audit.json
 An output status of `pass` is structural evidence only. Run authenticated cross-account RLS
 probes, identity lifecycle tests, concurrent-write tests and the restore drill separately.
 
-`reset-and-test.sh` runs `persistence`, `dual-backend`, `admin-persistence`, and
-`ingredient-rules-persistence` against a real database, each from a freshly-migrated state.
+`reset-and-test.sh` applies both database and portal migration lineages, then runs `persistence`,
+`dual-backend`, `admin-persistence`, and `ingredient-rules-persistence` against a real database,
+each from a freshly-migrated state. It finishes with `rls-isolation.sql`, which temporarily grants
+browser-role SELECT permission inside a rolled-back transaction and proves owner reads,
+cross-account denial, anonymous denial, child-row isolation, and service-only table denial.
 
 These tests are **not idempotent** — they use fixed fixture ids (`evt_live_1`, `order_live_1`,
 `kb-*`) and assert on row counts. Running them twice against the same database fails on

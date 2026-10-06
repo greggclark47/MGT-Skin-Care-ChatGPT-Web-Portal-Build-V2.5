@@ -46,17 +46,21 @@ services:
       HOST: 0.0.0.0
       DATABASE_URL: ${DATABASE_URL:?Set the reviewed Supabase database connection}
       PORTAL_AUTO_MIGRATE: "false"
-      OLLAMA_ENABLED: "true"
+      OLLAMA_ENABLED: ${OLLAMA_ENABLED:-false}
       OLLAMA_BASE_URL: http://ollama:11434
       OPENCLAW_ENABLED: ${OPENCLAW_ENABLED:-false}
       OPENCLAW_BASE_URL: http://ollama:11434
       OPENCLAW_API_MODE: ollama
-    depends_on:
-      ollama:
-        condition: service_healthy
     restart: unless-stopped
     init: true
     stop_grace_period: 30s
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
     logging: *default-logging
   worker:
     build:
@@ -64,7 +68,7 @@ services:
       dockerfile: infra/portal/Dockerfile.api
       args:
         NODE_IMAGE: ${NODE_IMAGE:?Set the approved Node image digest}
-    command: ["node", "dist/portal/worker.js"]
+    command: ["sh", "-c", "node /app/infra/portal/preflight.mjs && exec node dist/portal/worker.js"]
     env_file: .env
     environment:
       DATABASE_URL: ${DATABASE_URL:?Set the reviewed Supabase database connection}
@@ -75,6 +79,13 @@ services:
     restart: unless-stopped
     init: true
     stop_grace_period: 60s
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
     logging: *default-logging
   web:
     build:
@@ -94,6 +105,13 @@ services:
     restart: unless-stopped
     init: true
     stop_grace_period: 30s
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
     logging: *default-logging
   edge:
     image: ${CADDY_IMAGE:?Set the approved Caddy image digest}

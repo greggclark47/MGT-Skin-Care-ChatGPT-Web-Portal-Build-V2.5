@@ -14,7 +14,7 @@ import {ASSISTANT_ROLES,routeAssistantRequest} from './assistant';
 import type {AiGateway} from '@mgt/ai-gateway';
 import Stripe from 'stripe';
 import {RETAILERS,SHOP_SEGMENTS,COMMERCE_MODEL} from './retailers';
-import {operationalReadiness} from './operations';
+import {aiRuntimeReadiness,operationalReadiness} from './operations';
 import {BILLING_CYCLES,PLAN_DEFINITIONS,priceIdFor} from './plans';
 type StripeClient=Stripe;
 export interface PortalOptions{store:Store;env?:NodeJS.ProcessEnv;stripe?:StripeClient;coach?:SafeCoach;analysisGateway?:AiGateway;verifyOtp?:(email:string,otp:string)=>Promise<{id:string,email:string}>}
@@ -90,12 +90,15 @@ export async function createPortal(options:PortalOptions){
  app.use((req,res,next)=>{(req as HubRequest).requestId=randomUUID();res.set({'X-Content-Type-Options':'nosniff','Referrer-Policy':'same-origin','Cache-Control':'no-store','X-Request-Id':(req as HubRequest).requestId});next();});
  app.get('/healthz',(_req,res)=>res.json({status:'ok'}));
  app.get('/readyz',wrap(async(_req,res)=>{
-  const snapshot=await db.tx(async r=>({backup:await r.get('operations','backup_health'),runs:await r.entries<any>('operation_runs')}));
+  const [snapshot,aiRuntime]=await Promise.all([db.tx(async r=>({backup:await r.get('operations','backup_health'),runs:await r.entries<any>('operation_runs')})),aiRuntimeReadiness(env)]);
   const workerInterval=Math.max(15,Math.min(3600,Number(env.WORKER_INTERVAL_SECONDS)||60));
   const maxAge=Math.max(60,Math.min(10800,Number(env.WORKER_READINESS_MAX_AGE_SECONDS)||Math.max(300,workerInterval*3)))*1000;
   const operations=operationalReadiness(snapshot.backup,snapshot.runs,Date.now(),maxAge);
-  const healthy=!prod||operations.healthy;
-  res.status(healthy?200:503).json({status:healthy?'ok':'not_ready',storage:db.kind,operations});
+  const issues=[...operations.issues,...(aiRuntime.healthy?[]:['ai_runtime_unhealthy'])];
+  const healthy=!prod||issues.length===0;
+  // This route is intentionally public for orchestrators. Never include backup locations,
+  // run identifiers, delivery modes, timestamps, or other operational records here.
+  res.status(healthy?200:503).json({status:healthy?'ok':'not_ready',operations:{healthy:issues.length===0,issues}});
  }));
  installSubscriptionWebhook(app,db,stripe,env);
  app.use(express.json({limit:'64kb'}));
@@ -393,7 +396,7 @@ export async function createPortal(options:PortalOptions){
   const failed=receipts.filter(item=>item.status==='failed').length,stalled=receipts.filter(item=>item.stalled).length;
   res.json({window_hours:24,configured:subscriptionBillingConfigured(stripe,env),summary:{events:receipts.length,delivery_attempts:receipts.reduce((total,item)=>total+item.attempts,0),processed:receipts.filter(item=>item.status==='processed').length,ignored:receipts.filter(item=>item.status==='ignored').length,failed,stalled,duplicates:receipts.reduce((total,item)=>total+item.duplicate_count,0)},alerts:[failed?`${failed} signed subscription event${failed===1?'':'s'} failed processing`:null,stalled?`${stalled} signed subscription event${stalled===1?' is':'s are'} stalled`:null].filter(Boolean),receipts:receipts.slice(0,100),privacy_note:'Signed event identifiers, types and sanitized outcome codes only; no customer, payment method or subscription payload is returned.'});
  });
- post('/admin/backup/verified',async(req,res)=>{const user=role(req,['superadmin','compliance']);const completed_at=text(req.body.completed_at,40),location_identifier=text(req.body.location_identifier,200),checksum=text(req.body.checksum,200);const completed=Date.parse(completed_at);check(!Number.isNaN(completed)&&completed<=Date.now()+60000,400,'backup_timestamp_invalid','Provide a valid backup completion time that is not in the future.');await db.tx(async r=>{await r.put('backup_status','latest',{completed_at:new Date(completed).toISOString(),location_identifier,checksum,verified_by:user.id,verified_at:now()});await audit(r,user.id,'backup.verified',location_identifier);});res.json({saved:true});});
+ post('/admin/backup/verified',async(req,res)=>{const user=role(req,['superadmin','compliance']);const completed_at=text(req.body.completed_at,40),restore_verified_at=text(req.body.restore_verified_at,40),location_identifier=text(req.body.location_identifier,200),restore_reference=text(req.body.restore_reference,1000),checksum=text(req.body.checksum,80);const completed=Date.parse(completed_at),restored=Date.parse(restore_verified_at),current=Date.now();check(!Number.isNaN(completed)&&completed<=current+60000,400,'backup_timestamp_invalid','Provide a valid backup completion time that is not in the future.');check(!Number.isNaN(restored)&&restored<=current+60000,400,'restore_timestamp_invalid','Provide a valid restore verification time that is not in the future.');check(/^sha256:[a-f0-9]{64}$/.test(checksum),400,'backup_checksum_invalid','Provide the verified backup SHA-256 checksum.');check(/^https:\/\//.test(restore_reference),400,'restore_reference_invalid','Provide the HTTPS restore-drill evidence reference.');await db.tx(async r=>{await r.put('backup_status','latest',{completed_at:new Date(completed).toISOString(),restore_verified_at:new Date(restored).toISOString(),location_identifier,restore_reference,checksum,verified_by:user.id,verified_at:now()});await audit(r,user.id,'backup_restore.verified',location_identifier);});res.json({saved:true});});
  post('/admin/operators/lookup',async(req,res)=>{
   const operator=role(req,['superadmin']);
   const email=text(req.body.email,254).toLowerCase();

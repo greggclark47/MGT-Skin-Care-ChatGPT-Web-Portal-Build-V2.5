@@ -18,6 +18,7 @@ const production = {
   WORKER_INTERVAL_SECONDS: "60",
   WORKER_READINESS_MAX_AGE_SECONDS: "300",
   BACKUP_MAX_AGE_HOURS: "26",
+  BACKUP_RESTORE_MAX_AGE_DAYS: "90",
   NOTIFICATION_DELIVERY: "in_app",
   SUPPORT_OWNER_NAME: "MGT Support Lead",
   SUPPORT_OWNER_EMAIL: "support-lead@mgtskincare.test",
@@ -49,12 +50,14 @@ test("rejects placeholders and an unsafe worker readiness window", () => {
     ...production,
     PUBLIC_ORIGIN: "https://YOUR-PORTAL-HOST",
     DATABASE_URL: "postgresql://USER:PASSWORD@DATABASE:5432/mgt",
-    WORKER_READINESS_MAX_AGE_SECONDS: "90"
+    WORKER_READINESS_MAX_AGE_SECONDS: "90",
+    BACKUP_RESTORE_MAX_AGE_DAYS: "0"
   });
   assert.equal(result.ok, false);
   assert.ok(result.errors.some((error) => error.startsWith("PUBLIC_ORIGIN")));
   assert.ok(result.errors.some((error) => error.startsWith("DATABASE_URL")));
   assert.ok(result.errors.some((error) => error.includes("twice WORKER_INTERVAL_SECONDS")));
+  assert.ok(result.errors.some((error) => error.startsWith("BACKUP_RESTORE_MAX_AGE_DAYS")));
 });
 
 test("requires the complete billing contract when subscriptions are enabled", () => {

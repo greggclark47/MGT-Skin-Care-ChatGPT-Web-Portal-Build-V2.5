@@ -50,6 +50,20 @@ export function operationalReadiness(backup:any,runs:{value:any}[],at=Date.now()
  return {healthy:issues.length===0,issues,last_run:lastRun,backup};
 }
 
+export async function aiRuntimeReadiness(env:NodeJS.ProcessEnv,fetchImpl:typeof fetch=fetch){
+ if(String(env.OLLAMA_ENABLED).toLowerCase()!=='true')return {enabled:false,healthy:true};
+ const base=String(env.OLLAMA_BASE_URL||'').replace(/\/$/,'');
+ if(!base)return {enabled:true,healthy:false};
+ const required=[env.OLLAMA_MODEL_PRIMARY||'llama3.2:3b',env.OLLAMA_MODEL_REASONING||'deepseek-r1:8b',env.OLLAMA_MODEL_EMBEDDING||'nomic-embed-text'];
+ try{
+  const response=await fetchImpl(base+'/api/tags',{signal:AbortSignal.timeout(3000)});
+  if(!response.ok)return {enabled:true,healthy:false};
+  const body=await response.json() as any;
+  const installed=new Set(Array.isArray(body?.models)?body.models.flatMap((model:any)=>[model?.name,model?.model].filter((value:unknown):value is string=>typeof value==='string')):[]);
+  return {enabled:true,healthy:required.every(model=>installed.has(model))};
+ }catch{return {enabled:true,healthy:false};}
+}
+
 export async function writeWorkerHeartbeat(file:string,result:unknown){
  const temp=file+'.tmp';
  await writeFile(temp,JSON.stringify({updated_at:new Date().toISOString(),result}));
@@ -144,10 +158,13 @@ export class OperationalWorker{
  }
  private async verifyBackup(records:Records,at:number):Promise<'healthy'|'stale'|'unverified'>{
   const maxAge=int(this.env.BACKUP_MAX_AGE_HOURS,26,1,24*30)*3600000;
+  const restoreMaxAge=int(this.env.BACKUP_RESTORE_MAX_AGE_DAYS,90,1,365)*86400000;
   const latest=await records.get<any>('backup_status','latest');
   const completed=timestamp(latest?.completed_at);
-  const status=completed===undefined?'unverified':at-completed<=maxAge?'healthy':'stale';
-  await records.put('operations','backup_health',{status,checked_at:iso(at),max_age_hours:maxAge/3600000,last_success_at:completed===undefined?null:iso(completed),location_identifier:typeof latest?.location_identifier==='string'?latest.location_identifier:null});
+  const restoreVerified=timestamp(latest?.restore_verified_at);
+  const validTimes=completed!==undefined&&completed<=at&&restoreVerified!==undefined&&restoreVerified<=at;
+  const status=!validTimes?'unverified':at-completed<=maxAge&&at-restoreVerified<=restoreMaxAge?'healthy':'stale';
+  await records.put('operations','backup_health',{status,checked_at:iso(at),max_age_hours:maxAge/3600000,restore_max_age_days:restoreMaxAge/86400000,last_success_at:completed===undefined?null:iso(completed),restore_verified_at:restoreVerified===undefined?null:iso(restoreVerified),location_identifier:typeof latest?.location_identifier==='string'?latest.location_identifier:null,restore_reference:typeof latest?.restore_reference==='string'?latest.restore_reference:null});
   return status;
  }
  private async processDeletionRequests(at:number){

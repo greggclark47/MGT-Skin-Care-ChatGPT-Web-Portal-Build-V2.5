@@ -19,7 +19,9 @@ export function sessionMiddleware(store:Store,origin:string,production:boolean){
    let s=sessionId?await db.get<Session>('sessions',sessionId):undefined;
    if(s&&s.expires<=Date.now()){await db.remove('sessions',s.id);s=undefined;}
    if(s?.userId){const user=await db.get('accounts',s.userId);if(user)req.account=user;else{await db.remove('sessions',s.id);s=undefined;}}
-   if(!s){const secret=token();s={id:hash(secret),actor:'guest_'+token(),csrf:token(),expires:Date.now()+86400000};
+   if(!s){const edgeSource=production&&typeof req.headers['x-mgt-client-ip']==='string'&&/^[0-9a-f:.]{2,64}$/i.test(req.headers['x-mgt-client-ip'])?req.headers['x-mgt-client-ip']:req.socket.remoteAddress||'unknown';
+    await rate(db,'session-create:'+hash(edgeSource),120,10*60000);
+    const secret=token();s={id:hash(secret),actor:'guest_'+token(),csrf:token(),expires:Date.now()+86400000};
     await db.put('sessions',s.id,s);res.cookie(cookie,secret,{httpOnly:true,secure:production,sameSite:'lax',path:'/',maxAge:86400000});}
    return s;
   });

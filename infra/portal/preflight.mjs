@@ -94,6 +94,7 @@ export function validateEnvironment(env) {
     errors.push("WORKER_READINESS_MAX_AGE_SECONDS must be at least twice WORKER_INTERVAL_SECONDS.");
   }
   if (!positiveNumber(env.BACKUP_MAX_AGE_HOURS, 1, 72)) errors.push("BACKUP_MAX_AGE_HOURS must be between 1 and 72.");
+  if (!positiveNumber(env.BACKUP_RESTORE_MAX_AGE_DAYS, 1, 365)) errors.push("BACKUP_RESTORE_MAX_AGE_DAYS must be between 1 and 365.");
 
   const delivery = String(env.NOTIFICATION_DELIVERY || "");
   if (!["in_app", "webhook"].includes(delivery)) errors.push("NOTIFICATION_DELIVERY must be in_app or webhook.");

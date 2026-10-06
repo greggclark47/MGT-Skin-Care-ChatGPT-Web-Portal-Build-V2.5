@@ -2,7 +2,7 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs/promises');
 const path=require('node:path');
 const {LocalStore}=require('../dist/portal/store.js');
-const {OperationalWorker,InAppNotificationDelivery,operationalReadiness,writeWorkerHeartbeat}=require('../dist/portal/operations.js');
+const {OperationalWorker,InAppNotificationDelivery,aiRuntimeReadiness,operationalReadiness,writeWorkerHeartbeat}=require('../dist/portal/operations.js');
 
 (async()=>{
  const store=new LocalStore(':memory:');
@@ -21,7 +21,7 @@ const {OperationalWorker,InAppNotificationDelivery,operationalReadiness,writeWor
   await records.put('referral_metrics','old_referral_metric',{date:'2026-01-01',updated_at:'2026-01-01T00:00:00.000Z'});
   await records.put('referral_metrics','recent_referral_metric',{date:'2026-09-11',updated_at:'2026-09-11T00:00:00.000Z'});
  await records.put('reminders','user_1',[{product_id:'cleanser',due_at:'2026-09-12T11:00:00.000Z',paused:false},{product_id:'serum',due_at:'2026-09-13T11:00:00.000Z',paused:false}]);
- await records.put('backup_status','latest',{completed_at:'2026-09-12T10:00:00.000Z',location_identifier:'encrypted-offsite',checksum:'abc'});
+ await records.put('backup_status','latest',{completed_at:'2026-09-12T10:00:00.000Z',restore_verified_at:'2026-09-10T10:00:00.000Z',location_identifier:'encrypted-offsite',restore_reference:'https://evidence.example.test/restore',checksum:'sha256:'+'a'.repeat(64)});
   await records.put('accounts','erase_me',{id:'erase_me',email:'erase@example.test',roles:[]});
   await records.put('profiles','user_erase_me',{input:{skin_type:'dry'}});
   await records.put('sessions','erase_session',{actor:'user_erase_me',userId:'erase_me',expires:at+86400000});
@@ -64,10 +64,17 @@ const {OperationalWorker,InAppNotificationDelivery,operationalReadiness,writeWor
   [{id:'newer',value:{completed_at:new Date(at-60000).toISOString()}},{id:'older',value:{completed_at:new Date(at-120000).toISOString()}}],
   at,300000);
  assert.equal(healthy.healthy,true);assert.equal(healthy.last_run.completed_at,new Date(at-60000).toISOString());
+ assert.deepEqual(operationalReadiness({status:'unverified',last_success_at:new Date(at-3600000).toISOString()},[],at).issues,
+  ['operations_worker_stale','backup_unhealthy']);
  assert.deepEqual(operationalReadiness({status:'stale',last_success_at:new Date(at-3600000).toISOString()},[],at).issues,
   ['operations_worker_stale','backup_unhealthy']);
  assert.equal(operationalReadiness({status:'healthy',last_success_at:new Date(at+60000).toISOString()},
   [{id:'future',value:{completed_at:new Date(at+60000).toISOString()}}],at).healthy,false);
+ assert.deepEqual(await aiRuntimeReadiness({OLLAMA_ENABLED:'false'}),{enabled:false,healthy:true});
+ const models={models:[{name:'llama3.2:3b'},{name:'deepseek-r1:8b'},{model:'nomic-embed-text'}]};
+ assert.deepEqual(await aiRuntimeReadiness({OLLAMA_ENABLED:'true',OLLAMA_BASE_URL:'http://ollama'},async()=>({ok:true,json:async()=>models})),{enabled:true,healthy:true});
+ assert.deepEqual(await aiRuntimeReadiness({OLLAMA_ENABLED:'true',OLLAMA_BASE_URL:'http://ollama'},async()=>({ok:true,json:async()=>({models:models.models.slice(0,2)})})),{enabled:true,healthy:false});
+ assert.deepEqual(await aiRuntimeReadiness({OLLAMA_ENABLED:'true',OLLAMA_BASE_URL:'http://ollama'},async()=>{throw new Error('offline');}),{enabled:true,healthy:false});
  const heartbeatFile=path.resolve('tmp','worker-heartbeat-test.json');
  await fs.mkdir(path.dirname(heartbeatFile),{recursive:true});
  await writeWorkerHeartbeat(heartbeatFile,{run_id:'test'});

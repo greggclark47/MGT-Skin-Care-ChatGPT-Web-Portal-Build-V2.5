@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import {
   buildProductionDatabaseAudit,
+  NON_PUBLIC_SERVICE_RELATIONS,
   OWNER_READ_TABLES,
   REQUIRED_EXTENSIONS,
   REQUIRED_TRIGGERS,
@@ -12,15 +13,18 @@ import {
 const completeSnapshot = () => ({
   serverVersion: 160004,
   readOnly: true,
+  connectionCanBypassRls: true,
   extensions: [...REQUIRED_EXTENSIONS],
   tables: [...OWNER_READ_TABLES, ...SERVICE_ONLY_TABLES].map((table) => ({ table, rlsEnabled: true })),
   policies: OWNER_READ_TABLES.map((table) => ({ table, roles: ["authenticated"], command: "SELECT" })),
+  nonPublicRelations: NON_PUBLIC_SERVICE_RELATIONS.map((relation) => ({ relation, rlsEnabled: true })),
+  nonPublicPolicies: [],
   triggers: REQUIRED_TRIGGERS.map((trigger) => ({ ...trigger, enabled: true })),
-  portalMigrations: ["0001_portal_operations.sql"]
+  portalMigrations: ["0001_portal_operations.sql", "0002_hub_records_rls.sql"]
 });
 
 test("production database audit passes a complete redacted structural snapshot", () => {
-  const report = buildProductionDatabaseAudit(completeSnapshot(), ["0001_portal_operations.sql"]);
+  const report = buildProductionDatabaseAudit(completeSnapshot(), ["0001_portal_operations.sql", "0002_hub_records_rls.sql"]);
   assert.equal(report.status, "pass");
   assert.equal(report.summary.blocked, 0);
   assert.equal(JSON.stringify(report).includes("postgresql://"), false);
@@ -34,23 +38,32 @@ test("production database audit fails closed on RLS, policy, extension, trigger,
   snapshot.tables.find((row) => row.table === "routines").rlsEnabled = false;
   snapshot.policies = snapshot.policies.filter((row) => row.table !== "carts");
   snapshot.policies.push({ table: "subscription_events", roles: ["authenticated"], command: "SELECT" });
+  snapshot.policies.push({ table: "hub_records", roles: ["anon"], command: "SELECT" });
+  snapshot.policies.push({ table: "orders", roles: ["public"], command: "SELECT" });
+  snapshot.nonPublicRelations.find((row) => row.relation === "analytics.events").rlsEnabled = false;
+  snapshot.nonPublicPolicies.push({ relation: "knowledge.objects", roles: ["anon"], command: "SELECT" });
   snapshot.triggers = snapshot.triggers.filter((row) => row.table !== "admin_audit_log");
   snapshot.portalMigrations = ["9999_unknown.sql"];
-  const report = buildProductionDatabaseAudit(snapshot, ["0001_portal_operations.sql"]);
+  const report = buildProductionDatabaseAudit(snapshot, ["0001_portal_operations.sql", "0002_hub_records_rls.sql"]);
   assert.equal(report.status, "blocked");
   assert.ok(report.summary.blocked >= 7);
   assert.deepEqual(report.checks.find((check) => check.id === "customer_tables_present").missing, ["orders"]);
   assert.deepEqual(report.checks.find((check) => check.id === "customer_rls_enabled").missing_or_disabled, ["orders", "routines"]);
-  assert.deepEqual(report.checks.find((check) => check.id === "service_only_tables_not_exposed").exposed, ["subscription_events"]);
+  assert.deepEqual(report.checks.find((check) => check.id === "service_only_tables_not_exposed").exposed, ["hub_records", "subscription_events"]);
+  assert.deepEqual(report.checks.find((check) => check.id === "owner_tables_not_anonymously_exposed").exposed, ["orders"]);
+  assert.deepEqual(report.checks.find((check) => check.id === "non_public_service_relations_rls").missing_or_disabled, ["analytics.events"]);
+  assert.deepEqual(report.checks.find((check) => check.id === "non_public_service_relations_not_exposed").exposed, ["knowledge.objects"]);
 });
 
 test("production database audit rejects a non-read-only or obsolete server session", () => {
   const snapshot = completeSnapshot();
   snapshot.readOnly = false;
+  snapshot.connectionCanBypassRls = false;
   snapshot.serverVersion = 150012;
-  const report = buildProductionDatabaseAudit(snapshot, ["0001_portal_operations.sql"]);
+  const report = buildProductionDatabaseAudit(snapshot, ["0001_portal_operations.sql", "0002_hub_records_rls.sql"]);
   assert.equal(report.status, "blocked");
   assert.equal(report.checks.find((check) => check.id === "read_only_session").status, "blocked");
+  assert.equal(report.checks.find((check) => check.id === "application_connection_rls_authority").status, "blocked");
   assert.equal(report.checks.find((check) => check.id === "postgres_16_or_newer").status, "blocked");
 });
 
@@ -59,11 +72,13 @@ test("checked-in migrations cover every audited RLS table and immutable trigger"
     "infra/db/migrations/0001_consolidated_schema.sql",
     "infra/db/migrations/0003_admin_knowledge.sql",
     "infra/db/migrations/0007_compliance_release_controls.sql",
-    "infra/db/migrations/0008_customer_data_rls.sql"
-  ].map((path) => readFileSync(path, "utf8")).join("\n");
+    "infra/db/migrations/0008_customer_data_rls.sql",
+    "infra/db/migrations/0009_service_table_rls.sql"
+  ].map((path) => readFileSync(path, "utf8")).concat(readFileSync("infra/portal/migrations/0002_hub_records_rls.sql", "utf8")).join("\n");
   for (const table of [...OWNER_READ_TABLES, ...SERVICE_ONLY_TABLES]) {
     assert.match(migrations, new RegExp(`(?:alter table\\s+${table}|['\"]${table}['\"])`, "i"), `${table} is absent from the RLS migrations`);
   }
+  for (const relation of NON_PUBLIC_SERVICE_RELATIONS) assert.match(migrations, new RegExp(relation.replace('.', '\\.'), "i"), `${relation} is absent from the RLS migrations`);
   for (const trigger of REQUIRED_TRIGGERS) {
     if (trigger.table === "admin_audit_log") {
       assert.match(migrations, new RegExp(trigger.name, "i"), `${trigger.name} is absent from the immutable-record migrations`);

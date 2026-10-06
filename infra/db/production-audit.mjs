@@ -27,12 +27,40 @@ export const OWNER_READ_TABLES = Object.freeze([
 ]);
 
 export const SERVICE_ONLY_TABLES = Object.freeze([
+  "admin_audit_log",
+  "admin_users",
+  "brands",
+  "bundle_items",
+  "bundles",
+  "eval_cases",
+  "eval_runs",
+  "fulfillment_jobs",
+  "fulfillment_partners",
+  "hub_records",
+  "ingredient_conflict_rules",
+  "ingredient_rules",
+  "ingredients",
   "llm_routing_log",
+  "model_configs",
+  "partner_feeds",
+  "portal_schema_migrations",
+  "product_attributes",
+  "product_ingredients",
+  "products",
+  "prompt_versions",
   "stripe_customers",
-  "subscription_events"
+  "subscription_plans",
+  "subscription_events",
+  "webhook_events"
 ]);
 
 export const REQUIRED_EXTENSIONS = Object.freeze(["pg_cron", "vector"]);
+
+export const NON_PUBLIC_SERVICE_RELATIONS = Object.freeze([
+  "analytics.events",
+  "knowledge.embeddings",
+  "knowledge.objects"
+]);
 
 export const REQUIRED_TRIGGERS = Object.freeze([
   { table: "admin_audit_log", name: "admin_audit_no_update", function: "admin_audit_immutable" },
@@ -42,6 +70,7 @@ export const REQUIRED_TRIGGERS = Object.freeze([
 
 const sorted = (values) => [...values].sort((a, b) => a.localeCompare(b));
 const pass = (condition) => condition ? "pass" : "blocked";
+const clientRoles = new Set(["anon", "authenticated", "public"]);
 
 function migrationNames(directory) {
   if (!existsSync(directory)) return [];
@@ -57,6 +86,8 @@ export function buildProductionDatabaseAudit(snapshot, expectedPortalMigrations 
   const triggers = snapshot.triggers || [];
   const extensions = new Set((snapshot.extensions || []).map(String));
   const appliedMigrations = new Set((snapshot.portalMigrations || []).map(String));
+  const nonPublicRelations = new Map((snapshot.nonPublicRelations || []).map((row) => [String(row.relation), row]));
+  const nonPublicPolicies = snapshot.nonPublicPolicies || [];
 
   const missingTables = sorted(allRlsTables.filter((table) => !tables.has(table)));
   const rlsDisabled = sorted(allRlsTables.filter((table) => tables.has(table) && !tables.get(table).rlsEnabled));
@@ -66,10 +97,18 @@ export function buildProductionDatabaseAudit(snapshot, expectedPortalMigrations 
     policy.roles.includes("authenticated") &&
     ["SELECT", "ALL"].includes(String(policy.command).toUpperCase())
   )));
+  const anonymouslyExposedOwnerTables = sorted(OWNER_READ_TABLES.filter((table) => policies.some((policy) =>
+    policy.table === table && Array.isArray(policy.roles) && policy.roles.some((role) => ["anon", "public"].includes(String(role).toLowerCase()))
+  )));
   const exposedServiceTables = sorted(SERVICE_ONLY_TABLES.filter((table) => policies.some((policy) =>
-    policy.table === table && Array.isArray(policy.roles) && policy.roles.includes("authenticated")
+    policy.table === table && Array.isArray(policy.roles) && policy.roles.some((role) => clientRoles.has(String(role).toLowerCase()))
   )));
   const missingExtensions = sorted(REQUIRED_EXTENSIONS.filter((extension) => !extensions.has(extension)));
+  const missingNonPublicRelations = sorted(NON_PUBLIC_SERVICE_RELATIONS.filter((relation) => !nonPublicRelations.has(relation)));
+  const nonPublicRlsDisabled = sorted(NON_PUBLIC_SERVICE_RELATIONS.filter((relation) => nonPublicRelations.has(relation) && !nonPublicRelations.get(relation).rlsEnabled));
+  const exposedNonPublicRelations = sorted(NON_PUBLIC_SERVICE_RELATIONS.filter((relation) => nonPublicPolicies.some((policy) =>
+    policy.relation === relation && Array.isArray(policy.roles) && policy.roles.some((role) => clientRoles.has(String(role).toLowerCase()))
+  )));
   const missingTriggers = REQUIRED_TRIGGERS.filter((required) => !triggers.some((trigger) =>
     trigger.table === required.table &&
     trigger.name === required.name &&
@@ -82,12 +121,17 @@ export function buildProductionDatabaseAudit(snapshot, expectedPortalMigrations 
 
   const checks = [
     { id: "read_only_session", status: pass(snapshot.readOnly === true), expected: true, observed: snapshot.readOnly === true },
+    { id: "application_connection_rls_authority", status: pass(snapshot.connectionCanBypassRls === true), expected: true, observed: snapshot.connectionCanBypassRls === true },
     { id: "postgres_16_or_newer", status: pass(serverVersion >= 160000), expected_minimum: 160000, observed: serverVersion || null },
     { id: "required_extensions", status: pass(missingExtensions.length === 0), missing: missingExtensions },
     { id: "customer_tables_present", status: pass(missingTables.length === 0), missing: missingTables },
     { id: "customer_rls_enabled", status: pass(rlsDisabled.length === 0), missing_or_disabled: [...missingTables, ...rlsDisabled] },
     { id: "authenticated_owner_read_policies", status: pass(missingOwnerPolicies.length === 0), missing: missingOwnerPolicies },
+    { id: "owner_tables_not_anonymously_exposed", status: pass(anonymouslyExposedOwnerTables.length === 0), exposed: anonymouslyExposedOwnerTables },
     { id: "service_only_tables_not_exposed", status: pass(exposedServiceTables.length === 0), exposed: exposedServiceTables },
+    { id: "non_public_service_relations_present", status: pass(missingNonPublicRelations.length === 0), missing: missingNonPublicRelations },
+    { id: "non_public_service_relations_rls", status: pass(nonPublicRlsDisabled.length === 0), missing_or_disabled: [...missingNonPublicRelations, ...nonPublicRlsDisabled] },
+    { id: "non_public_service_relations_not_exposed", status: pass(exposedNonPublicRelations.length === 0), exposed: exposedNonPublicRelations },
     { id: "append_only_triggers", status: pass(missingTriggers.length === 0), missing: missingTriggers },
     { id: "portal_migration_lineage", status: pass(missingPortalMigrations.length === 0 && unexpectedPortalMigrations.length === 0), missing: missingPortalMigrations, unexpected: unexpectedPortalMigrations }
   ];
@@ -118,13 +162,17 @@ async function captureSnapshot(databaseUrl) {
     await client.query("BEGIN READ ONLY");
     await client.query("SET LOCAL statement_timeout = '10s'");
     const tableNames = [...OWNER_READ_TABLES, ...SERVICE_ONLY_TABLES];
-    const [settings, extensionRows, tableRows, policyRows, triggerRows, portalLedger] = await Promise.all([
+    const relationNames = [...tableNames.map((table) => `public.${table}`), ...NON_PUBLIC_SERVICE_RELATIONS];
+    const [settings, extensionRows, tableRows, policyRows, nonPublicRows, nonPublicPolicyRows, triggerRows, portalLedger, connectionAuthority] = await Promise.all([
       client.query("select current_setting('server_version_num')::int as server_version, current_setting('transaction_read_only') = 'on' as read_only"),
       client.query("select extname from pg_extension where extname = any($1::text[]) order by extname", [REQUIRED_EXTENSIONS]),
       client.query("select c.relname as table_name, c.relrowsecurity as rls_enabled from pg_class c join pg_namespace n on n.oid = c.relnamespace where n.nspname = 'public' and c.relkind in ('r','p') and c.relname = any($1::text[]) order by c.relname", [tableNames]),
       client.query("select tablename as table_name, policyname, roles, cmd from pg_policies where schemaname = 'public' and tablename = any($1::text[]) order by tablename, policyname", [tableNames]),
+      client.query("select n.nspname || '.' || c.relname as relation, c.relrowsecurity as rls_enabled from pg_class c join pg_namespace n on n.oid = c.relnamespace where c.relkind in ('r','p') and n.nspname || '.' || c.relname = any($1::text[]) order by relation", [NON_PUBLIC_SERVICE_RELATIONS]),
+      client.query("select schemaname || '.' || tablename as relation, policyname, roles, cmd from pg_policies where schemaname || '.' || tablename = any($1::text[]) order by relation, policyname", [NON_PUBLIC_SERVICE_RELATIONS]),
       client.query("select c.relname as table_name, t.tgname as trigger_name, p.proname as function_name, t.tgenabled <> 'D' as enabled from pg_trigger t join pg_class c on c.oid = t.tgrelid join pg_namespace n on n.oid = c.relnamespace join pg_proc p on p.oid = t.tgfoid where not t.tgisinternal and n.nspname = 'public' order by c.relname, t.tgname"),
-      client.query("select to_regclass('public.portal_schema_migrations') is not null as present")
+      client.query("select to_regclass('public.portal_schema_migrations') is not null as present"),
+      client.query("select coalesce(bool_and(r.rolsuper or r.rolbypassrls or c.relowner = r.oid), false) as can_bypass_rls from pg_roles r cross join pg_class c join pg_namespace n on n.oid = c.relnamespace where r.rolname = current_user and n.nspname || '.' || c.relname = any($1::text[])", [relationNames])
     ]);
     let portalMigrations = [];
     if (portalLedger.rows[0]?.present) {
@@ -135,9 +183,12 @@ async function captureSnapshot(databaseUrl) {
     return {
       serverVersion: settings.rows[0]?.server_version,
       readOnly: settings.rows[0]?.read_only === true,
+      connectionCanBypassRls: connectionAuthority.rows[0]?.can_bypass_rls === true,
       extensions: extensionRows.rows.map((row) => String(row.extname)),
       tables: tableRows.rows.map((row) => ({ table: String(row.table_name), rlsEnabled: row.rls_enabled === true })),
       policies: policyRows.rows.map((row) => ({ table: String(row.table_name), name: String(row.policyname), roles: row.roles || [], command: String(row.cmd) })),
+      nonPublicRelations: nonPublicRows.rows.map((row) => ({ relation: String(row.relation), rlsEnabled: row.rls_enabled === true })),
+      nonPublicPolicies: nonPublicPolicyRows.rows.map((row) => ({ relation: String(row.relation), name: String(row.policyname), roles: row.roles || [], command: String(row.cmd) })),
       triggers: triggerRows.rows.map((row) => ({ table: String(row.table_name), name: String(row.trigger_name), function: String(row.function_name), enabled: row.enabled === true })),
       portalMigrations
     };

@@ -11,6 +11,10 @@ const {LocalStore}=require('../dist/portal/store');
  try{
   let response=await fetch(url+'/readyz');assert.equal(response.status,503);let body=await response.json();
   assert.deepEqual(body.operations.issues,['operations_worker_stale','backup_unhealthy']);
+  assert.deepEqual(Object.keys(body.operations).sort(),['healthy','issues']);
+  assert.equal('storage' in body,false);
+  assert.equal(JSON.stringify(body).includes('location_identifier'),false);
+  assert.equal(JSON.stringify(body).includes('last_run'),false);
   assert.equal((await fetch(url+'/healthz')).status,200);
   const current=Date.now();
   await store.tx(async records=>{
@@ -19,6 +23,7 @@ const {LocalStore}=require('../dist/portal/store');
   });
   response=await fetch(url+'/readyz');assert.equal(response.status,200);body=await response.json();
   assert.equal(body.operations.healthy,true);
+  assert.deepEqual(body.operations.issues,[]);
   await store.tx(records=>records.put('operation_runs','latest',{completed_at:new Date(current-600000).toISOString()}));
   response=await fetch(url+'/readyz');assert.equal(response.status,503);
   assert((await response.json()).operations.issues.includes('operations_worker_stale'));

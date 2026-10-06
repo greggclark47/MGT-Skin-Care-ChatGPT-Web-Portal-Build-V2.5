@@ -47,11 +47,15 @@ GitHub references:
 | Blocked medical claims | Domain and gateway validators reject blocked claims; gateway fallbacks and reviewed-output tests run in the release suite. |
 | Append-only records | Checked-in migration `0007_compliance_release_controls.sql` installs immutable triggers for skin-match answers and subscription events. |
 | Customer-data isolation baseline | Migration `0008_customer_data_rls.sql` enables owner-scoped RLS across customer tables and keeps provider, Stripe-mapping, and AI-routing records service-only. A redacted, read-only structural audit now fails closed on missing policies, triggers, extensions, or portal migrations. |
-| Migration consolidation | The repository uses an ordered `0000`–`0008` migration lineage with clean-database and repeat-application contract tests. |
+| Portal document-store isolation | Portal migration `0002_hub_records_rls.sql` makes the server-side session/account/profile/support/billing store service-only. The structural audit verifies both this boundary and the application connection's RLS authority without exposing its role name. |
+| Service-table isolation | Migration `0009_service_table_rls.sql` closes direct browser-role access to public catalog, model configuration, webhook, admin, audit, fulfillment, and migration-ledger tables that are served only through the API. |
+| Migration consolidation | The repository uses an ordered `0000`–`0009` database lineage and `0001`–`0002` portal lineage with clean-database and repeat-application contract tests. |
 | Subscription architecture | Free/Premium comparison, monthly/annual Prices, Product binding, explicit test/live mode, recurring consent, Checkout, billing portal, and signed webhooks are implemented fail-closed. |
 | Billing mode visibility | Customer session state and operator readiness distinguish MGT product commerce from subscription billing configuration. |
 | Release evidence integrity | Staging, production, export, receipt, launch, monitoring, and closeout artifacts are checksum-bound and contract-tested. |
 | Accessibility baseline | Theme contrast, reduced motion, forced colors, focus behavior, semantic components, and production build accessibility contracts pass locally. |
+| Runtime hardening | API, worker, and web containers are read-only with dropped capabilities and no-new-privileges; the edge supplies CSP and cross-origin protections; public readiness is redacted; enabled local AI must report all required models. |
+| Backup readiness contract | Backup records require a valid SHA-256 checksum plus a recent HTTPS-referenced restore drill. Production readiness fails when either the backup or restore proof is stale. |
 
 ## Known blockers and their solutions
 

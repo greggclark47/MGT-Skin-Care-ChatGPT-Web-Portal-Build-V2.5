@@ -27,7 +27,7 @@ The 2026-09-25 provisional plans checkpoint passed every local release gate at `
 ## Deployment scaffold
 Copy infra/portal/env.example to infra/portal/.env and fill service values outside source control. DATABASE_URL must identify the reviewed Supabase database, use verified TLS, and URI-encode reserved characters in credentials. API and worker use the same external database. Compose no longer provisions an independent database; existing local database volumes have not been deleted. Only the TLS edge publishes host ports. API refuses demo mode or HTTP public origins in production. Web-to-API forwarding is set at build time. Do not deploy before schema/identity reconciliation and role-based RLS checks.
 
-Before building containers, run `pnpm infra:preflight`. It rejects placeholder origins, missing backend settings, unverified database TLS, automatic production migration, invalid worker/backup windows, incomplete notification-webhook configuration, missing named support ownership, missing deployed accessibility evidence, partially enabled subscriptions, and floating container image tags. Configuration validation does not establish live readiness. Run `pnpm test:infra` after changing this contract.
+Before building containers, run `pnpm infra:preflight`. The production API and worker container entrypoints run the same preflight again and refuse to start when it fails. It rejects placeholder origins, missing backend settings, unverified database TLS, automatic production migration, invalid worker/backup/restore windows, incomplete notification-webhook configuration, missing named support ownership, missing deployed accessibility evidence, partially enabled subscriptions, and floating container image tags. Configuration validation does not establish live readiness. Run `pnpm test:infra` after changing this contract.
 
 `pnpm test:compliance-contract` protects the repository-local Path B controls: the single Premium catalog and two-price configuration, durable AI-disclosure enforcement and revocation, consent controls before reviewed requests, deferred partner/payout APIs, and the additive RLS/append-only migration. It is source-contract evidence only; target-database RLS behavior and deployed provider behavior still require staging evidence.
 
@@ -57,7 +57,7 @@ Generate a starting draft with `pnpm infra:create-ship-packet -- --output path/t
 
 The application, edge, and Ollama images are required to use approved immutable `@sha256:` digests. Set `NODE_IMAGE`, `OLLAMA_IMAGE`, and `CADDY_IMAGE` in the deployment environment after reviewing the exact image digests; floating tags such as `latest` and `2` are rejected by preflight.
 
-The edge now sends compression and baseline security headers, exposes liveness and readiness separately, routes same-origin API and signed subscription webhook traffic directly to the API, and emits structured access logs. Compose rotates local JSON logs, waits for both API and web health before starting the edge, and gives Node services explicit shutdown windows.
+The edge now sends compression, HSTS, CSP, frame denial, cross-origin isolation, permissions and content-type protections; exposes liveness and redacted readiness separately; routes same-origin API and signed subscription webhook traffic directly to the API; and emits structured access logs. Compose rotates local JSON logs, waits for both API and web health before starting the edge, and gives Node services explicit shutdown windows. API, worker, and web run with read-only filesystems, no added capabilities, no-new-privileges, and bounded temporary storage.
 
 Dockerfiles and Compose remain unvalidated in containers. Pin image digests and review network/secret management before deployment. `PORTAL_AUTO_MIGRATE=false` is required in production. The portal only checks its required storage columns at startup; migration application is a separately reviewed operation after inspecting both migration lineages. Local development may explicitly opt into the existing migration helper. No migration history has been reconciled against a live project here.
 
@@ -84,8 +84,12 @@ The Compose file includes Ollama with a persistent model volume, bounded paralle
 ```text
 docker compose up -d ollama
 docker compose --profile model-sync run --rm model-sync
-docker compose up -d api web edge
+docker compose up -d api worker web edge
 ```
+
+When `OLLAMA_ENABLED=false`, the API does not wait for or call Ollama. When it is `true`,
+`/readyz` remains unavailable until the three configured model tags appear in Ollama's inventory;
+the public response reports only `ai_runtime_unhealthy`, never model or provider names.
 
 The Codex build lane is not an Ollama model or a public portal runtime. It remains the controlled engineering/escalation path behind the server boundary; Ollama handles routine portal traffic. Do not add a public `codex` endpoint or expose a model/provider label to the client.
 
@@ -123,7 +127,7 @@ Superadmin and compliance operators can inspect a read-only privacy operations p
 
 Every signature-verified subscription webhook now receives a durable, sanitized receipt before processing. Successful, ignored, duplicate and failed outcomes update that receipt without retaining customer, payment method or subscription payloads. Invalid signatures are never recorded. The operations dashboard shows 24-hour event, delivery, duplicate, failure and stalled-processing counts plus provider event IDs and safe error codes for reconciliation. Receipts are retained for 90 days by default through `OPERATIONS_WEBHOOK_RECEIPT_RETENTION_DAYS`.
 
-The worker does not create database dumps itself: automatic unencrypted database dumps on the app host are not an acceptable production backup design. Use an encrypted, off-host PostgreSQL backup service with a tested restoration procedure. A superadmin or compliance operator records each verified backup through `POST /api/hub/admin/backup/verified` with its completion time, storage identifier and checksum. Future-dated completions are rejected. The worker exposes that proof on `/readyz` and marks it stale after `BACKUP_MAX_AGE_HOURS` (26 by default). Production `/readyz` returns HTTP 503 when the worker or backup is stale, while `/healthz` remains the container liveness probe so operators can still open the portal and correct readiness.
+The worker does not create database dumps itself: automatic unencrypted database dumps on the app host are not an acceptable production backup design. Use an encrypted, off-host PostgreSQL backup service with a tested restoration procedure. A superadmin or compliance operator records each verified backup through `POST /api/hub/admin/backup/verified` with its completion time, storage identifier, `sha256:` checksum, restore-verification time, and HTTPS restore-drill evidence reference. Future-dated timestamps, malformed checksums, and non-HTTPS evidence references are rejected. The worker marks readiness stale after `BACKUP_MAX_AGE_HOURS` (26 by default) or when the restore proof exceeds `BACKUP_RESTORE_MAX_AGE_DAYS` (90 by default). Public `/readyz` exposes only the overall state and safe issue codes—not backup locations, evidence references, run identifiers, or timestamps—and returns HTTP 503 when the worker or backup is unhealthy. `/healthz` remains the container liveness probe so operators can still open the portal and correct readiness.
 
 Run `pnpm --filter @mgt/api test:operations` and `pnpm --filter @mgt/api test:readiness` for worker and readiness regression checks. Checkout-request reconciliation, live webhook delivery validation, live identity-deletion validation, a live notification provider and a real restore drill still require environment-specific implementation and validation. No claim of complete production readiness is made.
 

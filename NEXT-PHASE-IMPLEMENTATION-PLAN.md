@@ -1567,6 +1567,8 @@ This checkpoint does not create Stripe Prices, connect an account, collect a pay
 **Phase F814 — final reconciliation decision:** Added the final checksum-bound reconciliation decision, stopping at `ready_for_production_reconciliation`.
 **F800–F814 local verification:** The review rejects incomplete records, changed artifacts, mismatched closeout checksums, stale timestamps, and fabricated reconciliation states. It does not deploy, publish, change traffic, or claim live production readiness without external evidence.
 
+**Phase F815 — production prerequisite packet:** Added `pnpm infra:production-prerequisites`, which records the exact candidate, validates production configuration without serializing secrets, and enumerates the remaining external prerequisites. It reports `blocked_on_configuration` until a production-shaped environment is supplied, then `blocked_on_external_prerequisites` until live evidence and approvals are observed. It does not deploy or mark production ready.
+
 **Phase F815 — release scope confirmation:** Added release-scope authorization evidence.
 **Phase F816 — release window confirmation:** Added release-window authorization evidence.
 **Phase F817 — change freeze confirmation:** Added change-freeze authorization evidence.

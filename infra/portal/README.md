@@ -253,6 +253,8 @@ Build the production reconciliation review after closeout is ready:
 
 The F800–F814 review remains `pending_production_closeout_review` until the exact closeout review is ready. It reaches only `ready_for_production_reconciliation` after GitHub/Drive receipt, candidate, staging, target, image, ownership, accessibility, backup, billing, monitoring, rollback, and final reconciliation records are present. It does not deploy, publish, change traffic, or convert local records into live production proof.
 
+The F815 prerequisite packet can be generated with `pnpm infra:production-prerequisites -- --candidate-commit <sha> --output work/production/prerequisites.json`. It validates the production-shaped environment without writing secret values and separates local configuration blockers from required live evidence and approvals.
+
 Build the production authorization review after reconciliation is ready:
 
 `pnpm infra:production-authorization-review -- --manifest work/exports/release-export.json --production-reconciliation work/exports/production-reconciliation-review.json --records work/exports/production-authorization-records.json --output work/exports/production-authorization-review.json`

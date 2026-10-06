@@ -1581,6 +1581,33 @@ This checkpoint does not create Stripe Prices, connect an account, collect a pay
 **Phase F825 — launch-approval prerequisite:** Added `pnpm infra:production-prerequisite-review`, binding ten prerequisite records and stopping at `pending_external_prerequisites` until live evidence is supplied.
 **F816–F825 local verification:** Prerequisite fixtures prove pending behavior, ten-record acceptance, mutation detection, and fabricated-ready rejection. No credentials, deployment, traffic change, or customer data was used.
 
+**Phase F826 — runtime identity:** Added `NODE_ENV` production identity evidence.
+**Phase F827 — demo isolation:** Added `DEMO_MODE=false` evidence.
+**Phase F828 — public origin:** Added HTTPS public-origin evidence.
+**Phase F829 — database URL:** Added verified-TLS database URL evidence.
+**Phase F830 — migration boundary:** Added automatic-migration disablement evidence.
+**Phase F831 — portal domain:** Added production domain evidence.
+**Phase F832 — Node image:** Added immutable Node image evidence.
+**Phase F833 — Ollama image:** Added immutable Ollama image evidence.
+**Phase F834 — Caddy image:** Added immutable Caddy image evidence.
+**Phase F835 — Supabase endpoint:** Added Supabase endpoint evidence.
+**Phase F836 — Supabase public key:** Added public-key boundary evidence.
+**Phase F837 — Supabase service key:** Added service-key boundary evidence without values.
+**Phase F838 — Ollama configuration:** Added local AI runtime configuration evidence.
+**Phase F839 — OpenClaw configuration:** Added optional orchestration boundary evidence.
+**Phase F840 — worker interval:** Added worker interval evidence.
+**Phase F841 — worker readiness:** Added worker freshness evidence.
+**Phase F842 — backup age:** Added backup-age policy evidence.
+**Phase F843 — notification delivery:** Added notification scope evidence.
+**Phase F844 — support name:** Added support-owner name evidence.
+**Phase F845 — support email:** Added support-owner route evidence.
+**Phase F846 — accessibility URL:** Added deployed accessibility-report URL evidence.
+**Phase F847 — accessibility timestamp:** Added accessibility freshness evidence.
+**Phase F848 — subscription flag:** Added subscription-scope evidence.
+**Phase F849 — terms approval:** Added conditional terms approval evidence.
+**Phase F850 — provider scope:** Added `pnpm infra:production-environment-review`, binding twenty-five environment records and stopping at `pending_prerequisite_review` until F816–F825 and live configuration are ready.
+**F826–F850 local verification:** Environment fixtures prove pending behavior, twenty-five-record acceptance, mutation detection, and fabricated-ready rejection. No secrets or live provider calls were used.
+
 **Phase F815 — release scope confirmation:** Added release-scope authorization evidence.
 **Phase F816 — release window confirmation:** Added release-window authorization evidence.
 **Phase F817 — change freeze confirmation:** Added change-freeze authorization evidence.

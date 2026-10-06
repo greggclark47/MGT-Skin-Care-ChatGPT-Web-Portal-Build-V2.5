@@ -257,6 +257,8 @@ The F815 prerequisite packet can be generated with `pnpm infra:production-prereq
 
 The F816–F825 prerequisite review can be generated with `pnpm infra:production-prerequisite-review -- --prerequisites work/production/prerequisites.json --output work/production/prerequisite-review.json`. It binds ten external prerequisite records and remains pending until live evidence is supplied.
 
+The F826–F850 environment review can be generated with `pnpm infra:production-environment-review -- --prerequisite-review work/production/prerequisite-review.json --output work/production/environment-review.json`. It binds twenty-five production runtime fields and remains pending until the prerequisite review is ready.
+
 Build the production authorization review after reconciliation is ready:
 
 `pnpm infra:production-authorization-review -- --manifest work/exports/release-export.json --production-reconciliation work/exports/production-reconciliation-review.json --records work/exports/production-authorization-records.json --output work/exports/production-authorization-review.json`

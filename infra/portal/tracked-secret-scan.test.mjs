@@ -21,10 +21,13 @@ test("allows empty, indirect, and explicit fixture configuration", () => {
 });
 
 test("detects private keys, credentialed database URLs, and unknown sensitive assignments", () => {
+  const privateKeyHeader = ["-----BEGIN ", "PRIVATE KEY-----"].join("");
+  const databaseUrl = ["postgresql://owner:", "actual-password", "@db.internal/app"].join("");
+  const tokenAssignment = ["NOTIFICATION_WEBHOOK_TOKEN", "=", "production-token-material"].join("");
   const findings = scanText([
-    "-----BEGIN PRIVATE KEY-----",
-    "postgresql://owner:actual-password@db.internal/app",
-    "NOTIFICATION_WEBHOOK_TOKEN=production-token-material"
+    privateKeyHeader,
+    databaseUrl,
+    tokenAssignment
   ].join("\n"));
   assert.deepEqual(new Set(findings.map((finding) => finding.rule)), new Set(["private_key", "credentialed_database_url", "sensitive_assignment"]));
 });

@@ -53,6 +53,26 @@ export function trackedFiles(root) {
   return result.stdout.toString("utf8").split("\0").filter(Boolean);
 }
 
+function gitBuffer(root, args, failure) {
+  const result = spawnSync("git", args, { cwd: root, encoding: "buffer", windowsHide: true, maxBuffer: 12 * 1024 * 1024 });
+  if (result.status !== 0) throw new Error(failure);
+  return result.stdout;
+}
+
+export function scanGitCommit(root, commit) {
+  if (!/^[a-f0-9]{40}$/i.test(String(commit || ""))) throw new Error("Candidate commit must be a 40-character Git SHA.");
+  const tree = gitBuffer(root, ["ls-tree", "-rz", "-l", commit], "Unable to enumerate the candidate commit for credential scanning.");
+  const findings = [];
+  for (const record of tree.toString("utf8").split("\0").filter(Boolean)) {
+    const parsed = record.match(/^\d+\s+blob\s+([a-f0-9]{40})\s+(\d+)\t([\s\S]+)$/i);
+    if (!parsed || Number(parsed[2]) > 10 * 1024 * 1024) continue;
+    const content = gitBuffer(root, ["cat-file", "blob", parsed[1]], `Unable to read ${parsed[3]} from the candidate commit.`);
+    if (content.includes(0)) continue;
+    for (const finding of scanText(content.toString("utf8"))) findings.push({ file: parsed[3].replaceAll("\\", "/"), ...finding });
+  }
+  return findings;
+}
+
 export function scanTrackedSource(root) {
   const findings = [];
   for (const relative of trackedFiles(root)) {

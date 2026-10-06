@@ -4,7 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { scanTrackedSource } from "./tracked-secret-scan.mjs";
+import { scanGitCommit } from "./tracked-secret-scan.mjs";
 
 const SHA = /^[a-f0-9]{40}$/i;
 const CHECKSUM = /^sha256:[a-f0-9]{64}$/i;
@@ -212,15 +212,17 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   const output = argumentValue(args, "--output");
   const archive = argumentValue(args, "--archive");
   const references = argumentValue(args, "--references");
+  const candidateCommitArgument = argumentValue(args, "--candidate-commit");
   if (!output) {
-    console.error("Usage: node infra/portal/release-export.mjs --output work/exports/release-export.json [--references README.md,infra/portal/README.md] [--archive work/exports/package.zip]");
+    console.error("Usage: node infra/portal/release-export.mjs --output work/exports/release-export.json [--candidate-commit <sha>] [--references README.md,infra/portal/README.md] [--archive work/exports/package.zip]");
     process.exitCode = 1;
   } else {
     try {
       const root = path.resolve(fileURLToPath(new URL("../..", import.meta.url)));
-      const credentialFindings = scanTrackedSource(root);
-      if (credentialFindings.length) throw new Error(`Tracked source credential scan found ${credentialFindings.length} potential finding(s); run tracked-secret-scan.mjs for redacted locations.`);
-      const manifest = buildReleaseExport({ root, references: references ? references.split(",") : DEFAULT_EXPORT_REFERENCES, archiveReference: archive });
+      const candidateCommit = candidateCommitArgument || gitValue(root, ["rev-parse", "HEAD"]);
+      const credentialFindings = scanGitCommit(root, candidateCommit);
+      if (credentialFindings.length) throw new Error(`Candidate commit credential scan found ${credentialFindings.length} potential finding(s); inspect the commit before export.`);
+      const manifest = buildReleaseExport({ root, candidateCommit, references: references ? references.split(",") : DEFAULT_EXPORT_REFERENCES, archiveReference: archive });
       const destination = path.resolve(root, output);
       fs.mkdirSync(path.dirname(destination), { recursive: true });
       fs.writeFileSync(destination, `${JSON.stringify(manifest, null, 2)}\n`);

@@ -1569,6 +1569,18 @@ This checkpoint does not create Stripe Prices, connect an account, collect a pay
 
 **Phase F815 — production prerequisite packet:** Added `pnpm infra:production-prerequisites`, which records the exact candidate, validates production configuration without serializing secrets, and enumerates the remaining external prerequisites. It reports `blocked_on_configuration` until a production-shaped environment is supplied, then `blocked_on_external_prerequisites` until live evidence and approvals are observed. It does not deploy or mark production ready.
 
+**Phase F816 — environment-shape review:** Added exact production environment-shape evidence.
+**Phase F817 — hosting-target review:** Added hosting, domain, TLS, and edge-target evidence.
+**Phase F818 — database-target review:** Added database target and migration-boundary evidence.
+**Phase F819 — secret-manager review:** Added secret-manager injection evidence without values.
+**Phase F820 — image-digest review:** Added immutable Node, Ollama, and Caddy digest evidence.
+**Phase F821 — backup/restore prerequisite:** Added backup and restore evidence requirements.
+**Phase F822 — support-owner prerequisite:** Added named support ownership and coverage evidence.
+**Phase F823 — accessibility prerequisite:** Added deployed accessibility-report evidence.
+**Phase F824 — rollback-authority prerequisite:** Added rollback authority and target evidence.
+**Phase F825 — launch-approval prerequisite:** Added `pnpm infra:production-prerequisite-review`, binding ten prerequisite records and stopping at `pending_external_prerequisites` until live evidence is supplied.
+**F816–F825 local verification:** Prerequisite fixtures prove pending behavior, ten-record acceptance, mutation detection, and fabricated-ready rejection. No credentials, deployment, traffic change, or customer data was used.
+
 **Phase F815 — release scope confirmation:** Added release-scope authorization evidence.
 **Phase F816 — release window confirmation:** Added release-window authorization evidence.
 **Phase F817 — change freeze confirmation:** Added change-freeze authorization evidence.

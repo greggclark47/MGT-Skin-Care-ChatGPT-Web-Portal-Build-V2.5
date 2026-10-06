@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
@@ -28,12 +29,13 @@ function parseEnvFile(filePath) {
   return values;
 }
 function externalRequirements() { return EXTERNAL_REQUIREMENTS.map(([id, requirement]) => ({ id, requirement, status: "pending_external_evidence" })); }
+export function productionPrerequisitesChecksum(document) { const { prerequisites_checksum: _ignored, ...unsigned } = document || {}; return `sha256:${createHash("sha256").update(JSON.stringify(unsigned, Object.keys(unsigned).sort())).digest("hex")}`; }
 
 export function buildProductionPrerequisites({ env = process.env, candidateCommit = "", envFile = "" } = {}) {
   const merged = { ...parseEnvFile(envFile), ...env };
   const preflight = validateEnvironment(merged);
   const config = { status: preflight.ok ? "ready_for_live_validation" : "blocked", errors: preflight.errors, warnings: preflight.warnings };
-  return {
+  const document = {
     version: VERSION,
     candidate_commit: text(candidateCommit) || null,
     generated_at: new Date().toISOString(),
@@ -42,6 +44,7 @@ export function buildProductionPrerequisites({ env = process.env, candidateCommi
     status: preflight.ok ? "blocked_on_external_prerequisites" : "blocked_on_configuration",
     next_action: preflight.ok ? "Collect the named live evidence and approvals, then run the production gate." : "Populate a production environment outside source control and rerun the preflight."
   };
+  return { ...document, prerequisites_checksum: productionPrerequisitesChecksum(document) };
 }
 
 function argumentValue(args, name) { const index = args.indexOf(name); return index >= 0 ? args[index + 1] : ""; }

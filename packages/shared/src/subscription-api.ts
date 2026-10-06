@@ -8,7 +8,8 @@ export interface PortalSubscription {
 export interface SubscriptionSnapshot {
   subscriptions: PortalSubscription[];
   entitlement: {premium: boolean; valid_until: string|null};
-  enrollment_available: false;
+  enrollment_available: boolean;
+  enrollment_path: '/membership';
 }
 export interface SubscriptionCommand {id: string; status: 'pending_confirmation'|'confirmed'}
 const messages: Record<string,string> = {
@@ -67,8 +68,8 @@ export class SubscriptionApi {
   }
   async list(): Promise<SubscriptionSnapshot> {
     const data=await this.request('');
-    if (!object(data)||!Array.isArray(data.subscriptions)||!object(data.entitlement)||typeof data.entitlement.premium!=='boolean'||!date(data.entitlement.valid_until)||data.enrollment_available!==false) throw new SubscriptionApiError('invalid_response');
-    return {subscriptions:data.subscriptions.map(subscription),entitlement:{premium:data.entitlement.premium,valid_until:data.entitlement.valid_until},enrollment_available:false};
+    if (!object(data)||!Array.isArray(data.subscriptions)||!object(data.entitlement)||typeof data.entitlement.premium!=='boolean'||!date(data.entitlement.valid_until)||typeof data.enrollment_available!=='boolean'||data.enrollment_path!=='/membership') throw new SubscriptionApiError('invalid_response');
+    return {subscriptions:data.subscriptions.map(subscription),entitlement:{premium:data.entitlement.premium,valid_until:data.entitlement.valid_until},enrollment_available:data.enrollment_available,enrollment_path:'/membership'};
   }
   async get(id: string): Promise<PortalSubscription> {const data=await this.request('/'+encodeURIComponent(id));return subscription(data?.subscription);}
   async setRenewal(id: string, cancelAtPeriodEnd: boolean, requestId: string): Promise<SubscriptionCommand> {

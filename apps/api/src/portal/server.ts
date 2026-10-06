@@ -1,4 +1,4 @@
-import {installBilling,installSubscriptionWebhook} from './billing';
+import {installBilling,installSubscriptionWebhook,subscriptionBillingConfigured} from './billing';
 import {portalV1Router,portalEntitlement,portalUsageAccount,ownEntitlement} from './subscriptions';
 import {installGuestAccess,activeGuestAccess} from './guest-access';
 import {readProfile,lockProfile,saveProfile} from './profiles';
@@ -126,7 +126,7 @@ export async function createPortal(options:PortalOptions){
   await db.tx(async r=>{await rate(r,'retailer-outbound:'+req.actor,60,3600000);await referralMetric(r,'retailer_outbound',`${id}:${segment}`);});
   res.json({recorded:true});
  });
- get('/session',async(req,res)=>{const state=await db.tx(async r=>({membership:await portalEntitlement(r,req.actor),deletion_request:req.account?await r.get('deletion_requests',req.actor)||null:null}));res.json({csrf:req.csrf,account:req.account||null,demo,auth_configured:!!(env.SUPABASE_URL&&env.SUPABASE_ANON_KEY),payments_configured:false,commerce:COMMERCE_MODEL,ai_configured:coach.configured,...state});});
+ get('/session',async(req,res)=>{const state=await db.tx(async r=>({membership:await portalEntitlement(r,req.actor),deletion_request:req.account?await r.get('deletion_requests',req.actor)||null:null}));res.json({csrf:req.csrf,account:req.account||null,demo,auth_configured:!!(env.SUPABASE_URL&&env.SUPABASE_ANON_KEY),payments_configured:false,subscription_billing_configured:subscriptionBillingConfigured(stripe,env),commerce:COMMERCE_MODEL,ai_configured:coach.configured,...state});});
  get('/catalog',async(_req,res)=>res.json({products:await db.tx(async r=>(await r.list<Product>('products')).filter(p=>p.status==='active'&&(demo||p.approved&&!p.sample))),demo}));
  get('/company',async(_req,res)=>res.json(await db.tx(r=>r.get('settings','company'))||{name:'MGT Skin Care',legal_name:null,support_email:null,affiliations:[],policies_published:false}));
  get('/profile',async(req,res)=>res.json(await db.tx(async r=>{await r.lock('profile:'+req.actor);return readProfile(r,req.actor);})));
@@ -311,8 +311,10 @@ export async function createPortal(options:PortalOptions){
  {name:'Email sign-in',configured:!!(env.SUPABASE_URL&&env.SUPABASE_ANON_KEY)},
  {name:'Account identity deletion',configured:!!(env.SUPABASE_URL&&env.SUPABASE_SERVICE_ROLE_KEY)},
  {name:'Analysis service',configured:coach.configured},
+ {name:'Subscription billing mode',configured:['true','false'].includes(String(env.STRIPE_LIVE_MODE).toLowerCase())},
  {name:'Subscription signing key',configured:!!env.STRIPE_SECRET_KEY},
  {name:'Subscription event signing',configured:!!env.STRIPE_SUBSCRIPTION_WEBHOOK_SECRET},
+ {name:'Premium billing product',configured:!!env.STRIPE_PREMIUM_PRODUCT_ID},
  ...PLAN_DEFINITIONS.flatMap(plan=>BILLING_CYCLES.map(cycle=>({name:plan.name+' '+cycle+' price',configured:!!priceIdFor(env,plan,cycle)}))),
  {name:'Subscription terms approved',configured:env.SUBSCRIPTION_TERMS_APPROVED==='true'&&!!company?.policies_published},
  {name:'Company details',configured:!!(company?.legal_name&&company?.support_email)},
@@ -389,7 +391,7 @@ export async function createPortal(options:PortalOptions){
   const current=Date.now(),windowStart=current-86400000,stalledBefore=current-10*60000;
   const receipts=(await db.tx(r=>r.list<any>('subscription_webhook_receipts'))).filter(item=>Date.parse(item.last_received_at||'')>=windowStart).map(item=>({event_id:item.id,type:item.type,status:item.status,attempts:Number(item.attempts)||0,duplicate_count:Number(item.duplicate_count)||0,first_received_at:item.first_received_at||null,last_received_at:item.last_received_at||null,processed_at:item.processed_at||null,error_code:item.status==='failed'?(item.last_error_code==='provider_error'?'service_error':item.last_error_code||'service_error'):null,stalled:item.status==='processing'&&Date.parse(item.last_received_at||'')<stalledBefore})).sort((a,b)=>(b.last_received_at||'').localeCompare(a.last_received_at||''));
   const failed=receipts.filter(item=>item.status==='failed').length,stalled=receipts.filter(item=>item.stalled).length;
-  res.json({window_hours:24,configured:!!(env.STRIPE_SECRET_KEY&&env.STRIPE_SUBSCRIPTION_WEBHOOK_SECRET),summary:{events:receipts.length,delivery_attempts:receipts.reduce((total,item)=>total+item.attempts,0),processed:receipts.filter(item=>item.status==='processed').length,ignored:receipts.filter(item=>item.status==='ignored').length,failed,stalled,duplicates:receipts.reduce((total,item)=>total+item.duplicate_count,0)},alerts:[failed?`${failed} signed subscription event${failed===1?'':'s'} failed processing`:null,stalled?`${stalled} signed subscription event${stalled===1?' is':'s are'} stalled`:null].filter(Boolean),receipts:receipts.slice(0,100),privacy_note:'Signed event identifiers, types and sanitized outcome codes only; no customer, payment method or subscription payload is returned.'});
+  res.json({window_hours:24,configured:subscriptionBillingConfigured(stripe,env),summary:{events:receipts.length,delivery_attempts:receipts.reduce((total,item)=>total+item.attempts,0),processed:receipts.filter(item=>item.status==='processed').length,ignored:receipts.filter(item=>item.status==='ignored').length,failed,stalled,duplicates:receipts.reduce((total,item)=>total+item.duplicate_count,0)},alerts:[failed?`${failed} signed subscription event${failed===1?'':'s'} failed processing`:null,stalled?`${stalled} signed subscription event${stalled===1?' is':'s are'} stalled`:null].filter(Boolean),receipts:receipts.slice(0,100),privacy_note:'Signed event identifiers, types and sanitized outcome codes only; no customer, payment method or subscription payload is returned.'});
  });
  post('/admin/backup/verified',async(req,res)=>{const user=role(req,['superadmin','compliance']);const completed_at=text(req.body.completed_at,40),location_identifier=text(req.body.location_identifier,200),checksum=text(req.body.checksum,200);const completed=Date.parse(completed_at);check(!Number.isNaN(completed)&&completed<=Date.now()+60000,400,'backup_timestamp_invalid','Provide a valid backup completion time that is not in the future.');await db.tx(async r=>{await r.put('backup_status','latest',{completed_at:new Date(completed).toISOString(),location_identifier,checksum,verified_by:user.id,verified_at:now()});await audit(r,user.id,'backup.verified',location_identifier);});res.json({saved:true});});
  post('/admin/operators/lookup',async(req,res)=>{

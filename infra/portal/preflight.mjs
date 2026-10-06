@@ -116,11 +116,24 @@ export function validateEnvironment(env) {
   if (isTrue(env.SUBSCRIPTIONS_ENABLED)) {
     if (!isTrue(env.SUBSCRIPTION_TERMS_APPROVED)) errors.push("SUBSCRIPTION_TERMS_APPROVED must be true before subscriptions are enabled.");
     for (const key of [
+      "STRIPE_LIVE_MODE",
       "STRIPE_SECRET_KEY",
       "STRIPE_SUBSCRIPTION_WEBHOOK_SECRET",
+      "STRIPE_PREMIUM_PRODUCT_ID",
       "STRIPE_PREMIUM_MONTHLY_PRICE_ID",
       "STRIPE_PREMIUM_ANNUAL_PRICE_ID"
     ]) requireValue(key);
+    const stripeLiveMode = String(env.STRIPE_LIVE_MODE || "").toLowerCase();
+    if (!["true", "false"].includes(stripeLiveMode)) errors.push("STRIPE_LIVE_MODE must be true or false when subscriptions are enabled.");
+    const secretPattern = stripeLiveMode === "true" ? /^sk_live_[A-Za-z0-9_]+$/ : /^sk_test_[A-Za-z0-9_]+$/;
+    if (!secretPattern.test(String(env.STRIPE_SECRET_KEY || ""))) errors.push(`STRIPE_SECRET_KEY must match the configured ${stripeLiveMode === "true" ? "live" : "test"} Stripe mode.`);
+    if (!/^whsec_[A-Za-z0-9_]+$/.test(String(env.STRIPE_SUBSCRIPTION_WEBHOOK_SECRET || ""))) errors.push("STRIPE_SUBSCRIPTION_WEBHOOK_SECRET must be a Stripe signing secret.");
+    if (!/^prod_[A-Za-z0-9_]+$/.test(String(env.STRIPE_PREMIUM_PRODUCT_ID || ""))) errors.push("STRIPE_PREMIUM_PRODUCT_ID must identify the approved Premium product.");
+    const monthlyPrice = String(env.STRIPE_PREMIUM_MONTHLY_PRICE_ID || "");
+    const annualPrice = String(env.STRIPE_PREMIUM_ANNUAL_PRICE_ID || "");
+    if (!/^price_[A-Za-z0-9_]+$/.test(monthlyPrice)) errors.push("STRIPE_PREMIUM_MONTHLY_PRICE_ID must be a Stripe Price ID.");
+    if (!/^price_[A-Za-z0-9_]+$/.test(annualPrice)) errors.push("STRIPE_PREMIUM_ANNUAL_PRICE_ID must be a Stripe Price ID.");
+    if (monthlyPrice && monthlyPrice === annualPrice) errors.push("Monthly and annual Premium prices must use different Stripe Price IDs.");
   } else {
     warnings.push("Subscriptions are disabled.");
   }

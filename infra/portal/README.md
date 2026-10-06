@@ -5,7 +5,7 @@ The phased build, test and production-readiness program is maintained in [`BUILD
 ## Implemented
 - Existing customer tabs use /api/hub: profile/matching, routine simplification, saved retailer destinations, reminders, knowledge, coach, session/account, and support.
 - Administration pages now call the same verified-session API. A typed user ID no longer supplies identity. Roles must be provisioned in the accounts record by an operator. No public role-grant endpoint exists.
-- One consumer Premium membership shares `/membership`, with separately configured monthly and annual Stripe Prices. Customer, checkout-attempt, and confirmed status records are isolated to that consumer membership.
+- One consumer Premium membership shares `/membership`, with one approved Stripe Product and separately configured monthly and annual Prices. Customer, checkout-attempt, and confirmed status records are isolated to that consumer membership.
 - Product checkout, partner onboarding, connected-account payouts, refunds and vendor transfers remain blocked or deferred. The partner API namespace returns a clear deferred response until commercial readiness is approved.
 - Premium enrollment remains closed without complete approval and configuration. No existing tab is paywalled, and no paid benefits are promised beyond the approved membership description.
 - The membership page no longer uses personalized plan recommendations. It presents the single Premium offer and cannot enroll or charge a customer by selection alone.
@@ -14,7 +14,7 @@ The phased build, test and production-readiness program is maintained in [`BUILD
 
 ## Stripe setup
 1. Use a Stripe sandbox/test account first. After Premium benefits, the $14.99 monthly / $149.99 annual prices, trial terms, and support ownership are approved, create the two recurring Prices.
-2. Set `STRIPE_PREMIUM_MONTHLY_PRICE_ID` and `STRIPE_PREMIUM_ANNUAL_PRICE_ID`. Keep `STRIPE_SECRET_KEY` server-side only.
+2. Set `STRIPE_LIVE_MODE=false` with sandbox keys in staging. Set `STRIPE_PREMIUM_PRODUCT_ID`, `STRIPE_PREMIUM_MONTHLY_PRICE_ID`, and `STRIPE_PREMIUM_ANNUAL_PRICE_ID`; all IDs must come from that same Stripe mode and both Prices must belong to that Product. Keep `STRIPE_SECRET_KEY` server-side only. Change `STRIPE_LIVE_MODE=true` only for an approved production launch using live IDs and secrets.
 3. The app creates a restricted customer-portal configuration for payment methods, provider invoices, end-of-period cancellation, and Premium monthly/annual changes. Set the business identity and terms URL in the Stripe account.
 4. Register /webhooks/subscriptions on the API (the included edge configuration forwards it). Subscribe to checkout.session.completed and customer.subscription.created, updated and deleted. Store its signing secret in STRIPE_SUBSCRIPTION_WEBHOOK_SECRET.
 5. Finalize company legal_name, support_email and policies_published in settings/company, then set SUBSCRIPTION_TERMS_APPROVED=true and SUBSCRIPTIONS_ENABLED=true.
@@ -132,7 +132,7 @@ Validation: API compilation, web build, existing referral suite and new billing 
 ## Trial and billing-cycle update
 New eligible Premium subscriptions use a 14-day free trial with payment_method_collection=always. The first paid billing period begins at trial end. No upfront subscription payment is collected. Trial eligibility is once per signed-in account, based on stored history and Stripe subscription history.
 
-Configure monthly and annual recurring Price IDs with the two named Premium variables listed above. Monthly Prices must recur every month and annual Prices every year, with `interval_count=1`. The approved product prices are $14.99/month and $149.99/year; no Prices have been created in this repository.
+Configure the approved Product ID and monthly and annual recurring Price IDs with the three named Premium variables listed above. Both Prices must use USD and belong to the same configured Product. Monthly Prices must recur every month and annual Prices every year, with `interval_count=1`. The approved product prices are $14.99/month and $149.99/year; no Product or Prices have been created in this repository.
 
 The app creates a restricted Stripe billing-portal configuration: cancellations at period end, payment methods and invoices enabled, and paid subscription price changes limited to Premium's configured Prices with Stripe confirmation and prorated invoicing. Trial-cycle changes use a separate authenticated endpoint, leaving trial_end untouched and creating no prorations. Trial subscriptions cannot change Prices through the billing portal because that could end a trial early. During a trial, cancellation ends access at trial end without starting the paid cycle. In a paid period, access remains until the end of that period. Payment failures can still suspend access according to subscription status.
 

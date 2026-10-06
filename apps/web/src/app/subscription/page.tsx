@@ -53,7 +53,7 @@ export default function SubscriptionPage(){
  }
  return <AppFrame title="Your subscriptions">
   <p className="lead">Review confirmed access and manage renewal from one place.</p>
-  <p>New plans and prices are still under review. Demo prices remain USD placeholders; this page cannot enroll you in a new plan.</p>
+  <p>Enrollment and plan comparison live in Plans &amp; Billing. This page only manages subscriptions already linked to your account.</p>
   <div className="actions"><button ref={refreshButton} className="button" type="button" disabled={loading||busy} onClick={reload}>Refresh status</button><Link className="text-link" href="/account">Account</Link></div>
   {loading&&<p role="status">Checking your subscriptions…</p>}
   {error&&<p id="subscription-error" className="notice error" role="alert">{error}</p>}
@@ -63,6 +63,8 @@ export default function SubscriptionPage(){
    <section className="panel" aria-labelledby="access-heading"><h2 id="access-heading">Confirmed access</h2>
     <p>{data.entitlement.premium?'Your paid access is active.':'No active paid access is confirmed.'}</p>
     {data.entitlement.valid_until&&<p>Current access period ends <Timestamp value={data.entitlement.valid_until}/>.</p>}
+    {!data.entitlement.premium&&<p>{data.enrollment_available?'Premium enrollment is available in Plans & Billing.':'Premium enrollment is currently closed while pricing, terms, and payment setup are reviewed.'}</p>}
+    <Link className="text-link" href={data.enrollment_path}>{data.enrollment_available?'Compare Free and Premium':'Review Plans & Billing'}</Link>
    </section>
    {!data.subscriptions.length&&<p className="notice">No subscriptions are linked to this signed-in account.</p>}
    {data.subscriptions.map(item=><section className="panel" key={item.id} aria-label={item.audience==='consumer'?'Personal subscription':'Business subscription'}>

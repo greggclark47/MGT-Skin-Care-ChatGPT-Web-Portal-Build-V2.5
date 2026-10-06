@@ -66,6 +66,7 @@ test("requires the complete billing contract when subscriptions are enabled", ()
   assert.equal(result.ok, false);
   assert.ok(result.errors.some((error) => error.includes("SUBSCRIPTION_TERMS_APPROVED")));
   assert.ok(result.errors.some((error) => error.startsWith("STRIPE_SECRET_KEY")));
+  assert.ok(result.errors.some((error) => error.startsWith("STRIPE_PREMIUM_PRODUCT_ID")));
   assert.ok(result.errors.some((error) => error.startsWith("STRIPE_PREMIUM_ANNUAL_PRICE_ID")));
 });
 
@@ -74,12 +75,48 @@ test("accepts the locked Premium subscription configuration", () => {
     ...production,
     SUBSCRIPTIONS_ENABLED: "true",
     SUBSCRIPTION_TERMS_APPROVED: "true",
+    STRIPE_LIVE_MODE: "true",
     STRIPE_SECRET_KEY: "sk_live_configured",
     STRIPE_SUBSCRIPTION_WEBHOOK_SECRET: "whsec_configured",
+    STRIPE_PREMIUM_PRODUCT_ID: "prod_premium",
     STRIPE_PREMIUM_MONTHLY_PRICE_ID: "price_premium_month",
     STRIPE_PREMIUM_ANNUAL_PRICE_ID: "price_premium_year"
   });
   assert.equal(result.ok, true);
+});
+
+test("accepts a complete Stripe sandbox configuration for staging", () => {
+  const result = validateEnvironment({
+    ...production,
+    SUBSCRIPTIONS_ENABLED: "true",
+    SUBSCRIPTION_TERMS_APPROVED: "true",
+    STRIPE_LIVE_MODE: "false",
+    STRIPE_SECRET_KEY: "sk_test_configured",
+    STRIPE_SUBSCRIPTION_WEBHOOK_SECRET: "whsec_configured",
+    STRIPE_PREMIUM_PRODUCT_ID: "prod_premium",
+    STRIPE_PREMIUM_MONTHLY_PRICE_ID: "price_premium_month",
+    STRIPE_PREMIUM_ANNUAL_PRICE_ID: "price_premium_year"
+  });
+  assert.equal(result.ok, true);
+});
+
+test("rejects malformed or cross-wired production billing identifiers", () => {
+  const result = validateEnvironment({
+    ...production,
+    SUBSCRIPTIONS_ENABLED: "true",
+    SUBSCRIPTION_TERMS_APPROVED: "true",
+    STRIPE_LIVE_MODE: "true",
+    STRIPE_SECRET_KEY: "sk_test_not_live",
+    STRIPE_SUBSCRIPTION_WEBHOOK_SECRET: "not-a-signing-secret",
+    STRIPE_PREMIUM_PRODUCT_ID: "price_wrong_kind",
+    STRIPE_PREMIUM_MONTHLY_PRICE_ID: "price_same",
+    STRIPE_PREMIUM_ANNUAL_PRICE_ID: "price_same"
+  });
+  assert.equal(result.ok, false);
+  assert.ok(result.errors.some((error) => error.includes("configured live Stripe mode")));
+  assert.ok(result.errors.some((error) => error.includes("signing secret")));
+  assert.ok(result.errors.some((error) => error.includes("approved Premium product")));
+  assert.ok(result.errors.some((error) => error.includes("different Stripe Price IDs")));
 });
 
 test("requires secure webhook delivery settings", () => {

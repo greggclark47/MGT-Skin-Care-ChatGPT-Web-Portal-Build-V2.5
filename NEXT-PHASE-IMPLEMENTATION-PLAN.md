@@ -89,13 +89,13 @@ Required implementation controls if subscription confirmations are approved: one
 
 **Path B Premium consolidation checkpoint:**
 
-1. The server-owned catalog now exposes exactly one consumer Premium offer, with monthly and annual Stripe Price configuration only.
-2. Membership no longer performs plan or audience selection. It preserves the existing shell, displays the Premium details, and cannot start enrollment by review alone.
-3. Checkout, trial cycle changes, the billing portal, webhook reconciliation, activity history, data export, and v1 subscription records are consumer-Premium only. Price configuration is fail-closed unless both approved Price IDs are present.
+1. The server-owned catalog now exposes one non-billable Free baseline and exactly one consumer Premium offer, with one approved Stripe Product plus monthly and annual Price configuration.
+2. Membership compares Free and Premium without turning Free into a Stripe plan. It preserves the existing shell and cannot start enrollment by review alone.
+3. Checkout, trial cycle changes, the billing portal, webhook reconciliation, activity history, data export, and v1 subscription records are consumer-Premium only. Price configuration is fail-closed unless the approved Product ID and both approved Price IDs are present and the live Price objects match the Product, USD currency, and billing intervals.
 4. Partner onboarding, connected-account payout, and partner approval endpoints are hard-deferred. The product retailer referral boundary remains unchanged.
 5. AI disclosure consent is versioned, timestamped, exportable, and revocable. The additive database migration adds consent controls and append-only protections for the existing write-once records.
 
-This checkpoint does not create Stripe Prices, connect an account, collect a payment, finalize legal terms, or change the retailer merchant-of-record boundary. Production preflight requires `STRIPE_PREMIUM_MONTHLY_PRICE_ID` and `STRIPE_PREMIUM_ANNUAL_PRICE_ID` only if subscriptions are enabled. Local checks verify the code contract; sandbox, PostgreSQL/RLS, deployed accessibility, support ownership, legal approval, and live production evidence remain required.
+This checkpoint does not create a Stripe Product or Prices, connect an account, collect a payment, finalize legal terms, or change the retailer merchant-of-record boundary. Production preflight requires explicit `STRIPE_LIVE_MODE` plus `STRIPE_PREMIUM_PRODUCT_ID`, `STRIPE_PREMIUM_MONTHLY_PRICE_ID`, and `STRIPE_PREMIUM_ANNUAL_PRICE_ID` only if subscriptions are enabled; the server key must match the selected mode. Local checks verify the code contract; sandbox, PostgreSQL/RLS, deployed accessibility, support ownership, legal approval, and live production evidence remain required.
 
 **External dependencies:** sandbox/live account, signed webhook secret, approved prices and terms, business identity/support contact, configured database and TLS origins, security/RLS review, transactional communications provider (if messaging is wanted), legal/privacy review and named reconciliation owner. Keep live charges and all retail-purchase confirmations blocked until the exact capability has approval and staging evidence.
 

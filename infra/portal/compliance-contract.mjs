@@ -34,9 +34,9 @@ export function validateComplianceContract(sources) {
   );
   add(
     "premium_price_contract",
-    ["STRIPE_PREMIUM_MONTHLY_PRICE_ID", "STRIPE_PREMIUM_ANNUAL_PRICE_ID"].every((key) => source("preflight").includes(key))
+    ["STRIPE_LIVE_MODE", "STRIPE_PREMIUM_PRODUCT_ID", "STRIPE_PREMIUM_MONTHLY_PRICE_ID", "STRIPE_PREMIUM_ANNUAL_PRICE_ID"].every((key) => source("preflight").includes(key))
       && !source("preflight").includes("STRIPE_PREMIUM_PRICE_ID"),
-    "Production preflight must require the monthly and annual Premium Price IDs, never a retired single-price variable.",
+    "Production preflight must bind Stripe mode, the Premium Product and both recurring Price IDs, never a retired single-price variable.",
   );
 
   const server = source("server");

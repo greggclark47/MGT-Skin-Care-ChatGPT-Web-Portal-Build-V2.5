@@ -4,25 +4,35 @@ import type Stripe from 'stripe';
 import type {Store} from './store';
 import {account,check,Fault,hash,wrap} from './security';
 import {confirmSubscriptionCommand} from './subscriptions';
-import {BILLING_CYCLES,PLAN_COMPARISON_ROWS,PLAN_DEFINITIONS,defaultPlan,planById,planPriceMatch,priceIdFor,recommendPlan,type BillingCycle,type PlanDefinition} from './plans';
+import {BILLING_CYCLES,FREE_ACCESS,PLAN_COMPARISON_ROWS,PLAN_DEFINITIONS,defaultPlan,planById,planPriceMatch,priceIdFor,recommendPlan,type BillingCycle,type PlanDefinition} from './plans';
+
+type PublicPrice={amount:number;currency:string;interval:string;interval_count:number};
+const productId=(price:Stripe.Price)=>typeof price.product==='string'?price.product:price.product.id;
+
+export function subscriptionBillingConfigured(stripe:Stripe|undefined,env:NodeJS.ProcessEnv){
+ return env.SUBSCRIPTIONS_ENABLED==='true'&&!!stripe&&['true','false'].includes(String(env.STRIPE_LIVE_MODE).toLowerCase())&&!!env.STRIPE_SECRET_KEY&&!!env.STRIPE_SUBSCRIPTION_WEBHOOK_SECRET&&!!env.STRIPE_PREMIUM_PRODUCT_ID&&BILLING_CYCLES.every(cycle=>!!priceIdFor(env,defaultPlan(),cycle));
+}
 export function installBilling(app:express.Express,db:Store,stripe:Stripe|undefined,env:NodeJS.ProcessEnv,origin:string){
  const selectedPlan=(value:unknown,audience:unknown):PlanDefinition=>{check(audience===undefined||audience==='consumer',400,'plan_scope','MGT offers one consumer Premium membership.');if(value!==undefined){const selected=planById(value);check(!!selected,400,'plan_missing','Premium is the available membership.');return selected!;}return defaultPlan();};
  const selectedCycle=(value:unknown):BillingCycle=>{if(value===undefined)return'monthly';check(value==='monthly'||value==='annual',400,'cycle_invalid','Choose monthly or annual billing.');return value as BillingCycle;};
  const priceId=(plan:PlanDefinition,cycle:BillingCycle)=>priceIdFor(env,plan,cycle);
- const validatePrice=(p:Stripe.Price,cycle:string)=>check(p.active&&p.unit_amount!==null&&p.recurring?.interval===(cycle==='annual'?'year':'month')&&p.recurring!.interval_count===1,503,'plan_invalid','Subscription pricing needs review.');
- const configured=()=>env.SUBSCRIPTIONS_ENABLED==='true'&&!!stripe&&BILLING_CYCLES.every(cycle=>!!priceId(defaultPlan(),cycle))&&!!env.STRIPE_SUBSCRIPTION_WEBHOOK_SECRET;
+ const validatePrice=(p:Stripe.Price,cycle:string)=>check(p.active&&p.unit_amount!==null&&p.currency==='usd'&&productId(p)===env.STRIPE_PREMIUM_PRODUCT_ID&&p.recurring?.interval===(cycle==='annual'?'year':'month')&&p.recurring!.interval_count===1,503,'plan_invalid','Subscription pricing needs review.');
+ const configured=()=>subscriptionBillingConfigured(stripe,env);
  const ready=()=>check(configured(),503,'billing_unconfigured','Subscriptions are awaiting plan and payment setup.');
  app.get('/api/hub/billing/plans',wrap(async(req,res)=>{
   const cycle=selectedCycle(req.query.cycle);
   const {profile,company}=await db.tx(async r=>({profile:await r.get<any>('profiles',req.actor),company:await r.get<any>('settings','company')}));
   const recommendation=recommendPlan(profile);
   const legalReady=env.SUBSCRIPTION_TERMS_APPROVED==='true'&&!!company?.policies_published&&!!company?.legal_name&&!!company?.support_email;
-  const plans=await Promise.all(PLAN_DEFINITIONS.map(async definition=>{
-   const id=priceId(definition,cycle);let pricing=null,pricing_status=id?'needs_review':'pending';
-   if(stripe&&id){try{const price=await stripe.prices.retrieve(id);validatePrice(price,cycle);pricing={amount:price.unit_amount,currency:price.currency,interval:price.recurring!.interval,interval_count:price.recurring!.interval_count};pricing_status='configured';}catch{pricing=null;pricing_status='needs_review';}}
-   return{id:definition.id,name:definition.name,audience:'consumer',summary:definition.summary,best_for:definition.best_for,features:definition.features,comparison:definition.comparison,provisional:false,pricing,pricing_status,enrollment_open:configured()&&legalReady&&pricing_status==='configured'};
-  }));
-  res.json({catalog_status:'release_pending',cycle,plans,comparison_rows:PLAN_COMPARISON_ROWS,recommendation:{...recommendation,method:'single_offer_v1'},notice:'Premium enrollment stays closed until its approved prices, terms, payment configuration, and release evidence are complete. Reviewing the offer never creates a charge.'});
+  const pricing_options:Partial<Record<BillingCycle,PublicPrice>>={};
+  if(stripe)for(const option of BILLING_CYCLES){const id=priceId(defaultPlan(),option);if(id)try{const price=await stripe.prices.retrieve(id);validatePrice(price,option);pricing_options[option]={amount:price.unit_amount!,currency:price.currency,interval:price.recurring!.interval,interval_count:price.recurring!.interval_count};}catch{/* Fail closed below without exposing provider details. */}}
+  const selectedPricing=pricing_options[cycle]||null;
+  const plans=PLAN_DEFINITIONS.map(definition=>({id:definition.id,name:definition.name,audience:'consumer',summary:definition.summary,best_for:definition.best_for,features:definition.features,comparison:definition.comparison,provisional:false,pricing:selectedPricing,pricing_status:priceId(definition,cycle)?selectedPricing?'configured':'needs_review':'pending',enrollment_open:configured()&&legalReady&&!!selectedPricing}));
+  const monthly=pricing_options.monthly,annual=pricing_options.annual;
+  const savings=monthly&&annual&&monthly.currency===annual.currency?Math.max(0,monthly.amount*12-annual.amount):0;
+  const annual_savings=savings&&monthly?{amount:savings,currency:monthly.currency,percent:Math.round(savings/(monthly.amount*12)*100)}:null;
+  const enrollmentOpen=plans.some(plan=>plan.enrollment_open);
+  res.json({catalog_status:enrollmentOpen?'enrollment_open':'release_pending',cycle,baseline:FREE_ACCESS,plans,comparison_rows:PLAN_COMPARISON_ROWS,pricing_options:{monthly:monthly||null,annual:annual||null,annual_savings},recommendation:{...recommendation,method:'single_offer_v1'},notice:enrollmentOpen?'Premium enrollment is available after sign-in. Reviewing the offer never creates a charge.':'Premium enrollment stays closed until its approved product, prices, terms, payment configuration, and release evidence are complete. Reviewing the offer never creates a charge.'});
  }));
  app.get('/api/hub/billing',wrap(async(req,res)=>{
   const selection=selectedPlan(req.query.plan,req.query.audience),audience='consumer';
@@ -78,7 +88,7 @@ export function installSubscriptionWebhook(app:express.Express,db:Store,stripe:S
   const received_at=new Date().toISOString();
   await db.tx(async r=>{await r.lock('subscription-receipt:'+event.id);const prior=await r.get<any>('subscription_webhook_receipts',event.id);await r.put('subscription_webhook_receipts',event.id,{id:event.id,type:event.type,status:prior?.status==='processed'?'processed':'processing',attempts:(prior?.attempts||0)+1,duplicate_count:prior?.duplicate_count||0,first_received_at:prior?.first_received_at||received_at,last_received_at:received_at,processed_at:prior?.processed_at||null,last_error_code:null});});
   try{
-   check(event.livemode===(env.STRIPE_SECRET_KEY?.startsWith('sk_live_')===true),400,'mode_mismatch','Payment mode mismatch.');
+   check(event.livemode===(env.STRIPE_LIVE_MODE==='true'),400,'mode_mismatch','Payment mode mismatch.');
    const allowed=['customer.subscription.created','customer.subscription.updated','customer.subscription.deleted','checkout.session.completed'];
    let outcome:{processed?:boolean;duplicate?:boolean;ignored?:boolean};
    if(!allowed.includes(event.type))outcome={ignored:true};

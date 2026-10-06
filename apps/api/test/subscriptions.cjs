@@ -3,7 +3,7 @@ const {test}=require('node:test');const assert=require('node:assert/strict');
 const Stripe=require('stripe');const {createPortal}=require('../dist/portal/server');const {LocalStore}=require('../dist/portal/store');
 async function fixture(t){
  const db=new LocalStore(':memory:'),signer=new Stripe('sk_test_fixture');
- const env={NODE_ENV:'test',PUBLIC_ORIGIN:'http://portal.test',SUBSCRIPTIONS_ENABLED:'true',STRIPE_SECRET_KEY:'sk_test_fixture',STRIPE_SUBSCRIPTION_WEBHOOK_SECRET:'whsec_fixture',STRIPE_PREMIUM_MONTHLY_PRICE_ID:'price_test',STRIPE_PREMIUM_ANNUAL_PRICE_ID:'price_test_year'};
+ const env={NODE_ENV:'test',PUBLIC_ORIGIN:'http://portal.test',SUBSCRIPTIONS_ENABLED:'true',STRIPE_LIVE_MODE:'false',STRIPE_SECRET_KEY:'sk_test_fixture',STRIPE_SUBSCRIPTION_WEBHOOK_SECRET:'whsec_fixture',STRIPE_PREMIUM_PRODUCT_ID:'prod_test',STRIPE_PREMIUM_MONTHLY_PRICE_ID:'price_test',STRIPE_PREMIUM_ANNUAL_PRICE_ID:'price_test_year'};
  let remote={id:'sub_private',customer:'cus_private',metadata:{kind:'mgt_subscription',actor:'user_owner:consumer',audience:'consumer'},items:{data:[{price:{id:'price_test'}}]},status:'active',cancel_at_period_end:false,current_period_end:Math.floor(Date.now()/1000)+3600},updates=0,fail=false;
  const stripe={webhooks:signer.webhooks,subscriptions:{retrieve:async()=>structuredClone(remote),update:async(_id,patch)=>{if(fail)throw Error('private upstream credential error');updates++;remote={...remote,...patch};return structuredClone(remote);}}};
  const app=await createPortal({store:db,env,stripe,verifyOtp:async email=>({id:email.startsWith('owner')?'owner':'other',email})});
@@ -24,6 +24,7 @@ test('subscriptions: session-bound list/get/entitlement; cross-account and forge
  assert.equal((await guest.call('/api/v1/subscriptions','GET',undefined,{'x-user-id':'owner'})).status,401);
  assert.equal((await other.call('/api/v1/subscriptions/'+f.id)).status,404);
  const listed=await f.owner.call('/api/v1/subscriptions');assert.equal(listed.status,200);assert.equal(listed.data.entitlement.premium,true);
+ assert.equal(listed.data.enrollment_available,false);assert.equal(listed.data.enrollment_path,'/membership');
  assert.doesNotMatch(JSON.stringify(listed.data),/stripe|supabase|revenuecat|cus_private|sub_private|price_test|user_owner/i);
  assert.deepEqual((await f.owner.call('/api/v1/entitlement')).data,listed.data.entitlement);
  assert.deepEqual((await f.owner.call('/api/hub/session')).data.membership,listed.data.entitlement);

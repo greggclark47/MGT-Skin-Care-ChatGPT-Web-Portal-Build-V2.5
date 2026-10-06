@@ -13,11 +13,15 @@ type Plan = {
   provisional: false; pricing: null | { amount: number; currency: string; interval: string };
   pricing_status: 'pending' | 'needs_review' | 'configured'; enrollment_open: boolean;
 };
+type Baseline = { id: 'free'; name: string; summary: string; features: string[]; comparison: Record<string, string> };
+type Price = NonNullable<Plan['pricing']>;
+type PricingOptions = { monthly: Price | null; annual: Price | null; annual_savings: null | { amount: number; currency: string; percent: number } };
 
 const planIds = ['premium'] as const;
 const planNames: Record<string, string> = { premium: 'Premium' };
 const isPlanId = (value: string | null): value is typeof planIds[number] => !!value && planIds.includes(value as typeof planIds[number]);
 const formatPrice = (pricing: Plan['pricing']) => pricing ? new Intl.NumberFormat(undefined, { style: 'currency', currency: pricing.currency }).format(pricing.amount / 100) + (pricing.interval === 'year' ? ' / year' : ' / month') : 'Pricing pending';
+const formatMoney = (amount: number, currency: string) => new Intl.NumberFormat(undefined, { style: 'currency', currency }).format(amount / 100);
 type BillingAction = 'discard-checkout' | 'portal' | 'trial-cycle' | 'checkout' | '';
 
 export default function Membership() {
@@ -33,6 +37,8 @@ export default function Membership() {
   const selected = useMemo<Plan | undefined>(() => catalog.data?.plans?.find((plan: Plan) => plan.id === planId), [catalog.data, planId]);
   const data = state.data?.plan_id === planId && state.data?.cycle === cycle ? state.data : null;
   const recommendation = catalog.data?.recommendation;
+  const baseline = catalog.data?.baseline as Baseline | undefined;
+  const pricingOptions = catalog.data?.pricing_options as PricingOptions | undefined;
   const currentPlanName = planNames[data?.subscription?.plan_id] || 'an earlier plan';
   const enrollmentOpen = selected?.enrollment_open === true && data?.configured === true;
   const busy = busyAction !== '';
@@ -78,8 +84,8 @@ export default function Membership() {
   }
 
   return <AppFrame title="Plans & Billing">
-    <p className="lead">Review the Premium membership and confirmed subscription activity.</p>
-    <p>Premium has one monthly and one annual rate. Retail purchases remain with external retailers.</p>
+    <p className="lead">Compare Free and Premium, then review confirmed subscription activity.</p>
+    <p>Premium has one monthly and one annual rate tied to the same approved billing product. Retail purchases remain with external retailers.</p>
 
     <fieldset className="filters flow-fieldset" disabled={busy} aria-describedby={error ? 'membership-error' : undefined}><legend className="sr-only">Billing cycle</legend>
       {(['monthly', 'annual'] as const).map(item => <button type="button" key={item} aria-pressed={cycle === item} onClick={() => { setCycle(item); setConsent(false); setNotice(''); setError(''); }}>
@@ -90,8 +96,15 @@ export default function Membership() {
     <LoadState {...catalog} retry={catalog.reload} />
     {catalog.data && <>
       <section aria-labelledby="plan-options-heading">
-        <div className="section-heading"><div><span className="eyebrow">MEMBERSHIP</span><h2 id="plan-options-heading">Premium membership</h2></div><p className="muted">Reviewing this membership never starts a subscription.</p></div>
+        <div className="section-heading"><div><span className="eyebrow">MEMBERSHIP</span><h2 id="plan-options-heading">Choose the support you need</h2></div><p className="muted">Reviewing these options never starts a subscription.</p></div>
         <div className={styles.planGrid}>
+          {baseline && <article className={styles.planCard} aria-labelledby="plan-free">
+            <div className="row"><span className="pill">No recurring charge</span></div>
+            <h3 id="plan-free">{baseline.name}</h3>
+            <p className={styles.planPrice}>$0</p>
+            <p>{baseline.summary}</p>
+            <ul>{baseline.features.map(feature => <li key={feature}>{feature}</li>)}</ul>
+          </article>}
           {catalog.data.plans.map((plan: Plan) => <article className={styles.planCard + ' ' + styles.selected} key={plan.id} aria-labelledby={'plan-' + plan.id}>
             <div className="row"><span className="pill">Premium</span></div>
             <h3 id={'plan-' + plan.id}>{plan.name}</h3>
@@ -99,14 +112,15 @@ export default function Membership() {
             <p>{plan.summary}</p>
             <p className="muted"><strong>Built for:</strong> {plan.best_for}</p>
             <ul>{plan.features.map(feature => <li key={feature}>{feature}</li>)}</ul>
+            {cycle === 'annual' && pricingOptions?.annual_savings && <p className={styles.planMatch}>Save {formatMoney(pricingOptions.annual_savings.amount, pricingOptions.annual_savings.currency)} ({pricingOptions.annual_savings.percent}%) compared with 12 monthly payments</p>}
           </article>)}
         </div>
       </section>
       {recommendation && <p className="notice" role="status"><strong>Premium membership.</strong> {recommendation.reason} It does not enroll you automatically.</p>}
       <section className="panel" aria-labelledby="comparison-heading">
-        <h2 id="comparison-heading">Premium membership details</h2>
-        <p>These details describe the available membership. Service availability remains subject to the displayed terms and account safeguards.</p>
-        <div className="table-wrap"><table><caption className="sr-only">MGT Premium membership details</caption><thead><tr><th scope="col">Capability</th>{catalog.data.plans.map((plan: Plan) => <th scope="col" key={plan.id}>{plan.name}</th>)}</tr></thead><tbody>{catalog.data.comparison_rows.map((row: { id: string; label: string }) => <tr key={row.id}><th scope="row">{row.label}</th>{catalog.data.plans.map((plan: Plan) => <td key={plan.id}>{plan.comparison[row.id]}</td>)}</tr>)}</tbody></table></div>
+        <h2 id="comparison-heading">Free and Premium comparison</h2>
+        <p>Free remains available without a subscription. Premium adds the services listed below, subject to the displayed terms and account safeguards.</p>
+        <div className="table-wrap"><table><caption className="sr-only">MGT Free and Premium membership comparison</caption><thead><tr><th scope="col">Capability</th>{baseline && <th scope="col">{baseline.name}</th>}{catalog.data.plans.map((plan: Plan) => <th scope="col" key={plan.id}>{plan.name}</th>)}</tr></thead><tbody>{catalog.data.comparison_rows.map((row: { id: string; label: string }) => <tr key={row.id}><th scope="row">{row.label}</th>{baseline && <td>{baseline.comparison[row.id]}</td>}{catalog.data.plans.map((plan: Plan) => <td key={plan.id}>{plan.comparison[row.id]}</td>)}</tr>)}</tbody></table></div>
       </section>
     </>}
 

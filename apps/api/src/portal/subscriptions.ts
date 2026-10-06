@@ -109,15 +109,22 @@ export async function confirmSubscriptionCommand(records: Records, scope: string
 export function portalV1Router(db: Store, stripe: Stripe | undefined, env: NodeJS.ProcessEnv) {
   const subscriptions = express.Router();
   subscriptions.use(wrap(async(req,_res,next) => {account(req);next();}));
-  const configured = () => env.SUBSCRIPTIONS_ENABLED === 'true' && !!stripe && !!env.STRIPE_SUBSCRIPTION_WEBHOOK_SECRET;
+  const configured = () => env.SUBSCRIPTIONS_ENABLED === 'true' && !!stripe && ['true','false'].includes(String(env.STRIPE_LIVE_MODE).toLowerCase()) && !!env.STRIPE_SECRET_KEY &&
+    !!env.STRIPE_SUBSCRIPTION_WEBHOOK_SECRET && !!env.STRIPE_PREMIUM_PRODUCT_ID &&
+    !!env.STRIPE_PREMIUM_MONTHLY_PRICE_ID && !!env.STRIPE_PREMIUM_ANNUAL_PRICE_ID;
   const writable = () => check(configured(),503,'billing_unconfigured','Subscription changes are awaiting setup.');
 
   subscriptions.get('/',wrap(async(req,res) => {
-    res.json(await db.tx(async records => ({
-      subscriptions: await Promise.all((await ownedRecords(records,req.actor)).map(item => publicSubscription(records,item,configured()))),
-      entitlement: await portalEntitlement(records,req.actor),
-      enrollment_available: false,
-    })));
+    res.json(await db.tx(async records => {
+      const company=await records.get<any>('settings','company');
+      const enrollmentAvailable=configured()&&env.SUBSCRIPTION_TERMS_APPROVED==='true'&&!!company?.policies_published&&!!company?.legal_name&&!!company?.support_email;
+      return {
+        subscriptions: await Promise.all((await ownedRecords(records,req.actor)).map(item => publicSubscription(records,item,configured()))),
+        entitlement: await portalEntitlement(records,req.actor),
+        enrollment_available: enrollmentAvailable,
+        enrollment_path: '/membership',
+      };
+    }));
   }));
 
   subscriptions.get('/commands/:id',wrap(async(req,res) => {

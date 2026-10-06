@@ -26,7 +26,7 @@ Required inputs are stored in the approved secret manager or evidence system, ne
 - A deployed accessibility report URL with a past validation timestamp.
 - An encrypted off-host backup, restore destination, checksum and restore transcript.
 - Approved container image digests and the exact release commit.
-- Optional Stripe sandbox/live approvals and Price IDs if `SUBSCRIPTIONS_ENABLED=true`.
+- Optional Stripe sandbox/live approvals, approved Product ID, and Price IDs if `SUBSCRIPTIONS_ENABLED=true`.
 - Optional AI provider/model and billing evidence if a runtime is enabled.
 
 ## 2. Candidate freeze
@@ -93,7 +93,7 @@ Subscriptions remain disabled unless every item below is approved:
 
 - Premium membership benefits, the approved monthly and annual Prices, trial, cancellation and refund language.
 - Company identity, support route, published terms and support ownership.
-- `STRIPE_PREMIUM_MONTHLY_PRICE_ID`, `STRIPE_PREMIUM_ANNUAL_PRICE_ID`, the server secret and signed webhook secret.
+- `STRIPE_LIVE_MODE`, `STRIPE_PREMIUM_PRODUCT_ID`, `STRIPE_PREMIUM_MONTHLY_PRICE_ID`, `STRIPE_PREMIUM_ANNUAL_PRICE_ID`, the matching server secret and signed webhook secret. Both Prices must resolve to the configured Product. Staging uses test mode; an approved production launch uses live mode.
 - Sandbox Checkout, decline, trial, renewal, cancellation, portal, replayed event, ownership and entitlement evidence.
 - Reconciliation and rollback procedure for failed or stalled events.
 

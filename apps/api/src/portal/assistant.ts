@@ -1,10 +1,10 @@
 import {check} from './security';
-import {screenInput} from './ai';
+import {screenInputResult,type InputScreening} from './ai';
 
 export const ASSISTANT_ROLES=['customer_care','onboarding','routine_guidance','product_referral'] as const;
 export type AssistantRole=typeof ASSISTANT_ROLES[number];
 type NextStep={label:string;path:string}|null;
-type Guidance={role:AssistantRole;kind:'guidance'|'handoff';category:string;text:string;citations:[];next_step:NextStep};
+type Guidance={role:AssistantRole;kind:'guidance'|'handoff';category:string;text:string;citations:[];next_step:NextStep;escalate?:boolean;escalation_type?:InputScreening['escalation_type'];further_coach_disabled?:boolean};
 type Reviewed={role:AssistantRole;kind:'reviewed_ai';category:'routine'|'product_education'};
 
 const guidance=(role:AssistantRole,kind:Guidance['kind'],category:string,text:string,next_step:NextStep):Guidance=>
@@ -17,8 +17,8 @@ const onboarding=(role:AssistantRole)=>guidance(role,'guidance','onboarding',onb
 export function routeAssistantRequest(roleInput:unknown,message:string):Guidance|Reviewed{
  check(typeof roleInput==='string'&&ASSISTANT_ROLES.includes(roleInput as AssistantRole),400,'assistant_role_invalid','Choose a supported help topic.');
  const role=roleInput as AssistantRole;
- const safety=screenInput(message);
- if(safety)return guidance(role,'handoff','safety',safety,null);
+ const safety=screenInputResult(message);
+ if(safety)return{...guidance(role,'handoff','safety',safety.text,null),escalate:safety.escalate,escalation_type:safety.escalation_type,further_coach_disabled:safety.further_coach_disabled};
 
  if(/\b(subscription|membership|billing plan|mgt plan)\b/i.test(message))
   return guidance(role,'handoff','mgt_billing','I cannot verify an MGT charge or payment here. Review Plans & Billing for your account status. If it differs from your provider record, save a Portal Support request.',{label:'Review Plans & Billing',path:'/membership'});

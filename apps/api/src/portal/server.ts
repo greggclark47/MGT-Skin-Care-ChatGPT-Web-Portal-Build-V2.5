@@ -9,7 +9,7 @@ import {SKIN_TYPES,SKIN_CONCERNS,SKIN_SENSITIVITY,AGE_BANDS,ROUTINE_LEVELS,DESIR
 import {LocalStore,PgStore,startupMigrations,type Store,type Records} from './store';
 import {check,Fault,hash,token,text,wrap,sessionMiddleware,rate,account,role,type HubRequest,type Session} from './security';
 import {initializeCatalog,match,quote,type Product} from './catalog';
-import {SafeCoach,gatewayFromEnv,StoreBudgetStore,StoreRoutingLogSink,screenInput,type Knowledge} from './ai';
+import {SafeCoach,gatewayFromEnv,StoreBudgetStore,StoreRoutingLogSink,screenInput,screenInputResult,type Knowledge} from './ai';
 import {ASSISTANT_ROLES,routeAssistantRequest} from './assistant';
 import type {AiGateway} from '@mgt/ai-gateway';
 import Stripe from 'stripe';
@@ -223,7 +223,7 @@ export async function createPortal(options:PortalOptions){
   const answer=await coach.answer(message,access.articles,access.usage.actor,access.premium);await db.tx(r=>audit(r,req.actor,'coach.answer','prompt-v2.1'));return answer;
  };
  post('/coach',async(req,res)=>{
-  const message=text(req.body.message,1800);const refusal=screenInput(message);if(refusal)return res.json({kind:'guidance',text:refusal,citations:[]});
+  const message=text(req.body.message,1800);const screening=screenInputResult(message);if(screening)return res.json({kind:'guidance',...screening,citations:[]});
   res.json(await reviewedAnswer(req,message));
  });
  post('/assistant',async(req,res)=>{

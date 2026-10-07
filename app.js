@@ -146,72 +146,43 @@ function updateDeletionDemo() {
 
 const membershipPlans = [
   {
-    id: "essential",
-    name: "Essential",
-    monthly: 49,
-    annual: 529,
-    audience: "For a simple, consistent care rhythm.",
-    usage: "250 requests / month",
-    overage: "$19 for each 100-request pack",
-    depth: "Focused guidance",
-    length: "Concise action plan",
-    turnaround: "Standard turnaround",
-    concurrency: "1 active request · 1 profile",
-    confidence: "Clear, grounded recommendations for everyday decisions.",
-    upgrade: "Unlock a more connected view of your routine."
+    id: "free",
+    name: "Free",
+    audience: "Core tools for a clear skincare starting point.",
+    price: "$0",
+    billing: "No recurring charge",
+    features: ["Skin Match and saved profile", "Core routine planning", "Reviewed skincare education"],
+    action: "Explore Free",
+    popular: false
   },
   {
-    id: "guided",
-    name: "Guided",
-    monthly: 129,
-    annual: 1390,
-    audience: "For regular routines with more context and momentum.",
-    usage: "900 requests / month",
-    overage: "$59 for each 250-request pack",
-    depth: "Connected routine review",
-    length: "Full explanation and options",
-    turnaround: "Priority turnaround",
-    concurrency: "2 active requests · 3 profiles",
-    confidence: "Higher-confidence connected review for recurring routines.",
-    upgrade: "Unlock the highest depth for detailed, multi-part decisions.",
+    id: "premium",
+    name: "Premium",
+    audience: "Connected guidance for an ongoing care routine.",
+    price: "Price pending approval",
+    billing: "One product · approved monthly or annual rate",
+    features: ["Personalized ongoing routine guidance", "Premium Skin Coach guidance with safeguards", "One trusted guest invitation"],
+    action: "Preview Premium",
     popular: true
-  },
-  {
-    id: "studio",
-    name: "Studio",
-    monthly: 349,
-    annual: 3690,
-    audience: "For detailed planning, comparisons, and high-volume care work.",
-    usage: "2,500 requests / month",
-    overage: "$159 for each 750-request package",
-    depth: "Deep multi-signal review",
-    length: "Expanded plan and comparison",
-    turnaround: "Fastest available turnaround",
-    concurrency: "4 active requests · 10 profiles",
-    confidence: "Highest available depth for detailed, multi-part decisions.",
-    upgrade: "Unlock volume solutions as your care work grows."
   }
 ];
 
 function renderPricing() {
   const grid = $("#pricingGrid");
   if (!grid) return;
-  const annual = state.billing === "annual";
   grid.innerHTML = membershipPlans.map((plan) => {
-    const price = annual ? plan.annual : plan.monthly;
-    const savings = plan.monthly * 12 - plan.annual;
-    const billingNote = annual
-      ? `Billed annually in USD · Save $${savings}`
-      : "Billed monthly in USD · Change any time";
+    const billingNote = plan.id === "premium"
+      ? `${state.billing === "annual" ? "Annual" : "Monthly"} billing · ${plan.billing}`
+      : plan.billing;
     return `<article class="pricing-card${plan.popular ? " popular" : ""}">
-      ${plan.popular ? '<span class="popular-badge">Most popular</span>' : ""}
+      ${plan.popular ? '<span class="popular-badge">ONE PAID MEMBERSHIP</span>' : ""}
       <p class="pricing-tier">${plan.name}</p>
       <h3>${plan.audience}</h3>
-      <p class="price"><span>$${price}</span> <small>/${annual ? "year" : "month"}</small></p>
+      <p class="price"><span>${plan.price}</span></p>
       <p class="billing-note">${billingNote}</p>
-      <button class="${plan.popular ? "primary-button" : "secondary-button"} plan-button" data-pricing-action="select" data-tier="${plan.id}" type="button">Choose ${plan.name} <span>→</span></button>
-      <dl class="plan-details"><div><dt>Included usage</dt><dd>${plan.usage}</dd></div><div><dt>When you need more</dt><dd>${plan.overage}</dd></div><div><dt>Output</dt><dd>${plan.depth}<br>${plan.length}</dd></div><div><dt>Speed + focus</dt><dd>${plan.turnaround}<br>${plan.concurrency}</dd></div><div><dt>Confidence</dt><dd>${plan.confidence}</dd></div></dl>
-      <p class="upgrade-note"><b>Upgrading unlocks:</b> ${plan.upgrade}</p>
+      <button class="${plan.popular ? "primary-button" : "secondary-button"} plan-button" data-pricing-action="select" data-tier="${plan.id}" type="button">${plan.action} <span>→</span></button>
+      <ul class="plan-feature-list">${plan.features.map((feature) => `<li>${feature}</li>`).join("")}</ul>
+      <p class="upgrade-note"><b>${plan.id === "premium" ? "Enrollment gate:" : "Access boundary:"}</b> ${plan.id === "premium" ? "Disabled until approved pricing, terms, support, and signed-event verification are complete." : "No billing customer or subscription is created."}</p>
     </article>`;
   }).join("");
 }
@@ -637,7 +608,7 @@ document.addEventListener("click", (event) => {
   const planChoice = event.target.closest("[data-pricing-action='select']");
   if (planChoice) {
     const plan = membershipPlans.find((item) => item.id === planChoice.dataset.tier);
-    if (plan) showToast(`${plan.name} selected in this demo. Secure enrollment will be connected in the production release.`);
+    if (plan) showToast(plan.id === "premium" ? "Premium preview selected. Enrollment remains disabled until production readiness is approved." : "Free access preview selected. No billing record was created.");
     return;
   }
 
@@ -787,7 +758,7 @@ if ("IntersectionObserver" in window) {
     if (!visible) return;
     navLinks.forEach((link) => link.classList.toggle("active", link.getAttribute("href") === `#${visible.target.id}`));
   }, { rootMargin: "-30% 0px -60% 0px", threshold: [0, .2, .6] });
-  ["home", "applications", "plans", "shop", "operations", "account"].forEach((id) => observer.observe(document.getElementById(id)));
+  ["home", "applications", "flows", "plans", "shop", "operations", "account"].forEach((id) => observer.observe(document.getElementById(id)));
 }
 
 activateConsolePanel("privacy");

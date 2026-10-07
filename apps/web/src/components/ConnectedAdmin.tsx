@@ -33,9 +33,10 @@ function RefreshButton({ children, loading, onClick }: { children: React.ReactNo
 
 function Readiness() {
   const state = useHub('/admin/readiness');
+  const phaseName = (value: string) => ({data_identity:'Data & identity',operations_recovery:'Operations & recovery',ai_quality:'AI & quality',billing_commercial:'Billing & commercial',support_accessibility:'Support & accessibility'} as Record<string,string>)[value] || label(value);
   return <><section className="panel" aria-labelledby="launch-setup-heading" aria-busy={state.loading}>
-    <h2 id="launch-setup-heading">Launch setup</h2><LoadState {...state} retry={state.reload}/>
-    {state.data && <><p>{state.data.note}</p><dl className="profile-details">{state.data.checks.map((c: any) => <div key={c.name}><dt>{c.name}</dt><dd>{c.configured ? 'Configured' : 'Needs setup'}</dd></div>)}</dl><RefreshButton loading={state.loading} onClick={state.reload}>Refresh checks</RefreshButton></>}
+    <h2 id="launch-setup-heading">Production phase readiness</h2><LoadState {...state} retry={state.reload}/>
+    {state.data && <><p>{state.data.note}</p>{state.data.phases?.map((phase:any)=><section className="readiness-phase" key={phase.id} aria-labelledby={'readiness-'+phase.id}><div className="row"><h3 id={'readiness-'+phase.id}>{phaseName(phase.id)}</h3><span className={'pill '+(phase.status==='ready'?'success':'')}>{phase.status==='ready'?'Ready':'Blocked'} · {phase.ready}/{phase.total}</span></div>{phase.blockers.length?<ul className="compact-list">{phase.blockers.map((blocker:string)=><li key={blocker}>{blocker}</li>)}</ul>:<p className="muted">All repository-visible checks in this phase are currently satisfied.</p>}</section>)}<details><summary>View individual checks</summary><dl className="profile-details">{state.data.checks.map((c: any) => <div key={c.name}><dt>{c.name}<small className="muted"> · {c.evidence}</small></dt><dd>{c.configured ? 'Ready' : 'Blocked'}</dd></div>)}</dl></details><RefreshButton loading={state.loading} onClick={state.reload}>Refresh phase readiness</RefreshButton></>}
   </section><CatalogHealth/></>;
 }
 

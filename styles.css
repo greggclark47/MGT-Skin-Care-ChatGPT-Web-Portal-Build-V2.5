@@ -113,12 +113,22 @@ h1 i, h2 i { color: var(--purple); font-style: normal; font-weight: 400; }
 .approach-steps h3 { margin: 0; font-size: 1.05rem; }
 .approach-steps p { margin: 6px 0 0; font-size: .92rem; }
 
+.flow-map-section { border-top: 1px solid var(--border); }
+.flow-map-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 14px; }
+.flow-map-grid article { min-height: 220px; padding: 24px; border: 1px solid var(--border); border-radius: 18px; background: linear-gradient(145deg,var(--panel),var(--surface)); }
+.flow-map-grid article > span { color: var(--purple); font: .66rem "DM Mono"; letter-spacing: .08em; }
+.flow-map-grid h3 { margin: 16px 0 10px; font: 600 1.3rem Fraunces,Georgia,serif; }
+.flow-map-grid p { color: var(--muted); font-size: .84rem; line-height: 1.65; }
+.flow-map-grid small { display: block; margin-top: 18px; color: var(--aqua); font: .66rem "DM Mono"; text-transform: uppercase; }
+.flow-boundary { display: flex; gap: 18px; margin-top: 16px; padding: 18px 22px; border-left: 3px solid var(--orange); border-radius: 8px; background: var(--surface); }
+.flow-boundary span { color: var(--muted); font-size: .83rem; }
+
 .pricing-section { position: relative; }
 .billing-control { display: inline-flex; gap: 4px; margin: -11px 0 24px; padding: 4px; border: 1px solid var(--border); border-radius: 999px; background: var(--surface); }
 .billing-toggle-button { min-height: 36px; padding: 0 12px; color: var(--muted); border: 0; border-radius: 999px; background: transparent; cursor: pointer; font-size: .78rem; font-weight: 650; }
 .billing-toggle-button.active { color: var(--text); background: var(--tint); box-shadow: inset 0 0 0 1px #a77dd7; }
 .billing-toggle-button span { margin-left: 4px; color: var(--aqua); font: .63rem "DM Mono"; }
-.pricing-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; align-items: stretch; }
+.pricing-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 16px; align-items: stretch; max-width: 900px; }
 .pricing-card { position: relative; display: flex; flex-direction: column; min-width: 0; padding: 27px 24px 23px; border: 1px solid var(--border); border-radius: 20px; background: var(--panel); box-shadow: var(--soft-shadow); }
 .pricing-card.popular { border-color: #a77dd7; background: linear-gradient(180deg,#1d1731 0%,var(--panel) 28%); box-shadow: 0 16px 45px #5e2eb329; }
 .popular-badge { position: absolute; top: -12px; left: 23px; padding: 5px 9px; color: #1a1027; border-radius: 999px; background: var(--purple); font: 700 .62rem "DM Mono"; letter-spacing: .04em; text-transform: uppercase; }
@@ -133,6 +143,7 @@ h1 i, h2 i { color: var(--purple); font-style: normal; font-weight: 400; }
 .plan-details div { padding: 12px 0; border-bottom: 1px solid var(--border); }
 .plan-details dt { margin-bottom: 3px; color: var(--purple); font: .62rem "DM Mono"; letter-spacing: .06em; text-transform: uppercase; }
 .plan-details dd { margin: 0; color: var(--text); font-size: .78rem; line-height: 1.5; }
+.plan-feature-list { display: grid; gap: 10px; margin: 0 0 22px; padding: 18px 0 0 20px; border-top: 1px solid var(--border); color: var(--text); font-size: .82rem; }
 .upgrade-note { margin: auto 0 0; padding-top: 17px; color: var(--muted); font-size: .76rem; line-height: 1.55; }
 .upgrade-note b { color: var(--text); }
 .pricing-note { max-width: 720px; margin: 17px 0 27px; color: var(--muted); font-size: .8rem; }
@@ -507,7 +518,7 @@ body.has-compare .toast { bottom: 105px; }
   .hero { padding-top: 34px; }
   .editorial-card { max-width: 650px; }
   .approach-panel { grid-template-columns: 1fr; gap: 14px; }
-  .pricing-grid { grid-template-columns: 1fr; max-width: 590px; }
+  .pricing-grid, .flow-map-grid { grid-template-columns: 1fr; max-width: 590px; }
   .pricing-card h3 { min-height: auto; }
   .shop-layout { grid-template-columns: 1fr; }
   .filters { padding-right: 0; border-right: 0; }
@@ -576,6 +587,7 @@ body.has-compare .toast { bottom: 105px; }
   .dialog-head, .dialog-body { padding-right: 19px; padding-left: 19px; }
   .flow-options { grid-template-columns: 1fr; }
   .guest-mode-grid { grid-template-columns: 1fr; }
+  .flow-boundary { align-items: flex-start; flex-direction: column; }
 }
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }

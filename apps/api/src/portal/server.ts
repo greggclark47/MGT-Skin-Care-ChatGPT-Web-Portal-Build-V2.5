@@ -29,6 +29,14 @@ const SUPPORT_STATUSES=['open','in_review','waiting_customer','closed'] as const
 const ESCALATION_REASONS=['content_safety','account_privacy','billing_scope','retailer_purchase','technical_issue','specialist_review','other'] as const;
 const ASSISTANT_NEXT_STEPS=['/skin-match','/membership','/orders','/shop','/account','/support'] as const;
 const AI_DISCLOSURE_VERSION='2026-09-29';
+type ReadinessCheck={name:string;configured:boolean;phase:string;evidence:'configuration'|'runtime'};
+function readinessPhases(checks:ReadinessCheck[]){
+ const order=['data_identity','operations_recovery','ai_quality','billing_commercial','support_accessibility'];
+ return order.map(id=>{
+  const phaseChecks=checks.filter(check=>check.phase===id),blocked=phaseChecks.filter(check=>!check.configured);
+  return{id,status:blocked.length?'blocked':'ready',ready:phaseChecks.length-blocked.length,total:phaseChecks.length,blockers:blocked.map(check=>check.name)};
+ });
+}
 const routeLabel=(task:unknown)=>({coach_answer:'Guided answers',operator_analysis:'Complex review',product_why:'Product explanations',coach_routine_command:'Routine guidance',routine_optimization_deep:'Deep routine review',premium_consultation:'Premium consultation',vision_attributes:'Visual attributes',embed:'Knowledge indexing'} as Record<string,string>)[String(task)]||'Other analysis';
 const validOperatorRoles=(value:unknown):value is string[]=>Array.isArray(value)&&value.length<=OPERATOR_ROLES.length&&value.every((item:unknown)=>typeof item==='string'&&OPERATOR_ROLES.includes(item as typeof OPERATOR_ROLES[number]))&&new Set(value).size===value.length;
 function publicOrder(order:any){
@@ -309,20 +317,38 @@ export async function createPortal(options:PortalOptions){
  post('/account/deletion-request',async(req,res)=>{const user=account(req);check(req.body.confirm===true,400,'confirm_required','Please confirm the deletion request.');const request=await db.tx(async r=>{await r.lock('account-deletion:'+hash(req.actor));const existing=await r.get<any>('deletion_requests',req.actor);if(existing?.status==='processing')throw new Fault(409,'deletion_in_progress','Account deletion is already in progress.');if(existing?.status==='pending'){const normalized={...existing,request_id:existing.request_id||randomUUID(),user_id:existing.user_id||user.id};await r.put('deletion_requests',req.actor,normalized);return normalized;}const requested_at=now(),created={request_id:randomUUID(),actor:req.actor,user_id:user.id,requested_at,status:'pending',not_before:new Date(Date.now()+30*86400000).toISOString(),attempts:0};await r.put('deletion_requests',req.actor,created);await audit(r,req.actor,'account.deletion_requested','self');return created;});res.json({requested:true,request});});
  post('/account/deletion-cancel',async(req,res)=>{account(req);check(req.body.confirm===true,400,'confirm_required','Please confirm cancellation of the deletion request.');await db.tx(async r=>{await r.lock('account-deletion:'+hash(req.actor));const request=await r.get<any>('deletion_requests',req.actor);check(request,404,'deletion_request_missing','No deletion request was found.');check(request.status==='pending',409,'deletion_in_progress','Account deletion is already in progress and cannot be cancelled.');await audit(r,req.actor,'account.deletion_cancelled','self');await r.remove('deletion_requests',req.actor);});res.json({cancelled:true});});
  // Admin identity is the verified session account. No client headers or role claims are trusted.
- get('/admin/readiness',async(req,res)=>{role(req,['superadmin','compliance']);const {company,backup}=await db.tx(async r=>({company:await r.get('settings','company'),backup:await r.get<any>('operations','backup_health')}));res.json({checks:[
- {name:'Production database',configured:db.kind==='postgres'},
- {name:'Email sign-in',configured:!!(env.SUPABASE_URL&&env.SUPABASE_ANON_KEY)},
- {name:'Account identity deletion',configured:!!(env.SUPABASE_URL&&env.SUPABASE_SERVICE_ROLE_KEY)},
- {name:'Analysis service',configured:coach.configured},
- {name:'Subscription billing mode',configured:['true','false'].includes(String(env.STRIPE_LIVE_MODE).toLowerCase())},
- {name:'Subscription signing key',configured:!!env.STRIPE_SECRET_KEY},
- {name:'Subscription event signing',configured:!!env.STRIPE_SUBSCRIPTION_WEBHOOK_SECRET},
- {name:'Premium billing product',configured:!!env.STRIPE_PREMIUM_PRODUCT_ID},
- ...PLAN_DEFINITIONS.flatMap(plan=>BILLING_CYCLES.map(cycle=>({name:plan.name+' '+cycle+' price',configured:!!priceIdFor(env,plan,cycle)}))),
- {name:'Subscription terms approved',configured:env.SUBSCRIPTION_TERMS_APPROVED==='true'&&!!company?.policies_published},
- {name:'Company details',configured:!!(company?.legal_name&&company?.support_email)},
-  {name:'Subscriptions enabled',configured:env.SUBSCRIPTIONS_ENABLED==='true'},
-  {name:'Verified encrypted backup',configured:backup?.status==='healthy'}],backup,note:'Configuration presence only. Live service and deployment checks are still required.'});});
+ get('/admin/readiness',async(req,res)=>{
+  role(req,['superadmin','compliance']);
+  const [{company,backup,runs},aiRuntime]=await Promise.all([
+   db.tx(async r=>({company:await r.get('settings','company'),backup:await r.get<any>('operations','backup_health'),runs:await r.entries<any>('operation_runs')})),
+   aiRuntimeReadiness(env)
+  ]);
+  const workerInterval=Math.max(15,Math.min(3600,Number(env.WORKER_INTERVAL_SECONDS)||60));
+  const maxAge=Math.max(60,Math.min(10800,Number(env.WORKER_READINESS_MAX_AGE_SECONDS)||Math.max(300,workerInterval*3)))*1000;
+  const operations=operationalReadiness(backup,runs,Date.now(),maxAge);
+  const supportOwner=typeof env.SUPPORT_OWNER_NAME==='string'&&env.SUPPORT_OWNER_NAME.trim().length>=2&&typeof env.SUPPORT_OWNER_EMAIL==='string'&&/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(env.SUPPORT_OWNER_EMAIL);
+  const accessibilityEvidence=typeof env.ACCESSIBILITY_VALIDATION_REPORT_URL==='string'&&/^https:\/\//.test(env.ACCESSIBILITY_VALIDATION_REPORT_URL)&&typeof env.ACCESSIBILITY_VALIDATED_AT==='string'&&!Number.isNaN(Date.parse(env.ACCESSIBILITY_VALIDATED_AT))&&Date.parse(env.ACCESSIBILITY_VALIDATED_AT)<=Date.now();
+  const checks:ReadinessCheck[]=[
+   {name:'Production database',configured:db.kind==='postgres',phase:'data_identity',evidence:'runtime'},
+   {name:'Email sign-in',configured:!!(env.SUPABASE_URL&&env.SUPABASE_ANON_KEY),phase:'data_identity',evidence:'configuration'},
+   {name:'Account identity deletion',configured:!!(env.SUPABASE_URL&&env.SUPABASE_SERVICE_ROLE_KEY),phase:'data_identity',evidence:'configuration'},
+   {name:'Operations worker heartbeat',configured:!operations.issues.includes('operations_worker_stale'),phase:'operations_recovery',evidence:'runtime'},
+   {name:'Verified encrypted backup and restore',configured:!operations.issues.includes('backup_unhealthy'),phase:'operations_recovery',evidence:'runtime'},
+   {name:'Analysis service',configured:coach.configured,phase:'ai_quality',evidence:'configuration'},
+   {name:'Analysis runtime inventory',configured:aiRuntime.healthy,phase:'ai_quality',evidence:'runtime'},
+   {name:'Subscription billing mode',configured:['true','false'].includes(String(env.STRIPE_LIVE_MODE).toLowerCase()),phase:'billing_commercial',evidence:'configuration'},
+   {name:'Subscription signing key',configured:!!env.STRIPE_SECRET_KEY,phase:'billing_commercial',evidence:'configuration'},
+   {name:'Subscription event signing',configured:!!env.STRIPE_SUBSCRIPTION_WEBHOOK_SECRET,phase:'billing_commercial',evidence:'configuration'},
+   {name:'Premium billing product',configured:!!env.STRIPE_PREMIUM_PRODUCT_ID,phase:'billing_commercial',evidence:'configuration'},
+   ...PLAN_DEFINITIONS.flatMap(plan=>BILLING_CYCLES.map(cycle=>({name:plan.name+' '+cycle+' price',configured:!!priceIdFor(env,plan,cycle),phase:'billing_commercial',evidence:'configuration' as const}))),
+   {name:'Subscription terms approved',configured:env.SUBSCRIPTION_TERMS_APPROVED==='true'&&!!company?.policies_published,phase:'billing_commercial',evidence:'configuration'},
+   {name:'Subscriptions enabled',configured:env.SUBSCRIPTIONS_ENABLED==='true',phase:'billing_commercial',evidence:'configuration'},
+   {name:'Company legal and support details',configured:!!(company?.legal_name&&company?.support_email),phase:'support_accessibility',evidence:'configuration'},
+   {name:'Accountable support owner',configured:supportOwner,phase:'support_accessibility',evidence:'configuration'},
+   {name:'Deployed accessibility evidence',configured:accessibilityEvidence,phase:'support_accessibility',evidence:'runtime'}
+  ];
+  res.json({checks,phases:readinessPhases(checks),operations:{healthy:operations.healthy,issues:operations.issues},ai_runtime:{enabled:aiRuntime.enabled,healthy:aiRuntime.healthy},backup,note:'Configuration and runtime signals are grouped by production phase. External service qualification and human approval remain separate release evidence.'});
+ });
   get('/admin/catalog-health',async(req,res)=>{
    role(req,['superadmin','catalog_editor','sme','compliance','viewer']);
    const requiredSlots=['cleanser','treatment','moisturizer','sunscreen'];

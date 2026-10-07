@@ -1,8 +1,10 @@
 # MGT Skin Care v2
 
+Current production gap and end-to-end flow analysis: [PRODUCTION-GAP-AND-FLOW-ANALYSIS-2026-10-07.md](PRODUCTION-GAP-AND-FLOW-ANALYSIS-2026-10-07.md).
+
 Consumer skincare application (web + iOS + Android) — personalized routine matching,
-explainable AI-assisted recommendations, and multi-brand commerce with subscription
-replenishment.
+explainable AI-assisted guidance, external-retailer discovery, and an optional Premium
+portal membership. MGT product checkout and vendor payouts are outside the initial scope.
 
 ## Source of truth
 `claude/skincare-master-blueprint-v2.md` (v2.0.2) is the canonical build specification:

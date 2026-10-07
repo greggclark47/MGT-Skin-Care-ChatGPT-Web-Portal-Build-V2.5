@@ -70,7 +70,15 @@ test("static demo exposes the current release and ship-packet surface", () => {
   assert.match(html, /Ship authorization: blocked/);
   assert.match(html, /aria-label="MGT Skin Care home"/);
   assert.match(html, /class="brand-mark-image" src="mgt-mark\.svg"/);
-  assert.match(html, /<small class="build-version">v2\.10<\/small>/);
+  assert.match(html, /<small class="build-version">v2\.11<\/small>/);
+  assert.match(html, /id="flows"/);
+  assert.match(html, /Six controlled service paths/);
+  assert.match(html, /Free \+ Premium/);
+  assert.match(html, /signed billing event is reconciled/);
+  assert.match(html, /No MGT product checkout/);
+  assert.doesNotMatch(html, /<th scope="col">Essential<\/th>/);
+  assert.doesNotMatch(html, /<th scope="col">Guided<\/th>/);
+  assert.doesNotMatch(html, /<th scope="col">Studio<\/th>/);
 });
 
 test("static demo keeps the ship packet interactive and clearly sample-only", () => {
@@ -140,4 +148,10 @@ test("static demo has responsive ship-packet styling", () => {
   assert.match(styles, /\.acceptance-grid/);
   assert.match(styles, /\.certification-grid/);
   assert.match(styles, /\.shipauth-grid/);
+  assert.match(styles, /\.flow-map-grid/);
+  assert.match(script, /id: "free"/);
+  assert.match(script, /id: "premium"/);
+  assert.doesNotMatch(script, /id: "essential"/);
+  assert.doesNotMatch(script, /id: "guided"/);
+  assert.doesNotMatch(script, /id: "studio"/);
 });

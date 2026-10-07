@@ -2,7 +2,7 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs/promises');
 const path=require('node:path');
 const {LocalStore}=require('../dist/portal/store.js');
-const {OperationalWorker,InAppNotificationDelivery,aiRuntimeReadiness,operationalReadiness,operationalSnapshot,writeWorkerHeartbeat}=require('../dist/portal/operations.js');
+const {OperationalWorker,InAppNotificationDelivery,aiRuntimeReadiness,operationalReadiness,operationalSnapshot,operationsAlertDeliveryFromEnv,writeWorkerHeartbeat}=require('../dist/portal/operations.js');
 
 (async()=>{
  const store=new LocalStore(':memory:');
@@ -79,6 +79,16 @@ const {OperationalWorker,InAppNotificationDelivery,aiRuntimeReadiness,operationa
  },at,24);
  assert.equal(snapshot.healthy,false);assert.equal(snapshot.notifications.oldest_pending_minutes,20);assert.equal(snapshot.deletions.blocked,1);assert.equal(snapshot.support.overdue,1);assert.equal(snapshot.worker.delivery_failures_24h,2);assert.equal(snapshot.subscriptions.stalled,1);assert(snapshot.alerts.includes('notification_queue_aging'));assert(snapshot.alerts.includes('support_response_target_missed'));
  const clearSnapshot=operationalSnapshot({notifications:[],deletions:[],tickets:[],runs:[],webhooks:[]},at,24);assert.equal(clearSnapshot.healthy,true);assert.deepEqual(clearSnapshot.alerts,[]);
+ assert.equal(operationsAlertDeliveryFromEnv({OPERATIONS_ALERT_DELIVERY:'disabled'}).kind,'disabled');
+ assert.throws(()=>operationsAlertDeliveryFromEnv({NODE_ENV:'production',OPERATIONS_ALERT_DELIVERY:'webhook',OPERATIONS_ALERT_WEBHOOK_URL:'http://alerts.test',OPERATIONS_ALERT_WEBHOOK_TOKEN:'token'}),/HTTPS/);
+ const alertStore=new LocalStore(':memory:'),captured=[];
+ await alertStore.tx(async records=>{await records.put('notifications','failed_alert',{id:'failed_alert',status:'failed',created_at:new Date(at-60000).toISOString(),updated_at:new Date(at-60000).toISOString(),attempts:3});await records.put('tickets','overdue_alert',{id:'overdue_alert',status:'open',created_at:new Date(at-25*3600000).toISOString()});});
+ const alertWorker=new OperationalWorker(alertStore,{env:{SUPPORT_RESPONSE_TARGET_HOURS:'24'},delivery:new InAppNotificationDelivery(),identityDeletion:{kind:'test',remove:async()=>{}},alertDelivery:{kind:'test',deliver:async alert=>captured.push(alert)}});
+ await alertWorker.runOnce(at);assert.equal(captured.length,1);assert.equal(captured[0].status,'active');assert(captured[0].alerts.includes('notification_delivery_failures'));assert.equal(JSON.stringify(captured[0]).includes('overdue_alert'),false);
+ await alertWorker.runOnce(at+60000);assert.equal(captured.length,1,'unchanged alert fingerprint is not redelivered');
+ await alertStore.tx(async records=>{await records.remove('notifications','failed_alert');const ticket=await records.get('tickets','overdue_alert');await records.put('tickets','overdue_alert',{...ticket,status:'closed'});});
+ await alertWorker.runOnce(at+120000);assert.equal(captured.length,2);assert.equal(captured[1].status,'resolved');assert.deepEqual(captured[1].alerts,[]);
+ await alertStore.close();
  assert.deepEqual(await aiRuntimeReadiness({OLLAMA_ENABLED:'false'}),{enabled:false,healthy:true});
  const models={models:[{name:'llama3.2:3b'},{name:'deepseek-r1:8b'},{model:'nomic-embed-text'}]};
  assert.deepEqual(await aiRuntimeReadiness({OLLAMA_ENABLED:'true',OLLAMA_BASE_URL:'http://ollama'},async()=>({ok:true,json:async()=>models})),{enabled:true,healthy:true});

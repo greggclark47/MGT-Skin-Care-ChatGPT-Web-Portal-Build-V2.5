@@ -87,6 +87,8 @@ Each phase returns `ready` or `blocked`, a ready/total count, and sanitized bloc
 
 The subsequent v2.12 control-plane increment adds an aggregate operations-health endpoint and portal panel. It identifies notification delivery failures and queue aging, due or blocked deletion work, overdue support requests, recent worker delivery failures, and failed or stalled signed subscription events. Production preflight now also requires a non-secret dashboard reference, incident runbook, accountable alert owner, and bounded support response target. These controls expose only aggregate counts and sanitized alert codes; live monitoring evidence is still required before production approval.
 
+The v2.13 alert-delivery increment connects that aggregate state to a dedicated operations webhook. The worker delivers only sanitized alert codes and counts, suppresses repeats with a durable fingerprint, records delivery outcome, and emits a single recovery event after the alert set clears. Production configuration now requires an HTTPS destination and server-side token; live receipt and escalation evidence remain external launch gates.
+
 ## Remaining gap register
 
 | Priority | Gap | Repository state | Required exit evidence |

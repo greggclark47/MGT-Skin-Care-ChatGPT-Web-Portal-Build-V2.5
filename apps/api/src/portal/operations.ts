@@ -4,7 +4,7 @@ import type { Records, Store } from './store';
 
 type Notification={id:string;actor:string;kind:'replenishment_reminder';status:'queued'|'processing'|'delivered'|'failed'|'read';scheduled_at:string;created_at:string;updated_at:string;attempts:number;payload:{product_id:string;due_at:string};lease_until?:string;delivered_at?:string;read_at?:string;last_error?:string};
 type Reminder={product_id:string;due_at:string;paused?:boolean;notification_id?:string;last_notified_at?:string};
-type WorkerOptions={env?:NodeJS.ProcessEnv;delivery?:NotificationDelivery;identityDeletion?:IdentityDeletion};
+type WorkerOptions={env?:NodeJS.ProcessEnv;delivery?:NotificationDelivery;identityDeletion?:IdentityDeletion;alertDelivery?:OperationsAlertDelivery};
 export type WorkerResult={run_id:string;created:number;delivered:number;failed:number;removed:number;deletions_completed:number;deletions_blocked:number;backup_status:'healthy'|'stale'|'unverified'};
 
 export interface NotificationDelivery{kind:string;deliver(notification:Notification):Promise<void>}
@@ -18,6 +18,17 @@ export class WebhookNotificationDelivery implements NotificationDelivery{
  async deliver(notification:Notification){
   const response=await fetch(this.url,{method:'POST',headers:{'content-type':'application/json',...(this.secret?{authorization:`Bearer ${this.secret}`}:{})},body:JSON.stringify({event:'mgt.notification',notification}),signal:AbortSignal.timeout(10000)});
   if(!response.ok)throw new Error(`Notification delivery returned ${response.status}.`);
+ }
+}
+type OperationsAlert={version:'1';status:'active'|'resolved';alerts:string[];summary:ReturnType<typeof operationalSnapshot>;generated_at:string};
+export interface OperationsAlertDelivery{kind:string;deliver(alert:OperationsAlert):Promise<void>}
+export class DisabledOperationsAlertDelivery implements OperationsAlertDelivery{kind='disabled';async deliver(_alert:OperationsAlert){}}
+export class WebhookOperationsAlertDelivery implements OperationsAlertDelivery{
+ kind='webhook';
+ constructor(private url:string,private secret:string){}
+ async deliver(alert:OperationsAlert){
+  const response=await fetch(this.url,{method:'POST',headers:{'content-type':'application/json',authorization:`Bearer ${this.secret}`},body:JSON.stringify({event:'mgt.operations.alert',alert}),signal:AbortSignal.timeout(10000)});
+  if(!response.ok)throw new Error(`Operations alert delivery returned ${response.status}.`);
  }
 }
 export interface IdentityDeletion{kind:string;remove(userId:string):Promise<void>}
@@ -110,6 +121,16 @@ export function notificationDeliveryFromEnv(env:NodeJS.ProcessEnv):NotificationD
  if(env.NOTIFICATION_DELIVERY&&env.NOTIFICATION_DELIVERY!=='in_app')throw new Error('NOTIFICATION_DELIVERY must be in_app or webhook.');
  return new InAppNotificationDelivery();
 }
+export function operationsAlertDeliveryFromEnv(env:NodeJS.ProcessEnv):OperationsAlertDelivery{
+ if(env.OPERATIONS_ALERT_DELIVERY==='webhook'){
+  if(!env.OPERATIONS_ALERT_WEBHOOK_URL||!env.OPERATIONS_ALERT_WEBHOOK_TOKEN)throw new Error('OPERATIONS_ALERT_WEBHOOK_URL and OPERATIONS_ALERT_WEBHOOK_TOKEN are required when operational alerts are enabled.');
+  const parsed=new URL(env.OPERATIONS_ALERT_WEBHOOK_URL);
+  if(env.NODE_ENV==='production'&&parsed.protocol!=='https:')throw new Error('Production operations alert webhooks must use HTTPS.');
+  return new WebhookOperationsAlertDelivery(parsed.toString(),env.OPERATIONS_ALERT_WEBHOOK_TOKEN);
+ }
+ if(env.OPERATIONS_ALERT_DELIVERY&&env.OPERATIONS_ALERT_DELIVERY!=='disabled')throw new Error('OPERATIONS_ALERT_DELIVERY must be disabled or webhook.');
+ return new DisabledOperationsAlertDelivery();
+}
 export function identityDeletionFromEnv(env:NodeJS.ProcessEnv):IdentityDeletion{
  if(!env.SUPABASE_URL)return new LocalIdentityDeletion();
  if(!env.SUPABASE_SERVICE_ROLE_KEY)return new MissingIdentityDeletion();
@@ -125,7 +146,8 @@ export class OperationalWorker{
  private env:NodeJS.ProcessEnv;
  private delivery:NotificationDelivery;
  private identityDeletion:IdentityDeletion;
- constructor(private store:Store,options:WorkerOptions={}){this.env=options.env||process.env;this.delivery=options.delivery||notificationDeliveryFromEnv(this.env);this.identityDeletion=options.identityDeletion||identityDeletionFromEnv(this.env);}
+ private alertDelivery:OperationsAlertDelivery;
+ constructor(private store:Store,options:WorkerOptions={}){this.env=options.env||process.env;this.delivery=options.delivery||notificationDeliveryFromEnv(this.env);this.identityDeletion=options.identityDeletion||identityDeletionFromEnv(this.env);this.alertDelivery=options.alertDelivery||operationsAlertDeliveryFromEnv(this.env);}
  async runOnce(at=Date.now()):Promise<WorkerResult>{
   if(this.running)throw new Error('Operational worker is already running.');
   this.running=true;
@@ -146,8 +168,27 @@ export class OperationalWorker{
     if(outcome==='delivered')delivered++;if(outcome==='failed')failed++;
    }
    await this.store.tx(async records=>{const run=await records.get<any>('operation_runs',runId);if(run)await records.put('operation_runs',runId,{...run,completed_at:iso(),delivered,failed,...deletions});});
+   await this.publishOperationalAlert(at,runId);
    return {run_id:runId,...staged,...deletions,delivered,failed};
   }finally{this.running=false;}
+ }
+ private async publishOperationalAlert(at:number,runId:string){
+  if(this.alertDelivery.kind==='disabled')return;
+  const {snapshot,previous}=await this.store.tx(async records=>({
+   snapshot:operationalSnapshot({notifications:(await records.entries<any>('notifications')).map(item=>item.value),deletions:(await records.entries<any>('deletion_requests')).map(item=>item.value),tickets:await records.list<any>('tickets'),runs:(await records.entries<any>('operation_runs')).map(item=>item.value),webhooks:await records.list<any>('subscription_webhook_receipts')},at,int(this.env.SUPPORT_RESPONSE_TARGET_HOURS,24,1,168)),
+   previous:await records.get<any>('operations','alert_state')
+  }));
+  const status=snapshot.alerts.length?'active':'resolved';
+  if(status==='resolved'&&previous?.status!=='active')return;
+  const fingerprint=createHash('sha256').update(JSON.stringify({status,alerts:[...snapshot.alerts].sort()})).digest('hex');
+  if(previous?.fingerprint===fingerprint&&previous?.delivery_status==='delivered')return;
+  const alert:OperationsAlert={version:'1',status,alerts:snapshot.alerts,summary:snapshot,generated_at:iso(at)};
+  try{
+   await this.alertDelivery.deliver(alert);
+   await this.store.tx(async records=>{await records.put('operations','alert_state',{status,fingerprint,delivery_status:'delivered',delivered_at:iso(at)});const run=await records.get<any>('operation_runs',runId);if(run)await records.put('operation_runs',runId,{...run,alert_delivery:'delivered'});});
+  }catch(error){
+   await this.store.tx(async records=>{await records.put('operations','alert_state',{status,fingerprint,delivery_status:'failed',last_attempt_at:iso(at),last_error:error instanceof Error?error.message:'Operations alert delivery failed.'});const run=await records.get<any>('operation_runs',runId);if(run)await records.put('operation_runs',runId,{...run,alert_delivery:'failed'});});
+  }
  }
  private async prune(records:Records,at:number){
   const policies=[

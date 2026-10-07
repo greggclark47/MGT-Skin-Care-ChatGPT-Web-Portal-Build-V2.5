@@ -122,6 +122,9 @@ export function validateEnvironment(env) {
   const alertOwner = requireValue("ALERT_OWNER_EMAIL");
   if (alertOwner && !validEmail(alertOwner)) errors.push("ALERT_OWNER_EMAIL must identify the production alert owner.");
   if (!positiveNumber(env.SUPPORT_RESPONSE_TARGET_HOURS, 1, 168)) errors.push("SUPPORT_RESPONSE_TARGET_HOURS must be between 1 and 168.");
+  if (env.OPERATIONS_ALERT_DELIVERY !== "webhook") errors.push("OPERATIONS_ALERT_DELIVERY must be webhook in production.");
+  if (!validUrl(env.OPERATIONS_ALERT_WEBHOOK_URL, ["https:"])) errors.push("OPERATIONS_ALERT_WEBHOOK_URL must be a production HTTPS URL.");
+  requireValue("OPERATIONS_ALERT_WEBHOOK_TOKEN");
 
   if (!["true", "false"].includes(String(env.SUBSCRIPTIONS_ENABLED).toLowerCase())) errors.push("SUBSCRIPTIONS_ENABLED must be true or false.");
   if (isTrue(env.SUBSCRIPTIONS_ENABLED)) {

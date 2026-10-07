@@ -34,6 +34,7 @@ const {LocalStore}=require('../dist/portal/store');
   assert(readiness.data.phases.every(phase=>['ready','blocked'].includes(phase.status)));
   assert(readiness.data.phases.find(phase=>phase.id==='operations_recovery').blockers.includes('Operations worker heartbeat'));
   assert(readiness.data.phases.find(phase=>phase.id==='operations_recovery').blockers.includes('Monitoring dashboard, alert owner and incident runbook'));
+  assert(readiness.data.phases.find(phase=>phase.id==='operations_recovery').blockers.includes('Operational alert delivery'));
   assert.equal(readiness.data.ai_runtime.healthy,true);
   assert.equal((await guest('/admin/operations-health')).status,401);
   const operationsHealth=await compliance('/admin/operations-health');assert.equal(operationsHealth.status,200);assert.equal(operationsHealth.data.healthy,true);assert.equal(operationsHealth.data.support.response_target_hours,24);assert.deepEqual(operationsHealth.data.alerts,[]);assert(!JSON.stringify(operationsHealth.data).includes('private@example.test'));assert(!JSON.stringify(operationsHealth.data).includes('Private support text'));

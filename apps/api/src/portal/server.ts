@@ -329,6 +329,7 @@ export async function createPortal(options:PortalOptions){
   const supportOwner=typeof env.SUPPORT_OWNER_NAME==='string'&&env.SUPPORT_OWNER_NAME.trim().length>=2&&typeof env.SUPPORT_OWNER_EMAIL==='string'&&/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(env.SUPPORT_OWNER_EMAIL);
   const accessibilityEvidence=typeof env.ACCESSIBILITY_VALIDATION_REPORT_URL==='string'&&/^https:\/\//.test(env.ACCESSIBILITY_VALIDATION_REPORT_URL)&&typeof env.ACCESSIBILITY_VALIDATED_AT==='string'&&!Number.isNaN(Date.parse(env.ACCESSIBILITY_VALIDATED_AT))&&Date.parse(env.ACCESSIBILITY_VALIDATED_AT)<=Date.now();
   const monitoringConfigured=typeof env.MONITORING_DASHBOARD_URL==='string'&&/^https:\/\//.test(env.MONITORING_DASHBOARD_URL)&&typeof env.INCIDENT_RUNBOOK_URL==='string'&&/^https:\/\//.test(env.INCIDENT_RUNBOOK_URL)&&typeof env.ALERT_OWNER_EMAIL==='string'&&/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(env.ALERT_OWNER_EMAIL);
+  const alertDeliveryConfigured=env.OPERATIONS_ALERT_DELIVERY==='webhook'&&typeof env.OPERATIONS_ALERT_WEBHOOK_URL==='string'&&/^https:\/\//.test(env.OPERATIONS_ALERT_WEBHOOK_URL)&&!!env.OPERATIONS_ALERT_WEBHOOK_TOKEN;
   const checks:ReadinessCheck[]=[
    {name:'Production database',configured:db.kind==='postgres',phase:'data_identity',evidence:'runtime'},
    {name:'Email sign-in',configured:!!(env.SUPABASE_URL&&env.SUPABASE_ANON_KEY),phase:'data_identity',evidence:'configuration'},
@@ -336,6 +337,7 @@ export async function createPortal(options:PortalOptions){
    {name:'Operations worker heartbeat',configured:!operations.issues.includes('operations_worker_stale'),phase:'operations_recovery',evidence:'runtime'},
    {name:'Verified encrypted backup and restore',configured:!operations.issues.includes('backup_unhealthy'),phase:'operations_recovery',evidence:'runtime'},
    {name:'Monitoring dashboard, alert owner and incident runbook',configured:monitoringConfigured,phase:'operations_recovery',evidence:'configuration'},
+   {name:'Operational alert delivery',configured:alertDeliveryConfigured,phase:'operations_recovery',evidence:'configuration'},
    {name:'Analysis service',configured:coach.configured,phase:'ai_quality',evidence:'configuration'},
    {name:'Analysis runtime inventory',configured:aiRuntime.healthy,phase:'ai_quality',evidence:'runtime'},
    {name:'Subscription billing mode',configured:['true','false'].includes(String(env.STRIPE_LIVE_MODE).toLowerCase()),phase:'billing_commercial',evidence:'configuration'},

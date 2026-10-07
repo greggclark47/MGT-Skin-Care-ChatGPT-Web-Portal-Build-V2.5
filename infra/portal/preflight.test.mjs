@@ -28,6 +28,9 @@ const production = {
   INCIDENT_RUNBOOK_URL: "https://operations.mgtskincare.test/runbook",
   ALERT_OWNER_EMAIL: "alerts@mgtskincare.test",
   SUPPORT_RESPONSE_TARGET_HOURS: "24",
+  OPERATIONS_ALERT_DELIVERY: "webhook",
+  OPERATIONS_ALERT_WEBHOOK_URL: "https://alerts.mgtskincare.test/events",
+  OPERATIONS_ALERT_WEBHOOK_TOKEN: "configured-alert-token",
   SUBSCRIPTIONS_ENABLED: "false",
   SUBSCRIPTION_TERMS_APPROVED: "false",
   NODE_IMAGE: `node@sha256:${"c".repeat(64)}`,
@@ -161,13 +164,19 @@ test("requires production monitoring ownership, runbook and response target", ()
     MONITORING_DASHBOARD_URL: "http://localhost/dashboard",
     INCIDENT_RUNBOOK_URL: "",
     ALERT_OWNER_EMAIL: "alerts@example.invalid",
-    SUPPORT_RESPONSE_TARGET_HOURS: "0"
+    SUPPORT_RESPONSE_TARGET_HOURS: "0",
+    OPERATIONS_ALERT_DELIVERY: "disabled",
+    OPERATIONS_ALERT_WEBHOOK_URL: "http://localhost/alerts",
+    OPERATIONS_ALERT_WEBHOOK_TOKEN: ""
   });
   assert.equal(result.ok, false);
   assert.ok(result.errors.some((error) => error.startsWith("MONITORING_DASHBOARD_URL")));
   assert.ok(result.errors.some((error) => error.startsWith("INCIDENT_RUNBOOK_URL")));
   assert.ok(result.errors.some((error) => error.startsWith("ALERT_OWNER_EMAIL")));
   assert.ok(result.errors.some((error) => error.startsWith("SUPPORT_RESPONSE_TARGET_HOURS")));
+  assert.ok(result.errors.some((error) => error.startsWith("OPERATIONS_ALERT_DELIVERY")));
+  assert.ok(result.errors.some((error) => error.startsWith("OPERATIONS_ALERT_WEBHOOK_URL")));
+  assert.ok(result.errors.some((error) => error.startsWith("OPERATIONS_ALERT_WEBHOOK_TOKEN")));
 });
 
 test("rejects floating or placeholder container image tags", () => {

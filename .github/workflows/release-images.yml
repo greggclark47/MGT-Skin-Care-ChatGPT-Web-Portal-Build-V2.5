@@ -1,0 +1,96 @@
+name: Publish release images
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+  id-token: write
+  attestations: write
+
+concurrency:
+  group: release-images-${{ github.sha }}
+  cancel-in-progress: false
+
+env:
+  API_REPOSITORY: ghcr.io/${{ github.repository_owner }}/mgt-skin-care-api
+  WEB_REPOSITORY: ghcr.io/${{ github.repository_owner }}/mgt-skin-care-web
+  NODE_IMAGE: ${{ vars.NODE_IMAGE }}
+
+jobs:
+  publish:
+    name: Build, attest, and publish immutable images
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Require an approved immutable Node base image
+        shell: bash
+        run: |
+          if [[ ! "$NODE_IMAGE" =~ @sha256:[a-f0-9]{64}$ ]]; then
+            echo "Repository variable NODE_IMAGE must be an approved immutable digest." >&2
+            exit 1
+          fi
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Authenticate to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and publish API image
+        id: api
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: infra/portal/Dockerfile.api
+          push: true
+          tags: ${{ env.API_REPOSITORY }}:${{ github.sha }}
+          build-args: NODE_IMAGE=${{ env.NODE_IMAGE }}
+          provenance: mode=max
+          sbom: true
+      - name: Attest API image provenance
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-name: ${{ env.API_REPOSITORY }}
+          subject-digest: ${{ steps.api.outputs.digest }}
+          push-to-registry: true
+      - name: Build and publish web image
+        id: web
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: infra/portal/Dockerfile.web
+          push: true
+          tags: ${{ env.WEB_REPOSITORY }}:${{ github.sha }}
+          build-args: |
+            NODE_IMAGE=${{ env.NODE_IMAGE }}
+            PORTAL_API_ORIGIN=http://api:3100
+          provenance: mode=max
+          sbom: true
+      - name: Attest web image provenance
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-name: ${{ env.WEB_REPOSITORY }}
+          subject-digest: ${{ steps.web.outputs.digest }}
+          push-to-registry: true
+      - name: Create candidate-bound image manifest
+        env:
+          API_DIGEST: ${{ steps.api.outputs.digest }}
+          WEB_DIGEST: ${{ steps.web.outputs.digest }}
+        run: >-
+          node infra/portal/release-image-manifest.mjs
+          --candidate "$GITHUB_SHA"
+          --repository "$GITHUB_REPOSITORY"
+          --api-image "$API_REPOSITORY@$API_DIGEST"
+          --web-image "$WEB_REPOSITORY@$WEB_DIGEST"
+          --output work/image-publication/release-images.json
+      - name: Preserve release image manifest
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-images-${{ github.sha }}
+          path: work/image-publication/release-images.json
+          if-no-files-found: error
+          retention-days: 90

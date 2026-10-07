@@ -1,0 +1,159 @@
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+x-application-runtime: &application-runtime
+  env_file: .env
+  init: true
+  restart: unless-stopped
+  read_only: true
+  security_opt:
+    - no-new-privileges:true
+  cap_drop:
+    - ALL
+  pids_limit: 256
+  logging: *default-logging
+
+services:
+  api:
+    <<: *application-runtime
+    image: ${API_IMAGE:?Set the approved immutable API image digest}
+    pull_policy: always
+    environment:
+      HOST: 0.0.0.0
+      PORT: 3100
+      PROCESS_ROLE: api
+      DATABASE_URL: ${DATABASE_URL:?Set the reviewed production database connection}
+      PORTAL_AUTO_MIGRATE: "false"
+      OLLAMA_ENABLED: ${OLLAMA_ENABLED:-false}
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://ollama:11434}
+      OPENCLAW_ENABLED: ${OPENCLAW_ENABLED:-false}
+      OPENCLAW_BASE_URL: ${OPENCLAW_BASE_URL:-http://ollama:11434}
+      OPENCLAW_API_MODE: ${OPENCLAW_API_MODE:-ollama}
+    expose:
+      - "3100"
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m
+    stop_grace_period: 30s
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3100/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    cpus: "2.0"
+    mem_limit: 2g
+
+  worker:
+    <<: *application-runtime
+    image: ${API_IMAGE:?Set the approved immutable API image digest}
+    pull_policy: always
+    command: ["sh", "-c", "node /app/infra/portal/preflight.mjs && exec node dist/portal/worker.js"]
+    environment:
+      PROCESS_ROLE: worker
+      DATABASE_URL: ${DATABASE_URL:?Set the reviewed production database connection}
+      PORTAL_AUTO_MIGRATE: "false"
+      WORKER_INTERVAL_SECONDS: ${WORKER_INTERVAL_SECONDS:-60}
+      WORKER_HEALTH_FILE: /tmp/mgt-worker-health.json
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m
+    stop_grace_period: 60s
+    healthcheck:
+      test: ["CMD", "node", "-e", "const fs=require('fs'),f=process.env.WORKER_HEALTH_FILE||'/tmp/mgt-worker-health.json',i=Math.max(15,Math.min(3600,Number(process.env.WORKER_INTERVAL_SECONDS)||60)),m=Math.max(180,i*3)*1000;fs.stat(f,(e,s)=>process.exit(!e&&Date.now()-s.mtimeMs<m?0:1));"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 90s
+    cpus: "1.0"
+    mem_limit: 1g
+
+  web:
+    <<: *application-runtime
+    image: ${WEB_IMAGE:?Set the approved immutable web image digest}
+    pull_policy: always
+    depends_on:
+      api:
+        condition: service_healthy
+    expose:
+      - "3000"
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m
+    stop_grace_period: 30s
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    cpus: "1.0"
+    mem_limit: 1g
+
+  edge:
+    image: ${CADDY_IMAGE:?Set the approved immutable Caddy image digest}
+    pull_policy: always
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      PORTAL_DOMAIN: ${PORTAL_DOMAIN:?Set the approved portal domain}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - certificates:/data
+      - caddy_config:/config
+    depends_on:
+      api:
+        condition: service_healthy
+      web:
+        condition: service_healthy
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=32m
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+    pids_limit: 128
+    healthcheck:
+      test: ["CMD", "caddy", "validate", "--config", "/etc/caddy/Caddyfile", "--adapter", "caddyfile"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    cpus: "1.0"
+    mem_limit: 512m
+    logging: *default-logging
+
+  ollama:
+    image: ${OLLAMA_IMAGE:?Set the approved immutable Ollama image digest}
+    pull_policy: always
+    profiles: ["local-ai"]
+    volumes:
+      - ollama:/root/.ollama
+    environment:
+      OLLAMA_HOST: 0.0.0.0:11434
+      OLLAMA_NUM_PARALLEL: ${OLLAMA_NUM_PARALLEL:-2}
+      OLLAMA_MAX_LOADED_MODELS: ${OLLAMA_MAX_LOADED_MODELS:-2}
+      OLLAMA_KEEP_ALIVE: ${OLLAMA_KEEP_ALIVE:-10m}
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    pids_limit: 512
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+    cpus: "4.0"
+    mem_limit: 12g
+    logging: *default-logging
+
+volumes:
+  certificates:
+  caddy_config:
+  ollama:

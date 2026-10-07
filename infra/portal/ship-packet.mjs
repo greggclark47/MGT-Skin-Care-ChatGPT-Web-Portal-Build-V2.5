@@ -98,8 +98,8 @@ export function validateShipPacket(packet, { readiness, env = {} } = {}) {
   }
 
   const images = packet.images || {};
-  for (const key of ["node", "ollama", "caddy"]) if (!DIGEST.test(text(images[key]))) errors.push(`images.${key} must be an immutable @sha256 digest.`);
-  for (const [envKey, packetKey] of [["NODE_IMAGE", "node"], ["OLLAMA_IMAGE", "ollama"], ["CADDY_IMAGE", "caddy"]]) {
+  for (const key of ["node", "api", "web", "ollama", "caddy"]) if (!DIGEST.test(text(images[key]))) errors.push(`images.${key} must be an immutable @sha256 digest.`);
+  for (const [envKey, packetKey] of [["NODE_IMAGE", "node"], ["API_IMAGE", "api"], ["WEB_IMAGE", "web"], ["OLLAMA_IMAGE", "ollama"], ["CADDY_IMAGE", "caddy"]]) {
     if (DIGEST.test(text(env[envKey])) && text(images[packetKey]) !== text(env[envKey])) errors.push(`images.${packetKey} must match ${envKey} from the deployment environment.`);
   }
 

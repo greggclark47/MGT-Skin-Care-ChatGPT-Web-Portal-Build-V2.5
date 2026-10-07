@@ -73,7 +73,7 @@ export function buildStagingPromotionHandoff({ root = process.cwd(), ledgerRefer
     status: readyForHumanApproval ? "pending_human_promotion_approval" : "blocked",
     candidate_commit: SHA.test(text(target.candidate_commit)) ? text(target.candidate_commit) : null,
     staging_origin: validOrigin(target.origin) ? text(target.origin) : null,
-    images: target.images && typeof target.images === "object" ? { node: text(target.images.node), ollama: text(target.images.ollama), caddy: text(target.images.caddy) } : null,
+    images: target.images && typeof target.images === "object" ? { node: text(target.images.node), api: text(target.images.api), web: text(target.images.web), ollama: text(target.images.ollama), caddy: text(target.images.caddy) } : null,
     evidence: {
       ledger: { reference: text(ledgerReference), checksum: ledgerArtifact.inspection.checksum, bytes: ledgerArtifact.inspection.bytes },
       review: { reference: text(reviewReference), checksum: reviewArtifact.inspection.checksum, bytes: reviewArtifact.inspection.bytes, reviewed_at: text(review.reviewed_at), max_age_minutes: reviewAgeMinutes }

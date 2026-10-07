@@ -27,6 +27,8 @@ const base = {
   SUBSCRIPTIONS_ENABLED: "false",
   SUBSCRIPTION_TERMS_APPROVED: "false",
   NODE_IMAGE: `node@sha256:${"c".repeat(64)}`,
+  API_IMAGE: `ghcr.io/mgt/api@sha256:${"d".repeat(64)}`,
+  WEB_IMAGE: `ghcr.io/mgt/web@sha256:${"e".repeat(64)}`,
   OLLAMA_IMAGE: `ollama/ollama@sha256:${"a".repeat(64)}`,
   CADDY_IMAGE: `caddy@sha256:${"b".repeat(64)}`
 };

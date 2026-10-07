@@ -66,6 +66,8 @@ export function buildDraftShipPacket({ root = process.cwd(), env = {}, now = new
   };
   const images = {
     node: digestOrPlaceholder(env.NODE_IMAGE, "node"),
+    api: digestOrPlaceholder(env.API_IMAGE, "ghcr.io/mgt/api"),
+    web: digestOrPlaceholder(env.WEB_IMAGE, "ghcr.io/mgt/web"),
     ollama: digestOrPlaceholder(env.OLLAMA_IMAGE, "ollama/ollama"),
     caddy: digestOrPlaceholder(env.CADDY_IMAGE, "caddy")
   };

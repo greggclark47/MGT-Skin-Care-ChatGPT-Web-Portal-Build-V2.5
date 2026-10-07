@@ -10,6 +10,8 @@ test("creates a secret-free candidate packet from repository metadata", () => {
     now: "2026-09-28T00:00:00.000Z",
     env: {
       NODE_IMAGE: `node@sha256:${"c".repeat(64)}`,
+      API_IMAGE: `ghcr.io/mgt/api@sha256:${"d".repeat(64)}`,
+      WEB_IMAGE: `ghcr.io/mgt/web@sha256:${"e".repeat(64)}`,
       OLLAMA_IMAGE: `ollama/ollama@sha256:${"a".repeat(64)}`,
       CADDY_IMAGE: `caddy@sha256:${"b".repeat(64)}`,
       OLLAMA_ENABLED: "true",
@@ -21,6 +23,8 @@ test("creates a secret-free candidate packet from repository metadata", () => {
   assert.equal(packet.candidate.commit, "a".repeat(40));
   assert.equal(packet.candidate.branch, "codex/release-candidate");
   assert.equal(packet.images.node, `node@sha256:${"c".repeat(64)}`);
+  assert.equal(packet.images.api, `ghcr.io/mgt/api@sha256:${"d".repeat(64)}`);
+  assert.equal(packet.images.web, `ghcr.io/mgt/web@sha256:${"e".repeat(64)}`);
   assert.equal(packet.version, "1.2");
   assert.equal(packet.staging_evidence.target.candidate_commit, "a".repeat(40));
   assert.equal(packet.staging_evidence.version, "1.2");

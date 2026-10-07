@@ -73,6 +73,8 @@ export function createProductionGateTemplate({ candidateCommit, images = {} } = 
     source_environment_review: "work/production/REPLACE_WITH_STAGING_DOSSIER_REVIEW.md",
     images: {
       node: images.node || "node@sha256:REPLACE_WITH_64_HEX_DIGEST",
+      api: images.api || "ghcr.io/mgt/api@sha256:REPLACE_WITH_64_HEX_DIGEST",
+      web: images.web || "ghcr.io/mgt/web@sha256:REPLACE_WITH_64_HEX_DIGEST",
       ollama: images.ollama || "ollama/ollama@sha256:REPLACE_WITH_64_HEX_DIGEST",
       caddy: images.caddy || "caddy@sha256:REPLACE_WITH_64_HEX_DIGEST"
     },
@@ -92,7 +94,7 @@ export function validateProductionGate(gate, { candidateCommit, images = {}, now
   if (SHA.test(text(candidateCommit)) && text(gate.candidate_commit) !== text(candidateCommit)) errors.push("candidate_commit must match the approved candidate");
   if (!validOrigin(gate.origin)) errors.push("origin must be a non-placeholder HTTPS production origin");
   if (!validReference(gate.source_environment_review)) errors.push("source_environment_review must be a non-placeholder evidence reference");
-  for (const key of ["node", "ollama", "caddy"]) {
+  for (const key of ["node", "api", "web", "ollama", "caddy"]) {
     if (!DIGEST.test(text(gate.images?.[key]))) errors.push(`images.${key} must be an immutable @sha256 digest`);
     if (DIGEST.test(text(images[key])) && text(gate.images?.[key]) !== text(images[key])) errors.push(`images.${key} must match the approved candidate image`);
   }

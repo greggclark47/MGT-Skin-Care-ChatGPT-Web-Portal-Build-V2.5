@@ -27,6 +27,8 @@ const production = {
   SUBSCRIPTIONS_ENABLED: "false",
   SUBSCRIPTION_TERMS_APPROVED: "false",
   NODE_IMAGE: `node@sha256:${"c".repeat(64)}`,
+  API_IMAGE: `ghcr.io/mgt-skincare/api@sha256:${"d".repeat(64)}`,
+  WEB_IMAGE: `ghcr.io/mgt-skincare/web@sha256:${"e".repeat(64)}`,
   OLLAMA_IMAGE: `ollama/ollama@sha256:${"a".repeat(64)}`,
   CADDY_IMAGE: `caddy@sha256:${"b".repeat(64)}`
 };
@@ -160,6 +162,13 @@ test("requires an immutable Node base image for application builds", () => {
   const result = validateEnvironment({ ...production, NODE_IMAGE: "node:24-bookworm-slim" });
   assert.equal(result.ok, false);
   assert.ok(result.errors.some((error) => error.startsWith("NODE_IMAGE")));
+});
+
+test("requires immutable deployable API and web application images", () => {
+  const result = validateEnvironment({ ...production, API_IMAGE: "ghcr.io/mgt/api:latest", WEB_IMAGE: "" });
+  assert.equal(result.ok, false);
+  assert.ok(result.errors.some((error) => error.startsWith("API_IMAGE")));
+  assert.ok(result.errors.some((error) => error.startsWith("WEB_IMAGE")));
 });
 
 test("allows native Ollama mode without an OpenClaw key and gates proxy mode", () => {

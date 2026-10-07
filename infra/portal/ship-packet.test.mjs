@@ -29,6 +29,8 @@ const env = {
   SUBSCRIPTIONS_ENABLED: "false",
   SUBSCRIPTION_TERMS_APPROVED: "false",
   NODE_IMAGE: `node@sha256:${"c".repeat(64)}`,
+  API_IMAGE: `ghcr.io/mgt/api@sha256:${"d".repeat(64)}`,
+  WEB_IMAGE: `ghcr.io/mgt/web@sha256:${"e".repeat(64)}`,
   OLLAMA_IMAGE: `ollama/ollama@sha256:${"a".repeat(64)}`,
   CADDY_IMAGE: `caddy@sha256:${"b".repeat(64)}`,
   RELEASE_LOCAL_GATES: "true",
@@ -51,7 +53,7 @@ const evidence = [
 ].map(([id, phase]) => ({ id, phase, status: "pass", reference: `work/evidence/${id}.md`, reviewed_at: "2026-09-20T00:00:00.000Z", reviewer: "MGT Release Owner" }));
 
 const owners = { release: "MGT Release Owner", support: "MGT Support Owner", data: "MGT Data Owner", platform: "MGT Platform Owner", accessibility: "MGT Accessibility Owner" };
-const images = { node: `node@sha256:${"c".repeat(64)}`, ollama: `ollama/ollama@sha256:${"a".repeat(64)}`, caddy: `caddy@sha256:${"b".repeat(64)}` };
+const images = { node: `node@sha256:${"c".repeat(64)}`, api: `ghcr.io/mgt/api@sha256:${"d".repeat(64)}`, web: `ghcr.io/mgt/web@sha256:${"e".repeat(64)}`, ollama: `ollama/ollama@sha256:${"a".repeat(64)}`, caddy: `caddy@sha256:${"b".repeat(64)}` };
 const stagingEvidence = {
   version: "1.2",
   environment: "staging",

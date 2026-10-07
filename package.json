@@ -63,6 +63,7 @@
     "infra:credential-scan": "node infra/portal/tracked-secret-scan.mjs",
     "reconcile:migrations": "node infra/db/migration-lineage.mjs",
     "test:compose-contract": "node --test infra/portal/compose-contract.test.mjs",
+    "test:production-compose-contract": "node --test infra/portal/production-compose-contract.test.mjs",
     "test:ci-contract": "node --test infra/portal/ci-contract.test.mjs",
     "test:compliance-contract": "node --test infra/portal/compliance-contract.test.mjs",
     "test:staging-evidence": "node --test infra/portal/staging-evidence.test.mjs",

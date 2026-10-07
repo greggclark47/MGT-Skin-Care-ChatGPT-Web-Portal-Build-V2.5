@@ -4,6 +4,8 @@ import { createProductionGateTemplate, evaluateProductionGate, PRODUCTION_GATE_C
 
 const images = {
   node: `node@sha256:${"c".repeat(64)}`,
+  api: `ghcr.io/mgt/api@sha256:${"d".repeat(64)}`,
+  web: `ghcr.io/mgt/web@sha256:${"e".repeat(64)}`,
   ollama: `ollama/ollama@sha256:${"a".repeat(64)}`,
   caddy: `caddy@sha256:${"b".repeat(64)}`
 };

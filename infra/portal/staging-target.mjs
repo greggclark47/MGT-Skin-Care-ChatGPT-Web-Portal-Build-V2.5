@@ -34,6 +34,8 @@ export function createStagingTargetTemplate({ candidateCommit, images = {} } = {
     secret_injection_reference: "work/staging/REPLACE_WITH_SECRET_INJECTION_REPORT.md",
     images: {
       node: images.node || "node@sha256:REPLACE_WITH_64_HEX_DIGEST",
+      api: images.api || "ghcr.io/mgt/api@sha256:REPLACE_WITH_64_HEX_DIGEST",
+      web: images.web || "ghcr.io/mgt/web@sha256:REPLACE_WITH_64_HEX_DIGEST",
       ollama: images.ollama || "ollama/ollama@sha256:REPLACE_WITH_64_HEX_DIGEST",
       caddy: images.caddy || "caddy@sha256:REPLACE_WITH_64_HEX_DIGEST"
     }
@@ -49,7 +51,7 @@ export function validateStagingTarget(target, { candidateCommit, images = {} } =
   if (candidateCommit && SHA.test(text(candidateCommit)) && text(target.candidate_commit) !== text(candidateCommit)) errors.push("candidate_commit must match the ship candidate");
   if (!validOrigin(target.origin)) errors.push("origin must be a non-placeholder HTTPS origin");
   for (const field of ["deployment_reference", "isolation_reference", "secret_injection_reference"]) if (!validReference(target[field])) errors.push(`${field} must be a non-placeholder evidence reference`);
-  for (const key of ["node", "ollama", "caddy"]) {
+  for (const key of ["node", "api", "web", "ollama", "caddy"]) {
     if (!DIGEST.test(text(target.images?.[key]))) errors.push(`images.${key} must be an immutable @sha256 digest`);
     if (DIGEST.test(text(images[key])) && text(target.images?.[key]) !== text(images[key])) errors.push(`images.${key} must match the ship packet image`);
   }

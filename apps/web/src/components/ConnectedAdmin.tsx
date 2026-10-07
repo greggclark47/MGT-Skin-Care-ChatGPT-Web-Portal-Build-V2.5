@@ -40,6 +40,14 @@ function Readiness() {
   </section><CatalogHealth/></>;
 }
 
+function OperationsHealth() {
+  const state = useHub('/admin/operations-health');
+  return <section className="panel" aria-labelledby="operations-health-heading" aria-busy={state.loading}><div className="section-heading"><div><span className="eyebrow">LIVE CONTROL PLANE</span><h2 id="operations-health-heading">Operational queues and service targets</h2></div></div><LoadState {...state} retry={state.reload}/>{state.data && <><p>{state.data.privacy_note}</p>{state.data.alerts?.length ? <ul className="notice error">{state.data.alerts.map((alert: string) => <li key={alert}>{label(alert)}</li>)}</ul> : <p className="notice success">No aggregate operational alerts are active.</p>}
+    <MetricSummary label="Operational health totals" items={[["Notifications queued", state.data.notifications.queued], ["Notification failures", state.data.notifications.failed], ["Oldest pending", state.data.notifications.oldest_pending_minutes + ' min'], ["Deletion blockers", state.data.deletions.blocked], ["Support overdue", state.data.support.overdue], ["Worker failures · 24h", state.data.worker.delivery_failures_24h], ["Subscription failures", state.data.subscriptions.failed + state.data.subscriptions.stalled]]}/>
+    <p className="muted">Support response target: {state.data.support.response_target_hours} hours · Worker window: {state.data.window_hours} hours.</p><RefreshButton loading={state.loading} onClick={state.reload}>Refresh operational health</RefreshButton></>}
+  </section>;
+}
+
 function CatalogHealth() {
   const state = useHub('/admin/catalog-health');
   return <section className="panel" aria-labelledby="catalog-health-heading" aria-busy={state.loading}><div className="section-heading"><div><span className="eyebrow">DATA QUALITY</span><h2 id="catalog-health-heading">Catalog readiness</h2></div></div><LoadState {...state} retry={state.reload}/>{state.data && <><p>{state.data.note}</p>{state.data.ready ? <p className="notice success">Catalog metadata meets the current readiness checks.</p> : <ul className="notice error">{state.data.warnings.map((warning: string) => <li key={warning}>{warning}</li>)}</ul>}
@@ -166,7 +174,7 @@ export function ConnectedAdmin({ kind }: { kind: 'knowledge' | 'rule' | 'operati
     <p>Access uses your signed-in account and assigned roles.</p><LoadState {...state} retry={state.reload}/>
     {error && <p id="admin-save-error" role="alert" className="notice error">{error}</p>}{message && <p id="admin-save-message" role="status" className="notice success">{message}</p>}
     {data && <>{kind === 'operations' ? <>
-      {supportOperator && <><Readiness/><SupportMetrics/><ReferralMetrics/><PrivacyOperations/><SubscriptionWebhooks/><AiEconomics/><AiRouting/></>}
+      {supportOperator && <><Readiness/><OperationsHealth/><SupportMetrics/><ReferralMetrics/><PrivacyOperations/><SubscriptionWebhooks/><AiEconomics/><AiRouting/></>}
       <MetricSummary label="Portal content and support totals" items={[["Products", data.products.length], ["Articles", data.knowledge.length], ["Support requests", data.tickets.length]]}/>
       <section aria-labelledby="support-requests-heading"><div className="row"><h2 id="support-requests-heading">Support requests</h2><span className="pill">{data.tickets.length} saved</span></div>
         {data.tickets.length ? data.tickets.map((ticket: SupportTicket) => <SupportTicketCard key={ticket.id} ticket={ticket} accountId={session.data?.account?.id} canOperate={supportOperator} onSaved={state.reload}/>) : <div className="empty"><h3>No support requests yet.</h3><p>New customer requests will appear here for review.</p></div>}

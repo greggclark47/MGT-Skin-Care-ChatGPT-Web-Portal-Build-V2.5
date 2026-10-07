@@ -50,6 +50,35 @@ export function operationalReadiness(backup:any,runs:{value:any}[],at=Date.now()
  return {healthy:issues.length===0,issues,last_run:lastRun,backup};
 }
 
+export function operationalSnapshot(input:{notifications:any[];deletions:any[];tickets:any[];runs:any[];webhooks:any[]},at=Date.now(),supportTargetHours=24){
+ const pendingNotifications=input.notifications.filter(item=>['queued','processing'].includes(item?.status));
+ const pendingSince=pendingNotifications.map(item=>timestamp(item?.created_at||item?.scheduled_at)).filter((value):value is number=>value!==undefined&&value<=at);
+ const dueDeletions=input.deletions.filter(item=>{const due=timestamp(item?.not_before);return due!==undefined&&due<=at&&['pending','processing'].includes(item?.status);});
+ const openTickets=input.tickets.filter(item=>item?.status!=='closed');
+ const overdueTickets=openTickets.filter(item=>{const changed=timestamp(item?.updated_at||item?.created_at);return changed!==undefined&&changed<=at&&at-changed>supportTargetHours*3600000;});
+ const recentRuns=input.runs.filter(item=>{const completed=timestamp(item?.completed_at);return completed!==undefined&&completed<=at&&at-completed<=86400000;});
+ const stalledWebhooks=input.webhooks.filter(item=>item?.status==='processing'&&(()=>{const received=timestamp(item?.last_received_at);return received!==undefined&&received<=at&&at-received>10*60000;})());
+ const failedWebhooks=input.webhooks.filter(item=>item?.status==='failed');
+ const alerts=[
+  input.notifications.some(item=>item?.status==='failed')?'notification_delivery_failures':null,
+  pendingSince.length&&at-Math.min(...pendingSince)>15*60000?'notification_queue_aging':null,
+  dueDeletions.some(item=>Array.isArray(item?.blocked_reasons)&&item.blocked_reasons.length||item?.last_error)?'deletion_requests_blocked':null,
+  overdueTickets.length?'support_response_target_missed':null,
+  recentRuns.some(item=>(Number(item?.failed)||0)>0)?'worker_delivery_failures':null,
+  failedWebhooks.length?'subscription_webhook_failures':null,
+  stalledWebhooks.length?'subscription_webhook_stalled':null
+ ].filter((value):value is string=>!!value);
+ return {
+  healthy:alerts.length===0,
+  alerts,
+  notifications:{queued:input.notifications.filter(item=>item?.status==='queued').length,processing:input.notifications.filter(item=>item?.status==='processing').length,failed:input.notifications.filter(item=>item?.status==='failed').length,oldest_pending_minutes:pendingSince.length?Math.floor((at-Math.min(...pendingSince))/60000):0},
+  deletions:{due:dueDeletions.length,blocked:dueDeletions.filter(item=>Array.isArray(item?.blocked_reasons)&&item.blocked_reasons.length||item?.last_error).length,processing:dueDeletions.filter(item=>item?.status==='processing').length},
+  support:{open:openTickets.length,overdue:overdueTickets.length,response_target_hours:supportTargetHours},
+  worker:{runs_24h:recentRuns.length,delivery_failures_24h:recentRuns.reduce((total,item)=>total+(Number(item?.failed)||0),0)},
+  subscriptions:{failed:failedWebhooks.length,stalled:stalledWebhooks.length}
+ };
+}
+
 export async function aiRuntimeReadiness(env:NodeJS.ProcessEnv,fetchImpl:typeof fetch=fetch){
  if(String(env.OLLAMA_ENABLED).toLowerCase()!=='true')return {enabled:false,healthy:true};
  const base=String(env.OLLAMA_BASE_URL||'').replace(/\/$/,'');

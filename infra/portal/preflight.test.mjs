@@ -24,6 +24,10 @@ const production = {
   SUPPORT_OWNER_EMAIL: "support-lead@mgtskincare.test",
   ACCESSIBILITY_VALIDATION_REPORT_URL: "https://evidence.mgtskincare.test/a11y/report",
   ACCESSIBILITY_VALIDATED_AT: "2026-09-01T00:00:00.000Z",
+  MONITORING_DASHBOARD_URL: "https://monitoring.mgtskincare.test/dashboard",
+  INCIDENT_RUNBOOK_URL: "https://operations.mgtskincare.test/runbook",
+  ALERT_OWNER_EMAIL: "alerts@mgtskincare.test",
+  SUPPORT_RESPONSE_TARGET_HOURS: "24",
   SUBSCRIPTIONS_ENABLED: "false",
   SUBSCRIPTION_TERMS_APPROVED: "false",
   NODE_IMAGE: `node@sha256:${"c".repeat(64)}`,
@@ -149,6 +153,21 @@ test("requires named support ownership and deployed accessibility evidence", () 
   assert.ok(result.errors.some((error) => error.startsWith("SUPPORT_OWNER_EMAIL")));
   assert.ok(result.errors.some((error) => error.startsWith("ACCESSIBILITY_VALIDATION_REPORT_URL")));
   assert.ok(result.errors.some((error) => error.startsWith("ACCESSIBILITY_VALIDATED_AT")));
+});
+
+test("requires production monitoring ownership, runbook and response target", () => {
+  const result = validateEnvironment({
+    ...production,
+    MONITORING_DASHBOARD_URL: "http://localhost/dashboard",
+    INCIDENT_RUNBOOK_URL: "",
+    ALERT_OWNER_EMAIL: "alerts@example.invalid",
+    SUPPORT_RESPONSE_TARGET_HOURS: "0"
+  });
+  assert.equal(result.ok, false);
+  assert.ok(result.errors.some((error) => error.startsWith("MONITORING_DASHBOARD_URL")));
+  assert.ok(result.errors.some((error) => error.startsWith("INCIDENT_RUNBOOK_URL")));
+  assert.ok(result.errors.some((error) => error.startsWith("ALERT_OWNER_EMAIL")));
+  assert.ok(result.errors.some((error) => error.startsWith("SUPPORT_RESPONSE_TARGET_HOURS")));
 });
 
 test("rejects floating or placeholder container image tags", () => {

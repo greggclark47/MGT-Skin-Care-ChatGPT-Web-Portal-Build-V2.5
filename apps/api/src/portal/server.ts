@@ -14,7 +14,7 @@ import {ASSISTANT_ROLES,routeAssistantRequest} from './assistant';
 import type {AiGateway} from '@mgt/ai-gateway';
 import Stripe from 'stripe';
 import {RETAILERS,SHOP_SEGMENTS,COMMERCE_MODEL} from './retailers';
-import {aiRuntimeReadiness,operationalReadiness} from './operations';
+import {aiRuntimeReadiness,operationalReadiness,operationalSnapshot} from './operations';
 import {BILLING_CYCLES,PLAN_DEFINITIONS,priceIdFor} from './plans';
 type StripeClient=Stripe;
 export interface PortalOptions{store:Store;env?:NodeJS.ProcessEnv;stripe?:StripeClient;coach?:SafeCoach;analysisGateway?:AiGateway;verifyOtp?:(email:string,otp:string)=>Promise<{id:string,email:string}>}
@@ -328,12 +328,14 @@ export async function createPortal(options:PortalOptions){
   const operations=operationalReadiness(backup,runs,Date.now(),maxAge);
   const supportOwner=typeof env.SUPPORT_OWNER_NAME==='string'&&env.SUPPORT_OWNER_NAME.trim().length>=2&&typeof env.SUPPORT_OWNER_EMAIL==='string'&&/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(env.SUPPORT_OWNER_EMAIL);
   const accessibilityEvidence=typeof env.ACCESSIBILITY_VALIDATION_REPORT_URL==='string'&&/^https:\/\//.test(env.ACCESSIBILITY_VALIDATION_REPORT_URL)&&typeof env.ACCESSIBILITY_VALIDATED_AT==='string'&&!Number.isNaN(Date.parse(env.ACCESSIBILITY_VALIDATED_AT))&&Date.parse(env.ACCESSIBILITY_VALIDATED_AT)<=Date.now();
+  const monitoringConfigured=typeof env.MONITORING_DASHBOARD_URL==='string'&&/^https:\/\//.test(env.MONITORING_DASHBOARD_URL)&&typeof env.INCIDENT_RUNBOOK_URL==='string'&&/^https:\/\//.test(env.INCIDENT_RUNBOOK_URL)&&typeof env.ALERT_OWNER_EMAIL==='string'&&/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(env.ALERT_OWNER_EMAIL);
   const checks:ReadinessCheck[]=[
    {name:'Production database',configured:db.kind==='postgres',phase:'data_identity',evidence:'runtime'},
    {name:'Email sign-in',configured:!!(env.SUPABASE_URL&&env.SUPABASE_ANON_KEY),phase:'data_identity',evidence:'configuration'},
    {name:'Account identity deletion',configured:!!(env.SUPABASE_URL&&env.SUPABASE_SERVICE_ROLE_KEY),phase:'data_identity',evidence:'configuration'},
    {name:'Operations worker heartbeat',configured:!operations.issues.includes('operations_worker_stale'),phase:'operations_recovery',evidence:'runtime'},
    {name:'Verified encrypted backup and restore',configured:!operations.issues.includes('backup_unhealthy'),phase:'operations_recovery',evidence:'runtime'},
+   {name:'Monitoring dashboard, alert owner and incident runbook',configured:monitoringConfigured,phase:'operations_recovery',evidence:'configuration'},
    {name:'Analysis service',configured:coach.configured,phase:'ai_quality',evidence:'configuration'},
    {name:'Analysis runtime inventory',configured:aiRuntime.healthy,phase:'ai_quality',evidence:'runtime'},
    {name:'Subscription billing mode',configured:['true','false'].includes(String(env.STRIPE_LIVE_MODE).toLowerCase()),phase:'billing_commercial',evidence:'configuration'},
@@ -348,6 +350,18 @@ export async function createPortal(options:PortalOptions){
    {name:'Deployed accessibility evidence',configured:accessibilityEvidence,phase:'support_accessibility',evidence:'runtime'}
   ];
   res.json({checks,phases:readinessPhases(checks),operations:{healthy:operations.healthy,issues:operations.issues},ai_runtime:{enabled:aiRuntime.enabled,healthy:aiRuntime.healthy},backup,note:'Configuration and runtime signals are grouped by production phase. External service qualification and human approval remain separate release evidence.'});
+ });
+ get('/admin/operations-health',async(req,res)=>{
+  role(req,['superadmin','compliance']);
+  const responseTarget=Math.max(1,Math.min(168,Number(env.SUPPORT_RESPONSE_TARGET_HOURS)||24));
+  const snapshot=await db.tx(async r=>operationalSnapshot({
+   notifications:(await r.entries<any>('notifications')).map(item=>item.value),
+   deletions:(await r.entries<any>('deletion_requests')).map(item=>item.value),
+   tickets:await r.list<any>('tickets'),
+   runs:(await r.entries<any>('operation_runs')).map(item=>item.value),
+   webhooks:await r.list<any>('subscription_webhook_receipts')
+  },Date.now(),responseTarget));
+  res.json({...snapshot,window_hours:24,privacy_note:'Aggregate operational counts and sanitized alert codes only; no customer, payment, provider payload or infrastructure location is returned.'});
  });
   get('/admin/catalog-health',async(req,res)=>{
    role(req,['superadmin','catalog_editor','sme','compliance','viewer']);

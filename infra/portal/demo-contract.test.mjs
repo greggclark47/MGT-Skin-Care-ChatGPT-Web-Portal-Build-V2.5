@@ -70,7 +70,10 @@ test("static demo exposes the current release and ship-packet surface", () => {
   assert.match(html, /Ship authorization: blocked/);
   assert.match(html, /aria-label="MGT Skin Care home"/);
   assert.match(html, /class="brand-mark-image" src="mgt-mark\.svg"/);
-  assert.match(html, /<small class="build-version">v2\.11<\/small>/);
+  assert.match(html, /<small class="build-version">v2\.12<\/small>/);
+  assert.match(html, /aria-label="Operational health preview"/);
+  assert.match(html, /Queue pressure, aging work and service targets/);
+  assert.match(html, /5 phase groups/);
   assert.match(html, /id="flows"/);
   assert.match(html, /Six controlled service paths/);
   assert.match(html, /Free \+ Premium/);
@@ -131,6 +134,7 @@ test("static demo has responsive ship-packet styling", () => {
   assert.match(styles, /\.packet-callout/);
   assert.match(styles, /packet-grid \{ grid-template-columns: 1fr; \}/);
   assert.match(styles, /\.monitoring-grid/);
+  assert.match(styles, /\.operations-health-preview/);
   assert.match(styles, /\.launch-grid/);
   assert.match(styles, /\.decision-grid/);
   assert.match(styles, /\.publish-grid/);

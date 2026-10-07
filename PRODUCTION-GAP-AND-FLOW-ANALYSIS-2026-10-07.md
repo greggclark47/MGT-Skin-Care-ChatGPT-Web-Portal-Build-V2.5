@@ -85,6 +85,8 @@ The operator readiness API now groups checks into five actionable backend phases
 
 Each phase returns `ready` or `blocked`, a ready/total count, and sanitized blocker names. Checks distinguish configuration evidence from runtime evidence. The operator portal renders this phase view and retains the detailed checklist for diagnosis. No secret value, customer identifier, provider payload, or private evidence URL is returned.
 
+The subsequent v2.12 control-plane increment adds an aggregate operations-health endpoint and portal panel. It identifies notification delivery failures and queue aging, due or blocked deletion work, overdue support requests, recent worker delivery failures, and failed or stalled signed subscription events. Production preflight now also requires a non-secret dashboard reference, incident runbook, accountable alert owner, and bounded support response target. These controls expose only aggregate counts and sanitized alert codes; live monitoring evidence is still required before production approval.
+
 ## Remaining gap register
 
 | Priority | Gap | Repository state | Required exit evidence |
@@ -98,7 +100,7 @@ Each phase returns `ready` or `blocked`, a ready/total count, and sanitized bloc
 | P1 | AI services | Routing/budget/safety complete | Approved model inventory, latency/error report, billing reconciliation, SME sign-off |
 | P1 | Support operations | Portal queue complete | Named rota, incident route, response targets, external delivery test if enabled |
 | P1 | Accessibility/browser | Local contracts complete | Deployed keyboard, screen-reader, zoom, mobile, and contrast evidence |
-| P1 | Monitoring/rollback | Evidence contracts complete | Live dashboards, alerts, rehearsal, previous image target, first-hour owner |
+| P1 | Monitoring/rollback | Preflight, aggregate control plane, and evidence contracts complete | Live dashboard and alert proof, rehearsal, previous image target, first-hour owner |
 
 ## Execution allocation and realistic proxy dates
 

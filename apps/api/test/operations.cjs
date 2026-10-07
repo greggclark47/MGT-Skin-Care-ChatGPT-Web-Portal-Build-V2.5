@@ -2,7 +2,7 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs/promises');
 const path=require('node:path');
 const {LocalStore}=require('../dist/portal/store.js');
-const {OperationalWorker,InAppNotificationDelivery,aiRuntimeReadiness,operationalReadiness,writeWorkerHeartbeat}=require('../dist/portal/operations.js');
+const {OperationalWorker,InAppNotificationDelivery,aiRuntimeReadiness,operationalReadiness,operationalSnapshot,writeWorkerHeartbeat}=require('../dist/portal/operations.js');
 
 (async()=>{
  const store=new LocalStore(':memory:');
@@ -70,6 +70,15 @@ const {OperationalWorker,InAppNotificationDelivery,aiRuntimeReadiness,operationa
   ['operations_worker_stale','backup_unhealthy']);
  assert.equal(operationalReadiness({status:'healthy',last_success_at:new Date(at+60000).toISOString()},
   [{id:'future',value:{completed_at:new Date(at+60000).toISOString()}}],at).healthy,false);
+ const snapshot=operationalSnapshot({
+  notifications:[{status:'queued',created_at:new Date(at-20*60000).toISOString()},{status:'failed',created_at:new Date(at-60000).toISOString()}],
+  deletions:[{status:'pending',not_before:new Date(at-60000).toISOString(),blocked_reasons:['active_consumer_subscription']}],
+  tickets:[{status:'open',created_at:new Date(at-25*3600000).toISOString()}],
+  runs:[{completed_at:new Date(at-60000).toISOString(),failed:2}],
+  webhooks:[{status:'processing',last_received_at:new Date(at-11*60000).toISOString()},{status:'failed',last_received_at:new Date(at-60000).toISOString()}]
+ },at,24);
+ assert.equal(snapshot.healthy,false);assert.equal(snapshot.notifications.oldest_pending_minutes,20);assert.equal(snapshot.deletions.blocked,1);assert.equal(snapshot.support.overdue,1);assert.equal(snapshot.worker.delivery_failures_24h,2);assert.equal(snapshot.subscriptions.stalled,1);assert(snapshot.alerts.includes('notification_queue_aging'));assert(snapshot.alerts.includes('support_response_target_missed'));
+ const clearSnapshot=operationalSnapshot({notifications:[],deletions:[],tickets:[],runs:[],webhooks:[]},at,24);assert.equal(clearSnapshot.healthy,true);assert.deepEqual(clearSnapshot.alerts,[]);
  assert.deepEqual(await aiRuntimeReadiness({OLLAMA_ENABLED:'false'}),{enabled:false,healthy:true});
  const models={models:[{name:'llama3.2:3b'},{name:'deepseek-r1:8b'},{model:'nomic-embed-text'}]};
  assert.deepEqual(await aiRuntimeReadiness({OLLAMA_ENABLED:'true',OLLAMA_BASE_URL:'http://ollama'},async()=>({ok:true,json:async()=>models})),{enabled:true,healthy:true});

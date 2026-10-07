@@ -264,6 +264,10 @@ code { font: .72rem "DM Mono"; }
 .monitoring-grid article { display: flex; min-height: 105px; flex-direction: column; justify-content: space-between; gap: 9px; padding: 13px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
 .monitoring-grid strong { font: 600 1.2rem "DM Mono"; }
 .monitoring-grid small { color: var(--muted); font-size: .7rem; line-height: 1.4; }
+.operations-health-preview { display: grid; grid-template-columns: minmax(0,1.4fr) minmax(260px,.6fr); gap: 20px; align-items: center; margin: 24px 0; padding: 22px; border: 1px solid var(--border); border-radius: 14px; background: linear-gradient(135deg,rgba(126,184,166,.12),rgba(255,255,255,.02)); }
+.operations-health-preview h3 { margin: 6px 0; }
+.operations-health-preview p { margin: 0; color: var(--muted); }
+.operations-health-preview .flow-meta { justify-content: flex-end; }
 .launch-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 10px; }
 .launch-grid article { display: flex; min-height: 145px; flex-direction: column; gap: 10px; padding: 16px; border: 1px solid var(--border); border-radius: 11px; background: var(--surface); }
 .launch-grid strong { font: 600 1.12rem Fraunces, Georgia, serif; }
@@ -556,6 +560,7 @@ body.has-compare .toast { bottom: 105px; }
   .packet-callout { align-items: flex-start; flex-direction: column; gap: 4px; }
   .evidence-review { align-items: flex-start; flex-direction: column; gap: 13px; }
   .monitoring-grid { grid-template-columns: repeat(2,1fr); }
+  .operations-health-preview { grid-template-columns: 1fr; }
   .launch-callout { align-items: flex-start; flex-direction: column; gap: 4px; }
   .decision-callout { align-items: flex-start; flex-direction: column; gap: 4px; }
   .publish-callout { align-items: flex-start; flex-direction: column; gap: 4px; }

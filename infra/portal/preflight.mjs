@@ -115,6 +115,14 @@ export function validateEnvironment(env) {
   const accessibilityAt = requireValue("ACCESSIBILITY_VALIDATED_AT");
   if (accessibilityAt && !validIsoDate(accessibilityAt)) errors.push("ACCESSIBILITY_VALIDATED_AT must be a past ISO timestamp.");
 
+  const monitoringDashboard = requireValue("MONITORING_DASHBOARD_URL");
+  if (monitoringDashboard && !validUrl(monitoringDashboard, ["https:"])) errors.push("MONITORING_DASHBOARD_URL must be a production HTTPS URL.");
+  const incidentRunbook = requireValue("INCIDENT_RUNBOOK_URL");
+  if (incidentRunbook && !validUrl(incidentRunbook, ["https:"])) errors.push("INCIDENT_RUNBOOK_URL must be a production HTTPS URL.");
+  const alertOwner = requireValue("ALERT_OWNER_EMAIL");
+  if (alertOwner && !validEmail(alertOwner)) errors.push("ALERT_OWNER_EMAIL must identify the production alert owner.");
+  if (!positiveNumber(env.SUPPORT_RESPONSE_TARGET_HOURS, 1, 168)) errors.push("SUPPORT_RESPONSE_TARGET_HOURS must be between 1 and 168.");
+
   if (!["true", "false"].includes(String(env.SUBSCRIPTIONS_ENABLED).toLowerCase())) errors.push("SUBSCRIPTIONS_ENABLED must be true or false.");
   if (isTrue(env.SUBSCRIPTIONS_ENABLED)) {
     if (!isTrue(env.SUBSCRIPTION_TERMS_APPROVED)) errors.push("SUBSCRIPTION_TERMS_APPROVED must be true before subscriptions are enabled.");

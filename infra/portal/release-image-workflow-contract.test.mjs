@@ -14,10 +14,17 @@ test("image publication is manual, immutable, and least-privilege", () => {
 });
 
 test("publishes, attests, and records both application images", () => {
-  assert.equal((workflow.match(/docker\/build-push-action@v6/g) || []).length, 2);
-  assert.equal((workflow.match(/actions\/attest-build-provenance@v2/g) || []).length, 2);
+  assert.equal((workflow.match(/docker\/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc/g) || []).length, 2);
+  assert.equal((workflow.match(/actions\/attest@1e69f48acb82d1966a394da916b4c1698aa569d6/g) || []).length, 2);
   assert.match(workflow, /infra\/portal\/Dockerfile\.api/);
   assert.match(workflow, /infra\/portal\/Dockerfile\.web/);
   assert.match(workflow, /release-image-manifest\.mjs/);
-  assert.match(workflow, /actions\/upload-artifact@v4/);
+  assert.match(workflow, /actions\/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9/);
+  assert.equal((workflow.match(/create-storage-record:\s*false/g) || []).length, 2);
+});
+
+test("every workflow action is pinned to a reviewed commit", () => {
+  const uses = [...workflow.matchAll(/^\s*-?\s*uses:\s*([^\s#]+)/gm)].map((match) => match[1]);
+  assert.ok(uses.length >= 8);
+  assert.ok(uses.every((value) => /@[a-f0-9]{40}$/.test(value)));
 });

@@ -97,6 +97,8 @@ The v2.16 receiver-contract increment provides a stable delivery ID across retri
 
 The v2.17 terminal-delivery increment adds an explicit signature version, non-secret key identifier, bounded payload size, strict request-shape verification, and a finite retry policy. Permanent client rejections stop immediately; transient failures stop after the configured maximum and are recorded as `abandoned`, never retried silently forever. Receiver authentication now relies on the signed body rather than repeating the shared secret in an Authorization header.
 
+The v2.18 recovery-timing increment adds an independently verifiable payload digest and bounded exponential retry delay. Each transient failure persists its next retry time and delay without recording sensitive transport details. Receivers must validate both the digest and signature before parsing JSON; operators can distinguish a waiting retry from a terminal handoff without accessing endpoint or token data.
+
 ## Remaining gap register
 
 | Priority | Gap | Repository state | Required exit evidence |

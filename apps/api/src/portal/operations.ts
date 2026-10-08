@@ -30,8 +30,9 @@ export class WebhookOperationsAlertDelivery implements OperationsAlertDelivery{
   const timestamp=new Date().toISOString();
   const body=JSON.stringify({event:'mgt.operations.alert',alert});
   if(Buffer.byteLength(body,'utf8')>65536)throw new Error('Operations alert payload exceeds the safe delivery limit.');
+  const contentDigest='sha256='+createHash('sha256').update(body).digest('hex');
   const signature=createHmac('sha256',this.secret).update(`${timestamp}.${body}`).digest('hex');
-  const response=await fetch(this.url,{method:'POST',headers:{'content-type':'application/json','x-mgt-event':'operations.alert','x-mgt-signature-version':'v1','x-mgt-key-id':this.keyId,'x-mgt-delivery-id':alert.delivery_id,'x-mgt-attempt':String(alert.attempt),'x-mgt-timestamp':timestamp,'x-mgt-signature':`sha256=${signature}`},body,signal:AbortSignal.timeout(this.timeoutMs)});
+  const response=await fetch(this.url,{method:'POST',headers:{'content-type':'application/json','x-mgt-event':'operations.alert','x-mgt-signature-version':'v1','x-mgt-key-id':this.keyId,'x-mgt-delivery-id':alert.delivery_id,'x-mgt-attempt':String(alert.attempt),'x-mgt-timestamp':timestamp,'x-mgt-content-sha256':contentDigest,'x-mgt-signature':`sha256=${signature}`},body,signal:AbortSignal.timeout(this.timeoutMs)});
   if(!response.ok)throw new Error(`Operations alert delivery returned ${response.status}.`);
  }
 }
@@ -54,6 +55,7 @@ const timestamp=(value:any)=>typeof value==='string'&&!Number.isNaN(Date.parse(v
 const int=(value:string|undefined,fallback:number,min:number,max:number)=>{const parsed=Number(value);return Number.isInteger(parsed)&&parsed>=min&&parsed<=max?parsed:fallback;};
 const notificationId=(actor:string,reminder:Reminder)=>'reminder_'+createHash('sha256').update(`${actor}:${reminder.product_id}:${reminder.due_at}`).digest('hex').slice(0,40);
 const alertFailure=(error:unknown)=>{
+ if(error instanceof Error&&error.message==='Operations alert payload exceeds the safe delivery limit.')return {code:'delivery_payload_rejected',retryable:false};
  const status=error instanceof Error?Number(error.message.match(/^Operations alert delivery returned (\d{3})\.$/)?.[1]):0;
  if(status>=400&&status<500&&status!==408&&status!==429)return {code:'delivery_rejected',retryable:false};
  return {code:'delivery_unavailable',retryable:true};
@@ -66,13 +68,18 @@ export function verifyOperationsAlertSignature(input:{timestamp:string;signature
  return timingSafeEqual(Buffer.from(input.signature),Buffer.from(expected));
 }
 
-export function verifyOperationsAlertRequest(input:{event:string;signatureVersion:string;deliveryId:string;attempt:string;timestamp:string;signature:string;body:string;secret:string;at?:number;maxAgeSeconds?:number}){
+export function verifyOperationsAlertRequest(input:{event:string;signatureVersion:string;deliveryId:string;attempt:string;timestamp:string;contentDigest:string;signature:string;body:string;secret:string;at?:number;maxAgeSeconds?:number}){
  if(input.event!=='operations.alert'||input.signatureVersion!=='v1'||!/^[-A-Za-z0-9_]{8,128}$/.test(input.deliveryId)||!/^[1-9]\d{0,5}$/.test(input.attempt))return false;
+ if(!/^sha256=[a-f0-9]{64}$/.test(input.contentDigest)||!timingSafeEqual(Buffer.from(input.contentDigest),Buffer.from('sha256='+createHash('sha256').update(input.body).digest('hex'))))return false;
  if(Buffer.byteLength(input.body,'utf8')>65536||!verifyOperationsAlertSignature(input))return false;
  try{
   const parsed=JSON.parse(input.body);
   return parsed?.event==='mgt.operations.alert'&&parsed?.alert?.version==='1'&&parsed.alert.delivery_id===input.deliveryId&&Number(parsed.alert.attempt)===Number(input.attempt);
  }catch{return false;}
+}
+
+export function operationsAlertRetryDelaySeconds(baseSeconds:number,attempt:number,maxSeconds:number){
+ return Math.min(maxSeconds,baseSeconds*Math.pow(2,Math.max(0,attempt-1)));
 }
 
 export function operationalReadiness(backup:any,runs:{value:any}[],at=Date.now(),workerMaxAgeMs=5*60000){
@@ -218,10 +225,10 @@ export class OperationalWorker{
    await this.alertDelivery.deliver(alert);
    await this.store.tx(async records=>{await records.put('operations','alert_state',{status,fingerprint,delivery_id:deliveryId,delivery_status:'delivered',attempts:attempt,last_attempt_at:iso(at),delivered_at:iso(at)});await records.put('operations_alert_events',eventId,{event_id:eventId,delivery_id:deliveryId,status,alerts:alert.alerts,delivery_status:'delivered',attempt:attempt,attempted_at:iso(at)});const run=await records.get<any>('operation_runs',runId);if(run)await records.put('operation_runs',runId,{...run,alert_delivery:'delivered'});});
   }catch(error){
-   const retryAfter=int(this.env.OPERATIONS_ALERT_RETRY_COOLDOWN_SECONDS,300,10,3600);
+   const retryBase=int(this.env.OPERATIONS_ALERT_RETRY_COOLDOWN_SECONDS,300,10,3600),retryMax=int(this.env.OPERATIONS_ALERT_MAX_RETRY_DELAY_SECONDS,3600,10,86400);
    const failure=alertFailure(error),maxAttempts=int(this.env.OPERATIONS_ALERT_MAX_ATTEMPTS,5,1,20),terminal=!failure.retryable||attempt>=maxAttempts;
-   const deliveryStatus=terminal?'abandoned':'failed',retryNotBefore=terminal?undefined:iso(at+retryAfter*1000);
-   await this.store.tx(async records=>{await records.put('operations','alert_state',{status,fingerprint,delivery_id:deliveryId,delivery_status:deliveryStatus,attempts:attempt,last_attempt_at:iso(at),...(retryNotBefore?{retry_not_before:retryNotBefore}:{}),last_error_code:failure.code});await records.put('operations_alert_events',eventId,{event_id:eventId,delivery_id:deliveryId,status,alerts:alert.alerts,delivery_status:deliveryStatus,attempt:attempt,error_code:failure.code,attempted_at:iso(at),...(retryNotBefore?{retry_not_before:retryNotBefore}:{}),terminal});const run=await records.get<any>('operation_runs',runId);if(run)await records.put('operation_runs',runId,{...run,alert_delivery:deliveryStatus});});
+   const retryDelaySeconds=terminal?undefined:operationsAlertRetryDelaySeconds(retryBase,attempt,retryMax),deliveryStatus=terminal?'abandoned':'failed',retryNotBefore=retryDelaySeconds===undefined?undefined:iso(at+retryDelaySeconds*1000);
+   await this.store.tx(async records=>{await records.put('operations','alert_state',{status,fingerprint,delivery_id:deliveryId,delivery_status:deliveryStatus,attempts:attempt,last_attempt_at:iso(at),...(retryNotBefore?{retry_not_before:retryNotBefore,retry_delay_seconds:retryDelaySeconds}:{}),last_error_code:failure.code});await records.put('operations_alert_events',eventId,{event_id:eventId,delivery_id:deliveryId,status,alerts:alert.alerts,delivery_status:deliveryStatus,attempt:attempt,error_code:failure.code,attempted_at:iso(at),...(retryNotBefore?{retry_not_before:retryNotBefore,retry_delay_seconds:retryDelaySeconds}:{}),terminal});const run=await records.get<any>('operation_runs',runId);if(run)await records.put('operation_runs',runId,{...run,alert_delivery:deliveryStatus});});
   }
  }
  private async prune(records:Records,at:number){

@@ -103,6 +103,8 @@ The v2.19 receiver-backoff increment honors valid `Retry-After` guidance from an
 
 The v2.20 multi-worker increment adds a durable alert-send lease. A worker claims an incident state before network delivery, so concurrent workers cannot create parallel alert sends. If a process stops after claiming the lease, the next worker safely resumes once the short lease expires using the same delivery ID. The operations health view exposes only the lease deadline, not any endpoint or credential.
 
+The v2.21 fenced-lease increment prevents a late worker from overwriting a newer delivery attempt after a lease expires. Each claim receives a unique fencing token; only the still-current token can finalize alert state. A late success or failure is retained only as a sanitized `superseded` audit event, preserving receiver idempotency and the newest worker's authoritative outcome.
+
 ## Remaining gap register
 
 | Priority | Gap | Repository state | Required exit evidence |

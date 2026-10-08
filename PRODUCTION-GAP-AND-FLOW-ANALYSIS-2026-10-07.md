@@ -105,6 +105,8 @@ The v2.20 multi-worker increment adds a durable alert-send lease. A worker claim
 
 The v2.21 fenced-lease increment prevents a late worker from overwriting a newer delivery attempt after a lease expires. Each claim receives a unique fencing token; only the still-current token can finalize alert state. A late success or failure is retained only as a sanitized `superseded` audit event, preserving receiver idempotency and the newest worker's authoritative outcome.
 
+The v2.22 delivery-fencing increment applies the same protection to customer reminder delivery. If a reminder lease expires during a slow provider call, the replacement attempt is authoritative and the late worker becomes a no-op. This keeps retry state, delivery counts, and the notification record consistent without recording provider details.
+
 ## Remaining gap register
 
 | Priority | Gap | Repository state | Required exit evidence |

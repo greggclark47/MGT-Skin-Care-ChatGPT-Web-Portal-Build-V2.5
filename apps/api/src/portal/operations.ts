@@ -2,7 +2,7 @@ import { createHash, createHmac, randomUUID, timingSafeEqual } from 'node:crypto
 import {writeFile,rename} from 'node:fs/promises';
 import type { Records, Store } from './store';
 
-type Notification={id:string;actor:string;kind:'replenishment_reminder';status:'queued'|'processing'|'delivered'|'failed'|'read';scheduled_at:string;created_at:string;updated_at:string;attempts:number;payload:{product_id:string;due_at:string};lease_until?:string;delivered_at?:string;read_at?:string;last_error?:string};
+type Notification={id:string;actor:string;kind:'replenishment_reminder';status:'queued'|'processing'|'delivered'|'failed'|'read';scheduled_at:string;created_at:string;updated_at:string;attempts:number;payload:{product_id:string;due_at:string};lease_until?:string;claim_id?:string;delivered_at?:string;read_at?:string;last_error?:string};
 type Reminder={product_id:string;due_at:string;paused?:boolean;notification_id?:string;last_notified_at?:string};
 type WorkerOptions={env?:NodeJS.ProcessEnv;delivery?:NotificationDelivery;identityDeletion?:IdentityDeletion;alertDelivery?:OperationsAlertDelivery};
 export type WorkerResult={run_id:string;created:number;delivered:number;failed:number;removed:number;deletions_completed:number;deletions_blocked:number;backup_status:'healthy'|'stale'|'unverified'};
@@ -384,17 +384,17 @@ export class OperationalWorker{
    if(!notification||notification.status==='delivered'||notification.status==='read'||notification.status==='failed')return undefined;
    const lease=timestamp(notification.lease_until);
    if(notification.status==='processing'&&lease!==undefined&&lease>at)return undefined;
-   const processing={...notification,status:'processing' as const,attempts:notification.attempts+1,lease_until:iso(at+5*60000),updated_at:iso(at)};
+    const processing={...notification,status:'processing' as const,attempts:notification.attempts+1,lease_until:iso(at+5*60000),claim_id:randomUUID(),updated_at:iso(at)};
    await records.put('notifications',id,processing);return processing;
   });
   if(!claimed)return 'skipped';
   try{
    await this.delivery.deliver(claimed);
-   await this.store.tx(async records=>{await records.lock('notification:'+id);const current=await records.get<Notification>('notifications',id);if(current)await records.put('notifications',id,{...current,status:'delivered',delivered_at:iso(),lease_until:undefined,updated_at:iso()});});
-   return 'delivered';
+   const completed=await this.store.tx(async records=>{await records.lock('notification:'+id);const current=await records.get<Notification>('notifications',id);if(!current||current.status!=='processing'||current.claim_id!==claimed.claim_id)return false;await records.put('notifications',id,{...current,status:'delivered',delivered_at:iso(),lease_until:undefined,claim_id:undefined,updated_at:iso()});return true;});
+   return completed?'delivered':'skipped';
   }catch(error){
-   await this.store.tx(async records=>{await records.lock('notification:'+id);const current=await records.get<Notification>('notifications',id);if(current){const retry=current.attempts<3;await records.put('notifications',id,{...current,status:retry?'queued':'failed',lease_until:undefined,last_error:error instanceof Error?error.message:'Notification delivery failed.',updated_at:iso()});}});
-   return 'failed';
+   const completed=await this.store.tx(async records=>{await records.lock('notification:'+id);const current=await records.get<Notification>('notifications',id);if(!current||current.status!=='processing'||current.claim_id!==claimed.claim_id)return false;const retry=current.attempts<3;await records.put('notifications',id,{...current,status:retry?'queued':'failed',lease_until:undefined,claim_id:undefined,last_error:error instanceof Error?error.message:'Notification delivery failed.',updated_at:iso()});return true;});
+   return completed?'failed':'skipped';
   }
  }
 }

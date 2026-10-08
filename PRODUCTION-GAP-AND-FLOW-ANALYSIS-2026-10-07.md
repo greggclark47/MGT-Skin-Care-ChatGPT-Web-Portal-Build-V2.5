@@ -107,6 +107,10 @@ The v2.21 fenced-lease increment prevents a late worker from overwriting a newer
 
 The v2.22 delivery-fencing increment applies the same protection to customer reminder delivery. If a reminder lease expires during a slow provider call, the replacement attempt is authoritative and the late worker becomes a no-op. This keeps retry state, delivery counts, and the notification record consistent without recording provider details.
 
+The v2.23 customer-notification boundary increment removes internal lease and claim fields from the customer notification response, records only bounded delivery outcome codes instead of adapter error text, and sends a stable notification identifier plus attempt number to webhook receivers. Receivers can deduplicate a slow/late reminder retry without receiving worker coordination details; customer responses expose only the notification state and reminder payload.
+
+The v2.24 account-deletion execution increment assigns a fresh claim ID to each leased deletion attempt and requires that claim for both successful erasure and failure recovery. A late worker can no longer reset or finalize a newer deletion attempt; the control is covered by a concurrent-worker regression and does not claim live provider completion.
+
 ## Remaining gap register
 
 | Priority | Gap | Repository state | Required exit evidence |

@@ -53,6 +53,9 @@ function publicSubscriptionRecord(record:any){
 function publicSupportTicket(ticket:any){
  return {id:ticket.id,subject:ticket.subject,message:ticket.message,status:SUPPORT_STATUSES.includes(ticket.status)?ticket.status:'open',request_type:SUPPORT_TYPES.includes(ticket.request_type)?ticket.request_type:'portal_help',replies:Array.isArray(ticket.replies)?ticket.replies.map((reply:any)=>({text:reply.text,at:reply.at})):[],created_at:ticket.created_at||null,updated_at:ticket.updated_at||ticket.created_at||null};
 }
+function publicNotification(notification:any){
+ return {id:notification.id,kind:notification.kind,status:notification.status,scheduled_at:notification.scheduled_at||null,created_at:notification.created_at||null,updated_at:notification.updated_at||notification.created_at||null,attempts:Number.isInteger(notification.attempts)?notification.attempts:0,payload:notification.payload||{},delivered_at:notification.delivered_at||null,read_at:notification.read_at||null};
+}
 async function supportMetric(db:Records,event:string,dimension:string){
  const date=now().slice(0,10),id=`${date}:${event}:${dimension}`;
  await db.lock('support-metric:'+id);
@@ -225,7 +228,7 @@ export async function createPortal(options:PortalOptions){
  get('/reminders',async(req,res)=>res.json({reminders:await db.tx(r=>r.get('reminders',req.actor))||[]}));
  post('/reminders',async(req,res)=>{const product_id=text(req.body.product_id,100);const days=Number(req.body.days);check(Number.isInteger(days)&&days>=1&&days<=365,400,'invalid_days','Choose between 1 and 365 days.');await db.tx(async r=>{check(await r.get('products',product_id),404,'product_missing','Product not found.');let reminders=await r.get('reminders',req.actor)||[];reminders=reminders.filter((x:any)=>x.product_id!==product_id);reminders.push({product_id,due_at:new Date(Date.now()+days*86400000).toISOString(),paused:false});await r.put('reminders',req.actor,reminders);});res.json({saved:true});});
  post('/reminders/remove',async(req,res)=>{await db.tx(async r=>r.put('reminders',req.actor,(await r.get('reminders',req.actor)||[]).filter((x:any)=>x.product_id!==req.body.product_id)));res.json({removed:true});});
- get('/notifications',async(req,res)=>{const notifications=await db.tx(async r=>(await r.entries<any>('notifications')).map(x=>x.value).filter(x=>x.actor===req.actor).sort((a,b)=>b.created_at.localeCompare(a.created_at)).slice(0,50));res.json({notifications});});
+ get('/notifications',async(req,res)=>{const notifications=await db.tx(async r=>(await r.entries<any>('notifications')).map(x=>x.value).filter(x=>x.actor===req.actor).sort((a,b)=>b.created_at.localeCompare(a.created_at)).slice(0,50).map(publicNotification));res.json({notifications});});
  post('/notifications/read',async(req,res)=>{const id=text(req.body.id,100);await db.tx(async r=>{await r.lock('notification:'+id);const notification=await r.get<any>('notifications',id);check(notification?.actor===req.actor,404,'notification_missing','Notification not found.');if(notification.status!=='delivered'&&notification.status!=='read')throw new Fault(409,'notification_pending','This notification is still being delivered.');await r.put('notifications',id,{...notification,status:'read',read_at:now(),updated_at:now()});});res.json({saved:true});});
  get('/knowledge',async(_req,res)=>res.json({articles:await db.tx(async r=>(await r.list('knowledge')).filter(a=>a.status==='approved'&&a.approved_by))}));
  const reviewedAnswer=async(req:HubRequest,message:string)=>{

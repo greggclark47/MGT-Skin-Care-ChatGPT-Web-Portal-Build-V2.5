@@ -1798,6 +1798,10 @@ This checkpoint does not create a Stripe Product or Prices, connect an account, 
 **Phase F949 — final verification hold:** Added the final checksum-bound receipt-verification hold, stopping at `ready_for_production_receipt_verification`.
 **F915–F949 local verification:** The review rejects incomplete records, changed artifacts, mismatched receipt checksums, stale timestamps, and fabricated verification states. It does not execute, deploy, publish, change traffic, or claim live production readiness without external evidence.
 
+**Phase F950 — customer-notification boundary hardening:** Customer reminder webhook delivery now sends a stable notification identifier and attempt number, bounds the serialized payload, persists only sanitized delivery outcome codes, and projects notifications without internal lease, claim, actor, or adapter-error fields. The v2.23 control closes the provider-detail and receiver-deduplication gap left after reminder lease fencing; it does not establish live provider receipt or production readiness.
+
+**Phase F975 — account-deletion execution fencing:** Account-deletion workers now receive a fresh per-attempt claim ID when they acquire a lease. Completion and failure paths require that claim, so a late worker cannot reset or finalize a newer deletion attempt. The v2.24 regression covers an expired first lease, a replacement worker, and a late failure while the replacement is still active.
+
 **Production ship plan alignment checkpoint:** Incorporated the linked Production Ship Todo Plan into `PRODUCTION-SHIP-PLAN-ALIGNMENT.md`. The alignment maps every required live setup and evidence area to the existing F437-F754 gates, adds Lean/Standard/Expanded economic profiles, defines the staged execution sequence, and preserves the fail-closed rule that local artifacts cannot substitute for live evidence, named owners, or production approval.
 
 **Exit evidence:** approved positioning and claims, consent-compliant measurement plan, attribution rules, partner terms where relevant, campaign cap and stop rule, baseline report, and a post-test decision grounded in observed data.

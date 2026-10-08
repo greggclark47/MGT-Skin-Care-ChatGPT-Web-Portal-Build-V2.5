@@ -2,7 +2,8 @@ import { createHash, createHmac, randomUUID, timingSafeEqual } from 'node:crypto
 import {writeFile,rename} from 'node:fs/promises';
 import type { Records, Store } from './store';
 
-type Notification={id:string;actor:string;kind:'replenishment_reminder';status:'queued'|'processing'|'delivered'|'failed'|'read';scheduled_at:string;created_at:string;updated_at:string;attempts:number;payload:{product_id:string;due_at:string};lease_until?:string;claim_id?:string;delivered_at?:string;read_at?:string;last_error?:string};
+type NotificationFailureCode='delivery_rejected'|'delivery_unavailable'|'delivery_payload_rejected';
+type Notification={id:string;actor:string;kind:'replenishment_reminder';status:'queued'|'processing'|'delivered'|'failed'|'read';scheduled_at:string;created_at:string;updated_at:string;attempts:number;payload:{product_id:string;due_at:string};lease_until?:string;claim_id?:string;delivered_at?:string;read_at?:string;last_error_code?:NotificationFailureCode};
 type Reminder={product_id:string;due_at:string;paused?:boolean;notification_id?:string;last_notified_at?:string};
 type WorkerOptions={env?:NodeJS.ProcessEnv;delivery?:NotificationDelivery;identityDeletion?:IdentityDeletion;alertDelivery?:OperationsAlertDelivery};
 export type WorkerResult={run_id:string;created:number;delivered:number;failed:number;removed:number;deletions_completed:number;deletions_blocked:number;backup_status:'healthy'|'stale'|'unverified'};
@@ -16,7 +17,9 @@ export class WebhookNotificationDelivery implements NotificationDelivery{
  kind='webhook';
  constructor(private url:string,private secret?:string){}
  async deliver(notification:Notification){
-  const response=await fetch(this.url,{method:'POST',headers:{'content-type':'application/json',...(this.secret?{authorization:`Bearer ${this.secret}`}:{})},body:JSON.stringify({event:'mgt.notification',notification}),signal:AbortSignal.timeout(10000)});
+  const body=JSON.stringify({event:'mgt.notification',notification:{id:notification.id,actor:notification.actor,kind:notification.kind,status:notification.status,scheduled_at:notification.scheduled_at,created_at:notification.created_at,updated_at:notification.updated_at,attempts:notification.attempts,payload:notification.payload}});
+  if(Buffer.byteLength(body,'utf8')>65536)throw new Error('Notification payload exceeds the safe delivery limit.');
+  const response=await fetch(this.url,{method:'POST',headers:{'content-type':'application/json','x-mgt-event':'mgt.notification','x-mgt-notification-id':notification.id,'x-mgt-attempt':String(notification.attempts),...(this.secret?{authorization:`Bearer ${this.secret}`}:{})},body,signal:AbortSignal.timeout(10000)});
   if(!response.ok)throw new Error(`Notification delivery returned ${response.status}.`);
  }
 }
@@ -57,6 +60,12 @@ const iso=(ms=Date.now())=>new Date(ms).toISOString();
 const timestamp=(value:any)=>typeof value==='string'&&!Number.isNaN(Date.parse(value))?Date.parse(value):undefined;
 const int=(value:string|undefined,fallback:number,min:number,max:number)=>{const parsed=Number(value);return Number.isInteger(parsed)&&parsed>=min&&parsed<=max?parsed:fallback;};
 const notificationId=(actor:string,reminder:Reminder)=>'reminder_'+createHash('sha256').update(`${actor}:${reminder.product_id}:${reminder.due_at}`).digest('hex').slice(0,40);
+const notificationFailureCode=(error:unknown):NotificationFailureCode=>{
+ if(error instanceof Error&&error.message==='Notification payload exceeds the safe delivery limit.')return 'delivery_payload_rejected';
+ const status=error instanceof Error?Number(error.message.match(/^Notification delivery returned (\d{3})\.$/)?.[1]):0;
+ if(status>=400&&status<500&&status!==408&&status!==429)return 'delivery_rejected';
+ return 'delivery_unavailable';
+};
 const alertFailure=(error:unknown)=>{
  if(error instanceof Error&&error.message==='Operations alert payload exceeds the safe delivery limit.')return {code:'delivery_payload_rejected',retryable:false};
  if(error instanceof OperationsAlertDeliveryError){
@@ -309,7 +318,7 @@ export class OperationalWorker{
      await records.put('deletion_requests',entry.id,{...request,status:'pending',blocked_reasons:blockers,last_checked_at:iso(at),lease_until:undefined});
      return {blocked:true} as const;
     }
-    const processing={...request,status:'processing',attempts:(request.attempts||0)+1,blocked_reasons:[],last_checked_at:iso(at),lease_until:iso(at+10*60000)};
+    const processing={...request,status:'processing',attempts:(request.attempts||0)+1,blocked_reasons:[],last_checked_at:iso(at),lease_until:iso(at+10*60000),claim_id:randomUUID()};
     await records.put('deletion_requests',entry.id,processing);
     return {blocked:false,request:processing} as const;
    });
@@ -320,14 +329,15 @@ export class OperationalWorker{
     await this.store.tx(async records=>{
      await records.lock('account-deletion:'+createHash('sha256').update(entry.id).digest('hex'));
      const current=await records.get<any>('deletion_requests',entry.id);
-     if(!current||current.status!=='processing'||current.request_id!==claimed.request.request_id)return;
+     if(!current||current.status!=='processing'||current.claim_id!==claimed.request.claim_id)return;
      await this.eraseAccount(records,current,at);
     });
     deletions_completed++;
    }catch(error){
     await this.store.tx(async records=>{
+     await records.lock('account-deletion:'+createHash('sha256').update(entry.id).digest('hex'));
      const current=await records.get<any>('deletion_requests',entry.id);
-     if(current?.request_id===claimed.request.request_id)await records.put('deletion_requests',entry.id,{...current,status:'pending',lease_until:undefined,last_error:error instanceof Error?error.message:'Identity deletion failed.',last_checked_at:iso(at)});
+     if(current?.claim_id===claimed.request.claim_id)await records.put('deletion_requests',entry.id,{...current,status:'pending',lease_until:undefined,claim_id:undefined,last_error:error instanceof Error?error.message:'Identity deletion failed.',last_checked_at:iso(at)});
     });
     deletions_blocked++;
    }
@@ -389,11 +399,11 @@ export class OperationalWorker{
   });
   if(!claimed)return 'skipped';
   try{
-   await this.delivery.deliver(claimed);
-   const completed=await this.store.tx(async records=>{await records.lock('notification:'+id);const current=await records.get<Notification>('notifications',id);if(!current||current.status!=='processing'||current.claim_id!==claimed.claim_id)return false;await records.put('notifications',id,{...current,status:'delivered',delivered_at:iso(),lease_until:undefined,claim_id:undefined,updated_at:iso()});return true;});
+    await this.delivery.deliver(claimed);
+    const completed=await this.store.tx(async records=>{await records.lock('notification:'+id);const current=await records.get<Notification>('notifications',id);if(!current||current.status!=='processing'||current.claim_id!==claimed.claim_id)return false;await records.put('notifications',id,{...current,status:'delivered',delivered_at:iso(),lease_until:undefined,claim_id:undefined,last_error_code:undefined,updated_at:iso()});return true;});
    return completed?'delivered':'skipped';
   }catch(error){
-   const completed=await this.store.tx(async records=>{await records.lock('notification:'+id);const current=await records.get<Notification>('notifications',id);if(!current||current.status!=='processing'||current.claim_id!==claimed.claim_id)return false;const retry=current.attempts<3;await records.put('notifications',id,{...current,status:retry?'queued':'failed',lease_until:undefined,claim_id:undefined,last_error:error instanceof Error?error.message:'Notification delivery failed.',updated_at:iso()});return true;});
+    const completed=await this.store.tx(async records=>{await records.lock('notification:'+id);const current=await records.get<Notification>('notifications',id);if(!current||current.status!=='processing'||current.claim_id!==claimed.claim_id)return false;const retry=current.attempts<3;await records.put('notifications',id,{...current,status:retry?'queued':'failed',lease_until:undefined,claim_id:undefined,last_error_code:notificationFailureCode(error),updated_at:iso()});return true;});
    return completed?'failed':'skipped';
   }
  }

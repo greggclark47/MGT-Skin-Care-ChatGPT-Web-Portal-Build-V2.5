@@ -1,0 +1,23 @@
+{
+  "version": "1.0",
+  "candidate_commit": "675f5f7e1ac79fd7f85a29c47697553357aee1f7",
+  "prerequisites_checksum": "sha256:9ec0eac9fba72fc0be6fedd804b0fdbb4a4725b9d41358d56682bf3658e20fcb",
+  "generated_at": "2026-10-06T18:15:34.625Z",
+  "status": "blocked",
+  "entries": [],
+  "errors": [
+    "prerequisites must be explicitly blocked on external prerequisites",
+    "local configuration must be ready before external prerequisite review",
+    "env_shape record is required",
+    "hosting_target record is required",
+    "database_target record is required",
+    "secret_manager record is required",
+    "image_digests record is required",
+    "backup_restore record is required",
+    "support_owner record is required",
+    "accessibility_report record is required",
+    "rollback_authority record is required",
+    "launch_approval record is required"
+  ],
+  "prerequisite_review_checksum": "sha256:088219d8f486efe7b10d515806c42de52ac604ae16e33524c717d8bc24b1188a"
+}

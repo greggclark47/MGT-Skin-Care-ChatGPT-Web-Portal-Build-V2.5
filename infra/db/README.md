@@ -2,6 +2,31 @@
 
 ## Applying
 
+Before applying migrations to a target project, generate the local lineage manifest:
+
+```
+pnpm reconcile:migrations > work/local-migration-manifest.json
+```
+
+After the database owner supplies a sanitized target manifest containing the applied
+`database` and `portal` migration names and hashes, compare it without connecting to or
+mutating the target database:
+
+```
+node infra/db/migration-lineage.mjs --target-manifest work/reconciliation/target-migrations.json
+```
+
+The comparison fails closed on missing, unknown, reordered, or content-mismatched migrations.
+It also rejects malformed target shapes, duplicate names, invalid IDs, and invalid hashes. The
+target manifest must contain migration metadata only; never export secrets, customer rows, tokens,
+or database dumps. This check is evidence for review, not permission to apply changes.
+
+There is intentionally no root command that mutates a staging or production database. Apply the
+reviewed SQL files through the database owner's approved change process, keep
+`PORTAL_AUTO_MIGRATE=false`, and record the resulting target manifest and transcript. The former
+`pnpm migrate` entry referenced a file that did not exist and has been removed rather than replaced
+with an unreviewed production mutation path.
+
 Apply every file in `migrations/` in **numeric order**. The full set has been verified to
 apply cleanly to a fresh PostgreSQL 16 (see "History" below — it did not, before 2026-09-06).
 
@@ -19,6 +44,10 @@ infra/db/reset-and-test.sh                # wipe + apply + run the DB-backed smo
 | `0004_ingredient_rules.sql` | `ingredient_rules` — the versioned sensitivity-ceiling safety matrix, plus its seed rows. Authoritative. |
 | `0005_orders_extensions.sql` | Order columns and `fulfillment_jobs`. Must run after 0002 creates `orders`. |
 | `0006_knowledge_rag.sql` | `knowledge.embeddings` + `knowledge.match()`. Must run after 0003 creates `knowledge.objects`. |
+| `0007_compliance_release_controls.sql` | Durable consent timestamps, consent RLS, an active-consent guard, and append-only skin-match/subscription event records. Fails closed if active consent history needs reconciliation. |
+| `0008_customer_data_rls.sql` | Completes owner-scoped RLS for customer data, protects related child rows, and keeps provider/AI implementation records service-only. |
+| `0009_service_table_rls.sql` | Enables RLS without browser-role policies on public catalog, configuration, webhook, admin, audit, fulfillment, and migration-ledger tables served only through the API. |
+| `0010_ingredient_rule_seed_alignment.sql` | Adds the reviewed zinc-oxide seed through a forward-only migration so the database covers the canonical 15-rule seed and the sunscreen seed product. Existing reviewed zinc-oxide history is preserved. |
 
 ### Requirements
 
@@ -31,8 +60,24 @@ infra/db/reset-and-test.sh                # wipe + apply + run the DB-backed smo
 
 ## Testing
 
-`reset-and-test.sh` runs `persistence`, `dual-backend`, `admin-persistence`, and
-`ingredient-rules-persistence` against a real database, each from a freshly-migrated state.
+Before staging approval, run the read-only structural audit against the reviewed target. It
+opens a read-only transaction, emits no connection string, role name, database name, customer
+row or provider payload, and fails closed on missing RLS, owner-read policies, service-only
+boundaries, application-role RLS authority, append-only triggers, required extensions,
+PostgreSQL version, or portal migrations:
+
+```
+pnpm infra:database-audit -- --output work/staging/database-audit.json
+```
+
+An output status of `pass` is structural evidence only. Run authenticated cross-account RLS
+probes, identity lifecycle tests, concurrent-write tests and the restore drill separately.
+
+`reset-and-test.sh` applies both database and portal migration lineages, then runs `persistence`,
+`dual-backend`, `admin-persistence`, and `ingredient-rules-persistence` against a real database,
+each from a freshly-migrated state. It finishes with `rls-isolation.sql`, which temporarily grants
+browser-role SELECT permission inside a rolled-back transaction and proves owner reads,
+cross-account denial, anonymous denial, child-row isolation, and service-only table denial.
 
 These tests are **not idempotent** — they use fixed fixture ids (`evt_live_1`, `order_live_1`,
 `kb-*`) and assert on row counts. Running them twice against the same database fails on

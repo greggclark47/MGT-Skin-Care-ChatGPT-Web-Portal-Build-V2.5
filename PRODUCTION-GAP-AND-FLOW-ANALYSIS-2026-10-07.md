@@ -93,6 +93,8 @@ The v2.14 delivery-assurance increment adds a timestamped HMAC signature (`x-mgt
 
 The v2.15 operational-resilience increment adds a bounded retry cooldown, classified delivery outcomes, monotonic attempt counts, and a compliance-restricted alert-history endpoint. Failure details are deliberately reduced to safe categories (`delivery_rejected` or `delivery_unavailable`) before durable storage. This allows operators to prove alert-flow behavior and investigate timing without storing gateway responses, endpoint details, or sensitive customer context.
 
+The v2.16 receiver-contract increment provides a stable delivery ID across retries, an explicit attempt number, and a reusable signature verifier. Receiver implementations must deduplicate on `x-mgt-delivery-id`, verify the HMAC of `timestamp.rawBody`, and reject messages outside their configured replay window. Retries keep the same delivery ID while their audit entries remain distinct, allowing safe at-least-once transport without duplicate incident creation.
+
 ## Remaining gap register
 
 | Priority | Gap | Repository state | Required exit evidence |

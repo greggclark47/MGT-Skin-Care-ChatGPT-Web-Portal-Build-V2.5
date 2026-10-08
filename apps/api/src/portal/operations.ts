@@ -20,17 +20,18 @@ export class WebhookNotificationDelivery implements NotificationDelivery{
   if(!response.ok)throw new Error(`Notification delivery returned ${response.status}.`);
  }
 }
-type OperationsAlert={version:'1';delivery_id:string;attempt:number;status:'active'|'resolved';alerts:string[];summary:ReturnType<typeof operationalSnapshot>;generated_at:string};
+export type OperationsAlert={version:'1';delivery_id:string;attempt:number;status:'active'|'resolved';alerts:string[];summary:ReturnType<typeof operationalSnapshot>;generated_at:string};
 export interface OperationsAlertDelivery{kind:string;deliver(alert:OperationsAlert):Promise<void>}
 export class DisabledOperationsAlertDelivery implements OperationsAlertDelivery{kind='disabled';async deliver(_alert:OperationsAlert){}}
 export class WebhookOperationsAlertDelivery implements OperationsAlertDelivery{
  kind='webhook';
- constructor(private url:string,private secret:string,private timeoutMs=10000){}
+ constructor(private url:string,private secret:string,private timeoutMs=10000,private keyId='primary'){}
  async deliver(alert:OperationsAlert){
   const timestamp=new Date().toISOString();
   const body=JSON.stringify({event:'mgt.operations.alert',alert});
+  if(Buffer.byteLength(body,'utf8')>65536)throw new Error('Operations alert payload exceeds the safe delivery limit.');
   const signature=createHmac('sha256',this.secret).update(`${timestamp}.${body}`).digest('hex');
-  const response=await fetch(this.url,{method:'POST',headers:{'content-type':'application/json',authorization:`Bearer ${this.secret}`,'x-mgt-event':'operations.alert','x-mgt-delivery-id':alert.delivery_id,'x-mgt-attempt':String(alert.attempt),'x-mgt-timestamp':timestamp,'x-mgt-signature':`sha256=${signature}`},body,signal:AbortSignal.timeout(this.timeoutMs)});
+  const response=await fetch(this.url,{method:'POST',headers:{'content-type':'application/json','x-mgt-event':'operations.alert','x-mgt-signature-version':'v1','x-mgt-key-id':this.keyId,'x-mgt-delivery-id':alert.delivery_id,'x-mgt-attempt':String(alert.attempt),'x-mgt-timestamp':timestamp,'x-mgt-signature':`sha256=${signature}`},body,signal:AbortSignal.timeout(this.timeoutMs)});
   if(!response.ok)throw new Error(`Operations alert delivery returned ${response.status}.`);
  }
 }
@@ -52,13 +53,26 @@ const iso=(ms=Date.now())=>new Date(ms).toISOString();
 const timestamp=(value:any)=>typeof value==='string'&&!Number.isNaN(Date.parse(value))?Date.parse(value):undefined;
 const int=(value:string|undefined,fallback:number,min:number,max:number)=>{const parsed=Number(value);return Number.isInteger(parsed)&&parsed>=min&&parsed<=max?parsed:fallback;};
 const notificationId=(actor:string,reminder:Reminder)=>'reminder_'+createHash('sha256').update(`${actor}:${reminder.product_id}:${reminder.due_at}`).digest('hex').slice(0,40);
-const alertFailureCode=(error:unknown)=>error instanceof Error&&/^Operations alert delivery returned 4\d\d\.$/.test(error.message)?'delivery_rejected':'delivery_unavailable';
+const alertFailure=(error:unknown)=>{
+ const status=error instanceof Error?Number(error.message.match(/^Operations alert delivery returned (\d{3})\.$/)?.[1]):0;
+ if(status>=400&&status<500&&status!==408&&status!==429)return {code:'delivery_rejected',retryable:false};
+ return {code:'delivery_unavailable',retryable:true};
+};
 
 export function verifyOperationsAlertSignature(input:{timestamp:string;signature:string;body:string;secret:string;at?:number;maxAgeSeconds?:number}){
  const at=input.at??Date.now(),received=timestamp(input.timestamp),maxAge=(input.maxAgeSeconds??300)*1000;
  if(!received||received>at+30000||at-received>maxAge||!input.secret||!/^sha256=[a-f0-9]{64}$/.test(input.signature))return false;
  const expected='sha256='+createHmac('sha256',input.secret).update(`${input.timestamp}.${input.body}`).digest('hex');
  return timingSafeEqual(Buffer.from(input.signature),Buffer.from(expected));
+}
+
+export function verifyOperationsAlertRequest(input:{event:string;signatureVersion:string;deliveryId:string;attempt:string;timestamp:string;signature:string;body:string;secret:string;at?:number;maxAgeSeconds?:number}){
+ if(input.event!=='operations.alert'||input.signatureVersion!=='v1'||!/^[-A-Za-z0-9_]{8,128}$/.test(input.deliveryId)||!/^[1-9]\d{0,5}$/.test(input.attempt))return false;
+ if(Buffer.byteLength(input.body,'utf8')>65536||!verifyOperationsAlertSignature(input))return false;
+ try{
+  const parsed=JSON.parse(input.body);
+  return parsed?.event==='mgt.operations.alert'&&parsed?.alert?.version==='1'&&parsed.alert.delivery_id===input.deliveryId&&Number(parsed.alert.attempt)===Number(input.attempt);
+ }catch{return false;}
 }
 
 export function operationalReadiness(backup:any,runs:{value:any}[],at=Date.now(),workerMaxAgeMs=5*60000){
@@ -137,7 +151,9 @@ export function operationsAlertDeliveryFromEnv(env:NodeJS.ProcessEnv):Operations
   if(!env.OPERATIONS_ALERT_WEBHOOK_URL||!env.OPERATIONS_ALERT_WEBHOOK_TOKEN)throw new Error('OPERATIONS_ALERT_WEBHOOK_URL and OPERATIONS_ALERT_WEBHOOK_TOKEN are required when operational alerts are enabled.');
   const parsed=new URL(env.OPERATIONS_ALERT_WEBHOOK_URL);
   if(env.NODE_ENV==='production'&&parsed.protocol!=='https:')throw new Error('Production operations alert webhooks must use HTTPS.');
-  return new WebhookOperationsAlertDelivery(parsed.toString(),env.OPERATIONS_ALERT_WEBHOOK_TOKEN,int(env.OPERATIONS_ALERT_TIMEOUT_MS,10000,1000,30000));
+  const keyId=env.OPERATIONS_ALERT_KEY_ID||'primary';
+  if(!/^[A-Za-z0-9_-]{1,64}$/.test(keyId))throw new Error('OPERATIONS_ALERT_KEY_ID must contain only letters, numbers, underscores or hyphens.');
+  return new WebhookOperationsAlertDelivery(parsed.toString(),env.OPERATIONS_ALERT_WEBHOOK_TOKEN,int(env.OPERATIONS_ALERT_TIMEOUT_MS,10000,1000,30000),keyId);
  }
  if(env.OPERATIONS_ALERT_DELIVERY&&env.OPERATIONS_ALERT_DELIVERY!=='disabled')throw new Error('OPERATIONS_ALERT_DELIVERY must be disabled or webhook.');
  return new DisabledOperationsAlertDelivery();
@@ -192,7 +208,7 @@ export class OperationalWorker{
   const status=snapshot.alerts.length?'active':'resolved';
   if(status==='resolved'&&previous?.status!=='active')return;
   const fingerprint=createHash('sha256').update(JSON.stringify({status,alerts:[...snapshot.alerts].sort()})).digest('hex');
-  if(previous?.fingerprint===fingerprint&&previous?.delivery_status==='delivered')return;
+  if(previous?.fingerprint===fingerprint&&['delivered','abandoned'].includes(previous?.delivery_status))return;
   if(previous?.fingerprint===fingerprint&&previous?.delivery_status==='failed'&&(timestamp(previous?.retry_not_before)||0)>at)return;
   const attempt=(previous?.fingerprint===fingerprint?Number(previous?.attempts)||0:0)+1;
   const deliveryId=previous?.fingerprint===fingerprint&&typeof previous?.delivery_id==='string'?previous.delivery_id:randomUUID();
@@ -203,8 +219,9 @@ export class OperationalWorker{
    await this.store.tx(async records=>{await records.put('operations','alert_state',{status,fingerprint,delivery_id:deliveryId,delivery_status:'delivered',attempts:attempt,last_attempt_at:iso(at),delivered_at:iso(at)});await records.put('operations_alert_events',eventId,{event_id:eventId,delivery_id:deliveryId,status,alerts:alert.alerts,delivery_status:'delivered',attempt:attempt,attempted_at:iso(at)});const run=await records.get<any>('operation_runs',runId);if(run)await records.put('operation_runs',runId,{...run,alert_delivery:'delivered'});});
   }catch(error){
    const retryAfter=int(this.env.OPERATIONS_ALERT_RETRY_COOLDOWN_SECONDS,300,10,3600);
-   const errorCode=alertFailureCode(error);
-   await this.store.tx(async records=>{await records.put('operations','alert_state',{status,fingerprint,delivery_id:deliveryId,delivery_status:'failed',attempts:attempt,last_attempt_at:iso(at),retry_not_before:iso(at+retryAfter*1000),last_error_code:errorCode});await records.put('operations_alert_events',eventId,{event_id:eventId,delivery_id:deliveryId,status,alerts:alert.alerts,delivery_status:'failed',attempt:attempt,error_code:errorCode,attempted_at:iso(at),retry_not_before:iso(at+retryAfter*1000)});const run=await records.get<any>('operation_runs',runId);if(run)await records.put('operation_runs',runId,{...run,alert_delivery:'failed'});});
+   const failure=alertFailure(error),maxAttempts=int(this.env.OPERATIONS_ALERT_MAX_ATTEMPTS,5,1,20),terminal=!failure.retryable||attempt>=maxAttempts;
+   const deliveryStatus=terminal?'abandoned':'failed',retryNotBefore=terminal?undefined:iso(at+retryAfter*1000);
+   await this.store.tx(async records=>{await records.put('operations','alert_state',{status,fingerprint,delivery_id:deliveryId,delivery_status:deliveryStatus,attempts:attempt,last_attempt_at:iso(at),...(retryNotBefore?{retry_not_before:retryNotBefore}:{}),last_error_code:failure.code});await records.put('operations_alert_events',eventId,{event_id:eventId,delivery_id:deliveryId,status,alerts:alert.alerts,delivery_status:deliveryStatus,attempt:attempt,error_code:failure.code,attempted_at:iso(at),...(retryNotBefore?{retry_not_before:retryNotBefore}:{}),terminal});const run=await records.get<any>('operation_runs',runId);if(run)await records.put('operation_runs',runId,{...run,alert_delivery:deliveryStatus});});
   }
  }
  private async prune(records:Records,at:number){

@@ -95,6 +95,8 @@ The v2.15 operational-resilience increment adds a bounded retry cooldown, classi
 
 The v2.16 receiver-contract increment provides a stable delivery ID across retries, an explicit attempt number, and a reusable signature verifier. Receiver implementations must deduplicate on `x-mgt-delivery-id`, verify the HMAC of `timestamp.rawBody`, and reject messages outside their configured replay window. Retries keep the same delivery ID while their audit entries remain distinct, allowing safe at-least-once transport without duplicate incident creation.
 
+The v2.17 terminal-delivery increment adds an explicit signature version, non-secret key identifier, bounded payload size, strict request-shape verification, and a finite retry policy. Permanent client rejections stop immediately; transient failures stop after the configured maximum and are recorded as `abandoned`, never retried silently forever. Receiver authentication now relies on the signed body rather than repeating the shared secret in an Authorization header.
+
 ## Remaining gap register
 
 | Priority | Gap | Repository state | Required exit evidence |

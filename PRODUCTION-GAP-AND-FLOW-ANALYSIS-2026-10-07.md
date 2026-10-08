@@ -89,6 +89,8 @@ The subsequent v2.12 control-plane increment adds an aggregate operations-health
 
 The v2.13 alert-delivery increment connects that aggregate state to a dedicated operations webhook. The worker delivers only sanitized alert codes and counts, suppresses repeats with a durable fingerprint, records delivery outcome, and emits a single recovery event after the alert set clears. Production configuration now requires an HTTPS destination and server-side token; live receipt and escalation evidence remain external launch gates.
 
+The v2.14 delivery-assurance increment adds a timestamped HMAC signature (`x-mgt-signature`) to each alert payload, a bounded delivery timeout, and retained sanitized delivery-event history. Receiving services should reject stale timestamps and validate the signature against the raw request body before processing. The administrator view exposes only delivery status and aggregate alert codes, never the token, payload detail, customer information, or endpoint location.
+
 ## Remaining gap register
 
 | Priority | Gap | Repository state | Required exit evidence |

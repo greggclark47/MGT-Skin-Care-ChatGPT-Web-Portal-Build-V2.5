@@ -356,14 +356,19 @@ export async function createPortal(options:PortalOptions){
  get('/admin/operations-health',async(req,res)=>{
   role(req,['superadmin','compliance']);
   const responseTarget=Math.max(1,Math.min(168,Number(env.SUPPORT_RESPONSE_TARGET_HOURS)||24));
-  const snapshot=await db.tx(async r=>operationalSnapshot({
-   notifications:(await r.entries<any>('notifications')).map(item=>item.value),
-   deletions:(await r.entries<any>('deletion_requests')).map(item=>item.value),
-   tickets:await r.list<any>('tickets'),
-   runs:(await r.entries<any>('operation_runs')).map(item=>item.value),
-   webhooks:await r.list<any>('subscription_webhook_receipts')
-  },Date.now(),responseTarget));
-  res.json({...snapshot,window_hours:24,privacy_note:'Aggregate operational counts and sanitized alert codes only; no customer, payment, provider payload or infrastructure location is returned.'});
+  const state=await db.tx(async r=>({
+   snapshot:operationalSnapshot({
+    notifications:(await r.entries<any>('notifications')).map(item=>item.value),
+    deletions:(await r.entries<any>('deletion_requests')).map(item=>item.value),
+    tickets:await r.list<any>('tickets'),
+    runs:(await r.entries<any>('operation_runs')).map(item=>item.value),
+    webhooks:await r.list<any>('subscription_webhook_receipts')
+   },Date.now(),responseTarget),
+   alert:await r.get<any>('operations','alert_state'),
+   events:(await r.entries<any>('operations_alert_events')).map(item=>item.value).filter(item=>item&&typeof item.attempted_at==='string').sort((a,b)=>Date.parse(b.attempted_at)-Date.parse(a.attempted_at)).slice(0,10)
+  }));
+  const alertDelivery={enabled:env.OPERATIONS_ALERT_DELIVERY==='webhook',status:state.alert?.delivery_status||'not_sent',last_attempt_at:state.alert?.last_attempt_at||state.alert?.delivered_at||null,recent:state.events.map(item=>({status:item.status,delivery_status:item.delivery_status,attempted_at:item.attempted_at,alerts:Array.isArray(item.alerts)?item.alerts:[]}))};
+  res.json({...state.snapshot,alert_delivery:alertDelivery,window_hours:24,privacy_note:'Aggregate operational counts and sanitized alert codes only; no customer, payment, provider payload, delivery secret or infrastructure location is returned.'});
  });
   get('/admin/catalog-health',async(req,res)=>{
    role(req,['superadmin','catalog_editor','sme','compliance','viewer']);

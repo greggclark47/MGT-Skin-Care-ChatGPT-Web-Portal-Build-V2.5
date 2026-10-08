@@ -2,7 +2,7 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs/promises');
 const path=require('node:path');
 const {LocalStore}=require('../dist/portal/store.js');
-const {OperationalWorker,InAppNotificationDelivery,aiRuntimeReadiness,operationalReadiness,operationalSnapshot,operationsAlertDeliveryFromEnv,writeWorkerHeartbeat}=require('../dist/portal/operations.js');
+const {OperationalWorker,InAppNotificationDelivery,WebhookOperationsAlertDelivery,aiRuntimeReadiness,operationalReadiness,operationalSnapshot,operationsAlertDeliveryFromEnv,writeWorkerHeartbeat}=require('../dist/portal/operations.js');
 
 (async()=>{
  const store=new LocalStore(':memory:');
@@ -81,6 +81,9 @@ const {OperationalWorker,InAppNotificationDelivery,aiRuntimeReadiness,operationa
  const clearSnapshot=operationalSnapshot({notifications:[],deletions:[],tickets:[],runs:[],webhooks:[]},at,24);assert.equal(clearSnapshot.healthy,true);assert.deepEqual(clearSnapshot.alerts,[]);
  assert.equal(operationsAlertDeliveryFromEnv({OPERATIONS_ALERT_DELIVERY:'disabled'}).kind,'disabled');
  assert.throws(()=>operationsAlertDeliveryFromEnv({NODE_ENV:'production',OPERATIONS_ALERT_DELIVERY:'webhook',OPERATIONS_ALERT_WEBHOOK_URL:'http://alerts.test',OPERATIONS_ALERT_WEBHOOK_TOKEN:'token'}),/HTTPS/);
+ const originalFetch=global.fetch,request=[];global.fetch=async(url,init)=>{request.push({url,init});return {ok:true};};
+ await new WebhookOperationsAlertDelivery('https://alerts.test/events','test-secret',1000).deliver({version:'1',status:'active',alerts:['notification_delivery_failures'],summary:clearSnapshot,generated_at:new Date(at).toISOString()});
+ global.fetch=originalFetch;assert.equal(request[0].init.headers['x-mgt-event'],'operations.alert');assert.match(request[0].init.headers['x-mgt-timestamp'],/^2026-/);assert.match(request[0].init.headers['x-mgt-signature'],/^sha256=[a-f0-9]{64}$/);assert.equal(request[0].init.body.includes('test-secret'),false);
  const alertStore=new LocalStore(':memory:'),captured=[];
  await alertStore.tx(async records=>{await records.put('notifications','failed_alert',{id:'failed_alert',status:'failed',created_at:new Date(at-60000).toISOString(),updated_at:new Date(at-60000).toISOString(),attempts:3});await records.put('tickets','overdue_alert',{id:'overdue_alert',status:'open',created_at:new Date(at-25*3600000).toISOString()});});
  const alertWorker=new OperationalWorker(alertStore,{env:{SUPPORT_RESPONSE_TARGET_HOURS:'24'},delivery:new InAppNotificationDelivery(),identityDeletion:{kind:'test',remove:async()=>{}},alertDelivery:{kind:'test',deliver:async alert=>captured.push(alert)}});

@@ -1,4 +1,4 @@
-import { createHash, randomUUID } from 'node:crypto';
+import { createHash, createHmac, randomUUID } from 'node:crypto';
 import {writeFile,rename} from 'node:fs/promises';
 import type { Records, Store } from './store';
 
@@ -25,9 +25,12 @@ export interface OperationsAlertDelivery{kind:string;deliver(alert:OperationsAle
 export class DisabledOperationsAlertDelivery implements OperationsAlertDelivery{kind='disabled';async deliver(_alert:OperationsAlert){}}
 export class WebhookOperationsAlertDelivery implements OperationsAlertDelivery{
  kind='webhook';
- constructor(private url:string,private secret:string){}
+ constructor(private url:string,private secret:string,private timeoutMs=10000){}
  async deliver(alert:OperationsAlert){
-  const response=await fetch(this.url,{method:'POST',headers:{'content-type':'application/json',authorization:`Bearer ${this.secret}`},body:JSON.stringify({event:'mgt.operations.alert',alert}),signal:AbortSignal.timeout(10000)});
+  const timestamp=new Date().toISOString();
+  const body=JSON.stringify({event:'mgt.operations.alert',alert});
+  const signature=createHmac('sha256',this.secret).update(`${timestamp}.${body}`).digest('hex');
+  const response=await fetch(this.url,{method:'POST',headers:{'content-type':'application/json',authorization:`Bearer ${this.secret}`,'x-mgt-event':'operations.alert','x-mgt-timestamp':timestamp,'x-mgt-signature':`sha256=${signature}`},body,signal:AbortSignal.timeout(this.timeoutMs)});
   if(!response.ok)throw new Error(`Operations alert delivery returned ${response.status}.`);
  }
 }
@@ -126,7 +129,7 @@ export function operationsAlertDeliveryFromEnv(env:NodeJS.ProcessEnv):Operations
   if(!env.OPERATIONS_ALERT_WEBHOOK_URL||!env.OPERATIONS_ALERT_WEBHOOK_TOKEN)throw new Error('OPERATIONS_ALERT_WEBHOOK_URL and OPERATIONS_ALERT_WEBHOOK_TOKEN are required when operational alerts are enabled.');
   const parsed=new URL(env.OPERATIONS_ALERT_WEBHOOK_URL);
   if(env.NODE_ENV==='production'&&parsed.protocol!=='https:')throw new Error('Production operations alert webhooks must use HTTPS.');
-  return new WebhookOperationsAlertDelivery(parsed.toString(),env.OPERATIONS_ALERT_WEBHOOK_TOKEN);
+  return new WebhookOperationsAlertDelivery(parsed.toString(),env.OPERATIONS_ALERT_WEBHOOK_TOKEN,int(env.OPERATIONS_ALERT_TIMEOUT_MS,10000,1000,30000));
  }
  if(env.OPERATIONS_ALERT_DELIVERY&&env.OPERATIONS_ALERT_DELIVERY!=='disabled')throw new Error('OPERATIONS_ALERT_DELIVERY must be disabled or webhook.');
  return new DisabledOperationsAlertDelivery();
@@ -185,9 +188,9 @@ export class OperationalWorker{
   const alert:OperationsAlert={version:'1',status,alerts:snapshot.alerts,summary:snapshot,generated_at:iso(at)};
   try{
    await this.alertDelivery.deliver(alert);
-   await this.store.tx(async records=>{await records.put('operations','alert_state',{status,fingerprint,delivery_status:'delivered',delivered_at:iso(at)});const run=await records.get<any>('operation_runs',runId);if(run)await records.put('operation_runs',runId,{...run,alert_delivery:'delivered'});});
+   await this.store.tx(async records=>{await records.put('operations','alert_state',{status,fingerprint,delivery_status:'delivered',delivered_at:iso(at)});await records.put('operations_alert_events',randomUUID(),{status,alerts:alert.alerts,delivery_status:'delivered',attempted_at:iso(at)});const run=await records.get<any>('operation_runs',runId);if(run)await records.put('operation_runs',runId,{...run,alert_delivery:'delivered'});});
   }catch(error){
-   await this.store.tx(async records=>{await records.put('operations','alert_state',{status,fingerprint,delivery_status:'failed',last_attempt_at:iso(at),last_error:error instanceof Error?error.message:'Operations alert delivery failed.'});const run=await records.get<any>('operation_runs',runId);if(run)await records.put('operation_runs',runId,{...run,alert_delivery:'failed'});});
+   await this.store.tx(async records=>{await records.put('operations','alert_state',{status,fingerprint,delivery_status:'failed',last_attempt_at:iso(at),last_error:error instanceof Error?error.message:'Operations alert delivery failed.'});await records.put('operations_alert_events',randomUUID(),{status,alerts:alert.alerts,delivery_status:'failed',attempted_at:iso(at)});const run=await records.get<any>('operation_runs',runId);if(run)await records.put('operation_runs',runId,{...run,alert_delivery:'failed'});});
   }
  }
  private async prune(records:Records,at:number){
@@ -202,7 +205,8 @@ export class OperationalWorker{
    ['support_metrics',int(this.env.OPERATIONS_AGGREGATE_METRIC_RETENTION_DAYS,180,30,3650),(v:any)=>timestamp(v?.updated_at||v?.date)],
    ['referral_metrics',int(this.env.OPERATIONS_AGGREGATE_METRIC_RETENTION_DAYS,180,30,3650),(v:any)=>timestamp(v?.updated_at||v?.date)],
    ['deletion_completions',int(this.env.OPERATIONS_DELETION_PROOF_RETENTION_DAYS,730,30,3650),(v:any)=>timestamp(v?.completed_at)],
-   ['operation_runs',int(this.env.OPERATIONS_RUN_RETENTION_DAYS,90,1,3650),(v:any)=>timestamp(v?.completed_at||v?.started_at)]
+   ['operation_runs',int(this.env.OPERATIONS_RUN_RETENTION_DAYS,90,1,3650),(v:any)=>timestamp(v?.completed_at||v?.started_at)],
+   ['operations_alert_events',int(this.env.OPERATIONS_ALERT_EVENT_RETENTION_DAYS,90,1,3650),(v:any)=>timestamp(v?.attempted_at)]
   ] as const;
   let removed=0;
   for(const [scope,days,date] of policies){for(const entry of await records.entries(scope)){const then=date(entry.value);if(then!==undefined&&then<at-days*86400000){await records.remove(scope,entry.id);removed++;}}}

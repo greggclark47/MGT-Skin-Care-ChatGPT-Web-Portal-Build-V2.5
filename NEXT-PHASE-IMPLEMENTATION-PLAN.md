@@ -1802,6 +1802,8 @@ This checkpoint does not create a Stripe Product or Prices, connect an account, 
 
 **Phase F975 — account-deletion execution fencing:** Account-deletion workers now receive a fresh per-attempt claim ID when they acquire a lease. Completion and failure paths require that claim, so a late worker cannot reset or finalize a newer deletion attempt. The v2.24 regression covers an expired first lease, a replacement worker, and a late failure while the replacement is still active.
 
+**Phase F976 — account-deletion privacy boundary:** Identity-deletion failures now persist only bounded outcome codes. Customer session, export, and deletion-request APIs project a safe status view without actor/user identifiers, worker lease state, claim IDs, or adapter diagnostics; compatibility keeps legacy error-bearing records visible only as a generic service-failure state.
+
 **Production ship plan alignment checkpoint:** Incorporated the linked Production Ship Todo Plan into `PRODUCTION-SHIP-PLAN-ALIGNMENT.md`. The alignment maps every required live setup and evidence area to the existing F437-F754 gates, adds Lean/Standard/Expanded economic profiles, defines the staged execution sequence, and preserves the fail-closed rule that local artifacts cannot substitute for live evidence, named owners, or production approval.
 
 **Exit evidence:** approved positioning and claims, consent-compliant measurement plan, attribution rules, partner terms where relevant, campaign cap and stop rule, baseline report, and a post-test decision grounded in observed data.

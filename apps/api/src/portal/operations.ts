@@ -3,6 +3,7 @@ import {writeFile,rename} from 'node:fs/promises';
 import type { Records, Store } from './store';
 
 type NotificationFailureCode='delivery_rejected'|'delivery_unavailable'|'delivery_payload_rejected';
+type DeletionFailureCode='identity_rejected'|'identity_unavailable';
 type Notification={id:string;actor:string;kind:'replenishment_reminder';status:'queued'|'processing'|'delivered'|'failed'|'read';scheduled_at:string;created_at:string;updated_at:string;attempts:number;payload:{product_id:string;due_at:string};lease_until?:string;claim_id?:string;delivered_at?:string;read_at?:string;last_error_code?:NotificationFailureCode};
 type Reminder={product_id:string;due_at:string;paused?:boolean;notification_id?:string;last_notified_at?:string};
 type WorkerOptions={env?:NodeJS.ProcessEnv;delivery?:NotificationDelivery;identityDeletion?:IdentityDeletion;alertDelivery?:OperationsAlertDelivery};
@@ -66,6 +67,10 @@ const notificationFailureCode=(error:unknown):NotificationFailureCode=>{
  if(status>=400&&status<500&&status!==408&&status!==429)return 'delivery_rejected';
  return 'delivery_unavailable';
 };
+const deletionFailureCode=(error:unknown):DeletionFailureCode=>{
+ const status=error instanceof Error?Number(error.message.match(/^Supabase identity deletion returned (\d{3})\.$/)?.[1]):0;
+ return status>=400&&status<500&&status!==408&&status!==429?'identity_rejected':'identity_unavailable';
+};
 const alertFailure=(error:unknown)=>{
  if(error instanceof Error&&error.message==='Operations alert payload exceeds the safe delivery limit.')return {code:'delivery_payload_rejected',retryable:false};
  if(error instanceof OperationsAlertDeliveryError){
@@ -126,7 +131,7 @@ export function operationalSnapshot(input:{notifications:any[];deletions:any[];t
  const alerts=[
   input.notifications.some(item=>item?.status==='failed')?'notification_delivery_failures':null,
   pendingSince.length&&at-Math.min(...pendingSince)>15*60000?'notification_queue_aging':null,
-  dueDeletions.some(item=>Array.isArray(item?.blocked_reasons)&&item.blocked_reasons.length||item?.last_error)?'deletion_requests_blocked':null,
+  dueDeletions.some(item=>Array.isArray(item?.blocked_reasons)&&item.blocked_reasons.length||item?.last_error_code||item?.last_error)?'deletion_requests_blocked':null,
   overdueTickets.length?'support_response_target_missed':null,
   recentRuns.some(item=>(Number(item?.failed)||0)>0)?'worker_delivery_failures':null,
   failedWebhooks.length?'subscription_webhook_failures':null,
@@ -136,7 +141,7 @@ export function operationalSnapshot(input:{notifications:any[];deletions:any[];t
   healthy:alerts.length===0,
   alerts,
   notifications:{queued:input.notifications.filter(item=>item?.status==='queued').length,processing:input.notifications.filter(item=>item?.status==='processing').length,failed:input.notifications.filter(item=>item?.status==='failed').length,oldest_pending_minutes:pendingSince.length?Math.floor((at-Math.min(...pendingSince))/60000):0},
-  deletions:{due:dueDeletions.length,blocked:dueDeletions.filter(item=>Array.isArray(item?.blocked_reasons)&&item.blocked_reasons.length||item?.last_error).length,processing:dueDeletions.filter(item=>item?.status==='processing').length},
+  deletions:{due:dueDeletions.length,blocked:dueDeletions.filter(item=>Array.isArray(item?.blocked_reasons)&&item.blocked_reasons.length||item?.last_error_code||item?.last_error).length,processing:dueDeletions.filter(item=>item?.status==='processing').length},
   support:{open:openTickets.length,overdue:overdueTickets.length,response_target_hours:supportTargetHours},
   worker:{runs_24h:recentRuns.length,delivery_failures_24h:recentRuns.reduce((total,item)=>total+(Number(item?.failed)||0),0)},
   subscriptions:{failed:failedWebhooks.length,stalled:stalledWebhooks.length}
@@ -315,10 +320,10 @@ export class OperationalWorker{
     if(due===undefined||due>at||!['pending','processing'].includes(request.status)||request.status==='processing'&&lease!==undefined&&lease>at)return null;
     const blockers=await this.deletionBlockers(records,request);
     if(blockers.length){
-     await records.put('deletion_requests',entry.id,{...request,status:'pending',blocked_reasons:blockers,last_checked_at:iso(at),lease_until:undefined});
+     await records.put('deletion_requests',entry.id,{...request,status:'pending',blocked_reasons:blockers,last_checked_at:iso(at),lease_until:undefined,claim_id:undefined,last_error:undefined,last_error_code:undefined});
      return {blocked:true} as const;
     }
-    const processing={...request,status:'processing',attempts:(request.attempts||0)+1,blocked_reasons:[],last_checked_at:iso(at),lease_until:iso(at+10*60000),claim_id:randomUUID()};
+    const processing={...request,status:'processing',attempts:(request.attempts||0)+1,blocked_reasons:[],last_checked_at:iso(at),lease_until:iso(at+10*60000),claim_id:randomUUID(),last_error:undefined,last_error_code:undefined};
     await records.put('deletion_requests',entry.id,processing);
     return {blocked:false,request:processing} as const;
    });
@@ -337,7 +342,7 @@ export class OperationalWorker{
     await this.store.tx(async records=>{
      await records.lock('account-deletion:'+createHash('sha256').update(entry.id).digest('hex'));
      const current=await records.get<any>('deletion_requests',entry.id);
-     if(current?.claim_id===claimed.request.claim_id)await records.put('deletion_requests',entry.id,{...current,status:'pending',lease_until:undefined,claim_id:undefined,last_error:error instanceof Error?error.message:'Identity deletion failed.',last_checked_at:iso(at)});
+     if(current?.claim_id===claimed.request.claim_id)await records.put('deletion_requests',entry.id,{...current,status:'pending',lease_until:undefined,claim_id:undefined,last_error:undefined,last_error_code:deletionFailureCode(error),last_checked_at:iso(at)});
     });
     deletions_blocked++;
    }

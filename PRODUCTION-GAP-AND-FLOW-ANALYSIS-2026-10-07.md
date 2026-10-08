@@ -111,6 +111,8 @@ The v2.23 customer-notification boundary increment removes internal lease and cl
 
 The v2.24 account-deletion execution increment assigns a fresh claim ID to each leased deletion attempt and requires that claim for both successful erasure and failure recovery. A late worker can no longer reset or finalize a newer deletion attempt; the control is covered by a concurrent-worker regression and does not claim live provider completion.
 
+The v2.25 account-deletion boundary increment retains only a bounded identity failure code and projects deletion requests without account identifiers, leases, claims, or adapter details. Session, export, and request responses preserve customer-visible progress and a generic service-failure indicator while preventing provider diagnostic text from crossing the API boundary.
+
 ## Remaining gap register
 
 | Priority | Gap | Repository state | Required exit evidence |

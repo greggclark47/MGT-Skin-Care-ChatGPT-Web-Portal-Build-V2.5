@@ -16,11 +16,12 @@ export class InAppNotificationDelivery implements NotificationDelivery{
 }
 export class WebhookNotificationDelivery implements NotificationDelivery{
  kind='webhook';
- constructor(private url:string,private secret?:string){}
+ constructor(private url:string,private secret:string,private keyId='primary'){}
  async deliver(notification:Notification){
   const body=JSON.stringify({event:'mgt.notification',notification:{id:notification.id,actor:notification.actor,kind:notification.kind,status:notification.status,scheduled_at:notification.scheduled_at,created_at:notification.created_at,updated_at:notification.updated_at,attempts:notification.attempts,payload:notification.payload}});
   if(Buffer.byteLength(body,'utf8')>65536)throw new Error('Notification payload exceeds the safe delivery limit.');
-  const response=await fetch(this.url,{method:'POST',headers:{'content-type':'application/json','x-mgt-event':'mgt.notification','x-mgt-notification-id':notification.id,'x-mgt-attempt':String(notification.attempts),...(this.secret?{authorization:`Bearer ${this.secret}`}:{})},body,signal:AbortSignal.timeout(10000)});
+  const timestamp=new Date().toISOString(),contentDigest='sha256='+createHash('sha256').update(body).digest('hex'),signature='sha256='+createHmac('sha256',this.secret).update(`${timestamp}.${body}`).digest('hex');
+  const response=await fetch(this.url,{method:'POST',headers:{'content-type':'application/json','x-mgt-event':'mgt.notification','x-mgt-signature-version':'v1','x-mgt-key-id':this.keyId,'x-mgt-notification-id':notification.id,'x-mgt-attempt':String(notification.attempts),'x-mgt-timestamp':timestamp,'x-mgt-content-sha256':contentDigest,'x-mgt-signature':signature},body,signal:AbortSignal.timeout(10000)});
   if(!response.ok)throw new Error(`Notification delivery returned ${response.status}.`);
  }
 }
@@ -99,6 +100,16 @@ export function verifyOperationsAlertRequest(input:{event:string;signatureVersio
  }catch{return false;}
 }
 
+export function verifyNotificationRequest(input:{event:string;signatureVersion:string;keyId:string;notificationId:string;attempt:string;timestamp:string;contentDigest:string;signature:string;body:string;secret:string;at?:number;maxAgeSeconds?:number}){
+ if(input.event!=='mgt.notification'||input.signatureVersion!=='v1'||!/^[A-Za-z0-9_-]{1,64}$/.test(input.keyId)||!/^[A-Za-z0-9_-]{1,128}$/.test(input.notificationId)||!/^[1-9]\d{0,5}$/.test(input.attempt))return false;
+ if(!/^sha256=[a-f0-9]{64}$/.test(input.contentDigest)||!timingSafeEqual(Buffer.from(input.contentDigest),Buffer.from('sha256='+createHash('sha256').update(input.body).digest('hex'))))return false;
+ if(Buffer.byteLength(input.body,'utf8')>65536||!verifyOperationsAlertSignature(input))return false;
+ try{
+  const parsed=JSON.parse(input.body);
+  return parsed?.event==='mgt.notification'&&parsed?.notification?.id===input.notificationId&&Number(parsed.notification.attempts)===Number(input.attempt);
+ }catch{return false;}
+}
+
 export function operationsAlertRetryAfterSeconds(value:string|null|undefined,at=Date.now()){
  if(!value)return undefined;
  if(/^\d{1,6}$/.test(value))return Number(value);
@@ -170,11 +181,13 @@ export async function writeWorkerHeartbeat(file:string,result:unknown){
 
 export function notificationDeliveryFromEnv(env:NodeJS.ProcessEnv):NotificationDelivery{
  if(env.NOTIFICATION_DELIVERY==='webhook'){
-  const url=env.NOTIFICATION_WEBHOOK_URL;
-  if(!url)throw new Error('NOTIFICATION_WEBHOOK_URL is required when webhook delivery is enabled.');
+  const url=env.NOTIFICATION_WEBHOOK_URL,token=env.NOTIFICATION_WEBHOOK_TOKEN;
+  if(!url||!token)throw new Error('NOTIFICATION_WEBHOOK_URL and NOTIFICATION_WEBHOOK_TOKEN are required when webhook delivery is enabled.');
   const parsed=new URL(url);
   if(env.NODE_ENV==='production'&&parsed.protocol!=='https:')throw new Error('Production notification webhooks must use HTTPS.');
-  return new WebhookNotificationDelivery(parsed.toString(),env.NOTIFICATION_WEBHOOK_TOKEN);
+  const keyId=env.NOTIFICATION_WEBHOOK_KEY_ID||'primary';
+  if(!/^[A-Za-z0-9_-]{1,64}$/.test(keyId))throw new Error('NOTIFICATION_WEBHOOK_KEY_ID must contain only letters, numbers, underscores or hyphens.');
+  return new WebhookNotificationDelivery(parsed.toString(),token,keyId);
  }
  if(env.NOTIFICATION_DELIVERY&&env.NOTIFICATION_DELIVERY!=='in_app')throw new Error('NOTIFICATION_DELIVERY must be in_app or webhook.');
  return new InAppNotificationDelivery();

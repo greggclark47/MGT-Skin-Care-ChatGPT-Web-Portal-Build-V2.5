@@ -113,6 +113,8 @@ The v2.24 account-deletion execution increment assigns a fresh claim ID to each 
 
 The v2.25 account-deletion boundary increment retains only a bounded identity failure code and projects deletion requests without account identifiers, leases, claims, or adapter details. Session, export, and request responses preserve customer-visible progress and a generic service-failure indicator while preventing provider diagnostic text from crossing the API boundary.
 
+The v2.26 customer-notification webhook increment replaces bearer-token replay exposure with a signed, replay-bounded v1 envelope. Each receiver request carries a non-secret key identifier, content digest, timestamp, stable notification ID, and attempt number; verification binds every header to the exact body without serializing the shared secret.
+
 ## Remaining gap register
 
 | Priority | Gap | Repository state | Required exit evidence |

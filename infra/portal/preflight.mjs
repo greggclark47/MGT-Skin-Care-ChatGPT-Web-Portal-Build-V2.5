@@ -103,6 +103,7 @@ export function validateEnvironment(env) {
   if (delivery === "webhook") {
     if (!validUrl(env.NOTIFICATION_WEBHOOK_URL, ["https:"])) errors.push("NOTIFICATION_WEBHOOK_URL must be HTTPS for webhook delivery.");
     requireValue("NOTIFICATION_WEBHOOK_TOKEN");
+    if (env.NOTIFICATION_WEBHOOK_KEY_ID && !/^[A-Za-z0-9_-]{1,64}$/.test(env.NOTIFICATION_WEBHOOK_KEY_ID)) errors.push("NOTIFICATION_WEBHOOK_KEY_ID must contain only letters, numbers, underscores or hyphens.");
   }
 
   const supportOwnerName = requireValue("SUPPORT_OWNER_NAME");

@@ -1806,6 +1806,8 @@ This checkpoint does not create a Stripe Product or Prices, connect an account, 
 
 **Phase F977 — signed customer-notification webhooks:** Reminder webhook delivery now uses a v1 HMAC envelope with a timestamp, body digest, stable notification ID, attempt, and non-secret key ID. Receivers can verify freshness, integrity, and delivery identity without receiving the shared secret in an Authorization header; invalid configuration fails closed.
 
+**Phase F978 — notification key preflight parity:** Production preflight now validates `NOTIFICATION_WEBHOOK_KEY_ID` using the same bounded non-secret identifier contract as runtime delivery. This prevents a deployment from reaching the worker with a key identifier that would be rejected only after startup.
+
 **Production ship plan alignment checkpoint:** Incorporated the linked Production Ship Todo Plan into `PRODUCTION-SHIP-PLAN-ALIGNMENT.md`. The alignment maps every required live setup and evidence area to the existing F437-F754 gates, adds Lean/Standard/Expanded economic profiles, defines the staged execution sequence, and preserves the fail-closed rule that local artifacts cannot substitute for live evidence, named owners, or production approval.
 
 **Exit evidence:** approved positioning and claims, consent-compliant measurement plan, attribution rules, partner terms where relevant, campaign cap and stop rule, baseline report, and a post-test decision grounded in observed data.

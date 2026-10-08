@@ -115,6 +115,8 @@ The v2.25 account-deletion boundary increment retains only a bounded identity fa
 
 The v2.26 customer-notification webhook increment replaces bearer-token replay exposure with a signed, replay-bounded v1 envelope. Each receiver request carries a non-secret key identifier, content digest, timestamp, stable notification ID, and attempt number; verification binds every header to the exact body without serializing the shared secret.
 
+The v2.27 release-contract increment brings production preflight into parity with the signed notification runtime: an invalid notification webhook key identifier is rejected before deployment, while an omitted key continues to use the documented `primary` default.
+
 ## Remaining gap register
 
 | Priority | Gap | Repository state | Required exit evidence |

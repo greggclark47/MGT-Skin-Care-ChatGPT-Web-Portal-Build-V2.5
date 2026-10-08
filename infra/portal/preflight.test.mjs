@@ -146,6 +146,18 @@ test("requires secure webhook delivery settings", () => {
   assert.ok(result.errors.some((error) => error.startsWith("NOTIFICATION_WEBHOOK_TOKEN")));
 });
 
+test("rejects an invalid notification webhook key identifier before deployment", () => {
+  const result = validateEnvironment({
+    ...production,
+    NOTIFICATION_DELIVERY: "webhook",
+    NOTIFICATION_WEBHOOK_URL: "https://notifications.example.test/events",
+    NOTIFICATION_WEBHOOK_TOKEN: "test-only-token",
+    NOTIFICATION_WEBHOOK_KEY_ID: "not valid"
+  });
+  assert.equal(result.ok, false);
+  assert.ok(result.errors.some((error) => error.startsWith("NOTIFICATION_WEBHOOK_KEY_ID")));
+});
+
 test("requires named support ownership and deployed accessibility evidence", () => {
   const result = validateEnvironment({
     ...production,

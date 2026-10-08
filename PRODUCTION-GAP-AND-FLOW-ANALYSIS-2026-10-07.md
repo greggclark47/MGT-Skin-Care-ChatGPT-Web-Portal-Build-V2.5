@@ -101,6 +101,8 @@ The v2.18 recovery-timing increment adds an independently verifiable payload dig
 
 The v2.19 receiver-backoff increment honors valid `Retry-After` guidance from an alert receiver while retaining a local exponential floor and a strict configured ceiling. Rate limits and temporary service responses remain retryable; permanent client responses are terminal. Only sanitized outcome categories and the resulting schedule are retained, so an operator can understand recovery behavior without storing remote response bodies or infrastructure details.
 
+The v2.20 multi-worker increment adds a durable alert-send lease. A worker claims an incident state before network delivery, so concurrent workers cannot create parallel alert sends. If a process stops after claiming the lease, the next worker safely resumes once the short lease expires using the same delivery ID. The operations health view exposes only the lease deadline, not any endpoint or credential.
+
 ## Remaining gap register
 
 | Priority | Gap | Repository state | Required exit evidence |

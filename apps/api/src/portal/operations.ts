@@ -220,19 +220,21 @@ export class OperationalWorker{
  }
  private async publishOperationalAlert(at:number,runId:string){
   if(this.alertDelivery.kind==='disabled')return;
-  const {snapshot,previous}=await this.store.tx(async records=>({
-   snapshot:operationalSnapshot({notifications:(await records.entries<any>('notifications')).map(item=>item.value),deletions:(await records.entries<any>('deletion_requests')).map(item=>item.value),tickets:await records.list<any>('tickets'),runs:(await records.entries<any>('operation_runs')).map(item=>item.value),webhooks:await records.list<any>('subscription_webhook_receipts')},at,int(this.env.SUPPORT_RESPONSE_TARGET_HOURS,24,1,168)),
-   previous:await records.get<any>('operations','alert_state')
-  }));
-  const status=snapshot.alerts.length?'active':'resolved';
-  if(status==='resolved'&&previous?.status!=='active')return;
-  const fingerprint=createHash('sha256').update(JSON.stringify({status,alerts:[...snapshot.alerts].sort()})).digest('hex');
-  if(previous?.fingerprint===fingerprint&&['delivered','abandoned'].includes(previous?.delivery_status))return;
-  if(previous?.fingerprint===fingerprint&&previous?.delivery_status==='failed'&&(timestamp(previous?.retry_not_before)||0)>at)return;
-  const attempt=(previous?.fingerprint===fingerprint?Number(previous?.attempts)||0:0)+1;
-  const deliveryId=previous?.fingerprint===fingerprint&&typeof previous?.delivery_id==='string'?previous.delivery_id:randomUUID();
-  const alert:OperationsAlert={version:'1',delivery_id:deliveryId,attempt,status,alerts:snapshot.alerts,summary:snapshot,generated_at:iso(at)};
-  const eventId=randomUUID();
+  const claimed=await this.store.tx(async records=>{
+   await records.lock('operations:alert-publish');
+   const snapshot=operationalSnapshot({notifications:(await records.entries<any>('notifications')).map(item=>item.value),deletions:(await records.entries<any>('deletion_requests')).map(item=>item.value),tickets:await records.list<any>('tickets'),runs:(await records.entries<any>('operation_runs')).map(item=>item.value),webhooks:await records.list<any>('subscription_webhook_receipts')},at,int(this.env.SUPPORT_RESPONSE_TARGET_HOURS,24,1,168));
+   const previous=await records.get<any>('operations','alert_state'),status=snapshot.alerts.length?'active':'resolved';
+   if(status==='resolved'&&previous?.status!=='active')return null;
+   const fingerprint=createHash('sha256').update(JSON.stringify({status,alerts:[...snapshot.alerts].sort()})).digest('hex');
+   if(previous?.fingerprint===fingerprint&&['delivered','abandoned'].includes(previous?.delivery_status))return null;
+   if(previous?.fingerprint===fingerprint&&previous?.delivery_status==='sending'&&(timestamp(previous?.lease_until)||0)>at)return null;
+   if(previous?.fingerprint===fingerprint&&previous?.delivery_status==='failed'&&(timestamp(previous?.retry_not_before)||0)>at)return null;
+   const attempt=(previous?.fingerprint===fingerprint?Number(previous?.attempts)||0:0)+1,deliveryId=previous?.fingerprint===fingerprint&&typeof previous?.delivery_id==='string'?previous.delivery_id:randomUUID(),leaseSeconds=int(this.env.OPERATIONS_ALERT_LEASE_SECONDS,60,10,600),leaseUntil=iso(at+leaseSeconds*1000),alert:OperationsAlert={version:'1',delivery_id:deliveryId,attempt,status,alerts:snapshot.alerts,summary:snapshot,generated_at:iso(at)},eventId=randomUUID();
+   await records.put('operations','alert_state',{status,fingerprint,delivery_id:deliveryId,delivery_status:'sending',attempts:attempt,last_attempt_at:iso(at),lease_until:leaseUntil});
+   return {alert,status,fingerprint,attempt,deliveryId,eventId};
+  });
+  if(!claimed)return;
+  const {alert,status,fingerprint,attempt,deliveryId,eventId}=claimed;
   try{
    await this.alertDelivery.deliver(alert);
    await this.store.tx(async records=>{await records.put('operations','alert_state',{status,fingerprint,delivery_id:deliveryId,delivery_status:'delivered',attempts:attempt,last_attempt_at:iso(at),delivered_at:iso(at)});await records.put('operations_alert_events',eventId,{event_id:eventId,delivery_id:deliveryId,status,alerts:alert.alerts,delivery_status:'delivered',attempt:attempt,attempted_at:iso(at)});const run=await records.get<any>('operation_runs',runId);if(run)await records.put('operation_runs',runId,{...run,alert_delivery:'delivered'});});

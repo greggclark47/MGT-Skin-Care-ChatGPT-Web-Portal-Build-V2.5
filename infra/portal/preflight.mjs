@@ -125,6 +125,9 @@ export function validateEnvironment(env) {
   if (env.OPERATIONS_ALERT_DELIVERY !== "webhook") errors.push("OPERATIONS_ALERT_DELIVERY must be webhook in production.");
   if (!validUrl(env.OPERATIONS_ALERT_WEBHOOK_URL, ["https:"])) errors.push("OPERATIONS_ALERT_WEBHOOK_URL must be a production HTTPS URL.");
   requireValue("OPERATIONS_ALERT_WEBHOOK_TOKEN");
+  if (env.OPERATIONS_ALERT_TIMEOUT_MS && !positiveNumber(env.OPERATIONS_ALERT_TIMEOUT_MS, 1000, 30000)) errors.push("OPERATIONS_ALERT_TIMEOUT_MS must be between 1000 and 30000.");
+  if (env.OPERATIONS_ALERT_RETRY_COOLDOWN_SECONDS && !positiveNumber(env.OPERATIONS_ALERT_RETRY_COOLDOWN_SECONDS, 10, 3600)) errors.push("OPERATIONS_ALERT_RETRY_COOLDOWN_SECONDS must be between 10 and 3600.");
+  if (env.OPERATIONS_ALERT_EVENT_RETENTION_DAYS && !positiveNumber(env.OPERATIONS_ALERT_EVENT_RETENTION_DAYS, 1, 3650)) errors.push("OPERATIONS_ALERT_EVENT_RETENTION_DAYS must be between 1 and 3650.");
 
   if (!["true", "false"].includes(String(env.SUBSCRIPTIONS_ENABLED).toLowerCase())) errors.push("SUBSCRIPTIONS_ENABLED must be true or false.");
   if (isTrue(env.SUBSCRIPTIONS_ENABLED)) {

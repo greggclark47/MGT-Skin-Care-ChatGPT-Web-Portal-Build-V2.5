@@ -31,6 +31,9 @@ const production = {
   OPERATIONS_ALERT_DELIVERY: "webhook",
   OPERATIONS_ALERT_WEBHOOK_URL: "https://alerts.mgtskincare.test/events",
   OPERATIONS_ALERT_WEBHOOK_TOKEN: "configured-alert-token",
+  OPERATIONS_ALERT_TIMEOUT_MS: "10000",
+  OPERATIONS_ALERT_RETRY_COOLDOWN_SECONDS: "300",
+  OPERATIONS_ALERT_EVENT_RETENTION_DAYS: "90",
   SUBSCRIPTIONS_ENABLED: "false",
   SUBSCRIPTION_TERMS_APPROVED: "false",
   NODE_IMAGE: `node@sha256:${"c".repeat(64)}`,
@@ -167,7 +170,10 @@ test("requires production monitoring ownership, runbook and response target", ()
     SUPPORT_RESPONSE_TARGET_HOURS: "0",
     OPERATIONS_ALERT_DELIVERY: "disabled",
     OPERATIONS_ALERT_WEBHOOK_URL: "http://localhost/alerts",
-    OPERATIONS_ALERT_WEBHOOK_TOKEN: ""
+    OPERATIONS_ALERT_WEBHOOK_TOKEN: "",
+    OPERATIONS_ALERT_TIMEOUT_MS: "999",
+    OPERATIONS_ALERT_RETRY_COOLDOWN_SECONDS: "1",
+    OPERATIONS_ALERT_EVENT_RETENTION_DAYS: "0"
   });
   assert.equal(result.ok, false);
   assert.ok(result.errors.some((error) => error.startsWith("MONITORING_DASHBOARD_URL")));
@@ -177,6 +183,9 @@ test("requires production monitoring ownership, runbook and response target", ()
   assert.ok(result.errors.some((error) => error.startsWith("OPERATIONS_ALERT_DELIVERY")));
   assert.ok(result.errors.some((error) => error.startsWith("OPERATIONS_ALERT_WEBHOOK_URL")));
   assert.ok(result.errors.some((error) => error.startsWith("OPERATIONS_ALERT_WEBHOOK_TOKEN")));
+  assert.ok(result.errors.some((error) => error.startsWith("OPERATIONS_ALERT_TIMEOUT_MS")));
+  assert.ok(result.errors.some((error) => error.startsWith("OPERATIONS_ALERT_RETRY_COOLDOWN_SECONDS")));
+  assert.ok(result.errors.some((error) => error.startsWith("OPERATIONS_ALERT_EVENT_RETENTION_DAYS")));
 });
 
 test("rejects floating or placeholder container image tags", () => {

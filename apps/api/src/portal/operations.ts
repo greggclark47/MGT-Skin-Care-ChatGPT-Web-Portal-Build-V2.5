@@ -52,6 +52,7 @@ const iso=(ms=Date.now())=>new Date(ms).toISOString();
 const timestamp=(value:any)=>typeof value==='string'&&!Number.isNaN(Date.parse(value))?Date.parse(value):undefined;
 const int=(value:string|undefined,fallback:number,min:number,max:number)=>{const parsed=Number(value);return Number.isInteger(parsed)&&parsed>=min&&parsed<=max?parsed:fallback;};
 const notificationId=(actor:string,reminder:Reminder)=>'reminder_'+createHash('sha256').update(`${actor}:${reminder.product_id}:${reminder.due_at}`).digest('hex').slice(0,40);
+const alertFailureCode=(error:unknown)=>error instanceof Error&&/^Operations alert delivery returned 4\d\d\.$/.test(error.message)?'delivery_rejected':'delivery_unavailable';
 
 export function operationalReadiness(backup:any,runs:{value:any}[],at=Date.now(),workerMaxAgeMs=5*60000){
  const lastRun=runs.map(entry=>entry.value).filter(run=>run&&typeof run.completed_at==='string')
@@ -185,12 +186,17 @@ export class OperationalWorker{
   if(status==='resolved'&&previous?.status!=='active')return;
   const fingerprint=createHash('sha256').update(JSON.stringify({status,alerts:[...snapshot.alerts].sort()})).digest('hex');
   if(previous?.fingerprint===fingerprint&&previous?.delivery_status==='delivered')return;
+  if(previous?.fingerprint===fingerprint&&previous?.delivery_status==='failed'&&(timestamp(previous?.retry_not_before)||0)>at)return;
   const alert:OperationsAlert={version:'1',status,alerts:snapshot.alerts,summary:snapshot,generated_at:iso(at)};
+  const attempt=(previous?.fingerprint===fingerprint?Number(previous?.attempts)||0:0)+1;
+  const eventId=randomUUID();
   try{
    await this.alertDelivery.deliver(alert);
-   await this.store.tx(async records=>{await records.put('operations','alert_state',{status,fingerprint,delivery_status:'delivered',delivered_at:iso(at)});await records.put('operations_alert_events',randomUUID(),{status,alerts:alert.alerts,delivery_status:'delivered',attempted_at:iso(at)});const run=await records.get<any>('operation_runs',runId);if(run)await records.put('operation_runs',runId,{...run,alert_delivery:'delivered'});});
+   await this.store.tx(async records=>{await records.put('operations','alert_state',{status,fingerprint,delivery_status:'delivered',attempts:attempt,last_attempt_at:iso(at),delivered_at:iso(at)});await records.put('operations_alert_events',eventId,{event_id:eventId,status,alerts:alert.alerts,delivery_status:'delivered',attempt:attempt,attempted_at:iso(at)});const run=await records.get<any>('operation_runs',runId);if(run)await records.put('operation_runs',runId,{...run,alert_delivery:'delivered'});});
   }catch(error){
-   await this.store.tx(async records=>{await records.put('operations','alert_state',{status,fingerprint,delivery_status:'failed',last_attempt_at:iso(at),last_error:error instanceof Error?error.message:'Operations alert delivery failed.'});await records.put('operations_alert_events',randomUUID(),{status,alerts:alert.alerts,delivery_status:'failed',attempted_at:iso(at)});const run=await records.get<any>('operation_runs',runId);if(run)await records.put('operation_runs',runId,{...run,alert_delivery:'failed'});});
+   const retryAfter=int(this.env.OPERATIONS_ALERT_RETRY_COOLDOWN_SECONDS,300,10,3600);
+   const errorCode=alertFailureCode(error);
+   await this.store.tx(async records=>{await records.put('operations','alert_state',{status,fingerprint,delivery_status:'failed',attempts:attempt,last_attempt_at:iso(at),retry_not_before:iso(at+retryAfter*1000),last_error_code:errorCode});await records.put('operations_alert_events',eventId,{event_id:eventId,status,alerts:alert.alerts,delivery_status:'failed',attempt:attempt,error_code:errorCode,attempted_at:iso(at),retry_not_before:iso(at+retryAfter*1000)});const run=await records.get<any>('operation_runs',runId);if(run)await records.put('operation_runs',runId,{...run,alert_delivery:'failed'});});
   }
  }
  private async prune(records:Records,at:number){

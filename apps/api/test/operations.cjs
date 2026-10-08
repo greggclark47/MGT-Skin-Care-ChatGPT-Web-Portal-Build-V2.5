@@ -92,6 +92,11 @@ const {OperationalWorker,InAppNotificationDelivery,WebhookOperationsAlertDeliver
  await alertStore.tx(async records=>{await records.remove('notifications','failed_alert');const ticket=await records.get('tickets','overdue_alert');await records.put('tickets','overdue_alert',{...ticket,status:'closed'});});
  await alertWorker.runOnce(at+120000);assert.equal(captured.length,2);assert.equal(captured[1].status,'resolved');assert.deepEqual(captured[1].alerts,[]);
  await alertStore.close();
+ const retryStore=new LocalStore(':memory:'),retryAttempts=[];
+ await retryStore.tx(async records=>{await records.put('notifications','failed_retry',{id:'failed_retry',status:'failed',created_at:new Date(at-60000).toISOString(),updated_at:new Date(at-60000).toISOString(),attempts:1});});
+ const retryWorker=new OperationalWorker(retryStore,{env:{OPERATIONS_ALERT_RETRY_COOLDOWN_SECONDS:'300'},delivery:new InAppNotificationDelivery(),identityDeletion:{kind:'test',remove:async()=>{}},alertDelivery:{kind:'test',deliver:async()=>{retryAttempts.push('attempt');throw new Error('Operations alert delivery returned 401.');}}});
+ await retryWorker.runOnce(at);await retryWorker.runOnce(at+60000);assert.equal(retryAttempts.length,1,'failed alert delivery respects retry cooldown');await retryWorker.runOnce(at+301000);assert.equal(retryAttempts.length,2);
+ const retryState=await retryStore.tx(records=>records.get('operations','alert_state'));assert.equal(retryState.last_error_code,'delivery_rejected');assert.equal(JSON.stringify(retryState).includes('401.'),false);const retryEvents=await retryStore.tx(records=>records.entries('operations_alert_events'));assert.equal(retryEvents.length,2);assert(retryEvents.every(event=>event.value.event_id&&event.value.attempt>=1));await retryStore.close();
  assert.deepEqual(await aiRuntimeReadiness({OLLAMA_ENABLED:'false'}),{enabled:false,healthy:true});
  const models={models:[{name:'llama3.2:3b'},{name:'deepseek-r1:8b'},{model:'nomic-embed-text'}]};
  assert.deepEqual(await aiRuntimeReadiness({OLLAMA_ENABLED:'true',OLLAMA_BASE_URL:'http://ollama'},async()=>({ok:true,json:async()=>models})),{enabled:true,healthy:true});

@@ -91,6 +91,8 @@ The v2.13 alert-delivery increment connects that aggregate state to a dedicated 
 
 The v2.14 delivery-assurance increment adds a timestamped HMAC signature (`x-mgt-signature`) to each alert payload, a bounded delivery timeout, and retained sanitized delivery-event history. Receiving services should reject stale timestamps and validate the signature against the raw request body before processing. The administrator view exposes only delivery status and aggregate alert codes, never the token, payload detail, customer information, or endpoint location.
 
+The v2.15 operational-resilience increment adds a bounded retry cooldown, classified delivery outcomes, monotonic attempt counts, and a compliance-restricted alert-history endpoint. Failure details are deliberately reduced to safe categories (`delivery_rejected` or `delivery_unavailable`) before durable storage. This allows operators to prove alert-flow behavior and investigate timing without storing gateway responses, endpoint details, or sensitive customer context.
+
 ## Remaining gap register
 
 | Priority | Gap | Repository state | Required exit evidence |

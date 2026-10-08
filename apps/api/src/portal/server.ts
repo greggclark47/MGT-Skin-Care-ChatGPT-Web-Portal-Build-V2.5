@@ -367,8 +367,15 @@ export async function createPortal(options:PortalOptions){
    alert:await r.get<any>('operations','alert_state'),
    events:(await r.entries<any>('operations_alert_events')).map(item=>item.value).filter(item=>item&&typeof item.attempted_at==='string').sort((a,b)=>Date.parse(b.attempted_at)-Date.parse(a.attempted_at)).slice(0,10)
   }));
-  const alertDelivery={enabled:env.OPERATIONS_ALERT_DELIVERY==='webhook',status:state.alert?.delivery_status||'not_sent',last_attempt_at:state.alert?.last_attempt_at||state.alert?.delivered_at||null,recent:state.events.map(item=>({status:item.status,delivery_status:item.delivery_status,attempted_at:item.attempted_at,alerts:Array.isArray(item.alerts)?item.alerts:[]}))};
+  const alertDelivery={enabled:env.OPERATIONS_ALERT_DELIVERY==='webhook',status:state.alert?.delivery_status||'not_sent',attempts:Number(state.alert?.attempts)||0,last_attempt_at:state.alert?.last_attempt_at||state.alert?.delivered_at||null,retry_not_before:state.alert?.retry_not_before||null,recent:state.events.map(item=>({event_id:item.event_id,status:item.status,delivery_status:item.delivery_status,attempt:Number(item.attempt)||0,error_code:item.error_code||null,attempted_at:item.attempted_at,retry_not_before:item.retry_not_before||null,alerts:Array.isArray(item.alerts)?item.alerts:[]}))};
   res.json({...state.snapshot,alert_delivery:alertDelivery,window_hours:24,privacy_note:'Aggregate operational counts and sanitized alert codes only; no customer, payment, provider payload, delivery secret or infrastructure location is returned.'});
+ });
+ get('/admin/operations-alert-history',async(req,res)=>{
+  role(req,['superadmin','compliance']);
+  const requested=Number(req.query.limit);
+  const limit=Number.isInteger(requested)?Math.max(1,Math.min(50,requested)):20;
+  const events=await db.tx(async r=>(await r.entries<any>('operations_alert_events')).map(item=>item.value).filter(item=>item&&typeof item.attempted_at==='string').sort((a,b)=>Date.parse(b.attempted_at)-Date.parse(a.attempted_at)).slice(0,limit));
+  res.json({events:events.map(item=>({event_id:typeof item.event_id==='string'?item.event_id:null,status:item.status,delivery_status:item.delivery_status,attempt:Number(item.attempt)||0,error_code:item.error_code||null,attempted_at:item.attempted_at,retry_not_before:item.retry_not_before||null,alerts:Array.isArray(item.alerts)?item.alerts:[]})),privacy_note:'Sanitized operational delivery history only; no endpoint, token, customer, payment, provider or error detail is returned.'});
  });
   get('/admin/catalog-health',async(req,res)=>{
    role(req,['superadmin','catalog_editor','sme','compliance','viewer']);

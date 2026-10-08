@@ -99,6 +99,8 @@ The v2.17 terminal-delivery increment adds an explicit signature version, non-se
 
 The v2.18 recovery-timing increment adds an independently verifiable payload digest and bounded exponential retry delay. Each transient failure persists its next retry time and delay without recording sensitive transport details. Receivers must validate both the digest and signature before parsing JSON; operators can distinguish a waiting retry from a terminal handoff without accessing endpoint or token data.
 
+The v2.19 receiver-backoff increment honors valid `Retry-After` guidance from an alert receiver while retaining a local exponential floor and a strict configured ceiling. Rate limits and temporary service responses remain retryable; permanent client responses are terminal. Only sanitized outcome categories and the resulting schedule are retained, so an operator can understand recovery behavior without storing remote response bodies or infrastructure details.
+
 ## Remaining gap register
 
 | Priority | Gap | Repository state | Required exit evidence |

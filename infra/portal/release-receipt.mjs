@@ -109,6 +109,19 @@ export function validateReleaseReceiptReview(review, { manifest, now = Date.now(
   errors.push(...driveReceiptErrors(manifest, drive, reviewTime));
   if (review.status === "export_complete" && (!github || !drive)) errors.push("export_complete requires both destination receipts");
   if (review.status === "awaiting_receipts" && (github && drive)) errors.push("awaiting_receipts cannot contain two confirmed receipts");
+  // A checksum only detects accidental changes when its signer is trusted. Rebuild
+  // the decision at the time it was recorded so a caller cannot relabel the state,
+  // suppress a blocker, or invent one and then simply recompute the checksum.
+  if (validPastIso(review.generated_at, now)) {
+    const expected = buildReleaseReceiptReview({
+      manifest,
+      githubReceipt: review.receipts?.github?.status === "pending" ? null : review.receipts?.github,
+      googleDriveReceipt: review.receipts?.google_drive?.status === "pending" ? null : review.receipts?.google_drive,
+      now: review.generated_at
+    });
+    if (review.status !== expected.status) errors.push("status must match independently recomputed receipt state");
+    if (JSON.stringify(review.errors) !== JSON.stringify(expected.errors)) errors.push("errors must match independently recomputed receipt blockers");
+  }
   return { ok: errors.length === 0, errors: [...new Set(errors)] };
 }
 

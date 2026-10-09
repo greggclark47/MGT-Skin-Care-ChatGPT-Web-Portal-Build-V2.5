@@ -1,6 +1,12 @@
-# Ownership and evidence integrity — v2.37
+# Ownership and evidence integrity — v2.38
 
 Gregg Clark of MGT is the accountable owner for operational configuration, release decisions, support, data, platform, and accessibility. Generated templates use the shared owner definition in `ownership.mjs`. Naming an owner is not an approval, and matching a name does not authenticate a person.
+
+## Receipt state integrity in v2.38
+
+Receipt-review validation independently rebuilds the decision at the review's recorded UTC time. The recorded status and exact ordered blocker list must match that reconstruction, even when an altered record has a newly computed checksum. A caller therefore cannot turn a pending or blocked review into completion, relabel a valid completion as another state, suppress blockers, or inject unobserved blockers without invalidating the audit record. Downstream closeout fails closed when this reconstruction fails.
+
+This is local consistency validation. It does not authenticate a receipt collector, verify remote bytes, establish Drive folder approval, or authorize publication.
 
 ## Per-repository receipt freshness in v2.37
 

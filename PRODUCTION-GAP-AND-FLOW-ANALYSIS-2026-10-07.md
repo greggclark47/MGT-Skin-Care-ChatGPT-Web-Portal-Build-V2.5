@@ -119,6 +119,8 @@ The v2.27 release-contract increment brings production preflight into parity wit
 
 The v2.28 customer-notification delivery increment adds bounded exponential retry scheduling. Retryable failures honor a receiver `Retry-After` value, permanent client rejections stop immediately, and a configured maximum prevents repeated worker sweeps from generating uncontrolled delivery attempts. Retry state stays internal and customer responses remain limited to notification status.
 
+The v2.29 release-contract increment validates the customer-notification retry policy before deployment. Cooldown, maximum delay, and attempt count must be bounded whole numbers, and the maximum delay cannot be lower than the initial cooldown; invalid settings can no longer silently fall back at runtime.
+
 ## Remaining gap register
 
 | Priority | Gap | Repository state | Required exit evidence |

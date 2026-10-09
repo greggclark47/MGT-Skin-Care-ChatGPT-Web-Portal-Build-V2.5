@@ -20,6 +20,11 @@ function positiveNumber(value, minimum, maximum) {
   return Number.isFinite(number) && number >= minimum && number <= maximum;
 }
 
+function wholeNumber(value, minimum, maximum) {
+  const number = Number(value);
+  return Number.isInteger(number) && number >= minimum && number <= maximum;
+}
+
 function digestImage(value) {
   return /^[a-z0-9./_-]+@sha256:[a-f0-9]{64}$/.test(String(value || "").trim());
 }
@@ -105,6 +110,13 @@ export function validateEnvironment(env) {
     requireValue("NOTIFICATION_WEBHOOK_TOKEN");
     if (env.NOTIFICATION_WEBHOOK_KEY_ID && !/^[A-Za-z0-9_-]{1,64}$/.test(env.NOTIFICATION_WEBHOOK_KEY_ID)) errors.push("NOTIFICATION_WEBHOOK_KEY_ID must contain only letters, numbers, underscores or hyphens.");
   }
+  const notificationRetryBase = env.NOTIFICATION_RETRY_COOLDOWN_SECONDS || "300";
+  const notificationRetryMax = env.NOTIFICATION_MAX_RETRY_DELAY_SECONDS || "3600";
+  const notificationMaxAttempts = env.NOTIFICATION_MAX_ATTEMPTS || "3";
+  if (!wholeNumber(notificationRetryBase, 10, 3600)) errors.push("NOTIFICATION_RETRY_COOLDOWN_SECONDS must be a whole number between 10 and 3600.");
+  if (!wholeNumber(notificationRetryMax, 10, 86400)) errors.push("NOTIFICATION_MAX_RETRY_DELAY_SECONDS must be a whole number between 10 and 86400.");
+  if (!wholeNumber(notificationMaxAttempts, 1, 20)) errors.push("NOTIFICATION_MAX_ATTEMPTS must be a whole number between 1 and 20.");
+  if (wholeNumber(notificationRetryBase, 10, 3600) && wholeNumber(notificationRetryMax, 10, 86400) && Number(notificationRetryMax) < Number(notificationRetryBase)) errors.push("NOTIFICATION_MAX_RETRY_DELAY_SECONDS must be at least NOTIFICATION_RETRY_COOLDOWN_SECONDS.");
 
   const supportOwnerName = requireValue("SUPPORT_OWNER_NAME");
   if (supportOwnerName && supportOwnerName.length < 2) errors.push("SUPPORT_OWNER_NAME must identify the accountable support owner.");

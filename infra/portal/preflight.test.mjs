@@ -158,6 +158,29 @@ test("rejects an invalid notification webhook key identifier before deployment",
   assert.ok(result.errors.some((error) => error.startsWith("NOTIFICATION_WEBHOOK_KEY_ID")));
 });
 
+test("rejects invalid notification retry policy before deployment", () => {
+  const result = validateEnvironment({
+    ...production,
+    NOTIFICATION_RETRY_COOLDOWN_SECONDS: "9",
+    NOTIFICATION_MAX_RETRY_DELAY_SECONDS: "30.5",
+    NOTIFICATION_MAX_ATTEMPTS: "0"
+  });
+  assert.equal(result.ok, false);
+  assert.ok(result.errors.some((error) => error.startsWith("NOTIFICATION_RETRY_COOLDOWN_SECONDS")));
+  assert.ok(result.errors.some((error) => error.startsWith("NOTIFICATION_MAX_RETRY_DELAY_SECONDS")));
+  assert.ok(result.errors.some((error) => error.startsWith("NOTIFICATION_MAX_ATTEMPTS")));
+});
+
+test("rejects a notification retry cap below the initial cooldown", () => {
+  const result = validateEnvironment({
+    ...production,
+    NOTIFICATION_RETRY_COOLDOWN_SECONDS: "600",
+    NOTIFICATION_MAX_RETRY_DELAY_SECONDS: "300"
+  });
+  assert.equal(result.ok, false);
+  assert.ok(result.errors.some((error) => error.includes("at least NOTIFICATION_RETRY_COOLDOWN_SECONDS")));
+});
+
 test("requires named support ownership and deployed accessibility evidence", () => {
   const result = validateEnvironment({
     ...production,

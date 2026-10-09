@@ -1810,6 +1810,8 @@ This checkpoint does not create a Stripe Product or Prices, connect an account, 
 
 **Phase F979 — bounded customer-notification retries:** Reminder deliveries now apply a configurable exponential cooldown, honor a receiver `Retry-After` directive, and stop after a bounded number of attempts or immediately on a permanent receiver rejection. Retry schedule and failure codes are retained only for worker coordination and operations monitoring.
 
+**Phase F980 — notification retry preflight parity:** Production preflight now validates customer-notification cooldown, maximum delay, and attempt-count settings as bounded whole numbers and rejects a retry cap below the initial cooldown. Deployment configuration now matches the runtime retry contract rather than relying on silent fallback defaults.
+
 **Production ship plan alignment checkpoint:** Incorporated the linked Production Ship Todo Plan into `PRODUCTION-SHIP-PLAN-ALIGNMENT.md`. The alignment maps every required live setup and evidence area to the existing F437-F754 gates, adds Lean/Standard/Expanded economic profiles, defines the staged execution sequence, and preserves the fail-closed rule that local artifacts cannot substitute for live evidence, named owners, or production approval.
 
 **Exit evidence:** approved positioning and claims, consent-compliant measurement plan, attribution rules, partner terms where relevant, campaign cap and stop rule, baseline report, and a post-test decision grounded in observed data.

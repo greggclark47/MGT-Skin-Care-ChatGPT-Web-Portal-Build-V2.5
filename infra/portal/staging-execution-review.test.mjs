@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { authorizationFixture } from "./test-fixtures/staging-authorization.mjs";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -21,27 +22,6 @@ function writeText(root, reference, value) {
   fs.writeFileSync(destination, value);
 }
 
-function authorizationFixture() {
-  return {
-    version: "1.0",
-    created_at: "2026-09-30T00:05:00.000Z",
-    status: "pending_operator_execution",
-    candidate_commit: "a".repeat(40),
-    staging_origin: "https://staging.mgtskincare.test",
-    handoff: { reference: "work/staging/handoff.json", checksum: `sha256:${"1".repeat(64)}`, canonical_checksum: `sha256:${"2".repeat(64)}`, bytes: 100 },
-    approvals: [{ role: "release", approver: "Gregg Clark of MGT" }, { role: "platform", approver: "Gregg Clark of MGT" }],
-    execution_window: { start: "2026-09-30T00:30:00.000Z", end: "2026-09-30T02:00:00.000Z" },
-    checks: [
-      { id: "handoff_integrity", status: "pass", error_count: 0 },
-      { id: "release_approval", status: "pass", error_count: 0 },
-      { id: "platform_approval", status: "pass", error_count: 0 },
-      { id: "shared_execution_window", status: "pass", error_count: 0 },
-      { id: "operator_execution", status: "pending", error_count: 0 }
-    ],
-    operator_execution: { status: "pending", restriction: "No command is included." },
-    blockers: []
-  };
-}
 
 function probeFixture(origin) {
   return {

@@ -1,4 +1,5 @@
 import { stagingPromotionHandoffChecksum } from "./staging-promotion-handoff.mjs";
+import { utcTimestamp, validExecutionWindow } from "./approval-window.mjs";
 import { DEFAULT_ACCOUNTABLE_OWNER, isAccountableOwner, accountableOwnerError } from "./ownership.mjs";
 
 const CHECKSUM = /^sha256:[a-f0-9]{64}$/i;
@@ -19,9 +20,7 @@ function validReference(value) {
 }
 
 function validApprovalWindow(window, now) {
-  const start = Date.parse(text(window?.start));
-  const end = Date.parse(text(window?.end));
-  return Number.isFinite(start) && Number.isFinite(end) && start >= now && end > start && end - start <= 4 * 60 * 60 * 1000;
+  return validExecutionWindow(window) && utcTimestamp(window.start) >= now;
 }
 
 export function createStagingPromotionApprovalTemplate({ role, handoff } = {}) {
@@ -44,14 +43,15 @@ export function validateStagingPromotionApproval(approval, { handoff, now = Date
   const errors = [];
   const nowMs = new Date(now).getTime();
   const maxAgeMs = Number(maxAgeMinutes) * 60 * 1000;
+  if (!Number.isFinite(nowMs)) errors.push("now must be a valid timestamp");
   if (!approval || typeof approval !== "object" || Array.isArray(approval)) return { ok: false, errors: ["must be an object"] };
   if (approval.version !== STAGING_PROMOTION_APPROVAL_VERSION) errors.push(`version must be ${STAGING_PROMOTION_APPROVAL_VERSION}`);
   if (!STAGING_PROMOTION_APPROVAL_ROLES.includes(approval.role)) errors.push("role must be release or platform");
   if (approval.decision !== "approve") errors.push("decision must be approve");
   if (!isAccountableOwner(approval.approver)) errors.push(accountableOwnerError("approver"));
-  const approvedAt = Date.parse(text(approval.approved_at));
+  const approvedAt = utcTimestamp(approval.approved_at);
   if (!Number.isFinite(approvedAt) || approvedAt > nowMs) errors.push("approved_at must be a past ISO timestamp");
-  if (!Number.isFinite(maxAgeMs) || maxAgeMs < 60 * 1000 || maxAgeMs > 24 * 60 * 60 * 1000) errors.push("maxAgeMinutes must be between 1 and 1440");
+  if (!Number.isInteger(Number(maxAgeMinutes)) || maxAgeMs < 60 * 1000 || maxAgeMs > 24 * 60 * 60 * 1000) errors.push("maxAgeMinutes must be an integer between 1 and 1440");
   if (Number.isFinite(approvedAt) && Number.isFinite(maxAgeMs) && nowMs - approvedAt > maxAgeMs) errors.push("approved_at exceeds the permitted freshness window");
   if (!CHECKSUM.test(text(approval.handoff_checksum))) errors.push("handoff_checksum must be a sha256 checksum");
   if (handoff && text(approval.handoff_checksum) !== stagingPromotionHandoffChecksum(handoff)) errors.push("handoff_checksum must match the promotion handoff");

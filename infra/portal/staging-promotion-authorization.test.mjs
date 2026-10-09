@@ -97,6 +97,9 @@ test("blocks stale, mismatched, or invented execution authorization", () => {
     writeJson(root, releaseReference, release);
     writeJson(root, platformReference, platform);
 
+    const swapped = buildStagingPromotionAuthorization({ root, handoffReference, releaseApprovalReference: platformReference, platformApprovalReference: releaseReference, now });
+    assert.equal(swapped.status, "blocked", "approval inputs must match their named roles");
+
     const stale = buildStagingPromotionAuthorization({ root, handoffReference, releaseApprovalReference: releaseReference, platformApprovalReference: platformReference, now: "2026-09-30T02:00:00.000Z", maxApprovalAgeMinutes: 60 });
     assert.equal(stale.status, "blocked");
     assert.ok(stale.blockers.some((blocker) => blocker.includes("freshness")));

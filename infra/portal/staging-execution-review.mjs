@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import { utcTimestamp, executionWithinWindow } from "./approval-window.mjs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { inspectStagingArtifact, resolveStagingArtifactPath } from "./staging-artifacts.mjs";
@@ -34,13 +35,6 @@ function loadJsonArtifact({ root, reference }) {
   return { inspection, value: JSON.parse(fs.readFileSync(resolveStagingArtifactPath({ root, reference }), "utf8")) };
 }
 
-function withinAuthorizationWindow(executedAt, authorization) {
-  const value = Date.parse(text(executedAt));
-  const start = Date.parse(text(authorization.execution_window?.start));
-  const end = Date.parse(text(authorization.execution_window?.end));
-  return Number.isFinite(value) && Number.isFinite(start) && Number.isFinite(end) && value >= start && value <= end;
-}
-
 function statusFor(result) {
   return result.ok ? "pass" : "fail";
 }
@@ -67,20 +61,25 @@ export function createStagingExecutionReceiptTemplate({ authorization } = {}) {
 export function validateStagingExecutionReceipt(receipt, { authorization, operation, probe, probeInspection, now = Date.now() } = {}) {
   const errors = [];
   const nowMs = new Date(now).getTime();
+  if (!Number.isFinite(nowMs)) errors.push("now must be a valid timestamp");
   if (!receipt || typeof receipt !== "object" || Array.isArray(receipt)) return { ok: false, errors: ["must be an object"] };
+  const authorizationValidation = validateStagingPromotionAuthorization(authorization, { now });
+  errors.push(...authorizationValidation.errors.map(error => `authorization.${error}`));
+  if (authorization?.status !== "pending_operator_execution") errors.push("authorization must be pending operator execution");
   if (receipt.version !== STAGING_EXECUTION_RECEIPT_VERSION) errors.push(`version must be ${STAGING_EXECUTION_RECEIPT_VERSION}`);
   if (receipt.status !== "recorded") errors.push("status must be recorded");
   if (!CHECKSUM.test(text(receipt.authorization_checksum))) errors.push("authorization_checksum must be a sha256 checksum");
   if (authorization && text(receipt.authorization_checksum) !== stagingPromotionAuthorizationChecksum(authorization)) errors.push("authorization_checksum must match the promotion authorization");
   if (text(receipt.operator).length < 2 || PLACEHOLDER.test(text(receipt.operator))) errors.push("operator must name the human operator");
-  const executedAt = Date.parse(text(receipt.executed_at));
+  const executedAt = utcTimestamp(receipt.executed_at);
   if (!Number.isFinite(executedAt) || executedAt > nowMs) errors.push("executed_at must be a past ISO timestamp");
-  if (authorization && !withinAuthorizationWindow(receipt.executed_at, authorization)) errors.push("executed_at must fall within the approved execution window");
+  if (!executionWithinWindow(receipt.executed_at, authorization?.execution_window)) errors.push("executed_at must fall within the approved execution window (start inclusive, end exclusive)");
   if (!receipt.operation || text(receipt.operation.reference) !== text(operation?.reference) || text(receipt.operation.checksum) !== text(operation?.checksum) || receipt.operation.bytes !== operation?.bytes) errors.push("operation must match the inspected local operation record");
   if (!receipt.post_execution_probe || text(receipt.post_execution_probe.reference) !== text(probeInspection?.reference) || text(receipt.post_execution_probe.checksum) !== text(probeInspection?.checksum)) errors.push("post_execution_probe must match the inspected local probe artifact");
   const probeValidation = validateStagingProbe(probe, { origin: authorization?.staging_origin });
   errors.push(...probeValidation.errors.map((error) => `post_execution_probe.${error}`));
-  const capturedAt = Date.parse(text(probe?.captured_at));
+  const capturedAt = utcTimestamp(probe?.captured_at);
+  if (!Number.isFinite(capturedAt) || capturedAt > nowMs) errors.push("post_execution_probe.captured_at must be a past UTC ISO timestamp");
   if (Number.isFinite(executedAt) && Number.isFinite(capturedAt) && capturedAt < executedAt) errors.push("post_execution_probe.captured_at must not predate execution");
   return { ok: errors.length === 0, errors: errors.map(redactedError) };
 }

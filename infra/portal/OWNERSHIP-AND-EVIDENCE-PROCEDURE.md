@@ -1,6 +1,16 @@
-# Ownership and evidence integrity — v2.33
+# Ownership and evidence integrity — v2.34
 
 Gregg Clark of MGT is the accountable owner for operational configuration, release decisions, support, data, platform, and accessibility. Generated templates use the shared owner definition in `ownership.mjs`. Naming an owner is not an approval, and matching a name does not authenticate a person.
+
+## Approval-window enforcement in v2.34
+
+Staging authorization schema 1.1 preserves both full approval summaries, their separate artifact references and checksums, the canonical handoff checksum, the exact shared execution window, and the configured approval-age limit. Validation rechecks the decision, owner, approval timestamp and window instead of trusting `pass` labels. The two input files must correspond to the release and platform roles in that order. Extra approval records and extra checks cannot be substituted for the required set.
+
+Evidence timestamps must be real UTC ISO dates ending in `Z`, with seconds or exactly three millisecond digits. Whitespace, offsets, date-only strings, impossible calendar dates and coerced values fail closed. Windows must be positive and at most four hours; approval freshness and future-window checks apply at authorization issuance. Execution uses a start-inclusive, end-exclusive window. The standalone receipt validator requires a valid pending authorization, matching checksum and observed post-execution probe. Historical review may occur after the window closes, but cannot authorize a new out-of-window execution.
+
+Migration: preserve schema 1.0 artifacts unchanged for historical reference. Do not relabel their version or fabricate the missing approval details. For a new operation, obtain actual candidate-bound approvals with a new future shared window; regenerate the authorization through the builder, then collect new execution evidence only after the approved action. A local fixture or generated file is not human approval. Schema 1.0 authorizations cannot pass the new execution-receipt gate.
+
+These are structural and consistency checks, not signature verification. A trusted controller must still authenticate the approver, pin the approved age policy, verify the original artifacts against trusted digests, and atomically consume authorization to prevent replay. No deploy, rollback, traffic switch or remote upload is performed by these validators. Existing five-domain production evidence remains distinct; the two-role staging gate does not replace it.
 
 ## Canonical-name enforcement in v2.33
 

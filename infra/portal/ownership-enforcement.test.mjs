@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { authorizationFixture } from "./test-fixtures/staging-authorization.mjs";
 import fs from 'node:fs';
 import test from 'node:test';
 import { DEFAULT_ACCOUNTABLE_OWNER as OWNER, isAccountableOwner, accountableOwnerError, validateOwnershipEnvironment } from './ownership.mjs';
@@ -131,15 +132,7 @@ test('ship approvers and staging evidence owners use the same exact policy', () 
 });
 
 test('a ready authorization cannot bypass owner checks through its embedded summary', () => {
-  const good = {
-    version: '1.0', created_at: now, status: 'pending_operator_execution',
-    candidate_commit: 'a'.repeat(40), staging_origin: 'https://staging.mgtskincare.test',
-    handoff: { checksum: 'sha256:' + 'a'.repeat(64), canonical_checksum: 'sha256:' + 'b'.repeat(64) },
-    approvals: ['release','platform'].map(role => ({ role, approver: OWNER })),
-    checks: ['handoff_integrity','release_approval','platform_approval','shared_execution_window','operator_execution']
-      .map(id => ({ id, status: id === 'operator_execution' ? 'pending' : 'pass', error_count: 0 })),
-    operator_execution: { status: 'pending' }, blockers: []
-  };
+  const good = authorizationFixture();
   assert.equal(validateStagingPromotionAuthorization(good, { now }).ok, true);
   for (const [,value] of invalid) {
     const changed = structuredClone(good);

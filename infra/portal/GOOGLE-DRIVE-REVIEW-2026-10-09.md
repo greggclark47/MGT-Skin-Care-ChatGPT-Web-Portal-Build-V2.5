@@ -40,6 +40,12 @@ Current contents of the five linked native Drive documents could not be fetched.
 
 ## Safe continuation procedure
 
+### v2.36 implementation follow-up
+
+Finding 3's arbitrary-HTTPS/file-ID mismatch is now addressed locally by the shared Drive identity predicate in export and receipt validation. One hundred negative identity cases plus positive/profile and existing-byte-binding tests cover the change. The historical v2.35 finding remains above as the review baseline. Approved parent/name checks, authenticated remote readback, multi-artifact receipts, live access and publication approval remain unresolved. No remote file or old receipt was changed.
+
+### Operational sequence
+
 1. Preserve v2.22 and subsequent source/evidence history. Finish the current narrowly scoped evidence-integrity fix and verify it locally.
 2. Restore a working Drive connection. User handles sign-in/security consent. Confirm the actual account and accessible folder metadata; do not change sharing or broaden permissions merely to make an upload work.
 3. Enumerate the MGT project documents in the verified scope. Fetch the five references above and any newer revisions/addenda; compare to local copies and record provenance. Do not claim all Drive documents reviewed until that inventory is complete.

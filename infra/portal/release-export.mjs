@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { matchesDriveFileIdentity } from "./drive-file-identity.mjs";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -172,7 +173,7 @@ export function validateReleaseExport(manifest, { now = Date.now() } = {}) {
   const destinations = manifest.destinations || {};
   if (!destinations.github || !["pending_push", "pushed"].includes(destinations.github.status)) errors.push("github destination must be pending_push or pushed");
   if (!destinations.google_drive || !["pending_upload", "uploaded"].includes(destinations.google_drive.status)) errors.push("google_drive destination must be pending_upload or uploaded");
-  if (destinations.google_drive?.status === "uploaded" && (!text(destinations.google_drive.file_id) || !/^https:\/\//.test(text(destinations.google_drive.web_url)))) errors.push("uploaded google_drive destination must include an observed file_id and HTTPS web_url");
+  if (destinations.google_drive?.status === "uploaded" && !matchesDriveFileIdentity(destinations.google_drive.file_id, destinations.google_drive.web_url)) errors.push("uploaded google_drive destination must include an observed file_id and matching HTTPS web_url on drive.google.com");
   if (destinations.github?.status === "pushed" && (!SHA.test(text(destinations.github.commit)) || text(destinations.github.commit) !== text(manifest.candidate_commit))) errors.push("pushed github destination must bind the candidate commit");
   return { ok: errors.length === 0, errors };
 }

@@ -1,6 +1,14 @@
-# Ownership and evidence integrity — v2.35
+# Ownership and evidence integrity — v2.36
 
 Gregg Clark of MGT is the accountable owner for operational configuration, release decisions, support, data, platform, and accessibility. Generated templates use the shared owner definition in `ownership.mjs`. Naming an owner is not an approval, and matching a name does not authenticate a person.
+
+## Drive file identity in v2.36
+
+An uploaded Drive export destination or confirmed Drive receipt must carry an exact string file ID and a matching HTTPS binary-file link on `drive.google.com`. A shared predicate is applied by export validation, receipt creation and receipt revalidation. Recomputing a receipt checksum cannot make a mismatched link acceptable.
+
+The supported archive-link profile is `/file/d/ID`, optionally followed by `/view`, `/preview` or `/edit`, and optionally one `usp=sharing`, `usp=drive_link` or `usp=drivesdk` parameter. Other link forms remain unsupported until explicitly reviewed. Whitespace, arrays/objects, unrelated/lookalike hosts, credentials, explicit ports, escaped paths, dot segments, folders, duplicate/unknown query parameters and fragments are rejected without normalization. IDs are case-sensitive. The literal ID placeholder patterns in the project are rejected.
+
+This checks consistency only: it neither visits the link nor proves existence, access, folder membership, identity of the uploader, remote size/hash, freshness or publication authority. Keep pending destinations pending; never fabricate an ID or construct a replacement URL merely to pass validation. If a real observed link is unsupported, preserve it and review the contract before publication. Existing bundle, archive and byte-count checks remain in force. Live byte readback, destination pinning and complete multi-artifact receipt coverage remain outstanding.
 
 ## Evidence reads and receipt inspection in v2.35
 

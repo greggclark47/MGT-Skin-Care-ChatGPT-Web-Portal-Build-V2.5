@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { matchesDriveFileIdentity } from "./drive-file-identity.mjs";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -59,6 +60,7 @@ function driveReceiptErrors(manifest, receipt, now) {
   if (receipt.status !== "confirmed") errors.push("google_drive receipt status must be confirmed");
   if (!text(receipt.file_id) || PLACEHOLDER.test(text(receipt.file_id))) errors.push("google_drive receipt must include an observed file_id");
   if (!/^https:\/\//.test(text(receipt.web_url))) errors.push("google_drive receipt must include an HTTPS web_url");
+  if (!matchesDriveFileIdentity(receipt.file_id, receipt.web_url)) errors.push("google_drive receipt file_id must match its HTTPS web_url on drive.google.com");
   if (!validPastIso(receipt.observed_at, now)) errors.push("google_drive receipt observed_at must be a past ISO timestamp");
   if (!CHECKSUM.test(text(receipt.bundle_checksum)) || text(receipt.bundle_checksum) !== text(manifest.bundle_checksum)) errors.push("google_drive receipt bundle_checksum must match the export manifest");
   if (archive && text(receipt.archive_checksum) !== text(archive.checksum)) errors.push("google_drive receipt archive_checksum must match the export archive");

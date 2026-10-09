@@ -109,6 +109,7 @@ export function validateEnvironment(env) {
     if (!validUrl(env.NOTIFICATION_WEBHOOK_URL, ["https:"])) errors.push("NOTIFICATION_WEBHOOK_URL must be HTTPS for webhook delivery.");
     requireValue("NOTIFICATION_WEBHOOK_TOKEN");
     if (env.NOTIFICATION_WEBHOOK_KEY_ID && !/^[A-Za-z0-9_-]{1,64}$/.test(env.NOTIFICATION_WEBHOOK_KEY_ID)) errors.push("NOTIFICATION_WEBHOOK_KEY_ID must contain only letters, numbers, underscores or hyphens.");
+    if (env.NOTIFICATION_WEBHOOK_TIMEOUT_MS !== undefined && !wholeNumber(env.NOTIFICATION_WEBHOOK_TIMEOUT_MS, 1000, 30000)) errors.push("NOTIFICATION_WEBHOOK_TIMEOUT_MS must be a whole number between 1000 and 30000.");
   }
   const notificationRetryBase = env.NOTIFICATION_RETRY_COOLDOWN_SECONDS || "300";
   const notificationRetryMax = env.NOTIFICATION_MAX_RETRY_DELAY_SECONDS || "3600";

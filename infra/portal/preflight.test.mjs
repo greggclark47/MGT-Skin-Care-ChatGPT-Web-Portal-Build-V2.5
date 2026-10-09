@@ -171,6 +171,28 @@ test("rejects invalid notification retry policy before deployment", () => {
   assert.ok(result.errors.some((error) => error.startsWith("NOTIFICATION_MAX_ATTEMPTS")));
 });
 
+test("rejects an invalid notification webhook timeout before deployment", () => {
+  const result = validateEnvironment({
+    ...production,
+    NOTIFICATION_DELIVERY: "webhook",
+    NOTIFICATION_WEBHOOK_URL: "https://notifications.example.test/events",
+    NOTIFICATION_WEBHOOK_TOKEN: "test-only-token",
+    NOTIFICATION_WEBHOOK_TIMEOUT_MS: "999"
+  });
+  assert.equal(result.ok, false);
+  assert.ok(result.errors.some((error) => error.startsWith("NOTIFICATION_WEBHOOK_TIMEOUT_MS")));
+
+  const blankTimeout = validateEnvironment({
+    ...production,
+    NOTIFICATION_DELIVERY: "webhook",
+    NOTIFICATION_WEBHOOK_URL: "https://notifications.example.test/events",
+    NOTIFICATION_WEBHOOK_TOKEN: "test-only-token",
+    NOTIFICATION_WEBHOOK_TIMEOUT_MS: ""
+  });
+  assert.equal(blankTimeout.ok, false);
+  assert.ok(blankTimeout.errors.some((error) => error.startsWith("NOTIFICATION_WEBHOOK_TIMEOUT_MS")));
+});
+
 test("rejects a notification retry cap below the initial cooldown", () => {
   const result = validateEnvironment({
     ...production,

@@ -121,6 +121,8 @@ The v2.28 customer-notification delivery increment adds bounded exponential retr
 
 The v2.29 release-contract increment validates the customer-notification retry policy before deployment. Cooldown, maximum delay, and attempt count must be bounded whole numbers, and the maximum delay cannot be lower than the initial cooldown; invalid settings can no longer silently fall back at runtime.
 
+The v2.30 notification-delivery increment makes the customer webhook timeout an explicit bounded deployment setting. Runtime and preflight now reject invalid timeout values rather than silently applying a default, while retaining a documented ten-second default for an omitted value.
+
 ## Remaining gap register
 
 | Priority | Gap | Repository state | Required exit evidence |

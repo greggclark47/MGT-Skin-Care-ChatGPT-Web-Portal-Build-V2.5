@@ -16,12 +16,12 @@ export class InAppNotificationDelivery implements NotificationDelivery{
 }
 export class WebhookNotificationDelivery implements NotificationDelivery{
  kind='webhook';
- constructor(private url:string,private secret:string,private keyId='primary'){}
+ constructor(private url:string,private secret:string,private keyId='primary',private timeoutMs=10000){}
  async deliver(notification:Notification){
   const body=JSON.stringify({event:'mgt.notification',notification:{id:notification.id,actor:notification.actor,kind:notification.kind,status:notification.status,scheduled_at:notification.scheduled_at,created_at:notification.created_at,updated_at:notification.updated_at,attempts:notification.attempts,payload:notification.payload}});
   if(Buffer.byteLength(body,'utf8')>65536)throw new Error('Notification payload exceeds the safe delivery limit.');
   const timestamp=new Date().toISOString(),contentDigest='sha256='+createHash('sha256').update(body).digest('hex'),signature='sha256='+createHmac('sha256',this.secret).update(`${timestamp}.${body}`).digest('hex');
-  const response=await fetch(this.url,{method:'POST',headers:{'content-type':'application/json','x-mgt-event':'mgt.notification','x-mgt-signature-version':'v1','x-mgt-key-id':this.keyId,'x-mgt-notification-id':notification.id,'x-mgt-attempt':String(notification.attempts),'x-mgt-timestamp':timestamp,'x-mgt-content-sha256':contentDigest,'x-mgt-signature':signature},body,signal:AbortSignal.timeout(10000)});
+  const response=await fetch(this.url,{method:'POST',headers:{'content-type':'application/json','x-mgt-event':'mgt.notification','x-mgt-signature-version':'v1','x-mgt-key-id':this.keyId,'x-mgt-notification-id':notification.id,'x-mgt-attempt':String(notification.attempts),'x-mgt-timestamp':timestamp,'x-mgt-content-sha256':contentDigest,'x-mgt-signature':signature},body,signal:AbortSignal.timeout(this.timeoutMs)});
   if(!response.ok)throw new NotificationDeliveryError(response.status,operationsAlertRetryAfterSeconds(response.headers.get('retry-after')));
  }
 }
@@ -194,7 +194,9 @@ export function notificationDeliveryFromEnv(env:NodeJS.ProcessEnv):NotificationD
   if(env.NODE_ENV==='production'&&parsed.protocol!=='https:')throw new Error('Production notification webhooks must use HTTPS.');
   const keyId=env.NOTIFICATION_WEBHOOK_KEY_ID||'primary';
   if(!/^[A-Za-z0-9_-]{1,64}$/.test(keyId))throw new Error('NOTIFICATION_WEBHOOK_KEY_ID must contain only letters, numbers, underscores or hyphens.');
-  return new WebhookNotificationDelivery(parsed.toString(),token,keyId);
+  const timeout=env.NOTIFICATION_WEBHOOK_TIMEOUT_MS,timeoutMs=Number(timeout);
+  if(timeout!==undefined&&(!Number.isInteger(timeoutMs)||timeoutMs<1000||timeoutMs>30000))throw new Error('NOTIFICATION_WEBHOOK_TIMEOUT_MS must be a whole number between 1000 and 30000.');
+  return new WebhookNotificationDelivery(parsed.toString(),token,keyId,int(timeout,10000,1000,30000));
  }
  if(env.NOTIFICATION_DELIVERY&&env.NOTIFICATION_DELIVERY!=='in_app')throw new Error('NOTIFICATION_DELIVERY must be in_app or webhook.');
  return new InAppNotificationDelivery();

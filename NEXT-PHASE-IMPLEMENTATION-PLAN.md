@@ -1808,6 +1808,8 @@ This checkpoint does not create a Stripe Product or Prices, connect an account, 
 
 **Phase F978 — notification key preflight parity:** Production preflight now validates `NOTIFICATION_WEBHOOK_KEY_ID` using the same bounded non-secret identifier contract as runtime delivery. This prevents a deployment from reaching the worker with a key identifier that would be rejected only after startup.
 
+**Phase F979 — bounded customer-notification retries:** Reminder deliveries now apply a configurable exponential cooldown, honor a receiver `Retry-After` directive, and stop after a bounded number of attempts or immediately on a permanent receiver rejection. Retry schedule and failure codes are retained only for worker coordination and operations monitoring.
+
 **Production ship plan alignment checkpoint:** Incorporated the linked Production Ship Todo Plan into `PRODUCTION-SHIP-PLAN-ALIGNMENT.md`. The alignment maps every required live setup and evidence area to the existing F437-F754 gates, adds Lean/Standard/Expanded economic profiles, defines the staged execution sequence, and preserves the fail-closed rule that local artifacts cannot substitute for live evidence, named owners, or production approval.
 
 **Exit evidence:** approved positioning and claims, consent-compliant measurement plan, attribution rules, partner terms where relevant, campaign cap and stop rule, baseline report, and a post-test decision grounded in observed data.

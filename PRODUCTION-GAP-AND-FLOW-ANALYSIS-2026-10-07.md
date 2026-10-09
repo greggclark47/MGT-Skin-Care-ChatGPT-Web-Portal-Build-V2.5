@@ -117,6 +117,8 @@ The v2.26 customer-notification webhook increment replaces bearer-token replay e
 
 The v2.27 release-contract increment brings production preflight into parity with the signed notification runtime: an invalid notification webhook key identifier is rejected before deployment, while an omitted key continues to use the documented `primary` default.
 
+The v2.28 customer-notification delivery increment adds bounded exponential retry scheduling. Retryable failures honor a receiver `Retry-After` value, permanent client rejections stop immediately, and a configured maximum prevents repeated worker sweeps from generating uncontrolled delivery attempts. Retry state stays internal and customer responses remain limited to notification status.
+
 ## Remaining gap register
 
 | Priority | Gap | Repository state | Required exit evidence |

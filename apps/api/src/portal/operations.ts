@@ -4,7 +4,7 @@ import type { Records, Store } from './store';
 
 type NotificationFailureCode='delivery_rejected'|'delivery_unavailable'|'delivery_payload_rejected';
 type DeletionFailureCode='identity_rejected'|'identity_unavailable';
-type Notification={id:string;actor:string;kind:'replenishment_reminder';status:'queued'|'processing'|'delivered'|'failed'|'read';scheduled_at:string;created_at:string;updated_at:string;attempts:number;payload:{product_id:string;due_at:string};lease_until?:string;claim_id?:string;delivered_at?:string;read_at?:string;last_error_code?:NotificationFailureCode};
+type Notification={id:string;actor:string;kind:'replenishment_reminder';status:'queued'|'processing'|'delivered'|'failed'|'read';scheduled_at:string;created_at:string;updated_at:string;attempts:number;payload:{product_id:string;due_at:string};lease_until?:string;claim_id?:string;retry_not_before?:string;retry_delay_seconds?:number;delivered_at?:string;read_at?:string;last_error_code?:NotificationFailureCode};
 type Reminder={product_id:string;due_at:string;paused?:boolean;notification_id?:string;last_notified_at?:string};
 type WorkerOptions={env?:NodeJS.ProcessEnv;delivery?:NotificationDelivery;identityDeletion?:IdentityDeletion;alertDelivery?:OperationsAlertDelivery};
 export type WorkerResult={run_id:string;created:number;delivered:number;failed:number;removed:number;deletions_completed:number;deletions_blocked:number;backup_status:'healthy'|'stale'|'unverified'};
@@ -22,8 +22,11 @@ export class WebhookNotificationDelivery implements NotificationDelivery{
   if(Buffer.byteLength(body,'utf8')>65536)throw new Error('Notification payload exceeds the safe delivery limit.');
   const timestamp=new Date().toISOString(),contentDigest='sha256='+createHash('sha256').update(body).digest('hex'),signature='sha256='+createHmac('sha256',this.secret).update(`${timestamp}.${body}`).digest('hex');
   const response=await fetch(this.url,{method:'POST',headers:{'content-type':'application/json','x-mgt-event':'mgt.notification','x-mgt-signature-version':'v1','x-mgt-key-id':this.keyId,'x-mgt-notification-id':notification.id,'x-mgt-attempt':String(notification.attempts),'x-mgt-timestamp':timestamp,'x-mgt-content-sha256':contentDigest,'x-mgt-signature':signature},body,signal:AbortSignal.timeout(10000)});
-  if(!response.ok)throw new Error(`Notification delivery returned ${response.status}.`);
+  if(!response.ok)throw new NotificationDeliveryError(response.status,operationsAlertRetryAfterSeconds(response.headers.get('retry-after')));
  }
+}
+class NotificationDeliveryError extends Error{
+ constructor(readonly status:number,readonly retryAfterSeconds?:number){super(`Notification delivery returned ${status}.`);}
 }
 export type OperationsAlert={version:'1';delivery_id:string;attempt:number;status:'active'|'resolved';alerts:string[];summary:ReturnType<typeof operationalSnapshot>;generated_at:string};
 export interface OperationsAlertDelivery{kind:string;deliver(alert:OperationsAlert):Promise<void>}
@@ -62,11 +65,15 @@ const iso=(ms=Date.now())=>new Date(ms).toISOString();
 const timestamp=(value:any)=>typeof value==='string'&&!Number.isNaN(Date.parse(value))?Date.parse(value):undefined;
 const int=(value:string|undefined,fallback:number,min:number,max:number)=>{const parsed=Number(value);return Number.isInteger(parsed)&&parsed>=min&&parsed<=max?parsed:fallback;};
 const notificationId=(actor:string,reminder:Reminder)=>'reminder_'+createHash('sha256').update(`${actor}:${reminder.product_id}:${reminder.due_at}`).digest('hex').slice(0,40);
-const notificationFailureCode=(error:unknown):NotificationFailureCode=>{
- if(error instanceof Error&&error.message==='Notification payload exceeds the safe delivery limit.')return 'delivery_payload_rejected';
+const notificationFailure=(error:unknown)=>{
+ if(error instanceof Error&&error.message==='Notification payload exceeds the safe delivery limit.')return {code:'delivery_payload_rejected' as const,retryable:false};
+ if(error instanceof NotificationDeliveryError){
+  if(error.status>=400&&error.status<500&&error.status!==408&&error.status!==429)return {code:'delivery_rejected' as const,retryable:false};
+  return {code:'delivery_unavailable' as const,retryable:true,retryAfterSeconds:error.retryAfterSeconds};
+ }
  const status=error instanceof Error?Number(error.message.match(/^Notification delivery returned (\d{3})\.$/)?.[1]):0;
- if(status>=400&&status<500&&status!==408&&status!==429)return 'delivery_rejected';
- return 'delivery_unavailable';
+ if(status>=400&&status<500&&status!==408&&status!==429)return {code:'delivery_rejected' as const,retryable:false};
+ return {code:'delivery_unavailable' as const,retryable:true};
 };
 const deletionFailureCode=(error:unknown):DeletionFailureCode=>{
  const status=error instanceof Error?Number(error.message.match(/^Supabase identity deletion returned (\d{3})\.$/)?.[1]):0;
@@ -410,18 +417,19 @@ export class OperationalWorker{
    await records.lock('notification:'+id);
    const notification=await records.get<Notification>('notifications',id);
    if(!notification||notification.status==='delivered'||notification.status==='read'||notification.status==='failed')return undefined;
-   const lease=timestamp(notification.lease_until);
-   if(notification.status==='processing'&&lease!==undefined&&lease>at)return undefined;
-    const processing={...notification,status:'processing' as const,attempts:notification.attempts+1,lease_until:iso(at+5*60000),claim_id:randomUUID(),updated_at:iso(at)};
+   const lease=timestamp(notification.lease_until),retryNotBefore=timestamp(notification.retry_not_before);
+   if(notification.status==='processing'&&lease!==undefined&&lease>at||notification.status==='queued'&&retryNotBefore!==undefined&&retryNotBefore>at)return undefined;
+    const processing={...notification,status:'processing' as const,attempts:notification.attempts+1,lease_until:iso(at+5*60000),claim_id:randomUUID(),retry_not_before:undefined,retry_delay_seconds:undefined,updated_at:iso(at)};
    await records.put('notifications',id,processing);return processing;
   });
   if(!claimed)return 'skipped';
   try{
     await this.delivery.deliver(claimed);
-    const completed=await this.store.tx(async records=>{await records.lock('notification:'+id);const current=await records.get<Notification>('notifications',id);if(!current||current.status!=='processing'||current.claim_id!==claimed.claim_id)return false;await records.put('notifications',id,{...current,status:'delivered',delivered_at:iso(),lease_until:undefined,claim_id:undefined,last_error_code:undefined,updated_at:iso()});return true;});
+    const completed=await this.store.tx(async records=>{await records.lock('notification:'+id);const current=await records.get<Notification>('notifications',id);if(!current||current.status!=='processing'||current.claim_id!==claimed.claim_id)return false;await records.put('notifications',id,{...current,status:'delivered',delivered_at:iso(),lease_until:undefined,claim_id:undefined,retry_not_before:undefined,retry_delay_seconds:undefined,last_error_code:undefined,updated_at:iso()});return true;});
    return completed?'delivered':'skipped';
   }catch(error){
-    const completed=await this.store.tx(async records=>{await records.lock('notification:'+id);const current=await records.get<Notification>('notifications',id);if(!current||current.status!=='processing'||current.claim_id!==claimed.claim_id)return false;const retry=current.attempts<3;await records.put('notifications',id,{...current,status:retry?'queued':'failed',lease_until:undefined,claim_id:undefined,last_error_code:notificationFailureCode(error),updated_at:iso()});return true;});
+    const retryBase=int(this.env.NOTIFICATION_RETRY_COOLDOWN_SECONDS,300,10,3600),retryMax=int(this.env.NOTIFICATION_MAX_RETRY_DELAY_SECONDS,3600,10,86400),failure=notificationFailure(error),maxAttempts=int(this.env.NOTIFICATION_MAX_ATTEMPTS,3,1,20),terminal=!failure.retryable||claimed.attempts>=maxAttempts,retryDelaySeconds=terminal?undefined:operationsAlertRetryDelaySeconds(retryBase,claimed.attempts,retryMax,failure.retryAfterSeconds||0),retryNotBefore=retryDelaySeconds===undefined?undefined:iso(at+retryDelaySeconds*1000);
+    const completed=await this.store.tx(async records=>{await records.lock('notification:'+id);const current=await records.get<Notification>('notifications',id);if(!current||current.status!=='processing'||current.claim_id!==claimed.claim_id)return false;await records.put('notifications',id,{...current,status:terminal?'failed':'queued',lease_until:undefined,claim_id:undefined,...(retryNotBefore?{retry_not_before:retryNotBefore,retry_delay_seconds:retryDelaySeconds}:{}),last_error_code:failure.code,updated_at:iso()});return true;});
    return completed?'failed':'skipped';
   }
  }

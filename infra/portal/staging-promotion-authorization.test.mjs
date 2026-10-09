@@ -49,7 +49,7 @@ function approvalFixture(role, handoff, reference) {
     version: "1.0",
     role,
     decision: "approve",
-    approver: role === "release" ? "MGT Release Owner" : "MGT Platform Owner",
+    approver: role === "release" ? "Gregg Clark of MGT" : "Gregg Clark of MGT",
     approved_at: "2026-09-30T00:04:00.000Z",
     handoff_checksum: stagingPromotionHandoffChecksum(handoff),
     reference,

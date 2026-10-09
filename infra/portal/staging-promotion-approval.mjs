@@ -1,5 +1,5 @@
 import { stagingPromotionHandoffChecksum } from "./staging-promotion-handoff.mjs";
-import { DEFAULT_ACCOUNTABLE_OWNER } from "./ownership.mjs";
+import { DEFAULT_ACCOUNTABLE_OWNER, isAccountableOwner, accountableOwnerError } from "./ownership.mjs";
 
 const CHECKSUM = /^sha256:[a-f0-9]{64}$/i;
 const PLACEHOLDER = /REPLACE_WITH|YOUR-|example\.com|localhost|127\.0\.0\.1/i;
@@ -48,7 +48,7 @@ export function validateStagingPromotionApproval(approval, { handoff, now = Date
   if (approval.version !== STAGING_PROMOTION_APPROVAL_VERSION) errors.push(`version must be ${STAGING_PROMOTION_APPROVAL_VERSION}`);
   if (!STAGING_PROMOTION_APPROVAL_ROLES.includes(approval.role)) errors.push("role must be release or platform");
   if (approval.decision !== "approve") errors.push("decision must be approve");
-  if (text(approval.approver).length < 2 || PLACEHOLDER.test(text(approval.approver))) errors.push("approver must name a human approver");
+  if (!isAccountableOwner(approval.approver)) errors.push(accountableOwnerError("approver"));
   const approvedAt = Date.parse(text(approval.approved_at));
   if (!Number.isFinite(approvedAt) || approvedAt > nowMs) errors.push("approved_at must be a past ISO timestamp");
   if (!Number.isFinite(maxAgeMs) || maxAgeMs < 60 * 1000 || maxAgeMs > 24 * 60 * 60 * 1000) errors.push("maxAgeMinutes must be between 1 and 1440");

@@ -1,6 +1,14 @@
-# Ownership and evidence integrity — v2.32
+# Ownership and evidence integrity — v2.33
 
 Gregg Clark of MGT is the accountable owner for operational configuration, release decisions, support, data, platform, and accessibility. Generated templates use the shared owner definition in `ownership.mjs`. Naming an owner is not an approval, and matching a name does not authenticate a person.
+
+## Canonical-name enforcement in v2.33
+
+Production preflight requires `RELEASE_OWNER_NAME` and `SUPPORT_OWNER_NAME` to equal `Gregg Clark of MGT` exactly. Ship-packet owners, approvers, reviewers and monitoring owners; staging ledger owners and promotion approvers; pending staging authorization summaries; and production gate owners, approvers and decider use the same policy. Missing names, aliases, whitespace/case changes, arrays and coerced objects are rejected. Validation does not rewrite supplied records or echo invalid submitted names in owner-policy errors.
+
+Every preflight failure now blocks release readiness, even when it has no phase-specific error-prefix mapping. Do not repair old approvals by changing their names: retain the historical record, obtain the actual review, and regenerate candidate-bound evidence/approvals and dependent checksums. Pending and hold decisions stay pending or hold.
+
+This checkpoint implements core local release validators only. Authenticated identity, protected CI bootstrap, runtime admission, full downstream ledger enforcement, persistent authorization consumption, cloud failover and automated backup publication remain implementation work described in [the architecture blueprint](architecture/INC-GOVERNANCE-BLUEPRINT.md).
 
 ## Record and validate a decision
 

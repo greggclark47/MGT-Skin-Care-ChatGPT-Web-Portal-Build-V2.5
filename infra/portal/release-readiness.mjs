@@ -67,7 +67,6 @@ export const RELEASE_PHASES = Object.freeze([
 ]);
 
 const ERROR_PREFIXES = Object.freeze({
-  configuration: ["NODE_ENV", "DEMO_MODE", "PUBLIC_ORIGIN", "DATABASE_URL", "PORTAL_AUTO_MIGRATE", "PORTAL_DOMAIN", "SUPABASE_", "NODE_IMAGE", "API_IMAGE", "WEB_IMAGE", "OLLAMA_IMAGE", "CADDY_IMAGE"],
   support: ["SUPPORT_OWNER_NAME", "SUPPORT_OWNER_EMAIL"],
   accessibility: ["ACCESSIBILITY_VALIDATION_REPORT_URL", "ACCESSIBILITY_VALIDATED_AT"],
   database: ["DATABASE_URL", "SUPABASE_URL", "SUPABASE_ANON_KEY", "SUPABASE_SERVICE_ROLE_KEY"],
@@ -105,7 +104,9 @@ export function buildReleaseReadiness({ env = {}, localGates = false, liveEviden
   const preflight = validateEnvironment(env);
   const phases = [];
 
-  const configurationBlocked = hasError(preflight.errors, ERROR_PREFIXES.configuration);
+  // Any failed preflight check blocks readiness, including owner/alert settings
+  // that are not represented by a phase-specific error-prefix list.
+  const configurationBlocked = !preflight.ok;
   const supportBlocked = hasError(preflight.errors, ERROR_PREFIXES.support);
   const accessibilityBlocked = hasError(preflight.errors, ERROR_PREFIXES.accessibility);
   const databaseBlocked = hasError(preflight.errors, ERROR_PREFIXES.database);

@@ -10,7 +10,7 @@ const images = {
   ollama: `ollama/ollama@sha256:${"a".repeat(64)}`,
   caddy: `caddy@sha256:${"b".repeat(64)}`
 };
-const owners = { release: "MGT Release Owner", platform: "MGT Platform Owner" };
+const owners = { release: "Gregg Clark of MGT", platform: "Gregg Clark of MGT" };
 
 function validLedger() {
   const target = {

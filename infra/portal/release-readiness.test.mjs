@@ -44,6 +44,24 @@ const base = {
   CADDY_IMAGE: `caddy@sha256:${"b".repeat(64)}`
 };
 
+test("no preflight failure can be omitted from release readiness", () => {
+  const evidence = Object.fromEntries(['support_workflow','accessibility_deployed','database_rls','backup_restore','stripe_sandbox','container_startup','ai_provider'].map(key => [key, true]));
+  assert.equal(buildReleaseReadiness({ env: base, localGates: true, liveEvidence: evidence }).release_ready, true);
+  for (const changed of [
+    { RELEASE_OWNER_NAME: 'Unrecorded delegate' },
+    { SUPPORT_OWNER_NAME: 'Gregg Clark of MGT ' },
+    { OPERATIONS_ALERT_TIMEOUT_MS: '0' },
+    { MONITORING_DASHBOARD_URL: '' },
+    { NOTIFICATION_MAX_ATTEMPTS: '0' }
+  ]) {
+    const result = buildReleaseReadiness({ env: { ...base, ...changed }, localGates: true, liveEvidence: evidence });
+    assert.equal(result.preflight.ok, false);
+    assert.equal(result.release_ready, false);
+    assert.equal(result.phases.find(phase => phase.id === 'F72').status, 'blocked');
+    assert.equal(result.phases.find(phase => phase.id === 'F80').status, 'blocked');
+  }
+});
+
 test("defines the ten next phases and only uses documented statuses", () => {
   assert.deepEqual(RELEASE_PHASES.map((item) => item.id), ["F71", "F72", "F73", "F74", "F75", "F76", "F77", "F78", "F79", "F80"]);
   assert.ok(RELEASE_PHASES.every((item) => item.owner && item.evidence));

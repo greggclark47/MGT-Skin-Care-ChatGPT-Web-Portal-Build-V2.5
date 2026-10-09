@@ -1,4 +1,5 @@
 import { pathToFileURL } from "node:url";
+import { validateOwnershipEnvironment } from "./ownership.mjs";
 
 const placeholder = /(your-|change[-_]?me|example\.|localhost|127\.0\.0\.1|user:password|database:5432)/i;
 
@@ -40,7 +41,7 @@ function validIsoDate(value) {
 }
 
 export function validateEnvironment(env) {
-  const errors = [];
+  const errors = [...validateOwnershipEnvironment(env).errors];
   const warnings = [];
   const requireValue = (key) => {
     const value = String(env[key] || "").trim();
@@ -119,10 +120,6 @@ export function validateEnvironment(env) {
   if (!wholeNumber(notificationMaxAttempts, 1, 20)) errors.push("NOTIFICATION_MAX_ATTEMPTS must be a whole number between 1 and 20.");
   if (wholeNumber(notificationRetryBase, 10, 3600) && wholeNumber(notificationRetryMax, 10, 86400) && Number(notificationRetryMax) < Number(notificationRetryBase)) errors.push("NOTIFICATION_MAX_RETRY_DELAY_SECONDS must be at least NOTIFICATION_RETRY_COOLDOWN_SECONDS.");
 
-  const releaseOwnerName = requireValue("RELEASE_OWNER_NAME");
-  if (releaseOwnerName && releaseOwnerName.length < 2) errors.push("RELEASE_OWNER_NAME must identify the accountable release owner.");
-  const supportOwnerName = requireValue("SUPPORT_OWNER_NAME");
-  if (supportOwnerName && supportOwnerName.length < 2) errors.push("SUPPORT_OWNER_NAME must identify the accountable support owner.");
   const supportOwnerEmail = requireValue("SUPPORT_OWNER_EMAIL");
   if (supportOwnerEmail && !validEmail(supportOwnerEmail)) errors.push("SUPPORT_OWNER_EMAIL must be a valid production support owner email.");
 

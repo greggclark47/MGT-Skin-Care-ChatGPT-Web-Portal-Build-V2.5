@@ -48,7 +48,7 @@ function stagingFixture(root) {
     phase: gate.phase,
     gate: gate.gate,
     requirement: gate.requirement,
-    owner: gate.owner_role === "release" ? "MGT Release Owner" : "MGT Platform Owner",
+    owner: gate.owner_role === "release" ? "Gregg Clark of MGT" : "Gregg Clark of MGT",
     captured_at: "2026-09-30T00:00:00.000Z",
     environment: "staging",
     action: "Recorded staging action",

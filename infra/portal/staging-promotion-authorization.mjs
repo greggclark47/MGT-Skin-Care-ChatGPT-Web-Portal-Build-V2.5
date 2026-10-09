@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import { isAccountableOwner, accountableOwnerError } from "./ownership.mjs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { inspectStagingArtifact, resolveStagingArtifactPath } from "./staging-artifacts.mjs";
@@ -98,6 +99,11 @@ export function validateStagingPromotionAuthorization(authorization, { now = Dat
   if (authorization.status === "pending_operator_execution" && (!SHA.test(text(authorization.candidate_commit)) || !validOrigin(authorization.staging_origin))) errors.push("a pending operator authorization needs a candidate and staging origin");
   if (!/^sha256:[a-f0-9]{64}$/i.test(text(authorization.handoff?.checksum)) || !/^sha256:[a-f0-9]{64}$/i.test(text(authorization.handoff?.canonical_checksum))) errors.push("authorization must bind the handoff checksums");
   const roles = Array.isArray(authorization.approvals) ? authorization.approvals.map((approval) => approval?.role) : [];
+  if (authorization.status === "pending_operator_execution") {
+    for (const approval of Array.isArray(authorization.approvals) ? authorization.approvals : []) {
+      if (!isAccountableOwner(approval?.approver)) errors.push(accountableOwnerError("approvals.approver"));
+    }
+  }
   for (const role of STAGING_PROMOTION_APPROVAL_ROLES) if (roles.filter((value) => value === role).length !== 1) errors.push(`approvals must contain exactly one ${role} approval`);
   const checks = Array.isArray(authorization.checks) ? authorization.checks : [];
   for (const id of ["handoff_integrity", "release_approval", "platform_approval", "shared_execution_window", "operator_execution"]) if (checks.filter((check) => check?.id === id).length !== 1) errors.push(`${id} must appear exactly once`);

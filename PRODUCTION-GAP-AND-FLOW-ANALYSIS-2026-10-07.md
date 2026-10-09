@@ -129,6 +129,8 @@ The v2.32 evidence-integrity increment hashes the complete nested prerequisite d
 
 ## Remaining gap register
 
+The v2.33 canonical-ownership increment requires the exact owner name Gregg Clark of MGT in production preflight, ship-packet owners/approvers/reviewers/monitoring, staging ledger and promotion approvals, pending staging authorization summaries, and production gate owners/approvers/decider. All preflight failures now block release readiness, including errors outside the old phase-prefix lists. One hundred owner-mutation regression cases cover missing, altered, and non-string values. This does not authenticate a human, grant approval, or implement the architecture's cloud executor or persistent ledger; those remain separate work.
+
 | Priority | Gap | Repository state | Required exit evidence |
 | --- | --- | --- | --- |
 | P0 | Staging/production target | Contracts complete | Approved host, domain, secret manager, deployment identity, redacted preflight |

@@ -2,7 +2,7 @@ import { createStagingAttestationTemplate, validateStagingAttestation } from "./
 import { createStagingArtifactsTemplate, validateStagingArtifacts } from "./staging-artifacts.mjs";
 import { createStagingProbeTemplate, validateStagingProbe } from "./staging-probe.mjs";
 import { createStagingTargetTemplate, validateStagingTarget } from "./staging-target.mjs";
-import { DEFAULT_ACCOUNTABLE_OWNER } from "./ownership.mjs";
+import { DEFAULT_ACCOUNTABLE_OWNER, isAccountableOwner, accountableOwnerError } from "./ownership.mjs";
 
 const CHECKSUM = /^sha256:[a-f0-9]{64}$/i;
 const PLACEHOLDER = /REPLACE_WITH|YOUR-|example\.com|localhost|127\.0\.0\.1/i;
@@ -96,7 +96,8 @@ export function validateStagingEvidence(ledger, { candidateCommit, images = {}, 
     if (record.phase !== definition.phase) errors.push(`${definition.id}.phase must be ${definition.phase}`);
     if (record.gate !== definition.gate) errors.push(`${definition.id}.gate must preserve the required gate name`);
     if (!validText(record.requirement)) errors.push(`${definition.id}.requirement must be recorded`);
-    if (!validText(record.owner)) errors.push(`${definition.id}.owner must name an accountable owner`);
+    if (!isAccountableOwner(record.owner)) errors.push(accountableOwnerError(`${definition.id}.owner`));
+    if (Object.hasOwn(owners, definition.owner_role) && !isAccountableOwner(owners[definition.owner_role])) errors.push(accountableOwnerError(`owners.${definition.owner_role}`));
     if (validText(owners[definition.owner_role]) && text(record.owner) !== text(owners[definition.owner_role])) errors.push(`${definition.id}.owner must match owners.${definition.owner_role}`);
     if (!validPastIso(record.captured_at)) errors.push(`${definition.id}.captured_at must be a past ISO timestamp`);
     if (record.environment !== "staging") errors.push(`${definition.id}.environment must be staging`);

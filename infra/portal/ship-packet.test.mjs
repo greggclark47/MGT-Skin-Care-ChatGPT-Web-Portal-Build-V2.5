@@ -1,48 +1,18 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { buildReleaseReadiness, liveEvidenceFromEnvironment } from "./release-readiness.mjs";
 import { validateShipPacket } from "./ship-packet.mjs";
 import { STAGING_EVIDENCE_GATES } from "./staging-evidence.mjs";
 
 const env = {
-  NODE_ENV: "production",
-  DEMO_MODE: "false",
-  PUBLIC_ORIGIN: "https://portal.mgtskincare.test",
-  DATABASE_URL: "postgresql://mgt:secure@db.internal:5432/mgt?sslmode=verify-full",
-  PORTAL_AUTO_MIGRATE: "false",
-  PORTAL_DOMAIN: "portal.mgtskincare.test",
-  SUPABASE_URL: "https://project.supabase.co",
-  SUPABASE_ANON_KEY: "anon-production-value",
-  SUPABASE_SERVICE_ROLE_KEY: "service-production-value",
-  OLLAMA_ENABLED: "true",
-  OLLAMA_BASE_URL: "http://ollama:11434",
-  OPENCLAW_ENABLED: "false",
-  WORKER_INTERVAL_SECONDS: "60",
-  WORKER_READINESS_MAX_AGE_SECONDS: "300",
-  BACKUP_MAX_AGE_HOURS: "26",
-  BACKUP_RESTORE_MAX_AGE_DAYS: "90",
-  NOTIFICATION_DELIVERY: "in_app",
-  SUPPORT_OWNER_NAME: "MGT Support Lead",
-  SUPPORT_OWNER_EMAIL: "support-lead@mgtskincare.test",
-  ACCESSIBILITY_VALIDATION_REPORT_URL: "https://evidence.mgtskincare.test/a11y/report",
-  ACCESSIBILITY_VALIDATED_AT: "2026-09-01T00:00:00.000Z",
-  SUBSCRIPTIONS_ENABLED: "false",
-  SUBSCRIPTION_TERMS_APPROVED: "false",
   NODE_IMAGE: `node@sha256:${"c".repeat(64)}`,
   API_IMAGE: `ghcr.io/mgt/api@sha256:${"d".repeat(64)}`,
   WEB_IMAGE: `ghcr.io/mgt/web@sha256:${"e".repeat(64)}`,
   OLLAMA_IMAGE: `ollama/ollama@sha256:${"a".repeat(64)}`,
   CADDY_IMAGE: `caddy@sha256:${"b".repeat(64)}`,
-  RELEASE_LOCAL_GATES: "true",
-  RELEASE_EVIDENCE_SUPPORT_WORKFLOW: "true",
-  RELEASE_EVIDENCE_ACCESSIBILITY_DEPLOYED: "true",
-  RELEASE_EVIDENCE_DATABASE_RLS: "true",
-  RELEASE_EVIDENCE_BACKUP_RESTORE: "true",
-  RELEASE_EVIDENCE_CONTAINER_STARTUP: "true",
-  RELEASE_EVIDENCE_AI_PROVIDER: "true"
 };
+// Unit-test dependency, not executed configuration or deployment evidence.
+const readiness = { release_ready: true, phases: [{ id: "F79", status: "pass" }] };
 
-const readiness = buildReleaseReadiness({ env, localGates: true, liveEvidence: liveEvidenceFromEnvironment(env) });
 const evidence = [
   ["support_workflow", "F73"],
   ["accessibility_deployed", "F74"],
@@ -50,9 +20,9 @@ const evidence = [
   ["backup_restore", "F76"],
   ["container_startup", "F78"],
   ["ai_provider", "F79"]
-].map(([id, phase]) => ({ id, phase, status: "pass", reference: `work/evidence/${id}.md`, reviewed_at: "2026-09-20T00:00:00.000Z", reviewer: "MGT Release Owner" }));
+].map(([id, phase]) => ({ id, phase, status: "pass", reference: `work/evidence/${id}.md`, reviewed_at: "2026-09-20T00:00:00.000Z", reviewer: "Gregg Clark of MGT" }));
 
-const owners = { release: "MGT Release Owner", support: "MGT Support Owner", data: "MGT Data Owner", platform: "MGT Platform Owner", accessibility: "MGT Accessibility Owner" };
+const owners = { release: "Gregg Clark of MGT", support: "Gregg Clark of MGT", data: "Gregg Clark of MGT", platform: "Gregg Clark of MGT", accessibility: "Gregg Clark of MGT" };
 const images = { node: `node@sha256:${"c".repeat(64)}`, api: `ghcr.io/mgt/api@sha256:${"d".repeat(64)}`, web: `ghcr.io/mgt/web@sha256:${"e".repeat(64)}`, ollama: `ollama/ollama@sha256:${"a".repeat(64)}`, caddy: `caddy@sha256:${"b".repeat(64)}` };
 const stagingEvidence = {
   version: "1.2",
@@ -134,7 +104,7 @@ const validPacket = {
   staging_evidence: stagingEvidence,
   evidence,
   rollback: { previous_release: "mgt-v2-previous", reference: "work/rollback/2026-09-20/report.md", verified_at: "2026-09-20T00:00:00.000Z" },
-  monitoring: { owner: "MGT Launch Monitor", incident_channel: "MGT launch incident channel", launch_window_start: "2030-01-01T12:00:00.000Z", checks: ["15m", "1h", "24h", "7d"] }
+  monitoring: { owner: "Gregg Clark of MGT", incident_channel: "MGT launch incident channel", launch_window_start: "2030-01-01T12:00:00.000Z", checks: ["15m", "1h", "24h", "7d"] }
 };
 
 test("accepts a complete ship packet only when readiness is also complete", () => {

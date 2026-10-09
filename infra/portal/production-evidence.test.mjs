@@ -25,7 +25,7 @@ function completeGate(root) {
   gate.origin = "https://portal.mgtskincare.test";
   gate.source_environment_review = "work/production/staging-dossier.md";
   writeArtifact(root, gate.source_environment_review, "Staging dossier evidence\n");
-  gate.owners = Object.fromEntries(PRODUCTION_GATE_OWNER_ROLES.map((role) => [role, `MGT ${role} owner`]));
+  gate.owners = Object.fromEntries(PRODUCTION_GATE_OWNER_ROLES.map((role) => [role, "Gregg Clark of MGT"]));
   gate.checks = PRODUCTION_GATE_CHECKS.map((definition) => {
     const reference = `work/production/${definition.id}.md`;
     const rollbackReference = `work/production/rollback/${definition.id}.md`;

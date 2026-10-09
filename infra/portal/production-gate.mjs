@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
-import { DEFAULT_ACCOUNTABLE_OWNER } from "./ownership.mjs";
+import { DEFAULT_ACCOUNTABLE_OWNER, isAccountableOwner, accountableOwnerError } from "./ownership.mjs";
 
 const SHA = /^[0-9a-f]{40}$/i;
 const DIGEST = /^[a-z0-9./_-]+@sha256:[a-f0-9]{64}$/;
@@ -46,7 +46,7 @@ function validOrigin(value) {
   }
 }
 
-function validOwner(value) {
+function validText(value) {
   return text(value).length >= 2 && !PLACEHOLDER.test(text(value));
 }
 
@@ -100,7 +100,7 @@ export function validateProductionGate(gate, { candidateCommit, images = {}, now
     if (DIGEST.test(text(images[key])) && text(gate.images?.[key]) !== text(images[key])) errors.push(`images.${key} must match the approved candidate image`);
   }
   const owners = gate.owners || {};
-  for (const role of PRODUCTION_GATE_OWNER_ROLES) if (!validOwner(owners[role])) errors.push(`owners.${role} must name an accountable owner`);
+  for (const role of PRODUCTION_GATE_OWNER_ROLES) if (!isAccountableOwner(owners[role])) errors.push(accountableOwnerError(`owners.${role}`));
 
   const checks = Array.isArray(gate.checks) ? gate.checks : [];
   for (const check of checks) if (!PRODUCTION_GATE_CHECKS.some((definition) => definition.id === check?.id)) errors.push("checks contain an unknown production gate");
@@ -112,12 +112,12 @@ export function validateProductionGate(gate, { candidateCommit, images = {}, now
     }
     const check = matches[0];
     if (check.owner_role !== definition.owner_role) errors.push(`${definition.id}.owner_role must be ${definition.owner_role}`);
-    if (!validOwner(check.owner)) errors.push(`${definition.id}.owner must name an accountable owner`);
-    if (validOwner(owners[definition.owner_role]) && text(check.owner) !== text(owners[definition.owner_role])) errors.push(`${definition.id}.owner must match owners.${definition.owner_role}`);
+    if (!isAccountableOwner(check.owner)) errors.push(accountableOwnerError(`${definition.id}.owner`));
+    if (validText(owners[definition.owner_role]) && text(check.owner) !== text(owners[definition.owner_role])) errors.push(`${definition.id}.owner must match owners.${definition.owner_role}`);
     if (check.requirement !== definition.requirement) errors.push(`${definition.id}.requirement must preserve the gate requirement`);
     if (!["pass", "pending", "blocked"].includes(check.status)) errors.push(`${definition.id}.status is invalid`);
     if (!validPastIso(check.captured_at, now)) errors.push(`${definition.id}.captured_at must be a past ISO timestamp`);
-    if (!validOwner(check.actual_result)) errors.push(`${definition.id}.actual_result must be recorded`);
+    if (!validText(check.actual_result)) errors.push(`${definition.id}.actual_result must be recorded`);
     if (!validReference(check.reference)) errors.push(`${definition.id}.reference must be a non-placeholder evidence reference`);
     if (!CHECKSUM.test(text(check.checksum))) errors.push(`${definition.id}.checksum must be a sha256 checksum`);
     if (!validReference(check.rollback_reference)) errors.push(`${definition.id}.rollback_reference must identify rollback evidence`);
@@ -132,7 +132,7 @@ export function validateProductionGate(gate, { candidateCommit, images = {}, now
     }
     const approval = matches[0];
     if (![`pending`, `go`, `hold`].includes(approval.decision)) errors.push(`${role} approval decision is invalid`);
-    if (!validOwner(approval.approver)) errors.push(`${role} approval must name an approver`);
+    if (!isAccountableOwner(approval.approver)) errors.push(accountableOwnerError(`${role}.approver`));
     if (text(approval.approver) !== text(owners[role])) errors.push(`${role} approval approver must match owners.${role}`);
     if (!validPastIso(approval.reviewed_at, now)) errors.push(`${role} approval must have a past timestamp`);
     if (!validReference(approval.reference)) errors.push(`${role} approval must reference a decision record`);
@@ -140,7 +140,7 @@ export function validateProductionGate(gate, { candidateCommit, images = {}, now
 
   const decision = gate.decision || {};
   if (!["pending", "go", "hold"].includes(decision.decision)) errors.push("decision.decision must be pending, go, or hold");
-  if (!validOwner(decision.decider)) errors.push("decision.decider must name the release decider");
+  if (!isAccountableOwner(decision.decider)) errors.push(accountableOwnerError("decision.decider"));
   if (text(decision.decider) !== text(owners.release)) errors.push("decision.decider must match owners.release");
   if (!validPastIso(decision.reviewed_at, now)) errors.push("decision.reviewed_at must be a past timestamp");
   if (!validReference(decision.reference)) errors.push("decision.reference must identify the go/no-go record");

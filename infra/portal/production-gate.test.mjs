@@ -14,7 +14,7 @@ function completeGate() {
   const gate = createProductionGateTemplate({ candidateCommit: "a".repeat(40), images });
   gate.origin = "https://portal.mgtskincare.test";
   gate.source_environment_review = "work/production/staging-dossier.md";
-  gate.owners = Object.fromEntries(PRODUCTION_GATE_OWNER_ROLES.map((role) => [role, `MGT ${role} owner`]));
+  gate.owners = Object.fromEntries(PRODUCTION_GATE_OWNER_ROLES.map((role) => [role, "Gregg Clark of MGT"]));
   gate.checks = PRODUCTION_GATE_CHECKS.map((definition) => ({
     ...definition,
     owner: gate.owners[definition.owner_role],

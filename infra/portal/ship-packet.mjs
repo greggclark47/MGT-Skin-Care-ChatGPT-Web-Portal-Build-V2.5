@@ -3,6 +3,7 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { buildReleaseReadiness, liveEvidenceFromEnvironment } from "./release-readiness.mjs";
 import { validateStagingEvidence } from "./staging-evidence.mjs";
+import { isAccountableOwner, accountableOwnerError } from "./ownership.mjs";
 
 export const SHIP_PACKET_VERSION = "1.2";
 
@@ -39,7 +40,7 @@ function validEvidenceReference(value) {
   return (/^https:\/\//.test(reference) || /^(?:work|infra)\//.test(reference)) && !PLACEHOLDER.test(reference);
 }
 
-function validOwner(value) {
+function validText(value) {
   const owner = text(value);
   return owner.length >= 2 && !PLACEHOLDER.test(owner);
 }
@@ -60,7 +61,7 @@ function addRequiredEvidence(errors, packet, key, phaseId) {
   if (item.status !== "pass") errors.push(`${key} evidence must have status pass.`);
   if (!validEvidenceReference(item.reference)) errors.push(`${key} evidence must reference a non-placeholder HTTPS or repository report.`);
   if (!validPastIso(item.reviewed_at)) errors.push(`${key} evidence must have a past reviewed_at timestamp.`);
-  if (!validOwner(item.reviewer)) errors.push(`${key} evidence must name a reviewer.`);
+  if (!isAccountableOwner(item.reviewer)) errors.push(accountableOwnerError(`${key}.reviewer`));
 }
 
 export function validateShipPacket(packet, { readiness, env = {} } = {}) {
@@ -74,14 +75,14 @@ export function validateShipPacket(packet, { readiness, env = {} } = {}) {
 
   const candidate = packet.candidate || {};
   if (!SHA.test(text(candidate.commit))) errors.push("candidate.commit must be a 40-character commit SHA.");
-  if (!validOwner(candidate.branch)) errors.push("candidate.branch must identify the source branch.");
+  if (!validText(candidate.branch)) errors.push("candidate.branch must identify the source branch.");
   for (const key of ["checkpoint_report", "verification_report"]) {
     if (!validEvidenceReference(candidate[key])) errors.push(`candidate.${key} must reference a non-placeholder HTTPS or repository report.`);
   }
   if (!/^https:\/\//.test(text(candidate.hosted_ci_url))) errors.push("candidate.hosted_ci_url must be an HTTPS hosted verification URL.");
 
   const owners = packet.owners || {};
-  for (const key of OWNER_KEYS) if (!validOwner(owners[key])) errors.push(`owners.${key} must identify an accountable owner.`);
+  for (const key of OWNER_KEYS) if (!isAccountableOwner(owners[key])) errors.push(accountableOwnerError(`owners.${key}`));
 
   const approvals = Array.isArray(packet.approvals) ? packet.approvals : [];
   for (const role of APPROVAL_KEYS) {
@@ -92,7 +93,7 @@ export function validateShipPacket(packet, { readiness, env = {} } = {}) {
     }
     const approval = matches[0];
     if (approval.decision !== "go") errors.push(`${role} approval must have decision go.`);
-    if (!validOwner(approval.approver)) errors.push(`${role} approval must name an approver.`);
+    if (!isAccountableOwner(approval.approver)) errors.push(accountableOwnerError(`${role}.approver`));
     if (text(approval.approver) !== text(owners[role])) errors.push(`${role} approval approver must match owners.${role}.`);
     if (!validPastIso(approval.reviewed_at)) errors.push(`${role} approval must have a past reviewed_at timestamp.`);
     if (!validEvidenceReference(approval.reference)) errors.push(`${role} approval must reference its decision record.`);
@@ -113,13 +114,13 @@ export function validateShipPacket(packet, { readiness, env = {} } = {}) {
   for (const [key, phaseId] of requiredEvidence) addRequiredEvidence(errors, packet, key, phaseId);
 
   const rollback = packet.rollback || {};
-  if (!validOwner(rollback.previous_release)) errors.push("rollback.previous_release must identify the last approved release.");
+  if (!validText(rollback.previous_release)) errors.push("rollback.previous_release must identify the last approved release.");
   if (!validEvidenceReference(rollback.reference)) errors.push("rollback.reference must point to the rehearsed rollback evidence.");
   if (!validPastIso(rollback.verified_at)) errors.push("rollback.verified_at must be a past ISO timestamp.");
 
   const monitoring = packet.monitoring || {};
-  if (!validOwner(monitoring.owner)) errors.push("monitoring.owner must identify the launch monitor.");
-  if (!validOwner(monitoring.incident_channel)) errors.push("monitoring.incident_channel must identify the incident route.");
+  if (!isAccountableOwner(monitoring.owner)) errors.push(accountableOwnerError("monitoring.owner"));
+  if (!validText(monitoring.incident_channel)) errors.push("monitoring.incident_channel must identify the incident route.");
   if (!Number.isFinite(Date.parse(text(monitoring.launch_window_start)))) errors.push("monitoring.launch_window_start must be an ISO timestamp.");
   for (const checkpoint of ["15m", "1h", "24h", "7d"]) if (!Array.isArray(monitoring.checks) || !monitoring.checks.includes(checkpoint)) errors.push(`monitoring.checks must include ${checkpoint}.`);
 

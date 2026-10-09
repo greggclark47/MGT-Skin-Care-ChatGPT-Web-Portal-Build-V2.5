@@ -1,4 +1,6 @@
 import test from "node:test";
+import { receiptReviewFixture } from "./test-fixtures/release-receipt.mjs";
+import { buildReleaseCloseout } from "./release-closeout.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import os from "node:os";
@@ -9,14 +11,14 @@ import { releaseLaunchReviewChecksum } from "./release-launch-review.mjs";
 import { buildReleaseExecutionReview, releaseExecutionReviewChecksum, validateReleaseExecutionReview, verifyReleaseExecutionReview } from "./release-execution-review.mjs";
 
 const COMMIT = "0123456789abcdef0123456789abcdef01234567";
-const RECEIPT = "sha256:" + "c".repeat(64);
+const RECEIPT = review().receipt_checksum;
 const LAUNCH = "sha256:" + "e".repeat(64);
 const RECORD_IDS = ["command_authority", "approval_ledger", "dry_run", "execution_log", "release_window", "freeze_clearance", "customer_communication", "rollback_command", "first_hour_watch", "incident_route", "customer_impact_watch", "support_handoff"];
 
 function rootFixture() { const root = fs.mkdtempSync(path.join(os.tmpdir(), "mgt-execution-review-")); fs.mkdirSync(path.join(root, "work", "execution"), { recursive: true }); for (const id of RECORD_IDS) fs.writeFileSync(path.join(root, "work", "execution", `${id}.md`), `${id} record\n`); return root; }
 function manifest() { const value = { version: "1.0", candidate_commit: COMMIT, branch: "codex/test", generated_at: "2026-01-01T00:00:00.000Z", status: "ready_for_export", destinations: { github: { status: "pending_push", repository: [], branch: "codex/test", commit: COMMIT }, google_drive: { status: "pending_upload" } }, entries: [], errors: [] }; value.bundle_checksum = releaseExportChecksum(value); return value; }
-function closeout(value) { return { version: "1.0", candidate_commit: COMMIT, bundle_checksum: value.bundle_checksum, generated_at: "2026-01-01T01:00:00.000Z", max_receipt_age_minutes: 1440, receipt_ages_minutes: { github: 5, google_drive: 5 }, status: "release_closeout_ready", receipt_checksum: RECEIPT, errors: [] }; }
-function review() { return { status: "export_complete", receipt_checksum: RECEIPT }; }
+function closeout(value, status = "release_closeout_ready") { return buildReleaseCloseout({ manifest: value, review: receiptReviewFixture(value, { pending: status === "pending_receipts" }), now: "2026-01-01T01:00:00.000Z" }); }
+function review() { return receiptReviewFixture(manifest()); }
 function finalization(value) { const result = { version: "1.0", candidate_commit: COMMIT, bundle_checksum: value.bundle_checksum, closeout_checksum: RECEIPT, generated_at: "2026-01-01T01:00:00.000Z", status: "ready_for_finalization", entries: ["decision", "rollback", "monitoring", "support", "customer_communications", "audit_archive"].map((id) => ({ id, reference: `work/execution/${id}.md`, checksum: "sha256:" + "d".repeat(64), bytes: 1 })), errors: [] }; result.finalization_checksum = releaseFinalizationChecksum(result); return result; }
 function launch(value, f) { const result = { version: "1.0", candidate_commit: COMMIT, bundle_checksum: value.bundle_checksum, finalization_checksum: f.finalization_checksum, generated_at: "2026-01-01T01:00:00.000Z", status: "ready_for_launch_review", entries: ["launch_window", "freeze_clearance", "ship_owner", "operator", "rollback_trigger", "incident_route", "first_hour_watch", "customer_impact_watch", "command_log_archive", "closeout_timestamp"].map((id) => ({ id, reference: `work/execution/${id}.md`, checksum: "sha256:" + "d".repeat(64), bytes: 1 })), errors: [] }; result.launch_review_checksum = releaseLaunchReviewChecksum(result); return result; }
 function records() { return Object.fromEntries(RECORD_IDS.map((id) => [id, { reference: `work/execution/${id}.md`, owner: "owner", reviewed_at: "2026-01-01T01:00:00.000Z", status: "pass" }])); }

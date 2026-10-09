@@ -46,6 +46,8 @@ Finding 3's arbitrary-HTTPS/file-ID mismatch is now addressed locally by the sha
 
 ### Operational sequence
 
+v2.37 additionally closes the per-repository freshness gap: both GitHub observations and the Drive observation participate in closeout, and reported ages/status/blockers are independently recomputed at the recorded decision time. Strict timestamp chronology rejects impossible or post-review observations. This strengthens local receipt consistency; it does not complete remote readback or verify any new upload.
+
 1. Preserve v2.22 and subsequent source/evidence history. Finish the current narrowly scoped evidence-integrity fix and verify it locally.
 2. Restore a working Drive connection. User handles sign-in/security consent. Confirm the actual account and accessible folder metadata; do not change sharing or broaden permissions merely to make an upload work.
 3. Enumerate the MGT project documents in the verified scope. Fetch the five references above and any newer revisions/addenda; compare to local copies and record provenance. Do not claim all Drive documents reviewed until that inventory is complete.

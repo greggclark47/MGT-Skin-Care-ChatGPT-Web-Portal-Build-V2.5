@@ -1,6 +1,14 @@
-# Ownership and evidence integrity — v2.36
+# Ownership and evidence integrity — v2.37
 
 Gregg Clark of MGT is the accountable owner for operational configuration, release decisions, support, data, platform, and accessibility. Generated templates use the shared owner definition in `ownership.mjs`. Naming an owner is not an approval, and matching a name does not authenticate a person.
+
+## Per-repository receipt freshness in v2.37
+
+Release closeout now measures every observed GitHub repository timestamp. Its `github` age is the oldest observation's age, so a fresh aggregate timestamp cannot hide a stale mirror. Drive freshness remains independently required. Receipt observation and review timestamps use strict, real UTC ISO dates with seconds or exactly three millisecond digits. Each observation must occur no later than the review that attests it. Missing, malformed and future observations block closeout. The age policy must be an integer from 1 to 10080 minutes; an observation exactly at the limit is accepted and one millisecond beyond is stale.
+
+Closeout validation recomputes the source manifest/receipt chain, ages, status and blocker list at the recorded closeout time. Relabeling stale or blocked evidence as ready, dropping an age, or replacing a review checksum cannot substitute for this check. Historical audit remains possible after the receipt window expires. A new operational decision must build a new closeout at the current time and still obtain corresponding action authority; historical validation is not renewed permission.
+
+Preserve old records unchanged. A prior multi-remote closeout that omitted GitHub age may now fail validation and needs a new independently reviewed record, not manual relabeling or backdating. Downstream finalization, launch and execution tests now use complete synthetic receipt chains. These are not live observations. Authenticated collector provenance, trusted policy pinning, remote byte readback, folder/name checks and multi-artifact backup coverage remain outstanding.
 
 ## Drive file identity in v2.36
 

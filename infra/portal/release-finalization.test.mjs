@@ -1,4 +1,6 @@
 import test from "node:test";
+import { receiptReviewFixture } from "./test-fixtures/release-receipt.mjs";
+import { buildReleaseCloseout } from "./release-closeout.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import os from "node:os";
@@ -8,7 +10,7 @@ import { buildReleaseFinalization, releaseFinalizationChecksum, validateReleaseF
 
 const COMMIT = "0123456789abcdef0123456789abcdef01234567";
 const BUNDLE = "sha256:" + "a".repeat(64);
-const RECEIPT = "sha256:" + "c".repeat(64);
+const RECEIPT = review().receipt_checksum;
 const RECORD_IDS = ["decision", "rollback", "monitoring", "support", "customer_communications", "audit_archive"];
 
 function fixtureRoot() {
@@ -33,13 +35,9 @@ function manifest() {
   return value;
 }
 
-function review() {
-  return { status: "export_complete", receipt_checksum: RECEIPT };
-}
+function review() { return receiptReviewFixture(manifest()); }
 
-function closeout(value, status = "release_closeout_ready") {
-  return { version: "1.0", candidate_commit: COMMIT, bundle_checksum: value.bundle_checksum, generated_at: "2026-01-01T01:00:00.000Z", max_receipt_age_minutes: 1440, receipt_ages_minutes: { github: 5, google_drive: 5 }, status, receipt_checksum: RECEIPT, errors: [] };
-}
+function closeout(value, status = "release_closeout_ready") { return buildReleaseCloseout({ manifest: value, review: receiptReviewFixture(value, { pending: status === "pending_receipts" }), now: "2026-01-01T01:00:00.000Z" }); }
 
 function records(root) {
   return Object.fromEntries(RECORD_IDS.map((id) => [id, { reference: `work/finalization/${id}.md`, owner: "owner", reviewed_at: "2026-01-01T01:00:00.000Z", status: "pass" }]));
@@ -47,7 +45,7 @@ function records(root) {
 
 test("remains pending while closeout is not ready", () => {
   const value = manifest();
-  const result = buildReleaseFinalization({ root: fixtureRoot(), manifest: value, review: { status: "awaiting_receipts", receipt_checksum: RECEIPT }, closeout: closeout(value, "pending_receipts"), now: "2026-01-01T02:00:00.000Z" });
+  const result = buildReleaseFinalization({ root: fixtureRoot(), manifest: value, review: receiptReviewFixture(value, { pending: true }), closeout: closeout(value, "pending_receipts"), now: "2026-01-01T02:00:00.000Z" });
   assert.equal(result.status, "pending_closeout");
 });
 

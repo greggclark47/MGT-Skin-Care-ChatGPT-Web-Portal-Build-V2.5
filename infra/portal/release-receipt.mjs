@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { matchesDriveFileIdentity } from "./drive-file-identity.mjs";
+import { utcTimestamp } from "./approval-window.mjs";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -26,7 +27,7 @@ export function releaseReceiptChecksum(review) {
 }
 
 function validPastIso(value, now) {
-  const parsed = Date.parse(text(value));
+  const parsed = utcTimestamp(value);
   return Number.isFinite(parsed) && parsed <= new Date(now).getTime();
 }
 
@@ -39,15 +40,15 @@ function githubReceiptErrors(manifest, receipt, now) {
   if (!receipt) return errors;
   if (receipt.status !== "confirmed") errors.push("github receipt status must be confirmed");
   if (PLACEHOLDER.test(JSON.stringify(receipt))) errors.push("github receipt must not contain placeholders");
-  const repositories = Array.isArray(manifest.destinations?.github?.repository) ? manifest.destinations.github.repository : [];
+  const repositories = Array.isArray(manifest?.destinations?.github?.repository) ? manifest.destinations.github.repository : [];
   const observations = Array.isArray(receipt.repositories) ? receipt.repositories : receipt.repository ? [receipt] : [];
   if (!observations.length) errors.push("github receipt must include observed repository metadata");
   for (const observation of observations) {
-    if (!SHA.test(text(observation.commit)) || text(observation.commit) !== text(manifest.candidate_commit)) errors.push("github receipt commit must match the export candidate");
-    if (!validPastIso(observation.observed_at, now)) errors.push("github receipt observed_at must be a past ISO timestamp");
-    if (repositories.length && !repositories.includes(text(observation.repository))) errors.push("github receipt repository must match an observed export remote");
+    if (!SHA.test(text(observation?.commit)) || text(observation?.commit) !== text(manifest?.candidate_commit)) errors.push("github receipt commit must match the export candidate");
+    if (!validPastIso(observation?.observed_at, now)) errors.push("github receipt observed_at must be a past UTC ISO timestamp");
+    if (repositories.length && !repositories.includes(text(observation?.repository))) errors.push("github receipt repository must match an observed export remote");
   }
-  const observedRepositories = observations.map((observation) => text(observation.repository)).filter(Boolean);
+  const observedRepositories = observations.map((observation) => text(observation?.repository)).filter(Boolean);
   if (new Set(observedRepositories).size !== observedRepositories.length) errors.push("github receipt repositories must be unique");
   for (const repository of repositories) if (!observedRepositories.includes(repository)) errors.push(`github receipt is missing configured repository ${repository}`);
   return errors;
@@ -62,7 +63,7 @@ function driveReceiptErrors(manifest, receipt, now) {
   if (!/^https:\/\//.test(text(receipt.web_url))) errors.push("google_drive receipt must include an HTTPS web_url");
   if (!matchesDriveFileIdentity(receipt.file_id, receipt.web_url)) errors.push("google_drive receipt file_id must match its HTTPS web_url on drive.google.com");
   if (!validPastIso(receipt.observed_at, now)) errors.push("google_drive receipt observed_at must be a past ISO timestamp");
-  if (!CHECKSUM.test(text(receipt.bundle_checksum)) || text(receipt.bundle_checksum) !== text(manifest.bundle_checksum)) errors.push("google_drive receipt bundle_checksum must match the export manifest");
+  if (!CHECKSUM.test(text(receipt.bundle_checksum)) || text(receipt.bundle_checksum) !== text(manifest?.bundle_checksum)) errors.push("google_drive receipt bundle_checksum must match the export manifest");
   if (archive && text(receipt.archive_checksum) !== text(archive.checksum)) errors.push("google_drive receipt archive_checksum must match the export archive");
   if (archive && receipt.bytes !== archive.bytes) errors.push("google_drive receipt bytes must match the export archive");
   return errors;
@@ -103,8 +104,9 @@ export function validateReleaseReceiptReview(review, { manifest, now = Date.now(
   if (!["blocked", "awaiting_receipts", "export_complete"].includes(review.status)) errors.push("status must be a known receipt state");
   const github = review.receipts?.github?.status === "confirmed" ? review.receipts.github : null;
   const drive = review.receipts?.google_drive?.status === "confirmed" ? review.receipts.google_drive : null;
-  errors.push(...githubReceiptErrors(manifest, github, now));
-  errors.push(...driveReceiptErrors(manifest, drive, now));
+  const reviewTime = validPastIso(review.generated_at, now) ? utcTimestamp(review.generated_at) : now;
+  errors.push(...githubReceiptErrors(manifest, github, reviewTime));
+  errors.push(...driveReceiptErrors(manifest, drive, reviewTime));
   if (review.status === "export_complete" && (!github || !drive)) errors.push("export_complete requires both destination receipts");
   if (review.status === "awaiting_receipts" && (github && drive)) errors.push("awaiting_receipts cannot contain two confirmed receipts");
   return { ok: errors.length === 0, errors: [...new Set(errors)] };

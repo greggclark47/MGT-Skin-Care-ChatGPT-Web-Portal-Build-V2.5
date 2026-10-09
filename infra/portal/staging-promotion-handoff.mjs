@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { inspectStagingArtifact, resolveStagingArtifactPath } from "./staging-artifacts.mjs";
+import { readStagingJsonArtifact as loadJsonArtifact } from "./staging-artifacts.mjs";
 import { canonicalChecksum, DEFAULT_STAGING_REVIEW_MAX_AGE_MINUTES, validateStagingEvidenceReview } from "./staging-evidence-review.mjs";
 import { validateStagingEvidence } from "./staging-evidence.mjs";
 
@@ -30,11 +30,6 @@ function validOrigin(value) {
 function validHandoffTime(value, now) {
   const parsed = Date.parse(text(value));
   return Number.isFinite(parsed) && parsed <= now;
-}
-
-function loadJsonArtifact({ root, reference }) {
-  const inspection = inspectStagingArtifact({ root, reference });
-  return { inspection, value: JSON.parse(fs.readFileSync(resolveStagingArtifactPath({ root, reference }), "utf8")) };
 }
 
 function statusFor(result) {

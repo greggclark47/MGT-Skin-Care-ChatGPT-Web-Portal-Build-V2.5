@@ -1,6 +1,14 @@
-# Ownership and evidence integrity — v2.34
+# Ownership and evidence integrity — v2.35
 
 Gregg Clark of MGT is the accountable owner for operational configuration, release decisions, support, data, platform, and accessibility. Generated templates use the shared owner definition in `ownership.mjs`. Naming an owner is not an approval, and matching a name does not authenticate a person.
+
+## Evidence reads and receipt inspection in v2.35
+
+Staging handoff, authorization and execution-review JSON is now parsed from the same hygiene-checked buffer that supplies its checksum and byte count. Size changes between the metadata check and read are rejected; malformed-JSON diagnostics omit body excerpts. This is a per-file read guarantee, not a multi-file atomic snapshot or authenticated provenance.
+
+Execution receipts require complete operation and probe inspection metadata: safe local text paths, SHA-256 digests and bounded positive integer byte counts. Two equally empty or malformed records do not count as matching evidence. Receipt references/digests must match exactly, without trimming or coercion. The existing receipt schema is retained: the probe's byte count belongs to the supplied inspection, while the operation's byte count also appears in the receipt. Trusted callers must obtain inspections from actual file reads rather than constructing them from untrusted receipt fields.
+
+See [the Drive reference review](GOOGLE-DRIVE-REVIEW-2026-10-09.md) for the historical v2.22 publication record, destination ambiguity, unavailable live-document review and remaining remote receipt controls. No historical receipt or approval was rewritten.
 
 ## Approval-window enforcement in v2.34
 

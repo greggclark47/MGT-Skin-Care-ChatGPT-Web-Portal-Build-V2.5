@@ -1,5 +1,7 @@
 # Build checkpoints and saving
 
+Historical checkpoint guidance below: destination and connection statements describe the earlier workflow, not current verified access. See [the October 9 Drive review](infra/portal/GOOGLE-DRIVE-REVIEW-2026-10-09.md) for the v2.22 reference, later folder receipts, current repository pair and pending live verification. Preserve this history; do not infer current upload authority from it.
+
 The user authorized saving all future build checkpoints in this task to:
 - Google Drive: mgt-skincare-v2 / _snapshots (folder 1YdGrqoC0RBYvHi2dK1zotnfsC19f7EHY).
 - Public GitHub: greggclark47/MGT-Skin-Care---ChatGPT-Web-Portal-Build-V1.

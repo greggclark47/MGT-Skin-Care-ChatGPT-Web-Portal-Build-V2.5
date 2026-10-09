@@ -3,7 +3,7 @@ import { utcTimestamp, sameExecutionWindow } from "./approval-window.mjs";
 import { isAccountableOwner, accountableOwnerError } from "./ownership.mjs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { inspectStagingArtifact, resolveStagingArtifactPath } from "./staging-artifacts.mjs";
+import { readStagingJsonArtifact as loadJsonArtifact, resolveStagingArtifactPath } from "./staging-artifacts.mjs";
 import { canonicalChecksum } from "./staging-evidence-review.mjs";
 import { DEFAULT_STAGING_APPROVAL_MAX_AGE_MINUTES, STAGING_PROMOTION_APPROVAL_ROLES, validateStagingPromotionApproval } from "./staging-promotion-approval.mjs";
 import { stagingPromotionHandoffChecksum, validateStagingPromotionHandoff } from "./staging-promotion-handoff.mjs";
@@ -28,11 +28,6 @@ function validOrigin(value) {
   } catch {
     return false;
   }
-}
-
-function loadJsonArtifact({ root, reference }) {
-  const inspection = inspectStagingArtifact({ root, reference });
-  return { inspection, value: JSON.parse(fs.readFileSync(resolveStagingArtifactPath({ root, reference }), "utf8")) };
 }
 
 function approvalArtifactPath(approval) {

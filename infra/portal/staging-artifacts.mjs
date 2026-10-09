@@ -51,7 +51,7 @@ export function resolveStagingArtifactPath({ root = process.cwd(), reference } =
   return resolved;
 }
 
-export function inspectStagingArtifact({ root = process.cwd(), reference } = {}) {
+function readStagingArtifact({ root = process.cwd(), reference } = {}) {
   const artifactPath = resolveStagingArtifactPath({ root, reference });
   const stat = fs.lstatSync(artifactPath);
   if (!stat.isFile()) throw new Error(`${reference} must be a regular file.`);
@@ -59,11 +59,37 @@ export function inspectStagingArtifact({ root = process.cwd(), reference } = {})
   if (stat.size > MAX_EVIDENCE_BYTES) throw new Error(`${reference} exceeds the ${MAX_EVIDENCE_BYTES}-byte evidence limit.`);
   if (!TEXT_EXTENSIONS.has(path.extname(artifactPath).toLowerCase())) throw new Error(`${reference} must use a text evidence extension.`);
   const content = fs.readFileSync(artifactPath);
+  if (content.byteLength !== stat.size || content.byteLength < 1 || content.byteLength > MAX_EVIDENCE_BYTES) throw new Error("Artifact size changed during inspection or is outside the evidence limit.");
   if (content.includes(0)) throw new Error(`${reference} must be UTF-8 text evidence.`);
   const decoded = content.toString("utf8");
   if (!Buffer.from(decoded, "utf8").equals(content)) throw new Error(`${reference} must be valid UTF-8 text evidence.`);
   if (SECRET_VALUE.test(decoded)) throw new Error(`${reference} contains credential-like text and cannot be archived.`);
-  return { reference: text(reference), checksum: `sha256:${createHash("sha256").update(content).digest("hex")}`, bytes: content.byteLength };
+  return { decoded, inspection: { reference: text(reference), checksum: `sha256:${createHash("sha256").update(content).digest("hex")}`, bytes: content.byteLength } };
+}
+
+export function inspectStagingArtifact(options = {}) {
+  return readStagingArtifact(options).inspection;
+}
+
+// Parse only the bytes that passed hygiene checks and supplied the digest.
+export function readStagingJsonArtifact(options = {}) {
+  const { decoded, inspection } = readStagingArtifact(options);
+  try {
+    return { inspection, value: JSON.parse(decoded) };
+  } catch {
+    // Native JSON errors may include an excerpt of the evidence body.
+    throw new Error("Staging artifact must contain valid JSON.");
+  }
+}
+
+export function validateStagingArtifactInspection(inspection) {
+  const errors = [];
+  if (!inspection || typeof inspection !== "object" || Array.isArray(inspection)) return { ok: false, errors: ["inspection must be an object"] };
+  const reference = inspection.reference;
+  if (typeof reference !== "string" || reference !== reference.trim() || !validLocalReference(reference) || !TEXT_EXTENSIONS.has(path.extname(reference).toLowerCase())) errors.push("inspection reference must be a safe local text evidence path");
+  if (typeof inspection.checksum !== "string" || inspection.checksum !== inspection.checksum.trim() || !CHECKSUM.test(inspection.checksum)) errors.push("inspection checksum must be a sha256 digest");
+  if (!Number.isSafeInteger(inspection.bytes) || inspection.bytes < 1 || inspection.bytes > MAX_EVIDENCE_BYTES) errors.push("inspection bytes must be a bounded positive integer");
+  return { ok: errors.length === 0, errors };
 }
 
 export function createStagingArtifactsTemplate({ candidateCommit } = {}) {

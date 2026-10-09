@@ -86,3 +86,38 @@ test("blocks out-of-window receipts and rejects an invented published review", (
     fs.rmSync(root, { recursive: true, force: true });
   }
 });
+
+const invalidInspections = [
+  ["missing", undefined], ["empty", {}], ["null", null], ["array", []],
+  ["missing reference", { reference: undefined }], ["traversal", { reference: "work/../outside.md" }],
+  ["nontext extension", { reference: "work/source.zip" }], ["coerced reference", { reference: ["work/evidence.md"] }],
+  ["missing digest", { checksum: undefined }], ["invalid digest", { checksum: "invalid" }],
+  ["digest whitespace", { checksum: "sha256:" + "a".repeat(64) + "\n" }],
+  ["missing size", { bytes: undefined }], ["zero size", { bytes: 0 }], ["negative size", { bytes: -1 }],
+  ["fractional size", { bytes: 1.5 }], ["string size", { bytes: "100" }], ["oversized", { bytes: 10 * 1024 * 1024 + 1 }]
+];
+for (const field of ["operation", "post_execution_probe"]) for (const [label, mutation] of invalidInspections) {
+  test(`receipt rejects mutually matching ${label} ${field} inspection`, t => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), "mgt-receipt-inspection-"));
+    t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+    const f = setupFixture(root);
+    const options = { authorization: f.authorization, operation: f.operation, probe: probeFixture(f.authorization.staging_origin), probeInspection: f.probe, now };
+    assert.equal(validateStagingExecutionReceipt(f.receipt, options).ok, true);
+    const key = field === "operation" ? "operation" : "probeInspection";
+    options[key] = mutation && !Array.isArray(mutation) && Object.keys(mutation).length ? { ...options[key], ...mutation } : mutation;
+    // Deliberately make both sides equally invalid: equality alone is not evidence.
+    f.receipt[field] = options[key] ?? {};
+    const result = validateStagingExecutionReceipt(f.receipt, options);
+    assert.equal(result.ok, false);
+    assert(result.errors.some(error => error.startsWith(field + ".inspection")), result.errors.join("\n"));
+  });
+}
+
+test("receipt references and checksums must match exactly without coercion", t => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "mgt-receipt-exact-"));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const f = setupFixture(root);
+  const options = { authorization: f.authorization, operation: { ...f.operation }, probe: probeFixture(f.authorization.staging_origin), probeInspection: f.probe, now };
+  f.receipt.operation = { ...f.receipt.operation, reference: " " + f.operation.reference };
+  assert.equal(validateStagingExecutionReceipt(f.receipt, options).ok, false);
+});

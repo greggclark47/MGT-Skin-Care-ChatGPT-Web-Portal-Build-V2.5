@@ -2,7 +2,7 @@ import fs from "node:fs";
 import { utcTimestamp, executionWithinWindow } from "./approval-window.mjs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { inspectStagingArtifact, resolveStagingArtifactPath } from "./staging-artifacts.mjs";
+import { inspectStagingArtifact, readStagingJsonArtifact as loadJsonArtifact, validateStagingArtifactInspection } from "./staging-artifacts.mjs";
 import { validateStagingProbe } from "./staging-probe.mjs";
 import { stagingPromotionAuthorizationChecksum, validateStagingPromotionAuthorization } from "./staging-promotion-authorization.mjs";
 
@@ -28,11 +28,6 @@ function validOrigin(value) {
   } catch {
     return false;
   }
-}
-
-function loadJsonArtifact({ root, reference }) {
-  const inspection = inspectStagingArtifact({ root, reference });
-  return { inspection, value: JSON.parse(fs.readFileSync(resolveStagingArtifactPath({ root, reference }), "utf8")) };
 }
 
 function statusFor(result) {
@@ -74,8 +69,11 @@ export function validateStagingExecutionReceipt(receipt, { authorization, operat
   const executedAt = utcTimestamp(receipt.executed_at);
   if (!Number.isFinite(executedAt) || executedAt > nowMs) errors.push("executed_at must be a past ISO timestamp");
   if (!executionWithinWindow(receipt.executed_at, authorization?.execution_window)) errors.push("executed_at must fall within the approved execution window (start inclusive, end exclusive)");
-  if (!receipt.operation || text(receipt.operation.reference) !== text(operation?.reference) || text(receipt.operation.checksum) !== text(operation?.checksum) || receipt.operation.bytes !== operation?.bytes) errors.push("operation must match the inspected local operation record");
-  if (!receipt.post_execution_probe || text(receipt.post_execution_probe.reference) !== text(probeInspection?.reference) || text(receipt.post_execution_probe.checksum) !== text(probeInspection?.checksum)) errors.push("post_execution_probe must match the inspected local probe artifact");
+  for (const [field, inspection] of [["operation", operation], ["post_execution_probe", probeInspection]]) {
+    errors.push(...validateStagingArtifactInspection(inspection).errors.map(error => `${field}.${error}`));
+  }
+  if (!receipt.operation || receipt.operation.reference !== operation?.reference || receipt.operation.checksum !== operation?.checksum || receipt.operation.bytes !== operation?.bytes) errors.push("operation must match the inspected local operation record");
+  if (!receipt.post_execution_probe || receipt.post_execution_probe.reference !== probeInspection?.reference || receipt.post_execution_probe.checksum !== probeInspection?.checksum) errors.push("post_execution_probe must match the inspected local probe artifact");
   const probeValidation = validateStagingProbe(probe, { origin: authorization?.staging_origin });
   errors.push(...probeValidation.errors.map((error) => `post_execution_probe.${error}`));
   const capturedAt = utcTimestamp(probe?.captured_at);

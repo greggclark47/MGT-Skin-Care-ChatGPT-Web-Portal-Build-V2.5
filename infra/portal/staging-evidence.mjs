@@ -2,11 +2,11 @@ import { createStagingAttestationTemplate, validateStagingAttestation } from "./
 import { createStagingArtifactsTemplate, validateStagingArtifacts } from "./staging-artifacts.mjs";
 import { createStagingProbeTemplate, validateStagingProbe } from "./staging-probe.mjs";
 import { createStagingTargetTemplate, validateStagingTarget } from "./staging-target.mjs";
+import { DEFAULT_ACCOUNTABLE_OWNER } from "./ownership.mjs";
 
 const CHECKSUM = /^sha256:[a-f0-9]{64}$/i;
 const PLACEHOLDER = /REPLACE_WITH|YOUR-|example\.com|localhost|127\.0\.0\.1/i;
 const SECRET_VALUE = /(?:sk_(?:live|test)_[A-Za-z0-9]+|whsec_[A-Za-z0-9]+|postgres(?:ql)?:\/\/[^\s:@]+:[^\s@]+@|(?:OPENAI|SUPABASE|STRIPE)_[A-Z_]*(?:KEY|SECRET)[A-Z_]*\s*=\s*\S+)/i;
-const DEFAULT_ACCOUNTABLE_OWNER = "Gregg Clark of MGT";
 
 export const STAGING_EVIDENCE_VERSION = "1.2";
 export const STAGING_EVIDENCE_GATES = Object.freeze([

@@ -3,11 +3,11 @@ import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { createStagingEvidenceTemplate } from "./staging-evidence.mjs";
+import { DEFAULT_ACCOUNTABLE_OWNER } from "./ownership.mjs";
 
 const PACKET_VERSION = "1.2";
 const DAY = 24 * 60 * 60 * 1000;
 const OWNER_ROLES = ["release", "support", "data", "platform", "accessibility"];
-const DEFAULT_ACCOUNTABLE_OWNER = "Gregg Clark of MGT";
 
 function text(value) {
   return String(value || "").trim();

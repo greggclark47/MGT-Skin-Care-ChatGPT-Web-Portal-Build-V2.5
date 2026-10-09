@@ -129,7 +129,7 @@ const validPacket = {
     hosted_ci_url: "https://github.com/example/mgt/actions/runs/123"
   },
   owners,
-  approvals: ["release", "support", "data", "platform", "accessibility"].map((role) => ({ role, decision: "go", approver: `MGT ${role} owner`, reviewed_at: "2026-09-20T00:00:00.000Z", reference: `work/approvals/${role}.md` })),
+  approvals: ["release", "support", "data", "platform", "accessibility"].map((role) => ({ role, decision: "go", approver: owners[role], reviewed_at: "2026-09-20T00:00:00.000Z", reference: `work/approvals/${role}.md` })),
   images,
   staging_evidence: stagingEvidence,
   evidence,
@@ -141,6 +141,16 @@ test("accepts a complete ship packet only when readiness is also complete", () =
   const result = validateShipPacket(validPacket, { readiness });
   assert.equal(result.ok, true);
   assert.deepEqual(result.errors, []);
+});
+
+test("blocks ship approvals attributed to someone other than the declared role owner", () => {
+  for (const role of Object.keys(owners)) {
+    const packet = structuredClone(validPacket);
+    packet.approvals.find(approval => approval.role === role).approver = 'Unrecorded delegate';
+    const result = validateShipPacket(packet, { readiness });
+    assert.equal(result.ok, false);
+    assert(result.errors.some(error => error.includes(`approver must match owners.${role}`)));
+  }
 });
 
 test("requires candidate, ownership, evidence and rollback references", () => {

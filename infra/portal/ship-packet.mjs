@@ -93,6 +93,7 @@ export function validateShipPacket(packet, { readiness, env = {} } = {}) {
     const approval = matches[0];
     if (approval.decision !== "go") errors.push(`${role} approval must have decision go.`);
     if (!validOwner(approval.approver)) errors.push(`${role} approval must name an approver.`);
+    if (text(approval.approver) !== text(owners[role])) errors.push(`${role} approval approver must match owners.${role}.`);
     if (!validPastIso(approval.reviewed_at)) errors.push(`${role} approval must have a past reviewed_at timestamp.`);
     if (!validEvidenceReference(approval.reference)) errors.push(`${role} approval must reference its decision record.`);
   }

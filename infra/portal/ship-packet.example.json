@@ -17,11 +17,11 @@
     "accessibility": "Gregg Clark of MGT"
   },
   "approvals": [
-    { "role": "release", "decision": "go", "approver": "Gregg Clark of MGT", "reviewed_at": "REPLACE_WITH_PAST_ISO_TIMESTAMP", "reference": "work/approvals/release.md" },
-    { "role": "support", "decision": "go", "approver": "Gregg Clark of MGT", "reviewed_at": "REPLACE_WITH_PAST_ISO_TIMESTAMP", "reference": "work/approvals/support.md" },
-    { "role": "data", "decision": "go", "approver": "Gregg Clark of MGT", "reviewed_at": "REPLACE_WITH_PAST_ISO_TIMESTAMP", "reference": "work/approvals/data.md" },
-    { "role": "platform", "decision": "go", "approver": "Gregg Clark of MGT", "reviewed_at": "REPLACE_WITH_PAST_ISO_TIMESTAMP", "reference": "work/approvals/platform.md" },
-    { "role": "accessibility", "decision": "go", "approver": "Gregg Clark of MGT", "reviewed_at": "REPLACE_WITH_PAST_ISO_TIMESTAMP", "reference": "work/approvals/accessibility.md" }
+    { "role": "release", "decision": "pending", "approver": "Gregg Clark of MGT", "reviewed_at": "REPLACE_WITH_PAST_ISO_TIMESTAMP", "reference": "work/approvals/release.md" },
+    { "role": "support", "decision": "pending", "approver": "Gregg Clark of MGT", "reviewed_at": "REPLACE_WITH_PAST_ISO_TIMESTAMP", "reference": "work/approvals/support.md" },
+    { "role": "data", "decision": "pending", "approver": "Gregg Clark of MGT", "reviewed_at": "REPLACE_WITH_PAST_ISO_TIMESTAMP", "reference": "work/approvals/data.md" },
+    { "role": "platform", "decision": "pending", "approver": "Gregg Clark of MGT", "reviewed_at": "REPLACE_WITH_PAST_ISO_TIMESTAMP", "reference": "work/approvals/platform.md" },
+    { "role": "accessibility", "decision": "pending", "approver": "Gregg Clark of MGT", "reviewed_at": "REPLACE_WITH_PAST_ISO_TIMESTAMP", "reference": "work/approvals/accessibility.md" }
   ],
   "images": {
     "node": "node@sha256:REPLACE_WITH_64_HEX_DIGEST",
@@ -158,7 +158,7 @@
     {
       "id": "support_workflow",
       "phase": "F73",
-      "status": "pass",
+      "status": "pending",
       "reference": "https://evidence.example.com/support",
       "reviewed_at": "REPLACE_WITH_PAST_ISO_TIMESTAMP",
       "reviewer": "Gregg Clark of MGT"

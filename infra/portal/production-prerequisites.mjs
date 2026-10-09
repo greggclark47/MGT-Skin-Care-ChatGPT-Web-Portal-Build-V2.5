@@ -29,7 +29,34 @@ function parseEnvFile(filePath) {
   return values;
 }
 function externalRequirements() { return EXTERNAL_REQUIREMENTS.map(([id, requirement]) => ({ id, requirement, status: "pending_external_evidence" })); }
-export function productionPrerequisitesChecksum(document) { const { prerequisites_checksum: _ignored, ...unsigned } = document || {}; return `sha256:${createHash("sha256").update(JSON.stringify(unsigned, Object.keys(unsigned).sort())).digest("hex")}`; }
+export function productionPrerequisitesChecksum(document) {
+  const { prerequisites_checksum: _ignored, ...unsigned } = document || {};
+  // A replacer array filters keys at EVERY depth. Sort each object instead so
+  // nested configuration and external requirements remain in the digest.
+  const canonical = JSON.stringify(unsigned, (_key, value) => {
+    if (!value || typeof value !== "object" || Array.isArray(value)) return value;
+    return Object.fromEntries(Object.keys(value).sort().map((key) => [key, value[key]]));
+  });
+  return `sha256:${createHash("sha256").update(canonical).digest("hex")}`;
+}
+
+export function validateProductionPrerequisites(document) {
+  const errors = [];
+  if (!document || typeof document !== "object" || Array.isArray(document)) return { ok: false, errors: ["prerequisites must be an object"] };
+  if (document.version !== VERSION) errors.push(`prerequisites version must be ${VERSION}`);
+  if (!/^[a-f0-9]{40}$/i.test(text(document.candidate_commit))) errors.push("prerequisites candidate_commit must be a commit SHA");
+  if (text(document.prerequisites_checksum) !== productionPrerequisitesChecksum(document)) errors.push("prerequisites_checksum must match the complete canonical prerequisites document");
+  if (document.status !== "blocked_on_external_prerequisites") errors.push("prerequisites must be explicitly blocked on external prerequisites");
+  const config = document.local?.configuration;
+  if (config?.status !== "ready_for_live_validation" || !Array.isArray(config.errors) || config.errors.length) errors.push("local configuration must be ready without errors before external prerequisite review");
+  const external = Array.isArray(document.external) ? document.external : [];
+  if (external.length !== EXTERNAL_REQUIREMENTS.length) errors.push("external prerequisites must contain exactly the required records");
+  for (const [id, requirement] of EXTERNAL_REQUIREMENTS) {
+    const matches = external.filter((entry) => entry?.id === id);
+    if (matches.length !== 1 || matches[0].requirement !== requirement || matches[0].status !== "pending_external_evidence") errors.push(`${id} must retain its requirement and pending external evidence status`);
+  }
+  return { ok: errors.length === 0, errors };
+}
 
 export function buildProductionPrerequisites({ env = process.env, candidateCommit = "", envFile = "" } = {}) {
   const merged = { ...parseEnvFile(envFile), ...env };
@@ -39,7 +66,7 @@ export function buildProductionPrerequisites({ env = process.env, candidateCommi
     version: VERSION,
     candidate_commit: text(candidateCommit) || null,
     generated_at: new Date().toISOString(),
-    local: { backend_build: "verified_by_ci_build", portal_tests: "verified_by_local_suite", configuration: config },
+    local: { backend_build: "not_evaluated", portal_tests: "not_evaluated", configuration: config },
     external: externalRequirements(),
     status: preflight.ok ? "blocked_on_external_prerequisites" : "blocked_on_configuration",
     next_action: preflight.ok ? "Collect the named live evidence and approvals, then run the production gate." : "Populate a production environment outside source control and rerun the preflight."

@@ -25,8 +25,8 @@ function completeGate() {
     checksum: `sha256:${"d".repeat(64)}`,
     rollback_reference: "work/production/rollback.md"
   }));
-  gate.approvals = PRODUCTION_GATE_OWNER_ROLES.map((role) => ({ role, decision: "go", approver: `MGT ${role} approver`, reviewed_at: "2026-10-01T00:00:00.000Z", reference: `work/production/approvals/${role}.md` }));
-  gate.decision = { status: "recorded", decision: "go", decider: "MGT Release Decider", reviewed_at: "2026-10-01T00:00:00.000Z", reference: "work/production/go-no-go.md" };
+  gate.approvals = PRODUCTION_GATE_OWNER_ROLES.map((role) => ({ role, decision: "go", approver: gate.owners[role], reviewed_at: "2026-10-01T00:00:00.000Z", reference: `work/production/approvals/${role}.md` }));
+  gate.decision = { status: "recorded", decision: "go", decider: gate.owners.release, reviewed_at: "2026-10-01T00:00:00.000Z", reference: "work/production/go-no-go.md" };
   return gate;
 }
 
@@ -35,6 +35,19 @@ test("accepts a complete production evidence matrix and records only a decision 
   const validation = validateProductionGate(gate, { candidateCommit: gate.candidate_commit, images, now: "2026-10-01T01:00:00.000Z" });
   assert.equal(validation.ok, true, validation.errors.join("\n"));
   assert.deepEqual(evaluateProductionGate(gate, { candidateCommit: gate.candidate_commit, images, now: "2026-10-01T01:00:00.000Z" }), { status: "go_recorded", errors: [] });
+});
+
+test("blocks approvals and go decisions attributed to a different declared owner", () => {
+  for (const role of PRODUCTION_GATE_OWNER_ROLES) {
+    const gate = completeGate();
+    gate.approvals.find(approval => approval.role === role).approver = 'Unrecorded delegate';
+    const result = evaluateProductionGate(gate);
+    assert.equal(result.status, 'blocked');
+    assert(result.errors.some(error => error.includes(`approver must match owners.${role}`)));
+  }
+  const gate = completeGate();
+  gate.decision.decider = 'Unrecorded delegate';
+  assert(evaluateProductionGate(gate).errors.includes('decision.decider must match owners.release'));
 });
 
 test("fails closed for staging targets, incomplete evidence, secret-like text, and fabricated readiness", () => {

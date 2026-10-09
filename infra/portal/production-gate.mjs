@@ -1,13 +1,13 @@
 import fs from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
+import { DEFAULT_ACCOUNTABLE_OWNER } from "./ownership.mjs";
 
 const SHA = /^[0-9a-f]{40}$/i;
 const DIGEST = /^[a-z0-9./_-]+@sha256:[a-f0-9]{64}$/;
 const CHECKSUM = /^sha256:[a-f0-9]{64}$/i;
 const PLACEHOLDER = /REPLACE_WITH|YOUR-|example\.com|localhost|127\.0\.0\.1/i;
 const SECRET_VALUE = /(?:sk_(?:live|test)_[A-Za-z0-9]+|whsec_[A-Za-z0-9]+|postgres(?:ql)?:\/\/[^\s:@]+:[^\s@]+@|(?:OPENAI|SUPABASE|STRIPE)_[A-Z_]*(?:KEY|SECRET)[A-Z_]*\s*=\s*\S+)/i;
-const DEFAULT_ACCOUNTABLE_OWNER = "Gregg Clark of MGT";
 
 export const PRODUCTION_GATE_VERSION = "1.0";
 export const PRODUCTION_GATE_OWNER_ROLES = Object.freeze(["release", "platform", "data", "support", "accessibility"]);
@@ -133,6 +133,7 @@ export function validateProductionGate(gate, { candidateCommit, images = {}, now
     const approval = matches[0];
     if (![`pending`, `go`, `hold`].includes(approval.decision)) errors.push(`${role} approval decision is invalid`);
     if (!validOwner(approval.approver)) errors.push(`${role} approval must name an approver`);
+    if (text(approval.approver) !== text(owners[role])) errors.push(`${role} approval approver must match owners.${role}`);
     if (!validPastIso(approval.reviewed_at, now)) errors.push(`${role} approval must have a past timestamp`);
     if (!validReference(approval.reference)) errors.push(`${role} approval must reference a decision record`);
   }
@@ -140,6 +141,7 @@ export function validateProductionGate(gate, { candidateCommit, images = {}, now
   const decision = gate.decision || {};
   if (!["pending", "go", "hold"].includes(decision.decision)) errors.push("decision.decision must be pending, go, or hold");
   if (!validOwner(decision.decider)) errors.push("decision.decider must name the release decider");
+  if (text(decision.decider) !== text(owners.release)) errors.push("decision.decider must match owners.release");
   if (!validPastIso(decision.reviewed_at, now)) errors.push("decision.reviewed_at must be a past timestamp");
   if (!validReference(decision.reference)) errors.push("decision.reference must identify the go/no-go record");
   if (decision.decision === "go") {

@@ -125,6 +125,8 @@ The v2.30 notification-delivery increment makes the customer webhook timeout an 
 
 The v2.31 ownership-contract increment assigns Gregg Clark of MGT as the accountable owner and named approver in generated release, staging, and production templates. Role-specific evidence and explicit pending/go/hold decisions remain fail-closed; the ownership declaration is not an approval by itself.
 
+The v2.32 evidence-integrity increment hashes the complete nested prerequisite document, rejects incomplete or altered reviews before reading artifacts, and binds release approvals and production decisions to their declared role owners. Gregg Clark of MGT remains the shared default owner. Generated prerequisites no longer claim unexecuted build/test results, and examples remain pending. The regression suite includes 100 nested-evidence mutation cases. Existing prerequisite documents and dependent reviews must be regenerated; see [the migration and ownership procedure](infra/portal/OWNERSHIP-AND-EVIDENCE-PROCEDURE.md). These checks do not replace live evidence or grant production approval.
+
 ## Remaining gap register
 
 | Priority | Gap | Repository state | Required exit evidence |

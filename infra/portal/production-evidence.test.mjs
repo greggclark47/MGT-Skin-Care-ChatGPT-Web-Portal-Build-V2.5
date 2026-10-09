@@ -36,9 +36,9 @@ function completeGate(root) {
   gate.approvals = PRODUCTION_GATE_OWNER_ROLES.map((role) => {
     const reference = `work/production/approvals/${role}.md`;
     writeArtifact(root, reference, `${role} approval decision\n`);
-    return { role, decision: "go", approver: `MGT ${role} approver`, reviewed_at: "2026-10-01T00:00:00.000Z", reference };
+    return { role, decision: "go", approver: gate.owners[role], reviewed_at: "2026-10-01T00:00:00.000Z", reference };
   });
-  gate.decision = { status: "recorded", decision: "go", decider: "MGT Release Decider", reviewed_at: "2026-10-01T00:00:00.000Z", reference: "work/production/go-no-go.md" };
+  gate.decision = { status: "recorded", decision: "go", decider: gate.owners.release, reviewed_at: "2026-10-01T00:00:00.000Z", reference: "work/production/go-no-go.md" };
   writeArtifact(root, gate.decision.reference, "Go no-go decision\n");
   for (const check of gate.checks) check.checksum = checksum(root, check.reference);
   return gate;

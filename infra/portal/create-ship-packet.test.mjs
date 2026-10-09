@@ -44,7 +44,9 @@ test("adds conditional evidence only for enabled boundaries", () => {
 test("keeps the draft visibly incomplete for human release completion", () => {
   const packet = buildDraftShipPacket({ now: "2026-09-28T00:00:00.000Z", env: {} });
   assert.equal(packet.approvals.every((approval) => approval.decision === "pending"), true);
-  assert.equal(packet.owners.release.startsWith("REPLACE_WITH_"), true);
+  assert.equal(Object.values(packet.owners).every((owner) => owner === "Gregg Clark of MGT"), true);
+  assert.equal(packet.approvals.every((approval) => approval.approver === "Gregg Clark of MGT"), true);
+  assert.equal(packet.monitoring.owner, "Gregg Clark of MGT");
   assert.equal(packet.staging_evidence.records.every((record) => record.status === "pending"), true);
   assert.equal(packet.monitoring.checks.join(","), "15m,1h,24h,7d");
 });

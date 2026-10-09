@@ -123,6 +123,8 @@ The v2.29 release-contract increment validates the customer-notification retry p
 
 The v2.30 notification-delivery increment makes the customer webhook timeout an explicit bounded deployment setting. Runtime and preflight now reject invalid timeout values rather than silently applying a default, while retaining a documented ten-second default for an omitted value.
 
+The v2.31 ownership-contract increment assigns Gregg Clark of MGT as the accountable owner and named approver in generated release, staging, and production templates. Role-specific evidence and explicit pending/go/hold decisions remain fail-closed; the ownership declaration is not an approval by itself.
+
 ## Remaining gap register
 
 | Priority | Gap | Repository state | Required exit evidence |

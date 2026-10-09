@@ -7,6 +7,7 @@ import { createStagingEvidenceTemplate } from "./staging-evidence.mjs";
 const PACKET_VERSION = "1.2";
 const DAY = 24 * 60 * 60 * 1000;
 const OWNER_ROLES = ["release", "support", "data", "platform", "accessibility"];
+const DEFAULT_ACCOUNTABLE_OWNER = "Gregg Clark of MGT";
 
 function text(value) {
   return String(value || "").trim();
@@ -39,7 +40,7 @@ function evidenceTemplate(id, phase) {
     status: "pending",
     reference: `work/evidence/REPLACE_WITH_${id.toUpperCase()}_REPORT.md`,
     reviewed_at: "REPLACE_WITH_PAST_ISO_TIMESTAMP",
-    reviewer: "REPLACE_WITH_REVIEWER"
+    reviewer: DEFAULT_ACCOUNTABLE_OWNER
   };
 }
 
@@ -77,13 +78,13 @@ export function buildDraftShipPacket({ root = process.cwd(), env = {}, now = new
     generated_at: generatedAt.toISOString(),
     expires_at: expiresAt,
     candidate,
-    owners: Object.fromEntries(OWNER_ROLES.map((role) => [role, `REPLACE_WITH_${role.toUpperCase()}_OWNER`])),
-    approvals: OWNER_ROLES.map((role) => ({ role, decision: "pending", approver: `REPLACE_WITH_${role.toUpperCase()}_APPROVER`, reviewed_at: "REPLACE_WITH_PAST_ISO_TIMESTAMP", reference: `work/approvals/${role}.md` })),
+    owners: Object.fromEntries(OWNER_ROLES.map((role) => [role, DEFAULT_ACCOUNTABLE_OWNER])),
+    approvals: OWNER_ROLES.map((role) => ({ role, decision: "pending", approver: DEFAULT_ACCOUNTABLE_OWNER, reviewed_at: "REPLACE_WITH_PAST_ISO_TIMESTAMP", reference: `work/approvals/${role}.md` })),
     images,
     staging_evidence: createStagingEvidenceTemplate({ candidateCommit: candidate.commit, images }),
     evidence,
     rollback: { previous_release: "REPLACE_WITH_LAST_APPROVED_RELEASE", reference: "work/rollback/REPLACE_WITH_TIMESTAMP/report.md", verified_at: "REPLACE_WITH_PAST_ISO_TIMESTAMP" },
-    monitoring: { owner: "REPLACE_WITH_LAUNCH_MONITOR", incident_channel: "REPLACE_WITH_INCIDENT_CHANNEL", launch_window_start: "REPLACE_WITH_FUTURE_ISO_TIMESTAMP", checks: ["15m", "1h", "24h", "7d"] }
+    monitoring: { owner: DEFAULT_ACCOUNTABLE_OWNER, incident_channel: "REPLACE_WITH_INCIDENT_CHANNEL", launch_window_start: "REPLACE_WITH_FUTURE_ISO_TIMESTAMP", checks: ["15m", "1h", "24h", "7d"] }
   };
 }
 

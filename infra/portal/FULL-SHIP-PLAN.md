@@ -6,6 +6,8 @@ This is the publish runbook for the referral portal. It is intentionally fail-cl
 
 ## 1. Release ownership and inputs
 
+Gregg Clark of MGT is the accountable owner and named approver for release, platform, data, support, accessibility, monitoring, and release-decision records. Role-specific evidence, timestamps, references, and pending/go/hold decisions remain required; a named owner does not itself authorize release.
+
 Assign these roles before opening a launch window:
 
 | Role | Required decision or evidence |

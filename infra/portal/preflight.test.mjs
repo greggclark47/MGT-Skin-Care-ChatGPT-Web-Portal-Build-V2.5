@@ -20,7 +20,8 @@ const production = {
   BACKUP_MAX_AGE_HOURS: "26",
   BACKUP_RESTORE_MAX_AGE_DAYS: "90",
   NOTIFICATION_DELIVERY: "in_app",
-  SUPPORT_OWNER_NAME: "MGT Support Lead",
+  RELEASE_OWNER_NAME: "Gregg Clark of MGT",
+  SUPPORT_OWNER_NAME: "Gregg Clark of MGT",
   SUPPORT_OWNER_EMAIL: "support-lead@mgtskincare.test",
   ACCESSIBILITY_VALIDATION_REPORT_URL: "https://evidence.mgtskincare.test/a11y/report",
   ACCESSIBILITY_VALIDATED_AT: "2026-09-01T00:00:00.000Z",
@@ -206,12 +207,14 @@ test("rejects a notification retry cap below the initial cooldown", () => {
 test("requires named support ownership and deployed accessibility evidence", () => {
   const result = validateEnvironment({
     ...production,
+    RELEASE_OWNER_NAME: "",
     SUPPORT_OWNER_NAME: "",
     SUPPORT_OWNER_EMAIL: "support@example.invalid",
     ACCESSIBILITY_VALIDATION_REPORT_URL: "http://localhost/a11y",
     ACCESSIBILITY_VALIDATED_AT: "2999-01-01T00:00:00.000Z"
   });
   assert.equal(result.ok, false);
+  assert.ok(result.errors.some((error) => error.startsWith("RELEASE_OWNER_NAME")));
   assert.ok(result.errors.some((error) => error.startsWith("SUPPORT_OWNER_NAME")));
   assert.ok(result.errors.some((error) => error.startsWith("SUPPORT_OWNER_EMAIL")));
   assert.ok(result.errors.some((error) => error.startsWith("ACCESSIBILITY_VALIDATION_REPORT_URL")));

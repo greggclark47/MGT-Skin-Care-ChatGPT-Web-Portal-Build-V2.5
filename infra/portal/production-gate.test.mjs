@@ -52,5 +52,8 @@ test("fails closed for staging targets, incomplete evidence, secret-like text, a
   assert.ok(evaluation.errors.some((error) => error.includes("credential-like")));
 
   const template = createProductionGateTemplate();
+  assert.equal(Object.values(template.owners).every((owner) => owner === "Gregg Clark of MGT"), true);
+  assert.equal(template.approvals.every((approval) => approval.approver === "Gregg Clark of MGT"), true);
+  assert.equal(template.decision.decider, "Gregg Clark of MGT");
   assert.equal(evaluateProductionGate(template).status, "blocked");
 });

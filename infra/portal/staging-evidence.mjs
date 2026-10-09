@@ -6,6 +6,7 @@ import { createStagingTargetTemplate, validateStagingTarget } from "./staging-ta
 const CHECKSUM = /^sha256:[a-f0-9]{64}$/i;
 const PLACEHOLDER = /REPLACE_WITH|YOUR-|example\.com|localhost|127\.0\.0\.1/i;
 const SECRET_VALUE = /(?:sk_(?:live|test)_[A-Za-z0-9]+|whsec_[A-Za-z0-9]+|postgres(?:ql)?:\/\/[^\s:@]+:[^\s@]+@|(?:OPENAI|SUPABASE|STRIPE)_[A-Z_]*(?:KEY|SECRET)[A-Z_]*\s*=\s*\S+)/i;
+const DEFAULT_ACCOUNTABLE_OWNER = "Gregg Clark of MGT";
 
 export const STAGING_EVIDENCE_VERSION = "1.2";
 export const STAGING_EVIDENCE_GATES = Object.freeze([
@@ -39,7 +40,7 @@ function recordTemplate(gate) {
     phase: gate.phase,
     gate: gate.gate,
     requirement: gate.requirement,
-    owner: `REPLACE_WITH_${gate.owner_role.toUpperCase()}_OWNER`,
+    owner: DEFAULT_ACCOUNTABLE_OWNER,
     captured_at: "REPLACE_WITH_PAST_ISO_TIMESTAMP",
     environment: "staging",
     action: "REPLACE_WITH_RECORDED_ACTION_OR_COMMAND",

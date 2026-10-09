@@ -10,18 +10,18 @@
     "hosted_ci_url": "https://github.com/REPLACE_WITH_OWNER/REPLACE_WITH_REPOSITORY/actions/runs/REPLACE_WITH_RUN"
   },
   "owners": {
-    "release": "REPLACE_WITH_RELEASE_OWNER",
-    "support": "REPLACE_WITH_SUPPORT_OWNER",
-    "data": "REPLACE_WITH_DATA_OWNER",
-    "platform": "REPLACE_WITH_PLATFORM_OWNER",
-    "accessibility": "REPLACE_WITH_ACCESSIBILITY_OWNER"
+    "release": "Gregg Clark of MGT",
+    "support": "Gregg Clark of MGT",
+    "data": "Gregg Clark of MGT",
+    "platform": "Gregg Clark of MGT",
+    "accessibility": "Gregg Clark of MGT"
   },
   "approvals": [
-    { "role": "release", "decision": "go", "approver": "REPLACE_WITH_RELEASE_OWNER", "reviewed_at": "REPLACE_WITH_PAST_ISO_TIMESTAMP", "reference": "work/approvals/release.md" },
-    { "role": "support", "decision": "go", "approver": "REPLACE_WITH_SUPPORT_OWNER", "reviewed_at": "REPLACE_WITH_PAST_ISO_TIMESTAMP", "reference": "work/approvals/support.md" },
-    { "role": "data", "decision": "go", "approver": "REPLACE_WITH_DATA_OWNER", "reviewed_at": "REPLACE_WITH_PAST_ISO_TIMESTAMP", "reference": "work/approvals/data.md" },
-    { "role": "platform", "decision": "go", "approver": "REPLACE_WITH_PLATFORM_OWNER", "reviewed_at": "REPLACE_WITH_PAST_ISO_TIMESTAMP", "reference": "work/approvals/platform.md" },
-    { "role": "accessibility", "decision": "go", "approver": "REPLACE_WITH_ACCESSIBILITY_OWNER", "reviewed_at": "REPLACE_WITH_PAST_ISO_TIMESTAMP", "reference": "work/approvals/accessibility.md" }
+    { "role": "release", "decision": "go", "approver": "Gregg Clark of MGT", "reviewed_at": "REPLACE_WITH_PAST_ISO_TIMESTAMP", "reference": "work/approvals/release.md" },
+    { "role": "support", "decision": "go", "approver": "Gregg Clark of MGT", "reviewed_at": "REPLACE_WITH_PAST_ISO_TIMESTAMP", "reference": "work/approvals/support.md" },
+    { "role": "data", "decision": "go", "approver": "Gregg Clark of MGT", "reviewed_at": "REPLACE_WITH_PAST_ISO_TIMESTAMP", "reference": "work/approvals/data.md" },
+    { "role": "platform", "decision": "go", "approver": "Gregg Clark of MGT", "reviewed_at": "REPLACE_WITH_PAST_ISO_TIMESTAMP", "reference": "work/approvals/platform.md" },
+    { "role": "accessibility", "decision": "go", "approver": "Gregg Clark of MGT", "reviewed_at": "REPLACE_WITH_PAST_ISO_TIMESTAMP", "reference": "work/approvals/accessibility.md" }
   ],
   "images": {
     "node": "node@sha256:REPLACE_WITH_64_HEX_DIGEST",
@@ -89,7 +89,7 @@
         "phase": "F437",
         "gate": "Staging target isolation",
         "requirement": "A separate staging origin and deployment target are provisioned outside production.",
-        "owner": "REPLACE_WITH_PLATFORM_OWNER",
+        "owner": "Gregg Clark of MGT",
         "captured_at": "REPLACE_WITH_PAST_ISO_TIMESTAMP",
         "environment": "staging",
         "action": "REPLACE_WITH_RECORDED_ACTION_OR_COMMAND",
@@ -106,7 +106,7 @@
         "phase": "F438",
         "gate": "Secret injection boundary",
         "requirement": "Required values are injected through the approved secret manager without copying values into source control or evidence.",
-        "owner": "REPLACE_WITH_PLATFORM_OWNER",
+        "owner": "Gregg Clark of MGT",
         "captured_at": "REPLACE_WITH_PAST_ISO_TIMESTAMP",
         "environment": "staging",
         "action": "REPLACE_WITH_RECORDED_ACTION_OR_COMMAND",
@@ -123,7 +123,7 @@
         "phase": "F439",
         "gate": "Immutable artifact and health",
         "requirement": "The exact candidate images are deployed and staging /healthz and /readyz return the recorded healthy result.",
-        "owner": "REPLACE_WITH_PLATFORM_OWNER",
+        "owner": "Gregg Clark of MGT",
         "captured_at": "REPLACE_WITH_PAST_ISO_TIMESTAMP",
         "environment": "staging",
         "action": "REPLACE_WITH_RECORDED_ACTION_OR_COMMAND",
@@ -140,7 +140,7 @@
         "phase": "F440",
         "gate": "Staging evidence ledger",
         "requirement": "The release owner records attributable, immutable staging evidence for the exact candidate and rollback target.",
-        "owner": "REPLACE_WITH_RELEASE_OWNER",
+        "owner": "Gregg Clark of MGT",
         "captured_at": "REPLACE_WITH_PAST_ISO_TIMESTAMP",
         "environment": "staging",
         "action": "REPLACE_WITH_RECORDED_ACTION_OR_COMMAND",
@@ -161,7 +161,7 @@
       "status": "pass",
       "reference": "https://evidence.example.com/support",
       "reviewed_at": "REPLACE_WITH_PAST_ISO_TIMESTAMP",
-      "reviewer": "REPLACE_WITH_SUPPORT_OWNER"
+      "reviewer": "Gregg Clark of MGT"
     }
   ],
   "rollback": {
@@ -170,7 +170,7 @@
     "verified_at": "REPLACE_WITH_PAST_ISO_TIMESTAMP"
   },
   "monitoring": {
-    "owner": "REPLACE_WITH_LAUNCH_MONITOR",
+    "owner": "Gregg Clark of MGT",
     "incident_channel": "REPLACE_WITH_INCIDENT_CHANNEL",
     "launch_window_start": "REPLACE_WITH_LAUNCH_WINDOW_ISO_TIMESTAMP",
     "checks": ["15m", "1h", "24h", "7d"]

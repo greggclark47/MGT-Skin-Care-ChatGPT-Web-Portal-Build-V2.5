@@ -7,6 +7,7 @@ const DIGEST = /^[a-z0-9./_-]+@sha256:[a-f0-9]{64}$/;
 const CHECKSUM = /^sha256:[a-f0-9]{64}$/i;
 const PLACEHOLDER = /REPLACE_WITH|YOUR-|example\.com|localhost|127\.0\.0\.1/i;
 const SECRET_VALUE = /(?:sk_(?:live|test)_[A-Za-z0-9]+|whsec_[A-Za-z0-9]+|postgres(?:ql)?:\/\/[^\s:@]+:[^\s@]+@|(?:OPENAI|SUPABASE|STRIPE)_[A-Z_]*(?:KEY|SECRET)[A-Z_]*\s*=\s*\S+)/i;
+const DEFAULT_ACCOUNTABLE_OWNER = "Gregg Clark of MGT";
 
 export const PRODUCTION_GATE_VERSION = "1.0";
 export const PRODUCTION_GATE_OWNER_ROLES = Object.freeze(["release", "platform", "data", "support", "accessibility"]);
@@ -53,7 +54,7 @@ function recordTemplate(definition) {
   return {
     id: definition.id,
     owner_role: definition.owner_role,
-    owner: `REPLACE_WITH_${definition.owner_role.toUpperCase()}_OWNER`,
+    owner: DEFAULT_ACCOUNTABLE_OWNER,
     requirement: definition.requirement,
     status: "pending",
     captured_at: "REPLACE_WITH_PAST_ISO_TIMESTAMP",
@@ -78,10 +79,10 @@ export function createProductionGateTemplate({ candidateCommit, images = {} } = 
       ollama: images.ollama || "ollama/ollama@sha256:REPLACE_WITH_64_HEX_DIGEST",
       caddy: images.caddy || "caddy@sha256:REPLACE_WITH_64_HEX_DIGEST"
     },
-    owners: Object.fromEntries(PRODUCTION_GATE_OWNER_ROLES.map((role) => [role, `REPLACE_WITH_${role.toUpperCase()}_OWNER`])),
+    owners: Object.fromEntries(PRODUCTION_GATE_OWNER_ROLES.map((role) => [role, DEFAULT_ACCOUNTABLE_OWNER])),
     checks: PRODUCTION_GATE_CHECKS.map(recordTemplate),
-    approvals: PRODUCTION_GATE_OWNER_ROLES.map((role) => ({ role, decision: "pending", approver: `REPLACE_WITH_${role.toUpperCase()}_APPROVER`, reviewed_at: "REPLACE_WITH_PAST_ISO_TIMESTAMP", reference: `work/production/approvals/${role}.md` })),
-    decision: { status: "pending", decision: "hold", decider: "REPLACE_WITH_RELEASE_DECIDER", reviewed_at: "REPLACE_WITH_PAST_ISO_TIMESTAMP", reference: "work/production/REPLACE_WITH_GO_NO_GO_DECISION.md" }
+    approvals: PRODUCTION_GATE_OWNER_ROLES.map((role) => ({ role, decision: "pending", approver: DEFAULT_ACCOUNTABLE_OWNER, reviewed_at: "REPLACE_WITH_PAST_ISO_TIMESTAMP", reference: `work/production/approvals/${role}.md` })),
+    decision: { status: "pending", decision: "hold", decider: DEFAULT_ACCOUNTABLE_OWNER, reviewed_at: "REPLACE_WITH_PAST_ISO_TIMESTAMP", reference: "work/production/REPLACE_WITH_GO_NO_GO_DECISION.md" }
   };
 }
 

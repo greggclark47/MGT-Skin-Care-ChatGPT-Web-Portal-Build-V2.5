@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { validateEnvironment } from "./preflight.mjs";
+import { validateEnvironment, validProductionDatabaseUrl, validProductionOrigin } from "./preflight.mjs";
 
 const production = {
   NODE_ENV: "production",
@@ -58,6 +58,40 @@ test("rejects unverified database TLS and automatic production migrations", () =
   assert(result.errors.some(error=>error.startsWith('PORTAL_AUTO_MIGRATE')));
 });
 
+test("rejects database URL settings that the PostgreSQL parser could reinterpret", () => {
+  const baseline = production.DATABASE_URL;
+  assert.equal(validProductionDatabaseUrl(baseline), true);
+  for (const changed of [
+    `${baseline}&sslmode=disable`,
+    `${baseline}&sslmode=verify-full`,
+    `${baseline}&host=other.internal`,
+    `${baseline}&%68ost=other.internal`,
+    `${baseline}&port=6543`,
+    `${baseline}&user=other`
+  ]) {
+    const result = validateEnvironment({ ...production, DATABASE_URL: changed });
+    assert.equal(result.ok, false);
+    assert.ok(result.errors.some((error) => error.includes("verified TLS")));
+    assert.equal(result.errors.join(" ").includes("other.internal"), false);
+  }
+});
+
+test("binds the public HTTPS origin to the production portal domain", () => {
+  assert.equal(validProductionOrigin(production.PUBLIC_ORIGIN, production.PORTAL_DOMAIN), true);
+  for (const changed of [
+    `${production.PUBLIC_ORIGIN}/path`,
+    `${production.PUBLIC_ORIGIN}?token=hidden`,
+    `${production.PUBLIC_ORIGIN}#fragment`,
+    production.PUBLIC_ORIGIN.replace('portal.', 'other.'),
+    production.PUBLIC_ORIGIN.replace('https://', 'https://operator@')
+  ]) {
+    const result = validateEnvironment({ ...production, PUBLIC_ORIGIN: changed });
+    assert.equal(result.ok, false);
+    assert.ok(result.errors.some((error) => error.includes('exact HTTPS origin')));
+    assert.equal(result.errors.join(' ').includes('hidden'), false);
+  }
+});
+
 test("rejects placeholders and an unsafe worker readiness window", () => {
   const result = validateEnvironment({
     ...production,
@@ -71,6 +105,12 @@ test("rejects placeholders and an unsafe worker readiness window", () => {
   assert.ok(result.errors.some((error) => error.startsWith("DATABASE_URL")));
   assert.ok(result.errors.some((error) => error.includes("twice WORKER_INTERVAL_SECONDS")));
   assert.ok(result.errors.some((error) => error.startsWith("BACKUP_RESTORE_MAX_AGE_DAYS")));
+});
+
+test("requires a whole worker interval before scheduling production sweeps", () => {
+  const result = validateEnvironment({ ...production, WORKER_INTERVAL_SECONDS: "60.0001" });
+  assert.equal(result.ok, false);
+  assert.ok(result.errors.some((error) => error.startsWith("WORKER_INTERVAL_SECONDS must be a whole number")));
 });
 
 test("requires the complete billing contract when subscriptions are enabled", () => {

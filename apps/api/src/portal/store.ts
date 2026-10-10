@@ -14,9 +14,20 @@ export interface Records {
 }
 export interface Store { tx<T>(fn:(r:Records)=>Promise<T>):Promise<T>; close():Promise<void>; kind:string }
 const schema='CREATE TABLE IF NOT EXISTS hub_records (scope TEXT NOT NULL, id TEXT NOT NULL, body TEXT NOT NULL, PRIMARY KEY(scope,id))';
+export function validateProductionDatabaseUrl(url:string,env:NodeJS.ProcessEnv=process.env):void{
+ if(env.NODE_ENV!=='production')return;
+ try{
+  const parsed=new URL(url);
+  const validProtocol=['postgres:','postgresql:'].includes(parsed.protocol);
+  const singleTlsMode=parsed.searchParams.getAll('sslmode').length===1&&parsed.searchParams.get('sslmode')==='verify-full';
+  const overriddenTarget=['host','hostaddr','port','user','password','database'].some(key=>parsed.searchParams.has(key));
+  if(validProtocol&&parsed.hostname&&!parsed.hostname.includes('%')&&singleTlsMode&&!overriddenTarget)return;
+ }catch{ /* Only a bounded diagnostic is emitted; the URL may contain credentials. */ }
+ throw new Error('Production DATABASE_URL requires one host and verified TLS without query target overrides.');
+}
 export class PgStore implements Store{
  kind='postgres'; private pool:Pool;
- constructor(url:string){this.pool=new Pool({connectionString:url,max:10,connectionTimeoutMillis:5000,statement_timeout:10000});}
+ constructor(url:string,env:NodeJS.ProcessEnv=process.env){validateProductionDatabaseUrl(url,env);this.pool=new Pool({connectionString:url,max:10,connectionTimeoutMillis:5000,statement_timeout:10000});}
  async init(migrate=false){
   try{
    if(migrate)await applyPortalMigrations(this.pool);

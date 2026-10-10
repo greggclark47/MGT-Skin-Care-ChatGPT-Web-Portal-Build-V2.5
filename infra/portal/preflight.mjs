@@ -40,6 +40,31 @@ function validIsoDate(value) {
   return /^\d{4}-\d{2}-\d{2}T/.test(text) && Number.isFinite(time) && time <= Date.now();
 }
 
+// pg-connection-string takes the last duplicate query value and lets a query
+// `host` replace the URL hostname. Validate the exact target the client uses.
+export function validProductionDatabaseUrl(value) {
+  try {
+    const url = new URL(value);
+    if (!["postgres:", "postgresql:"].includes(url.protocol) || !url.hostname || url.hostname.includes("%")) return false;
+    if (url.searchParams.getAll("sslmode").length !== 1 || url.searchParams.get("sslmode") !== "verify-full") return false;
+    if (["host", "hostaddr", "port", "user", "password", "database"].some((key) => url.searchParams.has(key))) return false;
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export function validProductionOrigin(value, domain) {
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" && !!url.hostname && !url.username && !url.password && !url.port
+      && url.pathname === "/" && !url.search && !url.hash && url.origin === value
+      && typeof domain === "string" && url.hostname === domain;
+  } catch {
+    return false;
+  }
+}
+
 export function validateEnvironment(env) {
   const errors = [...validateOwnershipEnvironment(env).errors];
   const warnings = [];
@@ -57,10 +82,7 @@ export function validateEnvironment(env) {
 
   const databaseUrl = requireValue("DATABASE_URL");
   if (databaseUrl && !validUrl(databaseUrl, ["postgres:", "postgresql:"])) errors.push("DATABASE_URL must be a production PostgreSQL URL.");
-
-  try {
-    if (new URL(databaseUrl).searchParams.get("sslmode") !== "verify-full") errors.push("DATABASE_URL must require verified TLS (sslmode=verify-full).");
-  } catch { /* URL validation above reports the missing or malformed connection. */ }
+  if (databaseUrl && !validProductionDatabaseUrl(databaseUrl)) errors.push("DATABASE_URL must name a single production host and require verified TLS (one sslmode=verify-full, without target overrides).");
   if (env.PORTAL_AUTO_MIGRATE !== "false") errors.push("PORTAL_AUTO_MIGRATE must be false; review and apply database changes separately.");
   warnings.push("Configuration checks do not prove target-project identity, schema compatibility, RLS isolation, or data reconciliation. Those require separate release evidence.");
 
@@ -68,6 +90,7 @@ export function validateEnvironment(env) {
   if (portalDomain && (portalDomain.includes("://") || portalDomain.includes("/") || placeholder.test(portalDomain))) {
     errors.push("PORTAL_DOMAIN must be a production hostname without a scheme or path.");
   }
+  if (publicOrigin && portalDomain && !validProductionOrigin(publicOrigin, portalDomain)) errors.push("PUBLIC_ORIGIN must be the exact HTTPS origin for PORTAL_DOMAIN, without credentials, port, path, query, or fragment.");
 
   if (!digestImage(env.NODE_IMAGE)) errors.push("NODE_IMAGE must use an approved immutable @sha256 image digest.");
   if (!digestImage(env.API_IMAGE)) errors.push("API_IMAGE must use an approved immutable @sha256 application image digest.");
@@ -96,7 +119,7 @@ export function validateEnvironment(env) {
 
   const workerInterval = Number(env.WORKER_INTERVAL_SECONDS);
   const readinessAge = Number(env.WORKER_READINESS_MAX_AGE_SECONDS);
-  if (!positiveNumber(workerInterval, 15, 3600)) errors.push("WORKER_INTERVAL_SECONDS must be between 15 and 3600.");
+  if (!wholeNumber(env.WORKER_INTERVAL_SECONDS, 15, 3600)) errors.push("WORKER_INTERVAL_SECONDS must be a whole number between 15 and 3600.");
   if (!positiveNumber(readinessAge, 60, 86400)) errors.push("WORKER_READINESS_MAX_AGE_SECONDS must be between 60 and 86400.");
   if (Number.isFinite(workerInterval) && Number.isFinite(readinessAge) && readinessAge < workerInterval * 2) {
     errors.push("WORKER_READINESS_MAX_AGE_SECONDS must be at least twice WORKER_INTERVAL_SECONDS.");

@@ -1,6 +1,10 @@
-# Ownership and evidence integrity — v2.40
+# Ownership and evidence integrity — v2.41
 
 Gregg Clark of MGT is the accountable owner for operational configuration, release decisions, support, data, platform, and accessibility. Generated templates use the shared owner definition in `ownership.mjs`. Naming an owner is not an approval, and matching a name does not authenticate a person.
+
+## Backend production admission in v2.41
+
+The production preflight and API/worker database constructors now reject a database URL unless it has exactly one `sslmode=verify-full` value and no query parameter can replace its authority target. This closes a duplicate-parameter mismatch in the installed PostgreSQL parser, which uses the last duplicate value while the previous preflight checked the first. Preflight also binds the exact public HTTPS origin to the reviewed portal domain, and API startup rejects origins with credentials, a nonstandard port, path, query, or fragment. The worker waits for one sweep to finish before scheduling the next and uses bounded failure codes instead of raw exception messages. Keep the actual database target, certificate validation, backup/restore proof, and operational readiness evidence in the candidate-specific ledger; these local guards do not establish those live facts.
 
 ## Production evidence ownership in v2.40
 

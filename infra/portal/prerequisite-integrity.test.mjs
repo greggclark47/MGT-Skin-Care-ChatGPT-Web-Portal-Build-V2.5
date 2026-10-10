@@ -103,7 +103,7 @@ test('complete review verifies; incomplete or forged ready review fails even wit
   }));
   const complete = buildProductionPrerequisiteReview({ root, prerequisites, records, now });
   assert.equal(validateProductionPrerequisiteReview(complete, { prerequisites, now }).ok, true);
-  assert.equal(verifyProductionPrerequisiteReview({ root, document: complete, now }).verified.length, 10);
+  assert.equal(verifyProductionPrerequisiteReview({ root, document: complete, now }).verified.length, PREREQUISITE_RECORD_IDS.length);
   const invalid = [
     d => { d.entries = []; },
     d => { d.entries.pop(); },

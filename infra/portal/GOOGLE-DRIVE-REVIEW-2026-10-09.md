@@ -50,6 +50,8 @@ v2.37 additionally closes the per-repository freshness gap: both GitHub observat
 
 v2.38 closes the receipt-review state gap: validation reconstructs the recorded decision and requires its status and exact blocker list to agree, even after a caller recomputes the checksum. This prevents a locally forged `export_complete`, `blocked`, or `awaiting_receipts` label from passing as a faithful record. It still does not prove authenticated collection, approved-folder placement or remote-byte equality.
 
+v2.39 carries the October 8 setup forward as historical evidence while separating it from current-candidate production intake. The initial production prerequisite ledger now has explicit, distinct `github_receipt` and `drive_receipt` records, each owned by `Gregg Clark of MGT` and bound to its own artifact metadata. Those records must be regenerated for each candidate; an earlier successful upload cannot be relabelled as a current receipt.
+
 1. Preserve v2.22 and subsequent source/evidence history. Finish the current narrowly scoped evidence-integrity fix and verify it locally.
 2. Restore a working Drive connection. User handles sign-in/security consent. Confirm the actual account and accessible folder metadata; do not change sharing or broaden permissions merely to make an upload work.
 3. Enumerate the MGT project documents in the verified scope. Fetch the five references above and any newer revisions/addenda; compare to local copies and record provenance. Do not claim all Drive documents reviewed until that inventory is complete.

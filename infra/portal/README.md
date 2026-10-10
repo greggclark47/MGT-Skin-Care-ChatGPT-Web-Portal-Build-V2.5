@@ -265,7 +265,7 @@ The F800–F814 review remains `pending_production_closeout_review` until the ex
 
 The F815 prerequisite packet can be generated with `pnpm infra:production-prerequisites -- --candidate-commit <sha> --output work/production/prerequisites.json`. It validates the production-shaped environment without writing secret values and separates local configuration blockers from required live evidence and approvals.
 
-The F816–F825 prerequisite review can be generated with `pnpm infra:production-prerequisite-review -- --prerequisites work/production/prerequisites.json --output work/production/prerequisite-review.json`. It binds ten external prerequisite records and remains pending until live evidence is supplied.
+The F816–F827 prerequisite review can be generated with `pnpm infra:production-prerequisite-review -- --prerequisites work/production/prerequisites.json --output work/production/prerequisite-review.json`. It binds twelve distinct prerequisite records, including candidate-specific GitHub and Google Drive receipts, and remains pending until live evidence is supplied. Every record owner must be exactly `Gregg Clark of MGT`; matching the name is not authentication or approval.
 
 The F826–F850 environment review can be generated with `pnpm infra:production-environment-review -- --prerequisite-review work/production/prerequisite-review.json --output work/production/environment-review.json`. It binds twenty-five production runtime fields and remains pending until the prerequisite review is ready.
 

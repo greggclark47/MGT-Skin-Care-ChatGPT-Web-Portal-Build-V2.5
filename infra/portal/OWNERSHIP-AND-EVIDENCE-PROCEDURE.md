@@ -1,6 +1,12 @@
-# Ownership and evidence integrity — v2.38
+# Ownership and evidence integrity — v2.39
 
 Gregg Clark of MGT is the accountable owner for operational configuration, release decisions, support, data, platform, and accessibility. Generated templates use the shared owner definition in `ownership.mjs`. Naming an owner is not an approval, and matching a name does not authenticate a person.
+
+## Initial production intake in v2.39
+
+The inherited production runtime and promotion stack from candidate `bcc1b47` remains the foundation for the initial production phase. Its prerequisite review now uses schema 1.1 and requires twelve distinct records: the prior ten controls plus separate candidate-specific GitHub and Google Drive receipt artifacts. The subsequent environment review remains a separate 25-record ledger. All 37 records must name `Gregg Clark of MGT` exactly and retain their own evidence reference, checksum, byte count, review timestamp, and status.
+
+An October 8 publication receipt is historical evidence for its original candidate only. It cannot satisfy a later candidate's GitHub or Drive receipt record. A current production intake remains pending until both destinations are independently observed for the exact candidate and the remaining live records exist.
 
 ## Receipt state integrity in v2.38
 
@@ -73,7 +79,7 @@ Earlier prerequisite hashes omitted nested content. Do not edit only the checksu
    ```
 
 3. Resolve any reported configuration errors using approved configuration. Do not manually relabel a blocked configuration as ready.
-4. Recheck all record artifacts and their applicability to this candidate. Supply the ten records defined by `PREREQUISITE_RECORD_IDS`, including actual owners, past review timestamps, `pass` status only after review, and local evidence references.
+4. Recheck all record artifacts and their applicability to this candidate. Supply the twelve records defined by `PREREQUISITE_RECORD_IDS`, including separate GitHub and Drive receipts, the canonical owner, past strict-UTC review timestamps, `pass` status only after review, and local evidence references.
 5. Regenerate the dependent review with a new output filename:
 
    ```powershell

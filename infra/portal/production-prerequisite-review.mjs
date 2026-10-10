@@ -4,16 +4,18 @@ import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { inspectReleaseArtifact } from "./release-export.mjs";
 import { validateProductionPrerequisites } from "./production-prerequisites.mjs";
+import { utcTimestamp } from "./approval-window.mjs";
+import { accountableOwnerError, isAccountableOwner } from "./ownership.mjs";
 
 const SHA = /^[a-f0-9]{40}$/i;
 const CHECKSUM = /^sha256:[a-f0-9]{64}$/i;
-const VERSION = "1.0";
-export const PREREQUISITE_RECORD_IDS = Object.freeze(["env_shape", "hosting_target", "database_target", "secret_manager", "image_digests", "backup_restore", "support_owner", "accessibility_report", "rollback_authority", "launch_approval"]);
+const VERSION = "1.1";
+export const PREREQUISITE_RECORD_IDS = Object.freeze(["env_shape", "hosting_target", "database_target", "secret_manager", "image_digests", "backup_restore", "support_owner", "accessibility_report", "rollback_authority", "launch_approval", "github_receipt", "drive_receipt"]);
 function text(value) { return String(value || "").trim(); }
 function canonicalize(value) { if (Array.isArray(value)) return `[${value.map(canonicalize).join(",")}]`; if (value && typeof value === "object") return `{${Object.keys(value).sort().map((key) => `${JSON.stringify(key)}:${canonicalize(value[key])}`).join(",")}}`; return JSON.stringify(value); }
 export function productionPrerequisiteReviewChecksum(document) { const { prerequisite_review_checksum: _ignored, ...unsigned } = document || {}; return `sha256:${createHash("sha256").update(canonicalize(unsigned)).digest("hex")}`; }
-function validPastIso(value, now) { const parsed = Date.parse(text(value)); return Number.isFinite(parsed) && parsed <= new Date(now).getTime(); }
-function inspectRecord({ root, id, record, now }) { if (!record || typeof record !== "object") throw new Error(`${id} record is required`); const inspected = inspectReleaseArtifact({ root, reference: record.reference }); if (record.checksum && text(record.checksum) !== inspected.checksum) throw new Error(`${id} checksum does not match its local artifact`); if (record.bytes != null && record.bytes !== inspected.bytes) throw new Error(`${id} byte count does not match its local artifact`); if (text(record.status) !== "pass") throw new Error(`${id} record status must be pass`); if (text(record.owner).length < 2) throw new Error(`${id} record must name an owner`); if (!validPastIso(record.reviewed_at, now)) throw new Error(`${id} reviewed_at must be a past ISO timestamp`); return { id, ...inspected, owner: text(record.owner), reviewed_at: text(record.reviewed_at), status: "pass" }; }
+function validPastIso(value, now) { const parsed = utcTimestamp(value); return Number.isFinite(parsed) && parsed <= new Date(now).getTime(); }
+function inspectRecord({ root, id, record, now }) { if (!record || typeof record !== "object") throw new Error(`${id} record is required`); const inspected = inspectReleaseArtifact({ root, reference: record.reference }); if (record.checksum && text(record.checksum) !== inspected.checksum) throw new Error(`${id} checksum does not match its local artifact`); if (record.bytes != null && record.bytes !== inspected.bytes) throw new Error(`${id} byte count does not match its local artifact`); if (text(record.status) !== "pass") throw new Error(`${id} record status must be pass`); if (!isAccountableOwner(record.owner)) throw new Error(accountableOwnerError(`${id}.owner`)); if (!validPastIso(record.reviewed_at, now)) throw new Error(`${id} reviewed_at must be a past UTC ISO timestamp`); return { id, ...inspected, owner: record.owner, reviewed_at: record.reviewed_at, status: "pass" }; }
 export function buildProductionPrerequisiteReview({ root = process.cwd(), prerequisites, records = {}, now = new Date().toISOString() } = {}) {
   const baseErrors = validateProductionPrerequisites(prerequisites).errors;
   const recordErrors = [], entries = [];
@@ -49,8 +51,8 @@ function validateReviewStructure(document, now) {
   for (const entry of entries) {
     if (!entry || !PREREQUISITE_RECORD_IDS.includes(entry.id)) { errors.push("entries contain an unknown prerequisite"); continue; }
     if (entry.status !== "pass") errors.push(`${entry.id} record status must be pass`);
-    if (typeof entry.owner !== "string" || entry.owner.trim().length < 2) errors.push(`${entry.id} record must name an owner`);
-    if (!validPastIso(entry.reviewed_at, now)) errors.push(`${entry.id} reviewed_at must be a past timestamp`);
+    if (!isAccountableOwner(entry.owner)) errors.push(accountableOwnerError(`${entry.id}.owner`));
+    if (!validPastIso(entry.reviewed_at, now)) errors.push(`${entry.id} reviewed_at must be a past UTC ISO timestamp`);
     if (typeof entry.reference !== "string" || !entry.reference) errors.push(`${entry.id} reference is required`);
     if (!CHECKSUM.test(text(entry.checksum))) errors.push(`${entry.id} checksum is required`);
     if (!Number.isSafeInteger(entry.bytes) || entry.bytes < 1) errors.push(`${entry.id} byte count must be positive`);

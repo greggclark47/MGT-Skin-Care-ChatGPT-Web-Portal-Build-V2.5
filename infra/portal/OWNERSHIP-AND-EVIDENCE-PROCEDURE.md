@@ -1,6 +1,14 @@
-# Ownership and evidence integrity — v2.39
+# Ownership and evidence integrity — v2.40
 
 Gregg Clark of MGT is the accountable owner for operational configuration, release decisions, support, data, platform, and accessibility. Generated templates use the shared owner definition in `ownership.mjs`. Naming an owner is not an approval, and matching a name does not authenticate a person.
+
+## Production evidence ownership in v2.40
+
+Production evidence matrix schema 1.1 applies the canonical owner rule to every one of its 100 records while preserving ten separate configuration, hosting, database, security, identity, operations, support, accessibility, optional-provider, and release groups. Each entry must also retain a known ID, `pass` state, nonempty local reference, SHA-256 checksum, positive byte count, and a real past UTC timestamp. A ready matrix must contain all 100 IDs exactly once, the exact group counts, and no recorded errors.
+
+Production evidence reconciliation schema 1.1 applies the same requirements independently to its 25 records. Before it can become ready, it structurally revalidates the complete ready matrix rather than trusting the matrix status and checksum fields. Changing an owner, timestamp, record field, group map, or matrix state and then recomputing a checksum does not create valid evidence.
+
+For migration, preserve schema 1.0 matrices and reconciliation reviews as historical records. Do not edit their version or owner fields. Obtain the actual role-specific reviews, generate new schema 1.1 records for the intended candidate, and regenerate every downstream checksum-bound document. These controls establish local record integrity only; they do not authenticate Gregg Clark, prove a Drive upload, grant a production GO, or replace distinct Release, Platform, Data, Support, and Accessibility approvals.
 
 ## Initial production intake in v2.39
 

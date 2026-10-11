@@ -1,5 +1,5 @@
 import {installBilling,installSubscriptionWebhook,subscriptionBillingConfigured} from './billing';
-import {validateRuntimeOwnership,workerIntervalMs} from './runtime-admission';
+import {validateApiRuntimeAdmission,workerReadinessMaxAgeMs} from './runtime-admission';
 import {portalV1Router,portalEntitlement,portalUsageAccount,ownEntitlement} from './subscriptions';
 import {installGuestAccess,activeGuestAccess} from './guest-access';
 import {readProfile,lockProfile,saveProfile} from './profiles';
@@ -92,7 +92,8 @@ function profileInput(b:any):SkinProfileInput{
 }
 export async function createPortal(options:PortalOptions){
  const env=options.env||process.env,db=options.store,prod=env.NODE_ENV==='production',demo=env.DEMO_MODE==='true';
- if(prod){validateRuntimeOwnership(env);workerIntervalMs(env);}
+ validateApiRuntimeAdmission(env);
+ const operationsReadinessMaxAgeMs=workerReadinessMaxAgeMs(env);
  const origin=env.PUBLIC_ORIGIN||'http://localhost:3000';const stripe=options.stripe||(env.STRIPE_SECRET_KEY?new Stripe(env.STRIPE_SECRET_KEY,{maxNetworkRetries:2,timeout:15000}):undefined),gateway=options.analysisGateway||gatewayFromEnv(env,db,new StoreRoutingLogSink(db)),coach=options.coach||new SafeCoach([],gateway);
  check(!prod||db.kind==='postgres',500,'production_storage','Production requires PostgreSQL.');
  check(!prod||!demo,500,'production_demo','Demo catalog cannot run in production.');
@@ -112,9 +113,7 @@ export async function createPortal(options:PortalOptions){
  app.get('/healthz',(_req,res)=>res.json({status:'ok'}));
  app.get('/readyz',wrap(async(_req,res)=>{
   const [snapshot,aiRuntime]=await Promise.all([db.tx(async r=>({backup:await r.get('operations','backup_health'),runs:await r.entries<any>('operation_runs')})),aiRuntimeReadiness(env)]);
-  const workerInterval=Math.max(15,Math.min(3600,Number(env.WORKER_INTERVAL_SECONDS)||60));
-  const maxAge=Math.max(60,Math.min(10800,Number(env.WORKER_READINESS_MAX_AGE_SECONDS)||Math.max(300,workerInterval*3)))*1000;
-  const operations=operationalReadiness(snapshot.backup,snapshot.runs,Date.now(),maxAge);
+  const operations=operationalReadiness(snapshot.backup,snapshot.runs,Date.now(),operationsReadinessMaxAgeMs);
   const issues=[...operations.issues,...(aiRuntime.healthy?[]:['ai_runtime_unhealthy'])];
   const healthy=!prod||issues.length===0;
   // This route is intentionally public for orchestrators. Never include backup locations,
@@ -336,9 +335,7 @@ export async function createPortal(options:PortalOptions){
    db.tx(async r=>({company:await r.get('settings','company'),backup:await r.get<any>('operations','backup_health'),runs:await r.entries<any>('operation_runs')})),
    aiRuntimeReadiness(env)
   ]);
-  const workerInterval=Math.max(15,Math.min(3600,Number(env.WORKER_INTERVAL_SECONDS)||60));
-  const maxAge=Math.max(60,Math.min(10800,Number(env.WORKER_READINESS_MAX_AGE_SECONDS)||Math.max(300,workerInterval*3)))*1000;
-  const operations=operationalReadiness(backup,runs,Date.now(),maxAge);
+  const operations=operationalReadiness(backup,runs,Date.now(),operationsReadinessMaxAgeMs);
   const supportOwner=typeof env.SUPPORT_OWNER_NAME==='string'&&env.SUPPORT_OWNER_NAME.trim().length>=2&&typeof env.SUPPORT_OWNER_EMAIL==='string'&&/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(env.SUPPORT_OWNER_EMAIL);
   const accessibilityEvidence=typeof env.ACCESSIBILITY_VALIDATION_REPORT_URL==='string'&&/^https:\/\//.test(env.ACCESSIBILITY_VALIDATION_REPORT_URL)&&typeof env.ACCESSIBILITY_VALIDATED_AT==='string'&&!Number.isNaN(Date.parse(env.ACCESSIBILITY_VALIDATED_AT))&&Date.parse(env.ACCESSIBILITY_VALIDATED_AT)<=Date.now();
   const monitoringConfigured=typeof env.MONITORING_DASHBOARD_URL==='string'&&/^https:\/\//.test(env.MONITORING_DASHBOARD_URL)&&typeof env.INCIDENT_RUNBOOK_URL==='string'&&/^https:\/\//.test(env.INCIDENT_RUNBOOK_URL)&&typeof env.ALERT_OWNER_EMAIL==='string'&&/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(env.ALERT_OWNER_EMAIL);
@@ -557,5 +554,5 @@ export async function createPortal(options:PortalOptions){
  app.use((err:any,req:express.Request,res:Response,_next:express.NextFunction)=>{const known=err instanceof Fault;const status=known?err.status:err.type==='entity.too.large'?413:err.type==='entity.parse.failed'?400:500;res.status(status).json({error:{code:known?err.code:status===400?'invalid_json':'request_failed',message:known?err.message:status===413?'The request is too large.':status===400?'Send valid JSON.':'The request could not be completed.',request_id:(req as HubRequest).requestId}});if(status>=500)console.error(JSON.stringify({request_id:(req as HubRequest).requestId,event:'request_failed',code:known?err.code:'internal'}));});
  return app;
 }
-async function main(){validateRuntimeOwnership(process.env);const migrate=startupMigrations(process.env);if(process.env.NODE_ENV==='production'&&!process.env.DATABASE_URL)throw new Error('A reviewed production database connection is required.');const store=process.env.DATABASE_URL?await new PgStore(process.env.DATABASE_URL,process.env).init(migrate):new LocalStore(process.env.PORTAL_DB_PATH||'../../work/data/portal.sqlite');const app=await createPortal({store});const server=app.listen(Number(process.env.PORT||3100),process.env.HOST||'127.0.0.1',()=>console.log('MGT portal API listening at http://127.0.0.1:'+(process.env.PORT||3100)));const close=()=>server.close(()=>{void store.close().then(()=>process.exit(0));});process.on('SIGTERM',close);process.on('SIGINT',close);}
+async function main(){validateApiRuntimeAdmission(process.env);const migrate=startupMigrations(process.env);if(process.env.NODE_ENV==='production'&&!process.env.DATABASE_URL)throw new Error('A reviewed production database connection is required.');const store=process.env.DATABASE_URL?await new PgStore(process.env.DATABASE_URL,process.env).init(migrate):new LocalStore(process.env.PORTAL_DB_PATH||'../../work/data/portal.sqlite');const app=await createPortal({store});const server=app.listen(Number(process.env.PORT||3100),process.env.HOST||'127.0.0.1',()=>console.log('MGT portal API listening at http://127.0.0.1:'+(process.env.PORT||3100)));const close=()=>server.close(()=>{void store.close().then(()=>process.exit(0));});process.on('SIGTERM',close);process.on('SIGINT',close);}
 if(require.main===module)void main().catch(()=>{console.error(JSON.stringify({event:'portal_startup_failed',code:'startup_failed'}));process.exit(1);});

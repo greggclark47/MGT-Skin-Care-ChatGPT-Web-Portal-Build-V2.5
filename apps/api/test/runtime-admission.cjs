@@ -2,10 +2,10 @@ const assert = require('node:assert/strict');
 const { test } = require('node:test');
 const { spawnSync } = require('node:child_process');
 const path = require('node:path');
-const { validateRuntimeOwnership, workerIntervalMs } = require('../dist/portal/runtime-admission');
+const { validateRuntimeOwnership, workerIntervalMs, workerReadinessMaxAgeMs } = require('../dist/portal/runtime-admission');
 const { createPortal } = require('../dist/portal/server');
 const owner = 'Gregg Clark of MGT';
-const valid = { NODE_ENV:'production', RELEASE_OWNER_NAME:owner, SUPPORT_OWNER_NAME:owner, WORKER_INTERVAL_SECONDS:'60' };
+const valid = { NODE_ENV:'production', RELEASE_OWNER_NAME:owner, SUPPORT_OWNER_NAME:owner, WORKER_INTERVAL_SECONDS:'60', WORKER_READINESS_MAX_AGE_SECONDS:'300' };
 
 test('preflight and runtime accept the same owner declarations and 25 timing boundary cases', async () => {
   const { validateEnvironment } = await import('../../../infra/portal/preflight.mjs');
@@ -20,6 +20,13 @@ test('preflight and runtime accept the same owner declarations and 25 timing bou
     let runtimeAccepts = true;
     try { validateRuntimeOwnership({...valid,[key]:value}); } catch { runtimeAccepts = false; }
     assert.equal(validateOwnershipEnvironment({...valid,[key]:value}).ok,runtimeAccepts);
+  }
+  for (const value of [undefined,'',' ','59','60','119','120','121','300','10800','10801','86400','86401','120.0','1e3','0x78',' 120','120 ','+120','00120','9007199254740992']) {
+    let runtimeAccepts = true;
+    try { workerReadinessMaxAgeMs({...valid,WORKER_READINESS_MAX_AGE_SECONDS:value}); } catch { runtimeAccepts = false; }
+    const report = validateEnvironment({...valid,WORKER_READINESS_MAX_AGE_SECONDS:value});
+    const preflightAccepts=!report.errors.some(error=>error.startsWith('WORKER_READINESS_MAX_AGE_SECONDS'));
+    assert.equal(preflightAccepts,runtimeAccepts,JSON.stringify(value));
   }
 });
 
@@ -40,6 +47,7 @@ test('exported production app constructor enforces owner and worker timing befor
     {RELEASE_OWNER_NAME:'altered'},
     {SUPPORT_OWNER_NAME:'altered'},
     {WORKER_INTERVAL_SECONDS:'1e2'}
+    ,{WORKER_READINESS_MAX_AGE_SECONDS:'1e3'}
   ]) {
     const env={...valid,DEMO_MODE:'false',PUBLIC_ORIGIN:'https://portal.example',...overrides};
     const store={kind:'postgres',tx:async()=>{throw new Error('STORE_ACCESSED');},close:async()=>{}};
@@ -53,6 +61,13 @@ test('production interval rejects invalid inputs rather than falling back or cla
   }
   for (const value of ['15','60','3600']) assert.equal(workerIntervalMs({...valid,WORKER_INTERVAL_SECONDS:value}),Number(value)*1000);
   assert.equal(workerIntervalMs({NODE_ENV:'test'}),60000);
+});
+
+test('production readiness age uses the configured value and requires at least two worker intervals', () => {
+  for (const value of [undefined,'','59','119','86401','120.0','1e3',' 300','300 ']) {
+    assert.throws(()=>workerReadinessMaxAgeMs({...valid,WORKER_READINESS_MAX_AGE_SECONDS:value}),/Production worker readiness age is invalid/);
+  }
+  for (const value of ['120','300','10801','86400']) assert.equal(workerReadinessMaxAgeMs({...valid,WORKER_READINESS_MAX_AGE_SECONDS:value}),Number(value)*1000);
 });
 
 // A fake store throws if initialized. This proves the guard runs before any
@@ -86,5 +101,15 @@ test('worker entry point rejects unsafe timing before opening a database and emi
     assert.equal(child.status,1);
     assert.doesNotMatch(child.stderr,/DATABASE_OPENED|sensitive-timing-value|db\.invalid/);
     assert.deepEqual(JSON.parse(child.stderr.trim()),{worker:'portal-operations',event:'worker_startup_failed'});
+  }
+});
+
+test('API entry point rejects unsafe readiness age before opening a database', () => {
+  for (const value of ['119','86401','1e3','sensitive-readiness-value']) {
+    const child=probeStartup('server',{WORKER_READINESS_MAX_AGE_SECONDS:value});
+    assert.equal(child.error,undefined);
+    assert.equal(child.status,1);
+    assert.doesNotMatch(child.stderr,/DATABASE_OPENED|sensitive-readiness-value|db\.invalid/);
+    assert.deepEqual(JSON.parse(child.stderr.trim()),{event:'portal_startup_failed',code:'startup_failed'});
   }
 });

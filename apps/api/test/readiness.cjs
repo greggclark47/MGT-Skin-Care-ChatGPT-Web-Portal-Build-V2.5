@@ -6,7 +6,7 @@ const {LocalStore}=require('../dist/portal/store');
  const store=new LocalStore(':memory:');
  store.kind='postgres';
  for(const origin of ['https://portal.example/path','https://portal.example?token=hidden','https://operator@portal.example','https://other.example']){
-  await assert.rejects(createPortal({store,env:{NODE_ENV:'production',DEMO_MODE:'false',PUBLIC_ORIGIN:origin,PORTAL_DOMAIN:'portal.example',OLLAMA_ENABLED:'false',RELEASE_OWNER_NAME:'Gregg Clark of MGT',SUPPORT_OWNER_NAME:'Gregg Clark of MGT',WORKER_INTERVAL_SECONDS:'60'}}),error=>error.code==='production_origin');
+  await assert.rejects(createPortal({store,env:{NODE_ENV:'production',DEMO_MODE:'false',PUBLIC_ORIGIN:origin,PORTAL_DOMAIN:'portal.example',OLLAMA_ENABLED:'false',RELEASE_OWNER_NAME:'Gregg Clark of MGT',SUPPORT_OWNER_NAME:'Gregg Clark of MGT',WORKER_INTERVAL_SECONDS:'60',WORKER_READINESS_MAX_AGE_SECONDS:'300'}}),error=>error.code==='production_origin');
  }
  const app=await createPortal({store,env:{NODE_ENV:'production',DEMO_MODE:'false',PUBLIC_ORIGIN:'https://portal.example',WORKER_READINESS_MAX_AGE_SECONDS:'300',OLLAMA_ENABLED:'false',RELEASE_OWNER_NAME:'Gregg Clark of MGT',SUPPORT_OWNER_NAME:'Gregg Clark of MGT',WORKER_INTERVAL_SECONDS:'60'}});
  const server=app.listen(0,'127.0.0.1');await new Promise(resolve=>server.once('listening',resolve));

@@ -4,7 +4,7 @@ const {LocalStore}=require('../dist/portal/store');
 
 (async()=>{
  const store=new LocalStore(':memory:');store.kind='postgres';
- const app=await createPortal({store,env:{NODE_ENV:'production',DEMO_MODE:'false',PUBLIC_ORIGIN:'https://portal.example',OLLAMA_ENABLED:'false',RELEASE_OWNER_NAME:'Gregg Clark of MGT',SUPPORT_OWNER_NAME:'Gregg Clark of MGT',WORKER_INTERVAL_SECONDS:'60'}});
+ const app=await createPortal({store,env:{NODE_ENV:'production',DEMO_MODE:'false',PUBLIC_ORIGIN:'https://portal.example',OLLAMA_ENABLED:'false',RELEASE_OWNER_NAME:'Gregg Clark of MGT',SUPPORT_OWNER_NAME:'Gregg Clark of MGT',WORKER_INTERVAL_SECONDS:'60',WORKER_READINESS_MAX_AGE_SECONDS:'300'}});
  const server=app.listen(0,'127.0.0.1');await new Promise(resolve=>server.once('listening',resolve));
  const url='http://127.0.0.1:'+server.address().port+'/api/hub/session';
  try{

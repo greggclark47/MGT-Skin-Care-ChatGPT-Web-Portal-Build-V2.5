@@ -120,7 +120,7 @@ export function validateEnvironment(env) {
   const workerInterval = Number(env.WORKER_INTERVAL_SECONDS);
   const readinessAge = Number(env.WORKER_READINESS_MAX_AGE_SECONDS);
   if (typeof env.WORKER_INTERVAL_SECONDS !== 'string' || !/^\d+$/.test(env.WORKER_INTERVAL_SECONDS) || !wholeNumber(env.WORKER_INTERVAL_SECONDS, 15, 3600)) errors.push("WORKER_INTERVAL_SECONDS must be a whole number between 15 and 3600.");
-  if (!positiveNumber(readinessAge, 60, 86400)) errors.push("WORKER_READINESS_MAX_AGE_SECONDS must be between 60 and 86400.");
+  if (typeof env.WORKER_READINESS_MAX_AGE_SECONDS !== 'string' || !/^\d+$/.test(env.WORKER_READINESS_MAX_AGE_SECONDS) || !wholeNumber(readinessAge, 60, 86400)) errors.push("WORKER_READINESS_MAX_AGE_SECONDS must be a whole number between 60 and 86400.");
   if (Number.isFinite(workerInterval) && Number.isFinite(readinessAge) && readinessAge < workerInterval * 2) {
     errors.push("WORKER_READINESS_MAX_AGE_SECONDS must be at least twice WORKER_INTERVAL_SECONDS.");
   }

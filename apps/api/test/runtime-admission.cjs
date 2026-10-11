@@ -2,10 +2,10 @@ const assert = require('node:assert/strict');
 const { test } = require('node:test');
 const { spawnSync } = require('node:child_process');
 const path = require('node:path');
-const { validateRuntimeOwnership, workerIntervalMs, workerReadinessMaxAgeMs } = require('../dist/portal/runtime-admission');
+const { validateRuntimeOwnership, validateProductionPortalBoundary, workerIntervalMs, workerReadinessMaxAgeMs } = require('../dist/portal/runtime-admission');
 const { createPortal } = require('../dist/portal/server');
 const owner = 'Gregg Clark of MGT';
-const valid = { NODE_ENV:'production', RELEASE_OWNER_NAME:owner, SUPPORT_OWNER_NAME:owner, WORKER_INTERVAL_SECONDS:'60', WORKER_READINESS_MAX_AGE_SECONDS:'300' };
+const valid = { NODE_ENV:'production', DEMO_MODE:'false', PUBLIC_ORIGIN:'https://portal.example', PORTAL_DOMAIN:'portal.example', RELEASE_OWNER_NAME:owner, SUPPORT_OWNER_NAME:owner, WORKER_INTERVAL_SECONDS:'60', WORKER_READINESS_MAX_AGE_SECONDS:'300' };
 
 test('preflight and runtime accept the same owner declarations and 25 timing boundary cases', async () => {
   const { validateEnvironment } = await import('../../../infra/portal/preflight.mjs');
@@ -68,6 +68,24 @@ test('production readiness age uses the configured value and requires at least t
     assert.throws(()=>workerReadinessMaxAgeMs({...valid,WORKER_READINESS_MAX_AGE_SECONDS:value}),/Production worker readiness age is invalid/);
   }
   for (const value of ['120','300','10801','86400']) assert.equal(workerReadinessMaxAgeMs({...valid,WORKER_READINESS_MAX_AGE_SECONDS:value}),Number(value)*1000);
+});
+
+test('production portal boundary requires explicit non-demo mode and one exact HTTPS domain', () => {
+  assert.doesNotThrow(()=>validateProductionPortalBoundary(valid));
+  for (const overrides of [
+    {DEMO_MODE:undefined},{DEMO_MODE:'true'},{DEMO_MODE:'False'},
+    {PUBLIC_ORIGIN:undefined},{PUBLIC_ORIGIN:'http://portal.example'},{PUBLIC_ORIGIN:'https://portal.example/path'},
+    {PUBLIC_ORIGIN:'https://operator@portal.example'},{PUBLIC_ORIGIN:'https://portal.example:443'},
+    {PORTAL_DOMAIN:undefined},{PORTAL_DOMAIN:'other.example'},{PORTAL_DOMAIN:'https://portal.example'}
+  ]) assert.throws(()=>validateProductionPortalBoundary({...valid,...overrides}),error=>error.message==='Production portal boundary is invalid.');
+  assert.doesNotThrow(()=>validateProductionPortalBoundary({NODE_ENV:'test'}));
+});
+
+test('exported production app constructor rejects unsafe portal boundaries before store use', async () => {
+  for (const overrides of [{DEMO_MODE:'true'},{PUBLIC_ORIGIN:'https://portal.example/path'},{PORTAL_DOMAIN:'other.example'}]) {
+    const store={kind:'postgres',tx:async()=>{throw new Error('STORE_ACCESSED');},close:async()=>{}};
+    await assert.rejects(createPortal({store,env:{...valid,...overrides}}),error=>error.message==='Production portal boundary is invalid.');
+  }
 });
 
 // A fake store throws if initialized. This proves the guard runs before any

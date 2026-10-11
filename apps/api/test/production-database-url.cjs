@@ -1,5 +1,5 @@
 const assert = require('node:assert/strict');
-const { PgStore, validateProductionDatabaseUrl } = require('../dist/portal/store');
+const { PgStore, startupMigrations, validateProductionDatabaseUrl } = require('../dist/portal/store');
 
 const production = { NODE_ENV: 'production' };
 const baseline = new URL('postgresql://db.internal/mgt');
@@ -20,4 +20,10 @@ for (const change of unsafe) {
   assert.throws(() => new PgStore(changed.toString(), production), /verified TLS/);
 }
 assert.doesNotThrow(() => validateProductionDatabaseUrl(baseline.toString(), { NODE_ENV: 'test' }));
+assert.equal(startupMigrations({NODE_ENV:'production',PORTAL_AUTO_MIGRATE:'false'}),false);
+for (const value of [undefined,'','true','False']) assert.throws(
+  ()=>startupMigrations({NODE_ENV:'production',PORTAL_AUTO_MIGRATE:value}),
+  /explicit no-auto-migration declaration/
+);
+assert.equal(startupMigrations({NODE_ENV:'test',PORTAL_AUTO_MIGRATE:'true'}),true);
 console.log('Production database target and TLS admission checks passed.');

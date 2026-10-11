@@ -47,7 +47,7 @@ export class PgStore implements Store{
  async close(){await this.pool.end();}
 }
 export function startupMigrations(env:NodeJS.ProcessEnv){
- if(env.NODE_ENV==='production'&&env.PORTAL_AUTO_MIGRATE==='true')throw new Error('Production database changes require a separately reviewed migration.');
+ if(env.NODE_ENV==='production'&&env.PORTAL_AUTO_MIGRATE!=='false')throw new Error('Production database changes require an explicit no-auto-migration declaration.');
  return env.PORTAL_AUTO_MIGRATE==='true';
 }
 // SQLite is a persistent local development adapter. Production requires PostgreSQL.

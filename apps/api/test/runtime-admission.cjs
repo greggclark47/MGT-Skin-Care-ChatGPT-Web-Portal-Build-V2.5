@@ -2,7 +2,7 @@ const assert = require('node:assert/strict');
 const { test } = require('node:test');
 const { spawnSync } = require('node:child_process');
 const path = require('node:path');
-const { validateRuntimeOwnership, validateProductionPortalBoundary, workerIntervalMs, workerReadinessMaxAgeMs } = require('../dist/portal/runtime-admission');
+const { validateRuntimeOwnership, validateProductionPortalBoundary, validateProductionDatabaseAdmission, workerIntervalMs, workerReadinessMaxAgeMs } = require('../dist/portal/runtime-admission');
 const { createPortal } = require('../dist/portal/server');
 const owner = 'Gregg Clark of MGT';
 const valid = { NODE_ENV:'production', DEMO_MODE:'false', PUBLIC_ORIGIN:'https://portal.example', PORTAL_DOMAIN:'portal.example', RELEASE_OWNER_NAME:owner, SUPPORT_OWNER_NAME:owner, WORKER_INTERVAL_SECONDS:'60', WORKER_READINESS_MAX_AGE_SECONDS:'300' };
@@ -88,6 +88,26 @@ test('exported production app constructor rejects unsafe portal boundaries befor
   }
 });
 
+test('production process database admission matches preflight TLS and migration boundaries', async () => {
+  const {validateEnvironment}=await import('../../../infra/portal/preflight.mjs');
+  const database='postgresql://db.portal.test:5432/mgt?sslmode=verify-full';
+  const processEnv={...valid,DATABASE_URL:database,PORTAL_AUTO_MIGRATE:'false'};
+  assert.doesNotThrow(()=>validateProductionDatabaseAdmission(processEnv));
+  for (const overrides of [
+    {DATABASE_URL:undefined},{DATABASE_URL:'postgresql://db.portal.test/mgt'},{DATABASE_URL:'postgresql://db.portal.test/mgt?sslmode=disable'},
+    {DATABASE_URL:database+'&sslmode=disable'},{DATABASE_URL:database+'&host=other.portal.test'},
+    {PORTAL_AUTO_MIGRATE:undefined},{PORTAL_AUTO_MIGRATE:'true'},{PORTAL_AUTO_MIGRATE:'False'}
+  ]) {
+    const env={...processEnv,...overrides};
+    let runtimeAccepts=true;
+    try{validateProductionDatabaseAdmission(env);}catch(error){runtimeAccepts=false;assert.equal(error.message,'Production database admission is invalid.');}
+    const report=validateEnvironment(env);
+    const preflightAccepts=!report.errors.some(error=>error.startsWith('DATABASE_URL')||error.startsWith('PORTAL_AUTO_MIGRATE'));
+    assert.equal(runtimeAccepts,preflightAccepts,JSON.stringify(overrides));
+  }
+  assert.doesNotThrow(()=>validateProductionDatabaseAdmission({NODE_ENV:'test'}));
+});
+
 // A fake store throws if initialized. This proves the guard runs before any
 // database work, without contacting real services or requiring PostgreSQL.
 function probeStartup(entry, overrides = {}) {
@@ -129,5 +149,19 @@ test('API entry point rejects unsafe readiness age before opening a database', (
     assert.equal(child.status,1);
     assert.doesNotMatch(child.stderr,/DATABASE_OPENED|sensitive-readiness-value|db\.invalid/);
     assert.deepEqual(JSON.parse(child.stderr.trim()),{event:'portal_startup_failed',code:'startup_failed'});
+  }
+});
+
+for (const entry of ['server','worker']) test(`${entry} rejects unsafe database admission before initialization`, () => {
+  for (const overrides of [
+    {DATABASE_URL:''},{DATABASE_URL:'postgresql://db.invalid/mgt'},{DATABASE_URL:'postgresql://db.invalid/mgt?sslmode=disable'},
+    {DATABASE_URL:'postgresql://db.invalid/mgt?sslmode=verify-full&host=other.invalid'},
+    {PORTAL_AUTO_MIGRATE:''},{PORTAL_AUTO_MIGRATE:'true'},{PORTAL_AUTO_MIGRATE:'False'}
+  ]) {
+    const child=probeStartup(entry,overrides);
+    assert.equal(child.error,undefined);
+    assert.equal(child.status,1);
+    assert.doesNotMatch(child.stderr,/DATABASE_OPENED|db\.invalid|other\.invalid/);
+    assert.deepEqual(JSON.parse(child.stderr.trim()),entry==='server'?{event:'portal_startup_failed',code:'startup_failed'}:{worker:'portal-operations',event:'worker_startup_failed'});
   }
 });

@@ -2,7 +2,7 @@ const assert = require('node:assert/strict');
 const { test } = require('node:test');
 const { spawnSync } = require('node:child_process');
 const path = require('node:path');
-const { validateRuntimeOwnership, validateProductionPortalBoundary, validateProductionDatabaseAdmission, workerIntervalMs, workerReadinessMaxAgeMs } = require('../dist/portal/runtime-admission');
+const { validateRuntimeOwnership, validateProductionPortalBoundary, validateProductionDatabaseAdmission, validateProductionOperationsAdmission, workerIntervalMs, workerReadinessMaxAgeMs } = require('../dist/portal/runtime-admission');
 const { createPortal } = require('../dist/portal/server');
 const owner = 'Gregg Clark of MGT';
 const valid = { NODE_ENV:'production', DEMO_MODE:'false', PUBLIC_ORIGIN:'https://portal.example', PORTAL_DOMAIN:'portal.example', RELEASE_OWNER_NAME:owner, SUPPORT_OWNER_NAME:owner, WORKER_INTERVAL_SECONDS:'60', WORKER_READINESS_MAX_AGE_SECONDS:'300' };
@@ -108,13 +108,47 @@ test('production process database admission matches preflight TLS and migration 
   assert.doesNotThrow(()=>validateProductionDatabaseAdmission({NODE_ENV:'test'}));
 });
 
+const operational = {
+  SUPPORT_OWNER_EMAIL:'support@mgtskincare.test', ALERT_OWNER_EMAIL:'alerts@mgtskincare.test',
+  MONITORING_DASHBOARD_URL:'https://monitoring.mgtskincare.test/dashboard', INCIDENT_RUNBOOK_URL:'https://operations.mgtskincare.test/runbook',
+  SUPPORT_RESPONSE_TARGET_HOURS:'24', OPERATIONS_ALERT_DELIVERY:'webhook', OPERATIONS_ALERT_WEBHOOK_URL:'https://alerts.mgtskincare.test/events',
+  OPERATIONS_ALERT_WEBHOOK_TOKEN:'configured-alert-token', OPERATIONS_ALERT_TIMEOUT_MS:'10000', OPERATIONS_ALERT_RETRY_COOLDOWN_SECONDS:'300',
+  OPERATIONS_ALERT_EVENT_RETENTION_DAYS:'90', OPERATIONS_ALERT_LEASE_SECONDS:'60', OPERATIONS_ALERT_MAX_RETRY_DELAY_SECONDS:'3600',
+  OPERATIONS_ALERT_MAX_ATTEMPTS:'5', OPERATIONS_ALERT_KEY_ID:'primary'
+};
+
+test('production operations admission matches preflight support, monitoring, and alert boundaries', async () => {
+  const {validateEnvironment}=await import('../../../infra/portal/preflight.mjs');
+  const processEnv={...valid,...operational};
+  assert.doesNotThrow(()=>validateProductionOperationsAdmission(processEnv));
+  const cases=[
+    {SUPPORT_OWNER_EMAIL:''},{ALERT_OWNER_EMAIL:'invalid'},{MONITORING_DASHBOARD_URL:'http://monitoring.mgtskincare.test'},
+    {INCIDENT_RUNBOOK_URL:'https://operator@operations.mgtskincare.test/runbook'},{SUPPORT_RESPONSE_TARGET_HOURS:'24.0'},
+    {OPERATIONS_ALERT_DELIVERY:'disabled'},{OPERATIONS_ALERT_WEBHOOK_URL:'http://alerts.mgtskincare.test/events'},
+    {OPERATIONS_ALERT_WEBHOOK_TOKEN:'change-me'},{OPERATIONS_ALERT_TIMEOUT_MS:'1e4'},
+    {OPERATIONS_ALERT_RETRY_COOLDOWN_SECONDS:'9'},{OPERATIONS_ALERT_EVENT_RETENTION_DAYS:'0'},
+    {OPERATIONS_ALERT_LEASE_SECONDS:'9'},{OPERATIONS_ALERT_MAX_RETRY_DELAY_SECONDS:'299'},
+    {OPERATIONS_ALERT_MAX_ATTEMPTS:'21'},{OPERATIONS_ALERT_KEY_ID:'not valid'}
+  ];
+  const operationalKeys=new Set([...Object.keys(operational),'OPERATIONS_ALERT_MAX_RETRY_DELAY_SECONDS']);
+  for(const overrides of cases){
+    const env={...processEnv,...overrides};
+    let runtimeAccepts=true;
+    try{validateProductionOperationsAdmission(env);}catch(error){runtimeAccepts=false;assert.equal(error.message,'Production operations admission is invalid.');}
+    const report=validateEnvironment(env);
+    const preflightAccepts=!report.errors.some(error=>operationalKeys.has(error.split(' ')[0]));
+    assert.equal(runtimeAccepts,preflightAccepts,JSON.stringify(overrides));
+  }
+  assert.doesNotThrow(()=>validateProductionOperationsAdmission({NODE_ENV:'test'}));
+});
+
 // A fake store throws if initialized. This proves the guard runs before any
 // database work, without contacting real services or requiring PostgreSQL.
 function probeStartup(entry, overrides = {}) {
   const storePath = require.resolve('../dist/portal/store');
   const entryPath = path.resolve(__dirname,`../dist/portal/${entry}.js`);
   const boot = `const Module=require('node:module');const store=require(${JSON.stringify(storePath)});store.PgStore=class{constructor(){process.stderr.write('DATABASE_OPENED');process.exit(77);}};Module.runMain(${JSON.stringify(entryPath)});`;
-  const env = {...process.env,...valid,PORTAL_AUTO_MIGRATE:'false',DATABASE_URL:'postgresql://db.invalid/mgt?sslmode=verify-full',...overrides};
+  const env = {...process.env,...valid,...operational,PORTAL_AUTO_MIGRATE:'false',DATABASE_URL:'postgresql://db.invalid/mgt?sslmode=verify-full',...overrides};
   return spawnSync(process.execPath,['-e',boot],{env,encoding:'utf8',timeout:10000,windowsHide:true});
 }
 
@@ -162,6 +196,22 @@ for (const entry of ['server','worker']) test(`${entry} rejects unsafe database 
     assert.equal(child.error,undefined);
     assert.equal(child.status,1);
     assert.doesNotMatch(child.stderr,/DATABASE_OPENED|db\.invalid|other\.invalid/);
+    assert.deepEqual(JSON.parse(child.stderr.trim()),entry==='server'?{event:'portal_startup_failed',code:'startup_failed'}:{worker:'portal-operations',event:'worker_startup_failed'});
+  }
+});
+
+for (const entry of ['server','worker']) test(`${entry} rejects unsafe operational controls before database initialization`, () => {
+  for (const overrides of [
+    {SUPPORT_OWNER_EMAIL:''},{ALERT_OWNER_EMAIL:'invalid'},{MONITORING_DASHBOARD_URL:'http://monitoring.mgtskincare.test'},
+    {SUPPORT_RESPONSE_TARGET_HOURS:'24.0'},{OPERATIONS_ALERT_DELIVERY:'disabled'},
+    {OPERATIONS_ALERT_WEBHOOK_URL:'http://alerts.mgtskincare.test/events'},{OPERATIONS_ALERT_WEBHOOK_TOKEN:'change-me'},
+    {OPERATIONS_ALERT_TIMEOUT_MS:'1e4'},{OPERATIONS_ALERT_LEASE_SECONDS:'9'},
+    {OPERATIONS_ALERT_MAX_RETRY_DELAY_SECONDS:'299'},{OPERATIONS_ALERT_MAX_ATTEMPTS:'21'},{OPERATIONS_ALERT_KEY_ID:'not valid'}
+  ]) {
+    const child=probeStartup(entry,overrides);
+    assert.equal(child.error,undefined);
+    assert.equal(child.status,1);
+    assert.doesNotMatch(child.stderr,/DATABASE_OPENED|mgtskincare\.test|change-me|not valid/);
     assert.deepEqual(JSON.parse(child.stderr.trim()),entry==='server'?{event:'portal_startup_failed',code:'startup_failed'}:{worker:'portal-operations',event:'worker_startup_failed'});
   }
 });

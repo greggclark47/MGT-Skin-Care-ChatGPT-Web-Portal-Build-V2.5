@@ -55,6 +55,36 @@ export function validateProductionDatabaseAdmission(env:NodeJS.ProcessEnv):void{
  }catch{throw new Error('Production database admission is invalid.');}
 }
 
+const productionPlaceholder=/(your-|change[-_]?me|example\.|localhost|127\.0\.0\.1)/i;
+function productionEmail(value:unknown):boolean{
+ return typeof value==='string'&&/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(value)&&!productionPlaceholder.test(value);
+}
+function productionHttpsUrl(value:unknown):boolean{
+ try{const parsed=new URL(String(value));return parsed.protocol==='https:'&&!parsed.username&&!parsed.password&&!productionPlaceholder.test(String(value));}catch{return false;}
+}
+function productionInteger(value:unknown,minimum:number,maximum:number,optional=false):boolean{
+ if(optional&&(value===undefined||value===''))return true;
+ return typeof value==='string'&&/^\d+$/.test(value)&&Number.isSafeInteger(Number(value))&&Number(value)>=minimum&&Number(value)<=maximum;
+}
+
+export function validateProductionOperationsAdmission(env:NodeJS.ProcessEnv):void{
+ if(env.NODE_ENV!=='production')return;
+ const validCore=productionEmail(env.SUPPORT_OWNER_EMAIL)&&productionEmail(env.ALERT_OWNER_EMAIL)
+  &&productionHttpsUrl(env.MONITORING_DASHBOARD_URL)&&productionHttpsUrl(env.INCIDENT_RUNBOOK_URL)
+  &&productionInteger(env.SUPPORT_RESPONSE_TARGET_HOURS,1,168)
+  &&env.OPERATIONS_ALERT_DELIVERY==='webhook'&&productionHttpsUrl(env.OPERATIONS_ALERT_WEBHOOK_URL)
+  &&typeof env.OPERATIONS_ALERT_WEBHOOK_TOKEN==='string'&&!!env.OPERATIONS_ALERT_WEBHOOK_TOKEN.trim()&&!productionPlaceholder.test(env.OPERATIONS_ALERT_WEBHOOK_TOKEN);
+ const validOptional=productionInteger(env.OPERATIONS_ALERT_TIMEOUT_MS,1000,30000,true)
+  &&productionInteger(env.OPERATIONS_ALERT_RETRY_COOLDOWN_SECONDS,10,3600,true)
+  &&productionInteger(env.OPERATIONS_ALERT_EVENT_RETENTION_DAYS,1,3650,true)
+  &&productionInteger(env.OPERATIONS_ALERT_LEASE_SECONDS,10,600,true)
+  &&productionInteger(env.OPERATIONS_ALERT_MAX_RETRY_DELAY_SECONDS,10,86400,true)
+  &&productionInteger(env.OPERATIONS_ALERT_MAX_ATTEMPTS,1,20,true)
+  &&(env.OPERATIONS_ALERT_KEY_ID===undefined||/^[A-Za-z0-9_-]{1,64}$/.test(env.OPERATIONS_ALERT_KEY_ID));
+ const retryBase=Number(env.OPERATIONS_ALERT_RETRY_COOLDOWN_SECONDS||300),retryMax=Number(env.OPERATIONS_ALERT_MAX_RETRY_DELAY_SECONDS||3600);
+ if(!validCore||!validOptional||retryMax<retryBase)throw new Error('Production operations admission is invalid.');
+}
+
 export function validateApiRuntimeAdmission(env:NodeJS.ProcessEnv):void{
  validateRuntimeOwnership(env);
  if(env.NODE_ENV==='production'){
@@ -66,10 +96,12 @@ export function validateApiRuntimeAdmission(env:NodeJS.ProcessEnv):void{
 export function validateApiProcessAdmission(env:NodeJS.ProcessEnv):void{
  validateApiRuntimeAdmission(env);
  validateProductionDatabaseAdmission(env);
+ validateProductionOperationsAdmission(env);
 }
 
 export function validateWorkerRuntimeAdmission(env:NodeJS.ProcessEnv):number{
  validateRuntimeOwnership(env);
  validateProductionDatabaseAdmission(env);
+ validateProductionOperationsAdmission(env);
  return workerIntervalMs(env);
 }

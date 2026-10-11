@@ -34,6 +34,15 @@ function validEmail(value) {
   return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(String(value || "").trim()) && !placeholder.test(value);
 }
 
+function validControlUrl(value) {
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" && !url.username && !url.password && !placeholder.test(value);
+  } catch {
+    return false;
+  }
+}
+
 function validIsoDate(value) {
   const text = String(value || "").trim();
   const time = Date.parse(text);
@@ -152,18 +161,25 @@ export function validateEnvironment(env) {
   if (accessibilityAt && !validIsoDate(accessibilityAt)) errors.push("ACCESSIBILITY_VALIDATED_AT must be a past ISO timestamp.");
 
   const monitoringDashboard = requireValue("MONITORING_DASHBOARD_URL");
-  if (monitoringDashboard && !validUrl(monitoringDashboard, ["https:"])) errors.push("MONITORING_DASHBOARD_URL must be a production HTTPS URL.");
+  if (monitoringDashboard && !validControlUrl(monitoringDashboard)) errors.push("MONITORING_DASHBOARD_URL must be a production HTTPS URL without embedded credentials.");
   const incidentRunbook = requireValue("INCIDENT_RUNBOOK_URL");
-  if (incidentRunbook && !validUrl(incidentRunbook, ["https:"])) errors.push("INCIDENT_RUNBOOK_URL must be a production HTTPS URL.");
+  if (incidentRunbook && !validControlUrl(incidentRunbook)) errors.push("INCIDENT_RUNBOOK_URL must be a production HTTPS URL without embedded credentials.");
   const alertOwner = requireValue("ALERT_OWNER_EMAIL");
   if (alertOwner && !validEmail(alertOwner)) errors.push("ALERT_OWNER_EMAIL must identify the production alert owner.");
-  if (!positiveNumber(env.SUPPORT_RESPONSE_TARGET_HOURS, 1, 168)) errors.push("SUPPORT_RESPONSE_TARGET_HOURS must be between 1 and 168.");
+  if (typeof env.SUPPORT_RESPONSE_TARGET_HOURS !== "string" || !/^\d+$/.test(env.SUPPORT_RESPONSE_TARGET_HOURS) || !wholeNumber(env.SUPPORT_RESPONSE_TARGET_HOURS, 1, 168)) errors.push("SUPPORT_RESPONSE_TARGET_HOURS must be a whole number between 1 and 168.");
   if (env.OPERATIONS_ALERT_DELIVERY !== "webhook") errors.push("OPERATIONS_ALERT_DELIVERY must be webhook in production.");
-  if (!validUrl(env.OPERATIONS_ALERT_WEBHOOK_URL, ["https:"])) errors.push("OPERATIONS_ALERT_WEBHOOK_URL must be a production HTTPS URL.");
+  if (!validControlUrl(env.OPERATIONS_ALERT_WEBHOOK_URL)) errors.push("OPERATIONS_ALERT_WEBHOOK_URL must be a production HTTPS URL without embedded credentials.");
   requireValue("OPERATIONS_ALERT_WEBHOOK_TOKEN");
-  if (env.OPERATIONS_ALERT_TIMEOUT_MS && !positiveNumber(env.OPERATIONS_ALERT_TIMEOUT_MS, 1000, 30000)) errors.push("OPERATIONS_ALERT_TIMEOUT_MS must be between 1000 and 30000.");
-  if (env.OPERATIONS_ALERT_RETRY_COOLDOWN_SECONDS && !positiveNumber(env.OPERATIONS_ALERT_RETRY_COOLDOWN_SECONDS, 10, 3600)) errors.push("OPERATIONS_ALERT_RETRY_COOLDOWN_SECONDS must be between 10 and 3600.");
-  if (env.OPERATIONS_ALERT_EVENT_RETENTION_DAYS && !positiveNumber(env.OPERATIONS_ALERT_EVENT_RETENTION_DAYS, 1, 3650)) errors.push("OPERATIONS_ALERT_EVENT_RETENTION_DAYS must be between 1 and 3650.");
+  if (env.OPERATIONS_ALERT_KEY_ID !== undefined && !/^[A-Za-z0-9_-]{1,64}$/.test(env.OPERATIONS_ALERT_KEY_ID)) errors.push("OPERATIONS_ALERT_KEY_ID must contain only letters, numbers, underscores or hyphens.");
+  for (const [key,minimum,maximum] of [
+    ["OPERATIONS_ALERT_TIMEOUT_MS",1000,30000],
+    ["OPERATIONS_ALERT_RETRY_COOLDOWN_SECONDS",10,3600],
+    ["OPERATIONS_ALERT_EVENT_RETENTION_DAYS",1,3650],
+    ["OPERATIONS_ALERT_LEASE_SECONDS",10,600],
+    ["OPERATIONS_ALERT_MAX_RETRY_DELAY_SECONDS",10,86400],
+    ["OPERATIONS_ALERT_MAX_ATTEMPTS",1,20]
+  ]) if (env[key] !== undefined && env[key] !== "" && (typeof env[key] !== "string" || !/^\d+$/.test(env[key]) || !wholeNumber(env[key], minimum, maximum))) errors.push(`${key} must be a whole number between ${minimum} and ${maximum}.`);
+  if (wholeNumber(env.OPERATIONS_ALERT_RETRY_COOLDOWN_SECONDS || "300",10,3600) && wholeNumber(env.OPERATIONS_ALERT_MAX_RETRY_DELAY_SECONDS || "3600",10,86400) && Number(env.OPERATIONS_ALERT_MAX_RETRY_DELAY_SECONDS || 3600) < Number(env.OPERATIONS_ALERT_RETRY_COOLDOWN_SECONDS || 300)) errors.push("OPERATIONS_ALERT_MAX_RETRY_DELAY_SECONDS must be at least OPERATIONS_ALERT_RETRY_COOLDOWN_SECONDS.");
 
   if (!["true", "false"].includes(String(env.SUBSCRIPTIONS_ENABLED).toLowerCase())) errors.push("SUBSCRIPTIONS_ENABLED must be true or false.");
   if (isTrue(env.SUBSCRIPTIONS_ENABLED)) {

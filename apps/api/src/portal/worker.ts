@@ -2,9 +2,9 @@ import path from 'node:path';
 import { LocalStore, PgStore, startupMigrations, type Store } from './store';
 import { OperationalWorker, identityDeletionFromEnv, notificationDeliveryFromEnv, writeWorkerHeartbeat } from './operations';
 import { startWorkerLoop } from './worker-runtime';
+import { validateRuntimeOwnership, workerIntervalMs } from './runtime-admission';
 
 const env=process.env;
-const interval=Math.max(15,Math.min(3600,Number(env.WORKER_INTERVAL_SECONDS)||60))*1000;
 const healthFile=env.WORKER_HEALTH_FILE||'/tmp/mgt-worker-health.json';
 async function openStore():Promise<Store>{
  const migrate=startupMigrations(env);
@@ -13,6 +13,8 @@ async function openStore():Promise<Store>{
  return new LocalStore(env.PORTAL_DB_PATH||path.resolve(process.cwd(),'../../work/data/portal.sqlite'));
 }
 async function main(){
+ validateRuntimeOwnership(env);
+ const interval=workerIntervalMs(env);
  const store=await openStore();const worker=new OperationalWorker(store,{env,delivery:notificationDeliveryFromEnv(env),identityDeletion:identityDeletionFromEnv(env)});
  const stopLoop=startWorkerLoop(async()=>{const result=await worker.runOnce();await writeWorkerHeartbeat(healthFile,result);console.log(JSON.stringify({worker:'portal-operations',...result}));},interval,code=>console.error(JSON.stringify({worker:'portal-operations',event:code})));
  let stopping:Promise<void>|undefined;

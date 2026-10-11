@@ -3,6 +3,7 @@ const { test } = require('node:test');
 const { spawnSync } = require('node:child_process');
 const path = require('node:path');
 const { validateRuntimeOwnership, workerIntervalMs } = require('../dist/portal/runtime-admission');
+const { createPortal } = require('../dist/portal/server');
 const owner = 'Gregg Clark of MGT';
 const valid = { NODE_ENV:'production', RELEASE_OWNER_NAME:owner, SUPPORT_OWNER_NAME:owner, WORKER_INTERVAL_SECONDS:'60' };
 
@@ -32,6 +33,18 @@ test('production requires exact independent release and support declarations wit
     }
   }
   assert.doesNotThrow(() => validateRuntimeOwnership({NODE_ENV:'test'}));
+});
+
+test('exported production app constructor enforces owner and worker timing before store use', async () => {
+  for (const overrides of [
+    {RELEASE_OWNER_NAME:'altered'},
+    {SUPPORT_OWNER_NAME:'altered'},
+    {WORKER_INTERVAL_SECONDS:'1e2'}
+  ]) {
+    const env={...valid,DEMO_MODE:'false',PUBLIC_ORIGIN:'https://portal.example',...overrides};
+    const store={kind:'postgres',tx:async()=>{throw new Error('STORE_ACCESSED');},close:async()=>{}};
+    await assert.rejects(createPortal({store,env}),error=>error.message!=='STORE_ACCESSED');
+  }
 });
 
 test('production interval rejects invalid inputs rather than falling back or clamping', () => {

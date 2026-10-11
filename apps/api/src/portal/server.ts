@@ -1,5 +1,5 @@
 import {installBilling,installSubscriptionWebhook,subscriptionBillingConfigured} from './billing';
-import {validateRuntimeOwnership} from './runtime-admission';
+import {validateRuntimeOwnership,workerIntervalMs} from './runtime-admission';
 import {portalV1Router,portalEntitlement,portalUsageAccount,ownEntitlement} from './subscriptions';
 import {installGuestAccess,activeGuestAccess} from './guest-access';
 import {readProfile,lockProfile,saveProfile} from './profiles';
@@ -92,6 +92,7 @@ function profileInput(b:any):SkinProfileInput{
 }
 export async function createPortal(options:PortalOptions){
  const env=options.env||process.env,db=options.store,prod=env.NODE_ENV==='production',demo=env.DEMO_MODE==='true';
+ if(prod){validateRuntimeOwnership(env);workerIntervalMs(env);}
  const origin=env.PUBLIC_ORIGIN||'http://localhost:3000';const stripe=options.stripe||(env.STRIPE_SECRET_KEY?new Stripe(env.STRIPE_SECRET_KEY,{maxNetworkRetries:2,timeout:15000}):undefined),gateway=options.analysisGateway||gatewayFromEnv(env,db,new StoreRoutingLogSink(db)),coach=options.coach||new SafeCoach([],gateway);
  check(!prod||db.kind==='postgres',500,'production_storage','Production requires PostgreSQL.');
  check(!prod||!demo,500,'production_demo','Demo catalog cannot run in production.');

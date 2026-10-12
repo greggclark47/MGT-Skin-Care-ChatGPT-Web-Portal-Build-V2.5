@@ -26,7 +26,7 @@ export function validateProductionDatabaseUrl(url:string,env:NodeJS.ProcessEnv=p
  throw new Error('Production DATABASE_URL requires one host and verified TLS without query target overrides.');
 }
 export function portalPoolConfig(url:string):PoolConfig{
- return {connectionString:url,max:10,connectionTimeoutMillis:5000,statement_timeout:10000,query_timeout:12000,lock_timeout:5000,idle_in_transaction_session_timeout:15000,idleTimeoutMillis:30000,maxLifetimeSeconds:300,keepAlive:true,keepAliveInitialDelayMillis:10000};
+ return {connectionString:url,application_name:'mgt_skin_care_portal',max:10,connectionTimeoutMillis:5000,statement_timeout:10000,query_timeout:12000,lock_timeout:5000,idle_in_transaction_session_timeout:15000,idleTimeoutMillis:30000,maxLifetimeSeconds:300,keepAlive:true,keepAliveInitialDelayMillis:10000};
 }
 type PoolErrorSource={on:(event:'error',listener:(error:Error&{code?:string})=>void)=>unknown};
 export function installDatabasePoolErrorBoundary(pool:PoolErrorSource,log:(record:{event:string;code:string})=>void=(record)=>console.error(JSON.stringify(record))):void{

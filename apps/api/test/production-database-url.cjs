@@ -9,6 +9,7 @@ assert.equal(portalPoolConfig(baseline.toString()).idleTimeoutMillis,30000);
 assert.equal(portalPoolConfig(baseline.toString()).query_timeout,12000);
 assert.equal(portalPoolConfig(baseline.toString()).idle_in_transaction_session_timeout,15000);
 assert.equal(portalPoolConfig(baseline.toString()).lock_timeout,5000);
+assert.equal(portalPoolConfig(baseline.toString()).application_name,'mgt_skin_care_portal');
 assert.equal(portalPoolConfig(baseline.toString()).maxLifetimeSeconds,300);
 assert.equal(portalPoolConfig(baseline.toString()).keepAlive,true);
 assert.equal(portalPoolConfig(baseline.toString()).keepAliveInitialDelayMillis,10000);

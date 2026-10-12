@@ -1,13 +1,27 @@
 const assert=require('node:assert/strict');
 const {test}=require('node:test');
 const {createServer}=require('node:http');
-const {acceptsApiJsonBody,apiSecurityHeaders,applyProductionHttpTimeouts,applyProductionHttpLimits,applyProductionExpressBoundary,closeProductionHttpServer,isSupportedHttpMethod,requestTargetWithinLimit}=require('../dist/portal/http-runtime');
+const {acceptsApiJsonBody,apiSecurityHeaders,applyProductionHttpTimeouts,applyProductionHttpLimits,applyProductionExpressBoundary,closeProductionHttpServer,installClientErrorBoundary,isSupportedHttpMethod,requestTargetWithinLimit}=require('../dist/portal/http-runtime');
 
 test('request targets are bounded by UTF-8 byte length',()=>{
  assert.equal(requestTargetWithinLimit('/api/hub/catalog?query=clean'),true);
  assert.equal(requestTargetWithinLimit('/'+ 'a'.repeat(4096)),false);
  assert.equal(requestTargetWithinLimit('/'+ 'é'.repeat(2048)),false);
  assert.equal(requestTargetWithinLimit(undefined),false);
+});
+
+test('malformed socket input receives a minimal close response and sanitized audit code',()=>{
+ let listener,ended='',destroyed=false;
+ const logs=[],server={on:(event,callback)=>{assert.equal(event,'clientError');listener=callback;}};
+ installClientErrorBoundary(server,record=>logs.push(record));
+ const error=Object.assign(new Error('raw request material must not be logged'),{code:'HPE_HEADER_OVERFLOW'});
+ listener(error,{writable:true,end:data=>{ended=data;},destroy:()=>{destroyed=true;}});
+ assert.deepEqual(logs,[{event:'http_client_error',code:'HPE_HEADER_OVERFLOW'}]);
+ assert.equal(ended,'HTTP/1.1 400 Bad Request\r\nConnection: close\r\nContent-Length: 0\r\n\r\n');
+ assert.equal(destroyed,false);
+ listener(Object.assign(new Error('secret'),{code:'bad code'}),{writable:false,end:()=>{},destroy:()=>{destroyed=true;}});
+ assert.deepEqual(logs[1],{event:'http_client_error',code:'client_error'});
+ assert.equal(destroyed,true);
 });
 
 test('API security headers deny browser capabilities and enable HSTS only in production',()=>{

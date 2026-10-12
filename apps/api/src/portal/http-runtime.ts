@@ -2,6 +2,8 @@ type HttpTimeoutServer={requestTimeout:number;headersTimeout:number;keepAliveTim
 type HttpLimitServer={maxRequestsPerSocket:number|null;maxHeadersCount:number|null;maxConnections:number};
 type ExpressBoundary={disable:(name:string)=>unknown;set:(name:string,value:unknown)=>unknown};
 type ClosableServer={close:(callback:(error?:Error)=>void)=>unknown;closeIdleConnections?:()=>void;closeAllConnections?:()=>void};
+type ClientErrorSocket={writable:boolean;end:(data:string)=>unknown;destroy:()=>unknown};
+type ClientErrorServer={on:(event:'clientError',listener:(error:Error&{code?:string},socket:ClientErrorSocket)=>void)=>unknown};
 
 export function requestTargetWithinLimit(target:string|undefined,maxBytes=4_096):boolean{
  if(typeof target!=='string'||target.length===0)return false;
@@ -32,6 +34,15 @@ export function apiSecurityHeaders(env:NodeJS.ProcessEnv):Record<string,string>{
  };
  if(env.NODE_ENV==='production')headers['Strict-Transport-Security']='max-age=31536000; includeSubDomains';
  return headers;
+}
+
+export function installClientErrorBoundary(server:ClientErrorServer,log:(record:{event:string;code:string})=>void=(record)=>console.error(JSON.stringify(record))):void{
+ server.on('clientError',(error,socket)=>{
+  const code=typeof error.code==='string'&&/^[A-Z0-9_]{1,64}$/.test(error.code)?error.code:'client_error';
+  log({event:'http_client_error',code});
+  if(socket.writable)socket.end('HTTP/1.1 400 Bad Request\r\nConnection: close\r\nContent-Length: 0\r\n\r\n');
+  else socket.destroy();
+ });
 }
 
 export function applyProductionHttpTimeouts(server:HttpTimeoutServer,env:NodeJS.ProcessEnv):void{

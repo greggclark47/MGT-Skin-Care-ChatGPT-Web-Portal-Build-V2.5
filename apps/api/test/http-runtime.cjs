@@ -1,7 +1,14 @@
 const assert=require('node:assert/strict');
 const {test}=require('node:test');
 const {createServer}=require('node:http');
-const {applyProductionHttpTimeouts,applyProductionHttpLimits,applyProductionExpressBoundary,closeProductionHttpServer}=require('../dist/portal/http-runtime');
+const {applyProductionHttpTimeouts,applyProductionHttpLimits,applyProductionExpressBoundary,closeProductionHttpServer,requestTargetWithinLimit}=require('../dist/portal/http-runtime');
+
+test('request targets are bounded by UTF-8 byte length',()=>{
+ assert.equal(requestTargetWithinLimit('/api/hub/catalog?query=clean'),true);
+ assert.equal(requestTargetWithinLimit('/'+ 'a'.repeat(4096)),false);
+ assert.equal(requestTargetWithinLimit('/'+ 'é'.repeat(2048)),false);
+ assert.equal(requestTargetWithinLimit(undefined),false);
+});
 
 test('production HTTP server uses bounded request, header, and keep-alive timeouts',()=>{
  const server=createServer();

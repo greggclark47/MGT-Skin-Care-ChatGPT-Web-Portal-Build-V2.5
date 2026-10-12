@@ -3,6 +3,11 @@ type HttpLimitServer={maxRequestsPerSocket:number|null;maxHeadersCount:number|nu
 type ExpressBoundary={disable:(name:string)=>unknown;set:(name:string,value:unknown)=>unknown};
 type ClosableServer={close:(callback:(error?:Error)=>void)=>unknown;closeIdleConnections?:()=>void;closeAllConnections?:()=>void};
 
+export function requestTargetWithinLimit(target:string|undefined,maxBytes=4_096):boolean{
+ if(typeof target!=='string'||target.length===0)return false;
+ return Buffer.byteLength(target,'utf8')<=maxBytes;
+}
+
 export function applyProductionHttpTimeouts(server:HttpTimeoutServer,env:NodeJS.ProcessEnv):void{
  if(env.NODE_ENV!=='production')return;
  server.requestTimeout=30_000;

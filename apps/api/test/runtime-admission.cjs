@@ -81,6 +81,16 @@ test('production portal boundary requires explicit non-demo mode and one exact H
   assert.doesNotThrow(()=>validateProductionPortalBoundary({NODE_ENV:'test'}));
 });
 
+test('production runtime and preflight require the same exact demo-mode declaration', async () => {
+  const {validateEnvironment}=await import('../../../infra/portal/preflight.mjs');
+  for(const value of [undefined,'','false','False','FALSE','true','0',false]){
+    const env={...valid,...operational,...notification,...identity,...backup,...accessibility,...subscription,...ai,...processSurface,...images,PORTAL_AUTO_MIGRATE:'false',DATABASE_URL:'postgresql://db.invalid/mgt?sslmode=verify-full',DEMO_MODE:value};
+    let runtimeAccepts=true;try{validateProductionPortalBoundary(env);}catch{runtimeAccepts=false;}
+    const preflightAccepts=!validateEnvironment(env).errors.some(error=>error.startsWith('DEMO_MODE'));
+    assert.equal(runtimeAccepts,preflightAccepts,JSON.stringify(value));
+  }
+});
+
 test('exported production app constructor rejects unsafe portal boundaries before store use', async () => {
   for (const overrides of [{DEMO_MODE:'true'},{PUBLIC_ORIGIN:'https://portal.example/path'},{PORTAL_DOMAIN:'other.example'}]) {
     const store={kind:'postgres',tx:async()=>{throw new Error('STORE_ACCESSED');},close:async()=>{}};

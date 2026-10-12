@@ -100,7 +100,7 @@ export function validateEnvironment(env) {
   };
 
   if (env.NODE_ENV !== "production") errors.push("NODE_ENV must be production.");
-  if (String(env.DEMO_MODE).toLowerCase() !== "false") errors.push("DEMO_MODE must be false.");
+  if (env.DEMO_MODE !== "false") errors.push("DEMO_MODE must be exactly false.");
 
   const publicOrigin = requireValue("PUBLIC_ORIGIN");
   if (publicOrigin && !validUrl(publicOrigin, ["https:"])) errors.push("PUBLIC_ORIGIN must be a valid HTTPS origin.");

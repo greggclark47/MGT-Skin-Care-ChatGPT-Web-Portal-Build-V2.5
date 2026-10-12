@@ -54,6 +54,15 @@ test("accepts the proposed external database configuration without proving live 
   assert.ok(result.warnings.some((warning) => warning.includes("OpenAI")));
 });
 
+test("requires the exact lowercase production demo-mode declaration", () => {
+  assert.equal(validateEnvironment(production).ok, true);
+  for (const value of [undefined, "", "False", "FALSE", "true", "0", false]) {
+    const result = validateEnvironment({ ...production, DEMO_MODE: value });
+    assert.equal(result.ok, false, JSON.stringify(value));
+    assert.ok(result.errors.some((error) => error.startsWith("DEMO_MODE")));
+  }
+});
+
 test("rejects unverified database TLS and automatic production migrations", () => {
   const result=validateEnvironment({...production,DATABASE_URL:production.DATABASE_URL.replace('verify-full','disable'),PORTAL_AUTO_MIGRATE:'true'});
   assert.equal(result.ok,false);

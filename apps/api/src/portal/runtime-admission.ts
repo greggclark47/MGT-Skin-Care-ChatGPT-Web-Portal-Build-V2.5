@@ -70,7 +70,10 @@ function productionHttpsOrigin(value:unknown):boolean{
 }
 function productionServiceUrl(value:unknown):boolean{
  if(typeof value!=='string'||value.length>2048||value!==value.trim())return false;
- try{const parsed=new URL(value);return (parsed.protocol==='http:'||parsed.protocol==='https:')&&!parsed.username&&!parsed.password&&!parsed.search&&!parsed.hash&&!productionPlaceholder.test(value);}catch{return false;}
+ try{
+  const parsed=new URL(value),privateHttp=parsed.protocol==='http:'&&/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(parsed.hostname),externalHttps=parsed.protocol==='https:'&&productionHostname(parsed.hostname);
+  return (privateHttp||externalHttps)&&!parsed.username&&!parsed.password&&!parsed.search&&!parsed.hash&&!productionPlaceholder.test(value);
+ }catch{return false;}
 }
 function configuredReference(value:unknown):value is string{return typeof value==='string'&&value.length>0&&value.length<=4096&&value===value.trim()&&!/[\u0000-\u001f\u007f]/.test(value)&&!productionPlaceholder.test(value);}
 function optionalReference(value:unknown):boolean{return value===undefined||value===''||configuredReference(value);}

@@ -413,6 +413,19 @@ test("requires immutable deployable API and web application images", () => {
   assert.ok(result.errors.some((error) => error.startsWith("WEB_IMAGE")));
 });
 
+test("limits plain HTTP AI endpoints to private single-label services", () => {
+  for (const changed of [
+    { OLLAMA_BASE_URL: "http://ollama.internal:11434" },
+    { OLLAMA_BASE_URL: "http://192.0.2.10:11434" },
+    { OPENCLAW_BASE_URL: "http://openclaw.internal:8080" },
+    { OPENCLAW_BASE_URL: "https://openclaw_internal" }
+  ]) {
+    const result = validateEnvironment({ ...production, OPENCLAW_ENABLED: "true", OPENCLAW_API_MODE: "ollama", OPENCLAW_BASE_URL: "https://openclaw.internal", ...changed });
+    assert.equal(result.ok, false, JSON.stringify(changed));
+    assert.ok(result.errors.some((error) => /^(OLLAMA_BASE_URL|OPENCLAW_BASE_URL)/.test(error)));
+  }
+});
+
 test("rejects hidden routing and whitespace on AI service URLs", () => {
   for (const changed of [
     { OLLAMA_BASE_URL: "https://ollama.internal?model=other" },

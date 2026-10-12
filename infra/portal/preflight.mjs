@@ -62,8 +62,10 @@ function validServiceOrigin(value) {
 function validAiServiceUrl(value) {
   try {
     const url = new URL(value);
+    const privateHttp = url.protocol === "http:" && /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(url.hostname);
+    const externalHttps = url.protocol === "https:" && validProductionHostname(url.hostname);
     return typeof value === "string" && value.length <= 2048 && value === value.trim()
-      && ["http:", "https:"].includes(url.protocol) && !url.username && !url.password && !url.search && !url.hash && !placeholder.test(value);
+      && (privateHttp || externalHttps) && !url.username && !url.password && !url.search && !url.hash && !placeholder.test(value);
   } catch {
     return false;
   }
@@ -150,11 +152,11 @@ export function validateEnvironment(env) {
   if (serviceRole && serviceRole === env.SUPABASE_ANON_KEY) errors.push("SUPABASE_SERVICE_ROLE_KEY must differ from SUPABASE_ANON_KEY.");
 
   if (!["true", "false"].includes(env.OLLAMA_ENABLED)) errors.push("OLLAMA_ENABLED must be exactly true or false.");
-  if (env.OLLAMA_ENABLED === "true" && !validAiServiceUrl(env.OLLAMA_BASE_URL)) errors.push("OLLAMA_BASE_URL must be a bounded credential-free HTTP(S) URL without query or fragment when Ollama is enabled.");
+  if (env.OLLAMA_ENABLED === "true" && !validAiServiceUrl(env.OLLAMA_BASE_URL)) errors.push("OLLAMA_BASE_URL must use HTTPS or a canonical single-label private HTTP service without credentials, query, or fragment.");
 
   if (!["true", "false"].includes(env.OPENCLAW_ENABLED)) errors.push("OPENCLAW_ENABLED must be exactly true or false.");
   if (env.OPENCLAW_ENABLED === "true") {
-    if (!validAiServiceUrl(env.OPENCLAW_BASE_URL)) errors.push("OPENCLAW_BASE_URL must be a bounded credential-free HTTP(S) URL without query or fragment when OpenClaw is enabled.");
+    if (!validAiServiceUrl(env.OPENCLAW_BASE_URL)) errors.push("OPENCLAW_BASE_URL must use HTTPS or a canonical single-label private HTTP service without credentials, query, or fragment.");
     const openClawMode = env.OPENCLAW_API_MODE;
     if (!["ollama", "openai-completions"].includes(openClawMode)) errors.push("OPENCLAW_API_MODE must be ollama or openai-completions.");
     if (openClawMode === "openai-completions") {

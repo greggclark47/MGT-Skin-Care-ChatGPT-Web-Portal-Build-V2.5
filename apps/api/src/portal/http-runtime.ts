@@ -26,6 +26,12 @@ export function acceptsApiContentEncoding(contentEncoding:string|undefined):bool
  return contentEncoding===undefined||contentEncoding.trim().toLowerCase()==='identity';
 }
 
+export function acceptsApiJsonCharset(contentType:string|undefined):boolean{
+ if(contentType===undefined)return true;
+ const charsets=contentType.split(';').slice(1).map(value=>value.trim()).filter(value=>/^charset\s*=/i.test(value));
+ return charsets.length===0||(charsets.length===1&&/^charset\s*=\s*"?utf-8"?$/i.test(charsets[0]));
+}
+
 export function apiSecurityHeaders(env:NodeJS.ProcessEnv):Record<string,string>{
  const headers:Record<string,string>={
   'X-Content-Type-Options':'nosniff',

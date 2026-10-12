@@ -1,7 +1,7 @@
 const assert=require('node:assert/strict');
 const {test}=require('node:test');
 const {createServer}=require('node:http');
-const {acceptsApiContentEncoding,acceptsApiJsonBody,acceptsApiJsonCharset,apiSecurityHeaders,applyProductionHttpTimeouts,applyProductionHttpLimits,applyProductionExpressBoundary,closeProductionHttpServer,installClientErrorBoundary,isSupportedHttpMethod,requestTargetWithinLimit}=require('../dist/portal/http-runtime');
+const {acceptsApiContentEncoding,acceptsApiJsonBody,acceptsApiJsonCharset,acceptsBodyForMethod,apiSecurityHeaders,applyProductionHttpTimeouts,applyProductionHttpLimits,applyProductionExpressBoundary,closeProductionHttpServer,installClientErrorBoundary,isSupportedHttpMethod,requestTargetWithinLimit}=require('../dist/portal/http-runtime');
 
 test('request targets are bounded by UTF-8 byte length',()=>{
  assert.equal(requestTargetWithinLimit('/api/hub/catalog?query=clean'),true);
@@ -57,6 +57,14 @@ test('API JSON character decoding is unambiguously UTF-8',()=>{
  assert.equal(acceptsApiJsonCharset('application/json; charset="utf-8"'),true);
  assert.equal(acceptsApiJsonCharset('application/json; charset=iso-8859-1'),false);
  assert.equal(acceptsApiJsonCharset('application/json; charset=utf-8; charset=utf-8'),false);
+});
+
+test('read-only API methods reject request bodies',()=>{
+ assert.equal(acceptsBodyForMethod('GET',undefined,undefined),true);
+ assert.equal(acceptsBodyForMethod('HEAD','0',undefined),true);
+ assert.equal(acceptsBodyForMethod('GET','2',undefined),false);
+ assert.equal(acceptsBodyForMethod('HEAD',undefined,'chunked'),false);
+ assert.equal(acceptsBodyForMethod('POST','2',undefined),true);
 });
 
 test('only the bounded REST method set reaches application routes',()=>{

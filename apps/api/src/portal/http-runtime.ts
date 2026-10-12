@@ -32,6 +32,12 @@ export function acceptsApiJsonCharset(contentType:string|undefined):boolean{
  return charsets.length===0||(charsets.length===1&&/^charset\s*=\s*"?utf-8"?$/i.test(charsets[0]));
 }
 
+export function acceptsBodyForMethod(method:string|undefined,contentLength:string|undefined,transferEncoding:string|undefined):boolean{
+ const readOnly=typeof method==='string'&&['GET','HEAD'].includes(method.toUpperCase());
+ const hasBody=transferEncoding!==undefined||(contentLength!==undefined&&contentLength!=='0');
+ return !readOnly||!hasBody;
+}
+
 export function apiSecurityHeaders(env:NodeJS.ProcessEnv):Record<string,string>{
  const headers:Record<string,string>={
   'X-Content-Type-Options':'nosniff',

@@ -35,6 +35,7 @@ const production = {
   OPERATIONS_ALERT_DELIVERY: "webhook",
   OPERATIONS_ALERT_WEBHOOK_URL: "https://alerts.mgtskincare.test/events",
   OPERATIONS_ALERT_WEBHOOK_TOKEN: "configured-alert-token",
+  OPERATIONS_ALERT_KEY_ID: "primary",
   OPERATIONS_ALERT_TIMEOUT_MS: "10000",
   OPERATIONS_ALERT_RETRY_COOLDOWN_SECONDS: "300",
   OPERATIONS_ALERT_EVENT_RETENTION_DAYS: "90",
@@ -303,6 +304,19 @@ test("rejects an invalid notification webhook key identifier before deployment",
   });
   assert.equal(result.ok, false);
   assert.ok(result.errors.some((error) => error.startsWith("NOTIFICATION_WEBHOOK_KEY_ID")));
+});
+
+test("requires signing-key identifiers for every webhook channel", () => {
+  const missingOperations = validateEnvironment({ ...production, OPERATIONS_ALERT_KEY_ID: undefined });
+  assert.ok(missingOperations.errors.some((error) => error.startsWith("OPERATIONS_ALERT_KEY_ID")));
+  const missingNotification = validateEnvironment({
+    ...production,
+    NOTIFICATION_DELIVERY: "webhook",
+    NOTIFICATION_WEBHOOK_URL: "https://notifications.example.test/events",
+    NOTIFICATION_WEBHOOK_TOKEN: "test-only-token",
+    NOTIFICATION_WEBHOOK_KEY_ID: undefined
+  });
+  assert.ok(missingNotification.errors.some((error) => error.startsWith("NOTIFICATION_WEBHOOK_KEY_ID")));
 });
 
 test("rejects invalid notification retry policy before deployment", () => {

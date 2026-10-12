@@ -24,7 +24,7 @@ const ENV = {
   ACCESSIBILITY_VALIDATED_AT: "2026-01-01T00:00:00.000Z", MONITORING_DASHBOARD_URL: "https://monitoring.mgt-skin-care.test/dashboard",
   INCIDENT_RUNBOOK_URL: "https://operations.mgt-skin-care.test/runbook", ALERT_OWNER_EMAIL: "alerts@mgt-skin-care.test", SUPPORT_RESPONSE_TARGET_HOURS: "24",
   OPERATIONS_ALERT_DELIVERY: "webhook", OPERATIONS_ALERT_WEBHOOK_URL: "https://alerts.mgt-skin-care.test/events",
-  OPERATIONS_ALERT_WEBHOOK_TOKEN: "configured-alert-token", SUBSCRIPTIONS_ENABLED: "false"
+  OPERATIONS_ALERT_WEBHOOK_TOKEN: "configured-alert-token", OPERATIONS_ALERT_KEY_ID: "primary", SUBSCRIPTIONS_ENABLED: "false"
 };
 const PREREQUISITES = buildProductionPrerequisites({ env: ENV, candidateCommit: "0123456789abcdef0123456789abcdef01234567" });
 

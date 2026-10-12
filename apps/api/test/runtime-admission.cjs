@@ -155,7 +155,7 @@ test('production operations admission matches preflight support, monitoring, and
     {OPERATIONS_ALERT_WEBHOOK_TOKEN:'change-me'},{OPERATIONS_ALERT_WEBHOOK_TOKEN:' configured-alert-token '},{OPERATIONS_ALERT_WEBHOOK_TOKEN:'configured\nalert-token'},{OPERATIONS_ALERT_TIMEOUT_MS:'1e4'},
     {OPERATIONS_ALERT_RETRY_COOLDOWN_SECONDS:'9'},{OPERATIONS_ALERT_EVENT_RETENTION_DAYS:'0'},
     {OPERATIONS_ALERT_LEASE_SECONDS:'9'},{OPERATIONS_ALERT_MAX_RETRY_DELAY_SECONDS:'299'},
-    {OPERATIONS_ALERT_MAX_ATTEMPTS:'21'},{OPERATIONS_ALERT_KEY_ID:'not valid'}
+    {OPERATIONS_ALERT_MAX_ATTEMPTS:'21'},{OPERATIONS_ALERT_KEY_ID:undefined},{OPERATIONS_ALERT_KEY_ID:''},{OPERATIONS_ALERT_KEY_ID:'not valid'}
   ];
   const operationalKeys=new Set([...Object.keys(operational),'OPERATIONS_ALERT_MAX_RETRY_DELAY_SECONDS']);
   for(const overrides of cases){
@@ -179,7 +179,7 @@ test('production notification admission matches preflight delivery and retry bou
     {NOTIFICATION_WEBHOOK_URL:'http://notifications.mgtskincare.test/events'},
     {NOTIFICATION_WEBHOOK_URL:'https://operator@notifications.mgtskincare.test/events'},{NOTIFICATION_WEBHOOK_URL:'https://notifications.mgtskincare.test/events#alternate'},
     {NOTIFICATION_WEBHOOK_TOKEN:''},{NOTIFICATION_WEBHOOK_TOKEN:'change-me'},{NOTIFICATION_WEBHOOK_TOKEN:' configured-notification-token '},{NOTIFICATION_WEBHOOK_TOKEN:'configured\tnotification-token'},
-    {NOTIFICATION_WEBHOOK_KEY_ID:''},{NOTIFICATION_WEBHOOK_KEY_ID:'not valid'},
+    {NOTIFICATION_WEBHOOK_KEY_ID:undefined},{NOTIFICATION_WEBHOOK_KEY_ID:''},{NOTIFICATION_WEBHOOK_KEY_ID:'not valid'},
     {NOTIFICATION_WEBHOOK_TIMEOUT_MS:''},{NOTIFICATION_WEBHOOK_TIMEOUT_MS:'1e4'},
     {NOTIFICATION_RETRY_COOLDOWN_SECONDS:'3e2'},{NOTIFICATION_RETRY_COOLDOWN_SECONDS:'9'},
     {NOTIFICATION_MAX_RETRY_DELAY_SECONDS:'300.0'},{NOTIFICATION_MAX_RETRY_DELAY_SECONDS:'299'},
@@ -411,7 +411,7 @@ for (const entry of ['server','worker']) test(`${entry} rejects unsafe operation
     {SUPPORT_RESPONSE_TARGET_HOURS:'24.0'},{OPERATIONS_ALERT_DELIVERY:'disabled'},
     {OPERATIONS_ALERT_WEBHOOK_URL:'http://alerts.mgtskincare.test/events'},{OPERATIONS_ALERT_WEBHOOK_URL:'https://alerts.mgtskincare.test/events?token=hidden'},{OPERATIONS_ALERT_WEBHOOK_TOKEN:'change-me'},{OPERATIONS_ALERT_WEBHOOK_TOKEN:' configured-alert-token '},{OPERATIONS_ALERT_WEBHOOK_TOKEN:'configured\nalert-token'},
     {OPERATIONS_ALERT_TIMEOUT_MS:'1e4'},{OPERATIONS_ALERT_LEASE_SECONDS:'9'},
-    {OPERATIONS_ALERT_MAX_RETRY_DELAY_SECONDS:'299'},{OPERATIONS_ALERT_MAX_ATTEMPTS:'21'},{OPERATIONS_ALERT_KEY_ID:'not valid'}
+    {OPERATIONS_ALERT_MAX_RETRY_DELAY_SECONDS:'299'},{OPERATIONS_ALERT_MAX_ATTEMPTS:'21'},{OPERATIONS_ALERT_KEY_ID:undefined},{OPERATIONS_ALERT_KEY_ID:''},{OPERATIONS_ALERT_KEY_ID:'not valid'}
   ]) {
     const child=probeStartup(entry,overrides);
     assert.equal(child.error,undefined);
@@ -424,7 +424,7 @@ for (const entry of ['server','worker']) test(`${entry} rejects unsafe operation
 for (const entry of ['server','worker']) test(`${entry} rejects unsafe notification controls before database initialization`, () => {
   for (const overrides of [
     {NOTIFICATION_DELIVERY:'disabled'},{NOTIFICATION_WEBHOOK_URL:'http://notifications.mgtskincare.test/events'},{NOTIFICATION_WEBHOOK_URL:'https://notifications.mgtskincare.test/events#alternate'},
-    {NOTIFICATION_WEBHOOK_TOKEN:'change-me'},{NOTIFICATION_WEBHOOK_TOKEN:' configured-notification-token '},{NOTIFICATION_WEBHOOK_TOKEN:'configured\tnotification-token'},{NOTIFICATION_WEBHOOK_KEY_ID:'not valid'},
+    {NOTIFICATION_WEBHOOK_TOKEN:'change-me'},{NOTIFICATION_WEBHOOK_TOKEN:' configured-notification-token '},{NOTIFICATION_WEBHOOK_TOKEN:'configured\tnotification-token'},{NOTIFICATION_WEBHOOK_KEY_ID:undefined},{NOTIFICATION_WEBHOOK_KEY_ID:''},{NOTIFICATION_WEBHOOK_KEY_ID:'not valid'},
     {NOTIFICATION_WEBHOOK_TIMEOUT_MS:'1e4'},{NOTIFICATION_RETRY_COOLDOWN_SECONDS:'3e2'},
     {NOTIFICATION_MAX_RETRY_DELAY_SECONDS:'299'},{NOTIFICATION_MAX_ATTEMPTS:'0'},
     {OPERATIONS_NOTIFICATION_RETENTION_DAYS:'90.0'}

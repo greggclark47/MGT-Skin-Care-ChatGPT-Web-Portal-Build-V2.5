@@ -187,7 +187,7 @@ export function validateEnvironment(env) {
     if (!validControlUrl(env.NOTIFICATION_WEBHOOK_URL)) errors.push("NOTIFICATION_WEBHOOK_URL must be HTTPS without embedded credentials for webhook delivery.");
     const notificationToken = requireValue("NOTIFICATION_WEBHOOK_TOKEN");
     if (notificationToken && !validSecretReference(env.NOTIFICATION_WEBHOOK_TOKEN)) errors.push("NOTIFICATION_WEBHOOK_TOKEN must be a bounded injected reference without whitespace or control characters.");
-    if (env.NOTIFICATION_WEBHOOK_KEY_ID !== undefined && !/^[A-Za-z0-9_-]{1,64}$/.test(env.NOTIFICATION_WEBHOOK_KEY_ID)) errors.push("NOTIFICATION_WEBHOOK_KEY_ID must contain only letters, numbers, underscores or hyphens.");
+    if (!/^[A-Za-z0-9_-]{1,64}$/.test(env.NOTIFICATION_WEBHOOK_KEY_ID || "")) errors.push("NOTIFICATION_WEBHOOK_KEY_ID must identify the active signing key using letters, numbers, underscores or hyphens.");
     if (env.NOTIFICATION_WEBHOOK_TIMEOUT_MS !== undefined && (typeof env.NOTIFICATION_WEBHOOK_TIMEOUT_MS !== "string" || !/^\d+$/.test(env.NOTIFICATION_WEBHOOK_TIMEOUT_MS) || !wholeNumber(env.NOTIFICATION_WEBHOOK_TIMEOUT_MS, 1000, 30000))) errors.push("NOTIFICATION_WEBHOOK_TIMEOUT_MS must be a whole number between 1000 and 30000.");
   }
   const notificationRetryBase = env.NOTIFICATION_RETRY_COOLDOWN_SECONDS ?? "300";
@@ -219,7 +219,7 @@ export function validateEnvironment(env) {
   if (!validControlUrl(env.OPERATIONS_ALERT_WEBHOOK_URL)) errors.push("OPERATIONS_ALERT_WEBHOOK_URL must be a production HTTPS URL without embedded credentials.");
   const alertToken = requireValue("OPERATIONS_ALERT_WEBHOOK_TOKEN");
   if (alertToken && !validSecretReference(env.OPERATIONS_ALERT_WEBHOOK_TOKEN)) errors.push("OPERATIONS_ALERT_WEBHOOK_TOKEN must be a bounded injected reference without whitespace or control characters.");
-  if (env.OPERATIONS_ALERT_KEY_ID !== undefined && !/^[A-Za-z0-9_-]{1,64}$/.test(env.OPERATIONS_ALERT_KEY_ID)) errors.push("OPERATIONS_ALERT_KEY_ID must contain only letters, numbers, underscores or hyphens.");
+  if (!/^[A-Za-z0-9_-]{1,64}$/.test(env.OPERATIONS_ALERT_KEY_ID || "")) errors.push("OPERATIONS_ALERT_KEY_ID must identify the active signing key using letters, numbers, underscores or hyphens.");
   for (const [key,minimum,maximum] of [
     ["OPERATIONS_ALERT_TIMEOUT_MS",1000,30000],
     ["OPERATIONS_ALERT_RETRY_COOLDOWN_SECONDS",10,3600],

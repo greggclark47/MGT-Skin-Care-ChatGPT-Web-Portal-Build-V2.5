@@ -194,6 +194,7 @@ test('production identity admission matches preflight endpoint and credential-re
   const cases=[
     {SUPABASE_URL:undefined},{SUPABASE_URL:'http://identity.mgtskincare.test'},
     {SUPABASE_URL:'https://operator@identity.mgtskincare.test'},
+    {SUPABASE_URL:'https://identity.mgtskincare.test/auth'},{SUPABASE_URL:'https://identity.mgtskincare.test?tenant=other'},{SUPABASE_URL:'https://identity.mgtskincare.test#shadow'},
     {SUPABASE_ANON_KEY:undefined},{SUPABASE_ANON_KEY:''},{SUPABASE_ANON_KEY:'change-me'},
     {SUPABASE_SERVICE_ROLE_KEY:undefined},{SUPABASE_SERVICE_ROLE_KEY:''},{SUPABASE_SERVICE_ROLE_KEY:'change-me'},
     {SUPABASE_SERVICE_ROLE_KEY:'anon'}
@@ -380,6 +381,7 @@ for (const entry of ['server','worker']) test(`${entry} rejects unsafe identity 
   for (const overrides of [
     {SUPABASE_URL:''},{SUPABASE_URL:'http://identity.mgtskincare.test'},
     {SUPABASE_URL:'https://operator@identity.mgtskincare.test'},
+    {SUPABASE_URL:'https://identity.mgtskincare.test/auth'},{SUPABASE_URL:'https://identity.mgtskincare.test?tenant=other'},{SUPABASE_URL:'https://identity.mgtskincare.test#shadow'},
     {SUPABASE_ANON_KEY:''},{SUPABASE_ANON_KEY:'change-me'},
     {SUPABASE_SERVICE_ROLE_KEY:''},{SUPABASE_SERVICE_ROLE_KEY:'change-me'},
     {SUPABASE_SERVICE_ROLE_KEY:'anon'}

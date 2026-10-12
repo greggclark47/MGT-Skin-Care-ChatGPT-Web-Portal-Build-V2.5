@@ -63,6 +63,9 @@ function productionEmail(value:unknown):boolean{
 function productionHttpsUrl(value:unknown):boolean{
  try{const parsed=new URL(String(value));return parsed.protocol==='https:'&&!parsed.username&&!parsed.password&&!productionPlaceholder.test(String(value));}catch{return false;}
 }
+function productionHttpsOrigin(value:unknown):boolean{
+ try{const parsed=new URL(String(value));return parsed.protocol==='https:'&&!parsed.username&&!parsed.password&&!parsed.port&&parsed.pathname==='/'&&!parsed.search&&!parsed.hash&&parsed.origin===value&&!productionPlaceholder.test(String(value));}catch{return false;}
+}
 function productionServiceUrl(value:unknown):boolean{
  try{const parsed=new URL(String(value));return (parsed.protocol==='http:'||parsed.protocol==='https:')&&!parsed.username&&!parsed.password&&!productionPlaceholder.test(String(value));}catch{return false;}
 }
@@ -118,7 +121,7 @@ export function validateProductionNotificationAdmission(env:NodeJS.ProcessEnv):v
 
 export function validateProductionIdentityAdmission(env:NodeJS.ProcessEnv):void{
  if(env.NODE_ENV!=='production')return;
- if(!productionHttpsUrl(env.SUPABASE_URL))throw new Error('Production identity admission is invalid.');
+ if(!productionHttpsOrigin(env.SUPABASE_URL))throw new Error('Production identity admission is invalid.');
  if(typeof env.SUPABASE_ANON_KEY!=='string'||!env.SUPABASE_ANON_KEY.trim()||productionPlaceholder.test(env.SUPABASE_ANON_KEY))throw new Error('Production identity admission is invalid.');
  if(typeof env.SUPABASE_SERVICE_ROLE_KEY!=='string'||!env.SUPABASE_SERVICE_ROLE_KEY.trim()||productionPlaceholder.test(env.SUPABASE_SERVICE_ROLE_KEY))throw new Error('Production identity admission is invalid.');
  if(sameText(env.SUPABASE_ANON_KEY,env.SUPABASE_SERVICE_ROLE_KEY))throw new Error('Production identity admission is invalid.');

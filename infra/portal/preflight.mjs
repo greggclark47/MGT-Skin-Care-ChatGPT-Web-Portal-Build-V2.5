@@ -43,6 +43,16 @@ function validControlUrl(value) {
   }
 }
 
+function validServiceOrigin(value) {
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" && !url.username && !url.password && !url.port
+      && url.pathname === "/" && !url.search && !url.hash && url.origin === value && !placeholder.test(value);
+  } catch {
+    return false;
+  }
+}
+
 function validIsoDate(value) {
   const text = String(value || "").trim();
   const time = Date.parse(text);
@@ -108,7 +118,7 @@ export function validateEnvironment(env) {
   if (!digestImage(env.CADDY_IMAGE)) errors.push("CADDY_IMAGE must use an approved immutable @sha256 image digest.");
 
   const supabaseUrl = requireValue("SUPABASE_URL");
-  if (supabaseUrl && !validControlUrl(supabaseUrl)) errors.push("SUPABASE_URL must be a production HTTPS URL without embedded credentials.");
+  if (supabaseUrl && !validServiceOrigin(supabaseUrl)) errors.push("SUPABASE_URL must be an exact production HTTPS origin without credentials, port, path, query, or fragment.");
   requireValue("SUPABASE_ANON_KEY");
   const serviceRole = requireValue("SUPABASE_SERVICE_ROLE_KEY");
   if (serviceRole && serviceRole === env.SUPABASE_ANON_KEY) errors.push("SUPABASE_SERVICE_ROLE_KEY must differ from SUPABASE_ANON_KEY.");

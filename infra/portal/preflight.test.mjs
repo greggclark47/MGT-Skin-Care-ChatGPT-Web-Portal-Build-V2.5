@@ -104,6 +104,18 @@ test("binds the public HTTPS origin to the production portal domain", () => {
   }
 });
 
+test("requires the identity service to use one exact HTTPS origin", () => {
+  for (const changed of [
+    `${production.SUPABASE_URL}/auth`,
+    `${production.SUPABASE_URL}?tenant=other`,
+    `${production.SUPABASE_URL}#shadow`
+  ]) {
+    const result = validateEnvironment({ ...production, SUPABASE_URL: changed });
+    assert.equal(result.ok, false);
+    assert.ok(result.errors.some((error) => error.startsWith("SUPABASE_URL")));
+  }
+});
+
 test("rejects placeholders and an unsafe worker readiness window", () => {
   const result = validateEnvironment({
     ...production,

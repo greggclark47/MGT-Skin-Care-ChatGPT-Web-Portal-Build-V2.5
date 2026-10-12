@@ -112,6 +112,11 @@ export function validateProductionIdentityAdmission(env:NodeJS.ProcessEnv):void{
  if(sameText(env.SUPABASE_ANON_KEY,env.SUPABASE_SERVICE_ROLE_KEY))throw new Error('Production identity admission is invalid.');
 }
 
+export function validateProductionBackupAdmission(env:NodeJS.ProcessEnv):void{
+ if(env.NODE_ENV!=='production')return;
+ if(!productionInteger(env.BACKUP_MAX_AGE_HOURS,1,72)||!productionInteger(env.BACKUP_RESTORE_MAX_AGE_DAYS,1,365))throw new Error('Production backup admission is invalid.');
+}
+
 export function validateApiRuntimeAdmission(env:NodeJS.ProcessEnv):void{
  validateRuntimeOwnership(env);
  if(env.NODE_ENV==='production'){
@@ -126,6 +131,7 @@ export function validateApiProcessAdmission(env:NodeJS.ProcessEnv):void{
  validateProductionOperationsAdmission(env);
  validateProductionNotificationAdmission(env);
  validateProductionIdentityAdmission(env);
+ validateProductionBackupAdmission(env);
 }
 
 export function validateWorkerRuntimeAdmission(env:NodeJS.ProcessEnv):number{
@@ -134,5 +140,6 @@ export function validateWorkerRuntimeAdmission(env:NodeJS.ProcessEnv):number{
  validateProductionOperationsAdmission(env);
  validateProductionNotificationAdmission(env);
  validateProductionIdentityAdmission(env);
+ validateProductionBackupAdmission(env);
  return workerIntervalMs(env);
 }

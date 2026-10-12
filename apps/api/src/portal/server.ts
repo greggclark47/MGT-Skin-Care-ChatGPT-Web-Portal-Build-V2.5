@@ -16,7 +16,7 @@ import type {AiGateway} from '@mgt/ai-gateway';
 import Stripe from 'stripe';
 import {RETAILERS,SHOP_SEGMENTS,COMMERCE_MODEL} from './retailers';
 import {aiRuntimeReadiness,operationalReadiness,operationalSnapshot} from './operations';
-import {applyProductionExpressBoundary,applyProductionHttpLimits,applyProductionHttpTimeouts,closeProductionHttpServer,requestTargetWithinLimit} from './http-runtime';
+import {applyProductionExpressBoundary,applyProductionHttpLimits,applyProductionHttpTimeouts,closeProductionHttpServer,isSupportedHttpMethod,requestTargetWithinLimit} from './http-runtime';
 import {BILLING_CYCLES,PLAN_DEFINITIONS,priceIdFor} from './plans';
 type StripeClient=Stripe;
 export interface PortalOptions{store:Store;env?:NodeJS.ProcessEnv;stripe?:StripeClient;coach?:SafeCoach;analysisGateway?:AiGateway;verifyOtp?:(email:string,otp:string)=>Promise<{id:string,email:string}>}
@@ -101,6 +101,7 @@ export async function createPortal(options:PortalOptions){
  const app=express();app.disable('x-powered-by');applyProductionExpressBoundary(app,env);
  app.use((req,res,next)=>{(req as HubRequest).requestId=randomUUID();res.set({'X-Content-Type-Options':'nosniff','Referrer-Policy':'same-origin','Cache-Control':'no-store','X-Request-Id':(req as HubRequest).requestId});next();});
  app.use((req,res,next)=>requestTargetWithinLimit(req.originalUrl)?next():res.status(414).json({error:{code:'request_target_too_long',message:'The request target is too long.',request_id:(req as HubRequest).requestId}}));
+ app.use((req,res,next)=>isSupportedHttpMethod(req.method)?next():res.set('Allow','GET, HEAD, POST, PUT, PATCH, DELETE, OPTIONS').status(405).json({error:{code:'method_not_allowed',message:'The HTTP method is not supported.',request_id:(req as HubRequest).requestId}}));
  // Partner onboarding, payouts, and connected-account operations are deliberately
  // unreachable until the post-launch commercial, legal, and support gates are met.
  app.use(['/api/hub/partners','/api/hub/admin/partner','/api/hub/admin/payout'],(_req,res)=>res.status(410).json({error:{code:'feature_deferred',message:'Partner onboarding and payout operations are not available yet.'}}));

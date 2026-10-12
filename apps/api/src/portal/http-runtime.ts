@@ -8,6 +8,11 @@ export function requestTargetWithinLimit(target:string|undefined,maxBytes=4_096)
  return Buffer.byteLength(target,'utf8')<=maxBytes;
 }
 
+const SUPPORTED_HTTP_METHODS=new Set(['GET','HEAD','POST','PUT','PATCH','DELETE','OPTIONS']);
+export function isSupportedHttpMethod(method:string|undefined):boolean{
+ return typeof method==='string'&&SUPPORTED_HTTP_METHODS.has(method.toUpperCase());
+}
+
 export function applyProductionHttpTimeouts(server:HttpTimeoutServer,env:NodeJS.ProcessEnv):void{
  if(env.NODE_ENV!=='production')return;
  server.requestTimeout=30_000;

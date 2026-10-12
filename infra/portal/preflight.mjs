@@ -34,6 +34,11 @@ function validEmail(value) {
   return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(String(value || "").trim()) && !placeholder.test(value);
 }
 
+function validSecretReference(value) {
+  return typeof value === "string" && value.length > 0 && value.length <= 4096
+    && value === value.trim() && !/[\u0000-\u001f\u007f]/.test(value) && !placeholder.test(value);
+}
+
 function validControlUrl(value) {
   try {
     const url = new URL(value);
@@ -119,8 +124,10 @@ export function validateEnvironment(env) {
 
   const supabaseUrl = requireValue("SUPABASE_URL");
   if (supabaseUrl && !validServiceOrigin(supabaseUrl)) errors.push("SUPABASE_URL must be an exact production HTTPS origin without credentials, port, path, query, or fragment.");
-  requireValue("SUPABASE_ANON_KEY");
+  const anonKey = requireValue("SUPABASE_ANON_KEY");
   const serviceRole = requireValue("SUPABASE_SERVICE_ROLE_KEY");
+  if (anonKey && !validSecretReference(env.SUPABASE_ANON_KEY)) errors.push("SUPABASE_ANON_KEY must be a bounded injected reference without whitespace or control characters.");
+  if (serviceRole && !validSecretReference(env.SUPABASE_SERVICE_ROLE_KEY)) errors.push("SUPABASE_SERVICE_ROLE_KEY must be a bounded injected reference without whitespace or control characters.");
   if (serviceRole && serviceRole === env.SUPABASE_ANON_KEY) errors.push("SUPABASE_SERVICE_ROLE_KEY must differ from SUPABASE_ANON_KEY.");
 
   if (!["true", "false"].includes(env.OLLAMA_ENABLED)) errors.push("OLLAMA_ENABLED must be exactly true or false.");
@@ -131,7 +138,10 @@ export function validateEnvironment(env) {
     if (!validUrl(env.OPENCLAW_BASE_URL, ["http:", "https:"]) || /^(?:https?:\/\/)?[^/]*@/i.test(String(env.OPENCLAW_BASE_URL))) errors.push("OPENCLAW_BASE_URL must be a credential-free HTTP(S) URL when OpenClaw is enabled.");
     const openClawMode = env.OPENCLAW_API_MODE;
     if (!["ollama", "openai-completions"].includes(openClawMode)) errors.push("OPENCLAW_API_MODE must be ollama or openai-completions.");
-    if (openClawMode === "openai-completions") requireValue("OPENCLAW_API_KEY");
+    if (openClawMode === "openai-completions") {
+      const openClawKey = requireValue("OPENCLAW_API_KEY");
+      if (openClawKey && !validSecretReference(env.OPENCLAW_API_KEY)) errors.push("OPENCLAW_API_KEY must be a bounded injected reference without whitespace or control characters.");
+    }
   } else {
     warnings.push("OpenClaw orchestration is disabled.");
   }
@@ -154,7 +164,8 @@ export function validateEnvironment(env) {
   if (!["in_app", "webhook"].includes(delivery)) errors.push("NOTIFICATION_DELIVERY must be in_app or webhook.");
   if (delivery === "webhook") {
     if (!validControlUrl(env.NOTIFICATION_WEBHOOK_URL)) errors.push("NOTIFICATION_WEBHOOK_URL must be HTTPS without embedded credentials for webhook delivery.");
-    requireValue("NOTIFICATION_WEBHOOK_TOKEN");
+    const notificationToken = requireValue("NOTIFICATION_WEBHOOK_TOKEN");
+    if (notificationToken && !validSecretReference(env.NOTIFICATION_WEBHOOK_TOKEN)) errors.push("NOTIFICATION_WEBHOOK_TOKEN must be a bounded injected reference without whitespace or control characters.");
     if (env.NOTIFICATION_WEBHOOK_KEY_ID !== undefined && !/^[A-Za-z0-9_-]{1,64}$/.test(env.NOTIFICATION_WEBHOOK_KEY_ID)) errors.push("NOTIFICATION_WEBHOOK_KEY_ID must contain only letters, numbers, underscores or hyphens.");
     if (env.NOTIFICATION_WEBHOOK_TIMEOUT_MS !== undefined && (typeof env.NOTIFICATION_WEBHOOK_TIMEOUT_MS !== "string" || !/^\d+$/.test(env.NOTIFICATION_WEBHOOK_TIMEOUT_MS) || !wholeNumber(env.NOTIFICATION_WEBHOOK_TIMEOUT_MS, 1000, 30000))) errors.push("NOTIFICATION_WEBHOOK_TIMEOUT_MS must be a whole number between 1000 and 30000.");
   }
@@ -185,7 +196,8 @@ export function validateEnvironment(env) {
   if (typeof env.SUPPORT_RESPONSE_TARGET_HOURS !== "string" || !/^\d+$/.test(env.SUPPORT_RESPONSE_TARGET_HOURS) || !wholeNumber(env.SUPPORT_RESPONSE_TARGET_HOURS, 1, 168)) errors.push("SUPPORT_RESPONSE_TARGET_HOURS must be a whole number between 1 and 168.");
   if (env.OPERATIONS_ALERT_DELIVERY !== "webhook") errors.push("OPERATIONS_ALERT_DELIVERY must be webhook in production.");
   if (!validControlUrl(env.OPERATIONS_ALERT_WEBHOOK_URL)) errors.push("OPERATIONS_ALERT_WEBHOOK_URL must be a production HTTPS URL without embedded credentials.");
-  requireValue("OPERATIONS_ALERT_WEBHOOK_TOKEN");
+  const alertToken = requireValue("OPERATIONS_ALERT_WEBHOOK_TOKEN");
+  if (alertToken && !validSecretReference(env.OPERATIONS_ALERT_WEBHOOK_TOKEN)) errors.push("OPERATIONS_ALERT_WEBHOOK_TOKEN must be a bounded injected reference without whitespace or control characters.");
   if (env.OPERATIONS_ALERT_KEY_ID !== undefined && !/^[A-Za-z0-9_-]{1,64}$/.test(env.OPERATIONS_ALERT_KEY_ID)) errors.push("OPERATIONS_ALERT_KEY_ID must contain only letters, numbers, underscores or hyphens.");
   for (const [key,minimum,maximum] of [
     ["OPERATIONS_ALERT_TIMEOUT_MS",1000,30000],
@@ -224,7 +236,7 @@ export function validateEnvironment(env) {
   }
 
   if (!String(env.OPENAI_API_KEY || "").trim()) warnings.push("Hosted OpenAI escalation is disabled; local routes remain available.");
-  else if (placeholder.test(env.OPENAI_API_KEY)) errors.push("OPENAI_API_KEY must be injected from an approved non-placeholder reference when configured.");
+  else if (!validSecretReference(env.OPENAI_API_KEY)) errors.push("OPENAI_API_KEY must be injected as a bounded non-placeholder reference without whitespace or control characters.");
 
   return { ok: errors.length === 0, errors, warnings };
 }

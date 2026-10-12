@@ -199,6 +199,19 @@ test("rejects malformed or cross-wired production billing identifiers", () => {
   assert.ok(result.errors.some((error) => error.includes("different Stripe Price IDs")));
 });
 
+test("rejects secret references with whitespace or control characters", () => {
+  for (const [key, value] of [
+    ["SUPABASE_ANON_KEY", " anon-production-value"],
+    ["SUPABASE_SERVICE_ROLE_KEY", "service-production-value\n"],
+    ["OPERATIONS_ALERT_WEBHOOK_TOKEN", " configured-alert-token "],
+    ["OPENAI_API_KEY", "configured\tkey"]
+  ]) {
+    const result = validateEnvironment({ ...production, [key]: value });
+    assert.equal(result.ok, false, key);
+    assert.ok(result.errors.some((error) => error.startsWith(key)), key);
+  }
+});
+
 test("requires secure webhook delivery settings", () => {
   const result = validateEnvironment({
     ...production,

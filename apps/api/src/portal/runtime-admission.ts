@@ -69,7 +69,7 @@ function productionHttpsOrigin(value:unknown):boolean{
 function productionServiceUrl(value:unknown):boolean{
  try{const parsed=new URL(String(value));return (parsed.protocol==='http:'||parsed.protocol==='https:')&&!parsed.username&&!parsed.password&&!productionPlaceholder.test(String(value));}catch{return false;}
 }
-function configuredReference(value:unknown):boolean{return typeof value==='string'&&!!value.trim()&&!productionPlaceholder.test(value);}
+function configuredReference(value:unknown):value is string{return typeof value==='string'&&value.length>0&&value.length<=4096&&value===value.trim()&&!/[\u0000-\u001f\u007f]/.test(value)&&!productionPlaceholder.test(value);}
 function optionalReference(value:unknown):boolean{return value===undefined||value===''||configuredReference(value);}
 function productionInteger(value:unknown,minimum:number,maximum:number,optional=false):boolean{
  if(optional&&(value===undefined||value===''))return true;
@@ -89,7 +89,7 @@ export function validateProductionOperationsAdmission(env:NodeJS.ProcessEnv):voi
   &&productionHttpsUrl(env.MONITORING_DASHBOARD_URL)&&productionHttpsUrl(env.INCIDENT_RUNBOOK_URL)
   &&productionInteger(env.SUPPORT_RESPONSE_TARGET_HOURS,1,168)
   &&env.OPERATIONS_ALERT_DELIVERY==='webhook'&&productionHttpsUrl(env.OPERATIONS_ALERT_WEBHOOK_URL)
-  &&typeof env.OPERATIONS_ALERT_WEBHOOK_TOKEN==='string'&&!!env.OPERATIONS_ALERT_WEBHOOK_TOKEN.trim()&&!productionPlaceholder.test(env.OPERATIONS_ALERT_WEBHOOK_TOKEN);
+  &&configuredReference(env.OPERATIONS_ALERT_WEBHOOK_TOKEN);
  const validOptional=productionInteger(env.OPERATIONS_ALERT_TIMEOUT_MS,1000,30000,true)
   &&productionInteger(env.OPERATIONS_ALERT_RETRY_COOLDOWN_SECONDS,10,3600,true)
   &&productionInteger(env.OPERATIONS_ALERT_EVENT_RETENTION_DAYS,1,3650,true)
@@ -107,7 +107,7 @@ export function validateProductionNotificationAdmission(env:NodeJS.ProcessEnv):v
  if(delivery!=='in_app'&&delivery!=='webhook')throw new Error('Production notification admission is invalid.');
  if(delivery==='webhook'){
   if(!productionHttpsUrl(env.NOTIFICATION_WEBHOOK_URL))throw new Error('Production notification admission is invalid.');
-  if(typeof env.NOTIFICATION_WEBHOOK_TOKEN!=='string'||!env.NOTIFICATION_WEBHOOK_TOKEN.trim()||productionPlaceholder.test(env.NOTIFICATION_WEBHOOK_TOKEN))throw new Error('Production notification admission is invalid.');
+  if(!configuredReference(env.NOTIFICATION_WEBHOOK_TOKEN))throw new Error('Production notification admission is invalid.');
   if(env.NOTIFICATION_WEBHOOK_KEY_ID!==undefined&&!/^[A-Za-z0-9_-]{1,64}$/.test(env.NOTIFICATION_WEBHOOK_KEY_ID))throw new Error('Production notification admission is invalid.');
   if(env.NOTIFICATION_WEBHOOK_TIMEOUT_MS!==undefined&&!productionInteger(env.NOTIFICATION_WEBHOOK_TIMEOUT_MS,1000,30000))throw new Error('Production notification admission is invalid.');
  }
@@ -122,8 +122,8 @@ export function validateProductionNotificationAdmission(env:NodeJS.ProcessEnv):v
 export function validateProductionIdentityAdmission(env:NodeJS.ProcessEnv):void{
  if(env.NODE_ENV!=='production')return;
  if(!productionHttpsOrigin(env.SUPABASE_URL))throw new Error('Production identity admission is invalid.');
- if(typeof env.SUPABASE_ANON_KEY!=='string'||!env.SUPABASE_ANON_KEY.trim()||productionPlaceholder.test(env.SUPABASE_ANON_KEY))throw new Error('Production identity admission is invalid.');
- if(typeof env.SUPABASE_SERVICE_ROLE_KEY!=='string'||!env.SUPABASE_SERVICE_ROLE_KEY.trim()||productionPlaceholder.test(env.SUPABASE_SERVICE_ROLE_KEY))throw new Error('Production identity admission is invalid.');
+ if(!configuredReference(env.SUPABASE_ANON_KEY))throw new Error('Production identity admission is invalid.');
+ if(!configuredReference(env.SUPABASE_SERVICE_ROLE_KEY))throw new Error('Production identity admission is invalid.');
  if(sameText(env.SUPABASE_ANON_KEY,env.SUPABASE_SERVICE_ROLE_KEY))throw new Error('Production identity admission is invalid.');
 }
 

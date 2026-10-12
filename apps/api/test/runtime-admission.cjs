@@ -141,7 +141,7 @@ test('production operations admission matches preflight support, monitoring, and
     {SUPPORT_OWNER_EMAIL:''},{ALERT_OWNER_EMAIL:'invalid'},{MONITORING_DASHBOARD_URL:'http://monitoring.mgtskincare.test'},
     {INCIDENT_RUNBOOK_URL:'https://operator@operations.mgtskincare.test/runbook'},{SUPPORT_RESPONSE_TARGET_HOURS:'24.0'},
     {OPERATIONS_ALERT_DELIVERY:'disabled'},{OPERATIONS_ALERT_WEBHOOK_URL:'http://alerts.mgtskincare.test/events'},
-    {OPERATIONS_ALERT_WEBHOOK_TOKEN:'change-me'},{OPERATIONS_ALERT_TIMEOUT_MS:'1e4'},
+    {OPERATIONS_ALERT_WEBHOOK_TOKEN:'change-me'},{OPERATIONS_ALERT_WEBHOOK_TOKEN:' configured-alert-token '},{OPERATIONS_ALERT_WEBHOOK_TOKEN:'configured\nalert-token'},{OPERATIONS_ALERT_TIMEOUT_MS:'1e4'},
     {OPERATIONS_ALERT_RETRY_COOLDOWN_SECONDS:'9'},{OPERATIONS_ALERT_EVENT_RETENTION_DAYS:'0'},
     {OPERATIONS_ALERT_LEASE_SECONDS:'9'},{OPERATIONS_ALERT_MAX_RETRY_DELAY_SECONDS:'299'},
     {OPERATIONS_ALERT_MAX_ATTEMPTS:'21'},{OPERATIONS_ALERT_KEY_ID:'not valid'}
@@ -167,7 +167,7 @@ test('production notification admission matches preflight delivery and retry bou
     {NOTIFICATION_DELIVERY:undefined},{NOTIFICATION_DELIVERY:'disabled'},
     {NOTIFICATION_WEBHOOK_URL:'http://notifications.mgtskincare.test/events'},
     {NOTIFICATION_WEBHOOK_URL:'https://operator@notifications.mgtskincare.test/events'},
-    {NOTIFICATION_WEBHOOK_TOKEN:''},{NOTIFICATION_WEBHOOK_TOKEN:'change-me'},
+    {NOTIFICATION_WEBHOOK_TOKEN:''},{NOTIFICATION_WEBHOOK_TOKEN:'change-me'},{NOTIFICATION_WEBHOOK_TOKEN:' configured-notification-token '},{NOTIFICATION_WEBHOOK_TOKEN:'configured\tnotification-token'},
     {NOTIFICATION_WEBHOOK_KEY_ID:''},{NOTIFICATION_WEBHOOK_KEY_ID:'not valid'},
     {NOTIFICATION_WEBHOOK_TIMEOUT_MS:''},{NOTIFICATION_WEBHOOK_TIMEOUT_MS:'1e4'},
     {NOTIFICATION_RETRY_COOLDOWN_SECONDS:'3e2'},{NOTIFICATION_RETRY_COOLDOWN_SECONDS:'9'},
@@ -195,8 +195,8 @@ test('production identity admission matches preflight endpoint and credential-re
     {SUPABASE_URL:undefined},{SUPABASE_URL:'http://identity.mgtskincare.test'},
     {SUPABASE_URL:'https://operator@identity.mgtskincare.test'},
     {SUPABASE_URL:'https://identity.mgtskincare.test/auth'},{SUPABASE_URL:'https://identity.mgtskincare.test?tenant=other'},{SUPABASE_URL:'https://identity.mgtskincare.test#shadow'},
-    {SUPABASE_ANON_KEY:undefined},{SUPABASE_ANON_KEY:''},{SUPABASE_ANON_KEY:'change-me'},
-    {SUPABASE_SERVICE_ROLE_KEY:undefined},{SUPABASE_SERVICE_ROLE_KEY:''},{SUPABASE_SERVICE_ROLE_KEY:'change-me'},
+    {SUPABASE_ANON_KEY:undefined},{SUPABASE_ANON_KEY:''},{SUPABASE_ANON_KEY:'change-me'},{SUPABASE_ANON_KEY:' anon'},{SUPABASE_ANON_KEY:'anon\nkey'},
+    {SUPABASE_SERVICE_ROLE_KEY:undefined},{SUPABASE_SERVICE_ROLE_KEY:''},{SUPABASE_SERVICE_ROLE_KEY:'change-me'},{SUPABASE_SERVICE_ROLE_KEY:'service '},{SUPABASE_SERVICE_ROLE_KEY:'service\tkey'},
     {SUPABASE_SERVICE_ROLE_KEY:'anon'}
   ];
   const identityKeys=new Set(Object.keys(identity));
@@ -254,7 +254,7 @@ test('production AI admission matches preflight provider boundaries', async () =
   const enabled={OLLAMA_ENABLED:'true',OLLAMA_BASE_URL:'http://ollama:11434',OPENCLAW_ENABLED:'true',OPENCLAW_BASE_URL:'https://openclaw.mgtskincare.test',OPENCLAW_API_MODE:'ollama'};
   const processEnv={...valid,...operational,...notification,...identity,...backup,...accessibility,...subscription,...enabled};
   assert.doesNotThrow(()=>validateProductionAiAdmission(processEnv));
-  for(const overrides of [{OLLAMA_ENABLED:'True'},{OLLAMA_BASE_URL:'http://localhost:11434'},{OLLAMA_BASE_URL:'https://operator@ollama.mgtskincare.test'},{OPENCLAW_ENABLED:'TRUE'},{OPENCLAW_BASE_URL:'http://localhost:8080'},{OPENCLAW_API_MODE:undefined},{OPENCLAW_API_MODE:'invalid'},{OPENCLAW_API_MODE:'openai-completions',OPENCLAW_API_KEY:''},{OPENCLAW_API_MODE:'openai-completions',OPENCLAW_API_KEY:'change-me'},{OPENAI_API_KEY:'change-me'}]){
+  for(const overrides of [{OLLAMA_ENABLED:'True'},{OLLAMA_BASE_URL:'http://localhost:11434'},{OLLAMA_BASE_URL:'https://operator@ollama.mgtskincare.test'},{OPENCLAW_ENABLED:'TRUE'},{OPENCLAW_BASE_URL:'http://localhost:8080'},{OPENCLAW_API_MODE:undefined},{OPENCLAW_API_MODE:'invalid'},{OPENCLAW_API_MODE:'openai-completions',OPENCLAW_API_KEY:''},{OPENCLAW_API_MODE:'openai-completions',OPENCLAW_API_KEY:'change-me'},{OPENCLAW_API_MODE:'openai-completions',OPENCLAW_API_KEY:' configured-key '},{OPENAI_API_KEY:'change-me'},{OPENAI_API_KEY:'configured\nkey'}]){
     const env={...processEnv,...overrides};let runtimeAccepts=true;
     try{validateProductionAiAdmission(env);}catch(error){runtimeAccepts=false;assert.equal(error.message,'Production AI admission is invalid.');}
     const report=validateEnvironment(env),preflightAccepts=!report.errors.some(error=>/^(OLLAMA_|OPENCLAW_|OPENAI_)/.test(error));
@@ -349,7 +349,7 @@ for (const entry of ['server','worker']) test(`${entry} rejects unsafe operation
   for (const overrides of [
     {SUPPORT_OWNER_EMAIL:''},{ALERT_OWNER_EMAIL:'invalid'},{MONITORING_DASHBOARD_URL:'http://monitoring.mgtskincare.test'},
     {SUPPORT_RESPONSE_TARGET_HOURS:'24.0'},{OPERATIONS_ALERT_DELIVERY:'disabled'},
-    {OPERATIONS_ALERT_WEBHOOK_URL:'http://alerts.mgtskincare.test/events'},{OPERATIONS_ALERT_WEBHOOK_TOKEN:'change-me'},
+    {OPERATIONS_ALERT_WEBHOOK_URL:'http://alerts.mgtskincare.test/events'},{OPERATIONS_ALERT_WEBHOOK_TOKEN:'change-me'},{OPERATIONS_ALERT_WEBHOOK_TOKEN:' configured-alert-token '},{OPERATIONS_ALERT_WEBHOOK_TOKEN:'configured\nalert-token'},
     {OPERATIONS_ALERT_TIMEOUT_MS:'1e4'},{OPERATIONS_ALERT_LEASE_SECONDS:'9'},
     {OPERATIONS_ALERT_MAX_RETRY_DELAY_SECONDS:'299'},{OPERATIONS_ALERT_MAX_ATTEMPTS:'21'},{OPERATIONS_ALERT_KEY_ID:'not valid'}
   ]) {
@@ -364,7 +364,7 @@ for (const entry of ['server','worker']) test(`${entry} rejects unsafe operation
 for (const entry of ['server','worker']) test(`${entry} rejects unsafe notification controls before database initialization`, () => {
   for (const overrides of [
     {NOTIFICATION_DELIVERY:'disabled'},{NOTIFICATION_WEBHOOK_URL:'http://notifications.mgtskincare.test/events'},
-    {NOTIFICATION_WEBHOOK_TOKEN:'change-me'},{NOTIFICATION_WEBHOOK_KEY_ID:'not valid'},
+    {NOTIFICATION_WEBHOOK_TOKEN:'change-me'},{NOTIFICATION_WEBHOOK_TOKEN:' configured-notification-token '},{NOTIFICATION_WEBHOOK_TOKEN:'configured\tnotification-token'},{NOTIFICATION_WEBHOOK_KEY_ID:'not valid'},
     {NOTIFICATION_WEBHOOK_TIMEOUT_MS:'1e4'},{NOTIFICATION_RETRY_COOLDOWN_SECONDS:'3e2'},
     {NOTIFICATION_MAX_RETRY_DELAY_SECONDS:'299'},{NOTIFICATION_MAX_ATTEMPTS:'0'},
     {OPERATIONS_NOTIFICATION_RETENTION_DAYS:'90.0'}
@@ -382,8 +382,8 @@ for (const entry of ['server','worker']) test(`${entry} rejects unsafe identity 
     {SUPABASE_URL:''},{SUPABASE_URL:'http://identity.mgtskincare.test'},
     {SUPABASE_URL:'https://operator@identity.mgtskincare.test'},
     {SUPABASE_URL:'https://identity.mgtskincare.test/auth'},{SUPABASE_URL:'https://identity.mgtskincare.test?tenant=other'},{SUPABASE_URL:'https://identity.mgtskincare.test#shadow'},
-    {SUPABASE_ANON_KEY:''},{SUPABASE_ANON_KEY:'change-me'},
-    {SUPABASE_SERVICE_ROLE_KEY:''},{SUPABASE_SERVICE_ROLE_KEY:'change-me'},
+    {SUPABASE_ANON_KEY:''},{SUPABASE_ANON_KEY:'change-me'},{SUPABASE_ANON_KEY:' anon'},{SUPABASE_ANON_KEY:'anon\nkey'},
+    {SUPABASE_SERVICE_ROLE_KEY:''},{SUPABASE_SERVICE_ROLE_KEY:'change-me'},{SUPABASE_SERVICE_ROLE_KEY:'service '},{SUPABASE_SERVICE_ROLE_KEY:'service\tkey'},
     {SUPABASE_SERVICE_ROLE_KEY:'anon'}
   ]) {
     const child=probeStartup(entry,overrides);
@@ -413,7 +413,7 @@ for (const entry of ['server','worker']) test(`${entry} rejects unsafe subscript
 });
 
 for (const entry of ['server','worker']) test(`${entry} rejects unsafe AI provider controls before database initialization`, () => {
-  for (const overrides of [{OLLAMA_ENABLED:'True'},{OLLAMA_ENABLED:'true',OLLAMA_BASE_URL:'http://localhost:11434'},{OPENCLAW_ENABLED:'TRUE'},{OPENCLAW_ENABLED:'true',OPENCLAW_BASE_URL:'http://localhost:8080',OPENCLAW_API_MODE:'ollama'},{OPENAI_API_KEY:'change-me'}]) {
+  for (const overrides of [{OLLAMA_ENABLED:'True'},{OLLAMA_ENABLED:'true',OLLAMA_BASE_URL:'http://localhost:11434'},{OPENCLAW_ENABLED:'TRUE'},{OPENCLAW_ENABLED:'true',OPENCLAW_BASE_URL:'http://localhost:8080',OPENCLAW_API_MODE:'ollama'},{OPENAI_API_KEY:'change-me'},{OPENAI_API_KEY:'configured\nkey'}]) {
     const child=probeStartup(entry,overrides);assert.equal(child.error,undefined);assert.equal(child.status,1);assert.doesNotMatch(child.stderr,/DATABASE_OPENED|localhost|change-me/);
   }
 });

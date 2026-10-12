@@ -108,7 +108,7 @@ export function validateEnvironment(env) {
   if (!digestImage(env.CADDY_IMAGE)) errors.push("CADDY_IMAGE must use an approved immutable @sha256 image digest.");
 
   const supabaseUrl = requireValue("SUPABASE_URL");
-  if (supabaseUrl && !validUrl(supabaseUrl, ["https:"])) errors.push("SUPABASE_URL must be a production HTTPS URL.");
+  if (supabaseUrl && !validControlUrl(supabaseUrl)) errors.push("SUPABASE_URL must be a production HTTPS URL without embedded credentials.");
   requireValue("SUPABASE_ANON_KEY");
   const serviceRole = requireValue("SUPABASE_SERVICE_ROLE_KEY");
   if (serviceRole && serviceRole === env.SUPABASE_ANON_KEY) errors.push("SUPABASE_SERVICE_ROLE_KEY must differ from SUPABASE_ANON_KEY.");

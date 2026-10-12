@@ -2,7 +2,7 @@ const assert = require('node:assert/strict');
 const { test } = require('node:test');
 const { spawnSync } = require('node:child_process');
 const path = require('node:path');
-const { validateRuntimeOwnership, validateProductionPortalBoundary, validateProductionDatabaseAdmission, validateProductionOperationsAdmission, validateProductionNotificationAdmission, workerIntervalMs, workerReadinessMaxAgeMs } = require('../dist/portal/runtime-admission');
+const { validateRuntimeOwnership, validateProductionPortalBoundary, validateProductionDatabaseAdmission, validateProductionOperationsAdmission, validateProductionNotificationAdmission, validateProductionIdentityAdmission, workerIntervalMs, workerReadinessMaxAgeMs } = require('../dist/portal/runtime-admission');
 const { createPortal } = require('../dist/portal/server');
 const owner = 'Gregg Clark of MGT';
 const valid = { NODE_ENV:'production', DEMO_MODE:'false', PUBLIC_ORIGIN:'https://portal.example', PORTAL_DOMAIN:'portal.example', RELEASE_OWNER_NAME:owner, SUPPORT_OWNER_NAME:owner, WORKER_INTERVAL_SECONDS:'60', WORKER_READINESS_MAX_AGE_SECONDS:'300' };
@@ -122,6 +122,9 @@ const notification = {
   NOTIFICATION_RETRY_COOLDOWN_SECONDS:'300', NOTIFICATION_MAX_RETRY_DELAY_SECONDS:'3600', NOTIFICATION_MAX_ATTEMPTS:'3',
   OPERATIONS_NOTIFICATION_RETENTION_DAYS:'90'
 };
+const identity = {
+  SUPABASE_URL:'https://identity.mgtskincare.test', SUPABASE_ANON_KEY:'anon', SUPABASE_SERVICE_ROLE_KEY:'service'
+};
 
 test('production operations admission matches preflight support, monitoring, and alert boundaries', async () => {
   const {validateEnvironment}=await import('../../../infra/portal/preflight.mjs');
@@ -177,13 +180,36 @@ test('production notification admission matches preflight delivery and retry bou
   assert.doesNotThrow(()=>validateProductionNotificationAdmission({NODE_ENV:'test'}));
 });
 
+test('production identity admission matches preflight endpoint and credential-reference boundaries', async () => {
+  const {validateEnvironment}=await import('../../../infra/portal/preflight.mjs');
+  const processEnv={...valid,...operational,...notification,...identity};
+  assert.doesNotThrow(()=>validateProductionIdentityAdmission(processEnv));
+  const cases=[
+    {SUPABASE_URL:undefined},{SUPABASE_URL:'http://identity.mgtskincare.test'},
+    {SUPABASE_URL:'https://operator@identity.mgtskincare.test'},
+    {SUPABASE_ANON_KEY:undefined},{SUPABASE_ANON_KEY:''},{SUPABASE_ANON_KEY:'change-me'},
+    {SUPABASE_SERVICE_ROLE_KEY:undefined},{SUPABASE_SERVICE_ROLE_KEY:''},{SUPABASE_SERVICE_ROLE_KEY:'change-me'},
+    {SUPABASE_SERVICE_ROLE_KEY:'anon'}
+  ];
+  const identityKeys=new Set(Object.keys(identity));
+  for(const overrides of cases){
+    const env={...processEnv,...overrides};
+    let runtimeAccepts=true;
+    try{validateProductionIdentityAdmission(env);}catch(error){runtimeAccepts=false;assert.equal(error.message,'Production identity admission is invalid.');}
+    const report=validateEnvironment(env);
+    const preflightAccepts=!report.errors.some(error=>identityKeys.has(error.split(' ')[0]));
+    assert.equal(runtimeAccepts,preflightAccepts,JSON.stringify(overrides));
+  }
+  assert.doesNotThrow(()=>validateProductionIdentityAdmission({NODE_ENV:'test'}));
+});
+
 // A fake store throws if initialized. This proves the guard runs before any
 // database work, without contacting real services or requiring PostgreSQL.
 function probeStartup(entry, overrides = {}) {
   const storePath = require.resolve('../dist/portal/store');
   const entryPath = path.resolve(__dirname,`../dist/portal/${entry}.js`);
   const boot = `const Module=require('node:module');const store=require(${JSON.stringify(storePath)});store.PgStore=class{constructor(){process.stderr.write('DATABASE_OPENED');process.exit(77);}};Module.runMain(${JSON.stringify(entryPath)});`;
-  const env = {...process.env,...valid,...operational,...notification,PORTAL_AUTO_MIGRATE:'false',DATABASE_URL:'postgresql://db.invalid/mgt?sslmode=verify-full',...overrides};
+  const env = {...process.env,...valid,...operational,...notification,...identity,PORTAL_AUTO_MIGRATE:'false',DATABASE_URL:'postgresql://db.invalid/mgt?sslmode=verify-full',...overrides};
   return spawnSync(process.execPath,['-e',boot],{env,encoding:'utf8',timeout:10000,windowsHide:true});
 }
 
@@ -263,6 +289,22 @@ for (const entry of ['server','worker']) test(`${entry} rejects unsafe notificat
     assert.equal(child.error,undefined);
     assert.equal(child.status,1);
     assert.doesNotMatch(child.stderr,/DATABASE_OPENED|mgtskincare\.test|change-me|not valid/);
+    assert.deepEqual(JSON.parse(child.stderr.trim()),entry==='server'?{event:'portal_startup_failed',code:'startup_failed'}:{worker:'portal-operations',event:'worker_startup_failed'});
+  }
+});
+
+for (const entry of ['server','worker']) test(`${entry} rejects unsafe identity controls before database initialization`, () => {
+  for (const overrides of [
+    {SUPABASE_URL:''},{SUPABASE_URL:'http://identity.mgtskincare.test'},
+    {SUPABASE_URL:'https://operator@identity.mgtskincare.test'},
+    {SUPABASE_ANON_KEY:''},{SUPABASE_ANON_KEY:'change-me'},
+    {SUPABASE_SERVICE_ROLE_KEY:''},{SUPABASE_SERVICE_ROLE_KEY:'change-me'},
+    {SUPABASE_SERVICE_ROLE_KEY:'anon'}
+  ]) {
+    const child=probeStartup(entry,overrides);
+    assert.equal(child.error,undefined);
+    assert.equal(child.status,1);
+    assert.doesNotMatch(child.stderr,/DATABASE_OPENED|mgtskincare\.test|change-me|operator@/);
     assert.deepEqual(JSON.parse(child.stderr.trim()),entry==='server'?{event:'portal_startup_failed',code:'startup_failed'}:{worker:'portal-operations',event:'worker_startup_failed'});
   }
 });

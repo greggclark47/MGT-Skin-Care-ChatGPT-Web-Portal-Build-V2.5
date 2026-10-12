@@ -66,6 +66,7 @@ function productionInteger(value:unknown,minimum:number,maximum:number,optional=
  if(optional&&(value===undefined||value===''))return true;
  return typeof value==='string'&&/^\d+$/.test(value)&&Number.isSafeInteger(Number(value))&&Number(value)>=minimum&&Number(value)<=maximum;
 }
+function sameText(left:string,right:string):boolean{return left===right;}
 
 export function validateProductionOperationsAdmission(env:NodeJS.ProcessEnv):void{
  if(env.NODE_ENV!=='production')return;
@@ -103,6 +104,14 @@ export function validateProductionNotificationAdmission(env:NodeJS.ProcessEnv):v
  if(!validPolicy)throw new Error('Production notification admission is invalid.');
 }
 
+export function validateProductionIdentityAdmission(env:NodeJS.ProcessEnv):void{
+ if(env.NODE_ENV!=='production')return;
+ if(!productionHttpsUrl(env.SUPABASE_URL))throw new Error('Production identity admission is invalid.');
+ if(typeof env.SUPABASE_ANON_KEY!=='string'||!env.SUPABASE_ANON_KEY.trim()||productionPlaceholder.test(env.SUPABASE_ANON_KEY))throw new Error('Production identity admission is invalid.');
+ if(typeof env.SUPABASE_SERVICE_ROLE_KEY!=='string'||!env.SUPABASE_SERVICE_ROLE_KEY.trim()||productionPlaceholder.test(env.SUPABASE_SERVICE_ROLE_KEY))throw new Error('Production identity admission is invalid.');
+ if(sameText(env.SUPABASE_ANON_KEY,env.SUPABASE_SERVICE_ROLE_KEY))throw new Error('Production identity admission is invalid.');
+}
+
 export function validateApiRuntimeAdmission(env:NodeJS.ProcessEnv):void{
  validateRuntimeOwnership(env);
  if(env.NODE_ENV==='production'){
@@ -116,6 +125,7 @@ export function validateApiProcessAdmission(env:NodeJS.ProcessEnv):void{
  validateProductionDatabaseAdmission(env);
  validateProductionOperationsAdmission(env);
  validateProductionNotificationAdmission(env);
+ validateProductionIdentityAdmission(env);
 }
 
 export function validateWorkerRuntimeAdmission(env:NodeJS.ProcessEnv):number{
@@ -123,5 +133,6 @@ export function validateWorkerRuntimeAdmission(env:NodeJS.ProcessEnv):number{
  validateProductionDatabaseAdmission(env);
  validateProductionOperationsAdmission(env);
  validateProductionNotificationAdmission(env);
+ validateProductionIdentityAdmission(env);
  return workerIntervalMs(env);
 }

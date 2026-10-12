@@ -54,7 +54,7 @@ function validIsoDate(value) {
 export function validProductionDatabaseUrl(value) {
   try {
     const url = new URL(value);
-    if (!["postgres:", "postgresql:"].includes(url.protocol) || !url.hostname || url.hostname.includes("%")) return false;
+    if (!["postgres:", "postgresql:"].includes(url.protocol) || !url.hostname || url.hostname.includes("%") || !/^\/[^/]+$/.test(url.pathname) || url.hash) return false;
     if (url.searchParams.getAll("sslmode").length !== 1 || url.searchParams.get("sslmode") !== "verify-full") return false;
     if (["host", "hostaddr", "port", "user", "password", "database"].some((key) => url.searchParams.has(key))) return false;
     return true;

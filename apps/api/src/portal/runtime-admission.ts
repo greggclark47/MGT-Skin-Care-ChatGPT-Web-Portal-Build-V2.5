@@ -51,7 +51,8 @@ export function validateProductionDatabaseAdmission(env:NodeJS.ProcessEnv):void{
   const validProtocol=parsed.protocol==='postgres:'||parsed.protocol==='postgresql:';
   const singleTlsMode=parsed.searchParams.getAll('sslmode').length===1&&parsed.searchParams.get('sslmode')==='verify-full';
   const overriddenTarget=['host','hostaddr','port','user','password','database'].some(key=>parsed.searchParams.has(key));
-  if(!validProtocol||!parsed.hostname||parsed.hostname.includes('%')||!singleTlsMode||overriddenTarget)throw new Error();
+  const databasePath=/^\/[^/]+$/.test(parsed.pathname);
+  if(!validProtocol||!parsed.hostname||parsed.hostname.includes('%')||!databasePath||parsed.hash||!singleTlsMode||overriddenTarget)throw new Error();
  }catch{throw new Error('Production database admission is invalid.');}
 }
 

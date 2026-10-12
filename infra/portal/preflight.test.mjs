@@ -79,6 +79,15 @@ test("rejects database URL settings that the PostgreSQL parser could reinterpret
   }
 });
 
+test("production database URL requires one database path and no fragment", () => {
+  assert.equal(validProductionDatabaseUrl("postgresql://db.example/mgt?sslmode=verify-full"), true);
+  for (const value of [
+    "postgresql://db.example?sslmode=verify-full",
+    "postgresql://db.example/team/mgt?sslmode=verify-full",
+    "postgresql://db.example/mgt?sslmode=verify-full#shadow"
+  ]) assert.equal(validProductionDatabaseUrl(value), false, value);
+});
+
 test("binds the public HTTPS origin to the production portal domain", () => {
   assert.equal(validProductionOrigin(production.PUBLIC_ORIGIN, production.PORTAL_DOMAIN), true);
   for (const changed of [

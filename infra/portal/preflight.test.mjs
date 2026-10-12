@@ -375,6 +375,19 @@ test("requires immutable deployable API and web application images", () => {
   assert.ok(result.errors.some((error) => error.startsWith("WEB_IMAGE")));
 });
 
+test("rejects hidden routing and whitespace on AI service URLs", () => {
+  for (const changed of [
+    { OLLAMA_BASE_URL: "https://ollama.internal?model=other" },
+    { OLLAMA_BASE_URL: " https://ollama.internal" },
+    { OPENCLAW_BASE_URL: "https://openclaw.internal#alternate" },
+    { OPENCLAW_BASE_URL: "https://openclaw.internal?tenant=other" }
+  ]) {
+    const result = validateEnvironment({ ...production, OPENCLAW_ENABLED: "true", OPENCLAW_API_MODE: "ollama", OPENCLAW_BASE_URL: "https://openclaw.internal", ...changed });
+    assert.equal(result.ok, false, JSON.stringify(changed));
+    assert.ok(result.errors.some((error) => /^(OLLAMA_BASE_URL|OPENCLAW_BASE_URL)/.test(error)));
+  }
+});
+
 test("allows native Ollama mode without an OpenClaw key and gates proxy mode", () => {
   const native = validateEnvironment({ ...production, OPENCLAW_ENABLED: "true", OPENCLAW_BASE_URL: "http://ollama:11434", OPENCLAW_API_MODE: "ollama", OPENCLAW_API_KEY: "" });
   assert.equal(native.ok, true);

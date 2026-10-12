@@ -1,7 +1,7 @@
 const assert=require('node:assert/strict');
 const {test}=require('node:test');
 const {createServer}=require('node:http');
-const {applyProductionHttpTimeouts,applyProductionHttpLimits}=require('../dist/portal/http-runtime');
+const {applyProductionHttpTimeouts,applyProductionHttpLimits,applyProductionExpressBoundary}=require('../dist/portal/http-runtime');
 
 test('production HTTP server uses bounded request, header, and keep-alive timeouts',()=>{
  const server=createServer();
@@ -26,4 +26,10 @@ test('production HTTP server caps requests, headers, and concurrent connections'
  assert.equal(server.maxHeadersCount,100);
  assert.equal(server.maxConnections,1000);
  server.close();
+});
+
+test('production Express boundary disables proxy trust and nested query parsing',()=>{
+ const calls=[],app={disable:name=>calls.push(['disable',name]),set:(name,value)=>calls.push(['set',name,value])};
+ applyProductionExpressBoundary(app,{NODE_ENV:'production'});
+ assert.deepEqual(calls,[['disable','trust proxy'],['set','query parser','simple']]);
 });

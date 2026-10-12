@@ -16,7 +16,7 @@ import type {AiGateway} from '@mgt/ai-gateway';
 import Stripe from 'stripe';
 import {RETAILERS,SHOP_SEGMENTS,COMMERCE_MODEL} from './retailers';
 import {aiRuntimeReadiness,operationalReadiness,operationalSnapshot} from './operations';
-import {applyProductionHttpLimits,applyProductionHttpTimeouts} from './http-runtime';
+import {applyProductionExpressBoundary,applyProductionHttpLimits,applyProductionHttpTimeouts} from './http-runtime';
 import {BILLING_CYCLES,PLAN_DEFINITIONS,priceIdFor} from './plans';
 type StripeClient=Stripe;
 export interface PortalOptions{store:Store;env?:NodeJS.ProcessEnv;stripe?:StripeClient;coach?:SafeCoach;analysisGateway?:AiGateway;verifyOtp?:(email:string,otp:string)=>Promise<{id:string,email:string}>}
@@ -98,7 +98,7 @@ export async function createPortal(options:PortalOptions){
  const origin=env.PUBLIC_ORIGIN||'http://localhost:3000';const stripe=options.stripe||(env.STRIPE_SECRET_KEY?new Stripe(env.STRIPE_SECRET_KEY,{maxNetworkRetries:2,timeout:15000}):undefined),gateway=options.analysisGateway||gatewayFromEnv(env,db,new StoreRoutingLogSink(db)),coach=options.coach||new SafeCoach([],gateway);
  check(!prod||db.kind==='postgres',500,'production_storage','Production requires PostgreSQL.');
  await initializeCatalog(db,demo);
- const app=express();app.disable('x-powered-by');
+ const app=express();app.disable('x-powered-by');applyProductionExpressBoundary(app,env);
  // Partner onboarding, payouts, and connected-account operations are deliberately
  // unreachable until the post-launch commercial, legal, and support gates are met.
  app.use(['/api/hub/partners','/api/hub/admin/partner','/api/hub/admin/payout'],(_req,res)=>res.status(410).json({error:{code:'feature_deferred',message:'Partner onboarding and payout operations are not available yet.'}}));

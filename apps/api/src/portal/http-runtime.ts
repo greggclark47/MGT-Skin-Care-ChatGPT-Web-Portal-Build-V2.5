@@ -66,6 +66,10 @@ export function queryComponentsWithinLimit(target:string|undefined,maxKeyBytes=1
  if(typeof target!=='string')return false;const query=rawQuery(target);if(query==='')return true;
  return query.split('&').every(pair=>{const at=pair.indexOf('=');const key=at<0?pair:pair.slice(0,at),value=at<0?'':pair.slice(at+1);return Buffer.byteLength(key,'utf8')<=maxKeyBytes&&Buffer.byteLength(value,'utf8')<=maxValueBytes;});
 }
+export function hasUniqueQueryKeys(target:string|undefined):boolean{
+ if(typeof target!=='string')return false;const query=rawQuery(target);if(query==='')return true;const seen=new Set<string>();
+ for(const pair of query.split('&')){const rawKey=pair.split('=',1)[0];let key:string;try{key=decodeURIComponent(rawKey.replace(/\+/g,' '));}catch{return true;}if(seen.has(key))return false;seen.add(key);}return true;
+}
 
 export function apiSecurityHeaders(env:NodeJS.ProcessEnv):Record<string,string>{
  const headers:Record<string,string>={

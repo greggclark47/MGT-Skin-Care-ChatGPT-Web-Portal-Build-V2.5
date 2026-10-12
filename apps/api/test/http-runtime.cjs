@@ -1,7 +1,7 @@
 const assert=require('node:assert/strict');
 const {test}=require('node:test');
 const {createServer}=require('node:http');
-const {acceptsApiContentEncoding,acceptsApiJsonBody,acceptsApiJsonCharset,acceptsBodyForMethod,apiSecurityHeaders,applyProductionHttpTimeouts,applyProductionHttpLimits,applyProductionExpressBoundary,closeProductionHttpServer,hasNoMethodOverride,hasNoPartialBody,hasNoPathOverride,hasNoRangeRequest,hasNoRequestTrailers,hasNoUnverifiedIntegrity,headerWithinLimit,installClientErrorBoundary,isSupportedHttpMethod,queryComponentsWithinLimit,queryPairCountWithinLimit,queryStringWithinLimit,requestTargetWithinLimit}=require('../dist/portal/http-runtime');
+const {acceptsApiContentEncoding,acceptsApiJsonBody,acceptsApiJsonCharset,acceptsBodyForMethod,apiSecurityHeaders,applyProductionHttpTimeouts,applyProductionHttpLimits,applyProductionExpressBoundary,closeProductionHttpServer,hasNoMethodOverride,hasNoPartialBody,hasNoPathOverride,hasNoRangeRequest,hasNoRequestTrailers,hasNoUnverifiedIntegrity,hasUniqueQueryKeys,headerWithinLimit,installClientErrorBoundary,isSupportedHttpMethod,queryComponentsWithinLimit,queryPairCountWithinLimit,queryStringWithinLimit,requestTargetWithinLimit}=require('../dist/portal/http-runtime');
 
 test('request targets are bounded by UTF-8 byte length',()=>{
  assert.equal(requestTargetWithinLimit('/api/hub/catalog?query=clean'),true);
@@ -94,6 +94,7 @@ test('referer metadata fits its 2048-byte operational bound',()=>{assert.equal(h
 test('query strings fit a separate 2048-byte bound',()=>{assert.equal(queryStringWithinLimit('/api/hub/catalog?q=clean'),true);assert.equal(queryStringWithinLimit('/api?'+ 'a'.repeat(2048)),true);assert.equal(queryStringWithinLimit('/api?'+ 'é'.repeat(1025)),false);});
 test('query strings contain at most fifty pairs',()=>{assert.equal(queryPairCountWithinLimit('/api'),true);assert.equal(queryPairCountWithinLimit('/api?'+Array.from({length:50},(_,i)=>`k${i}=v`).join('&')),true);assert.equal(queryPairCountWithinLimit('/api?'+Array.from({length:51},(_,i)=>`k${i}=v`).join('&')),false);assert.equal(queryPairCountWithinLimit('/api?'+'&'.repeat(50)),false);});
 test('query keys and values have independent byte bounds',()=>{assert.equal(queryComponentsWithinLimit('/api?key=value'),true);assert.equal(queryComponentsWithinLimit('/api?'+ 'k'.repeat(129)+'=v'),false);assert.equal(queryComponentsWithinLimit('/api?k='+ 'v'.repeat(1025)),false);assert.equal(queryComponentsWithinLimit('/api?k='+ 'é'.repeat(513)),false);});
+test('query keys are unique after canonical decoding',()=>{assert.equal(hasUniqueQueryKeys('/api?a=1&b=2'),true);assert.equal(hasUniqueQueryKeys('/api?a=1&a=2'),false);assert.equal(hasUniqueQueryKeys('/api?a+b=1&a%20b=2'),false);assert.equal(hasUniqueQueryKeys('/api?%61=1&a=2'),false);});
 
 test('only the bounded REST method set reaches application routes',()=>{
  for(const method of ['GET','HEAD','POST','PUT','PATCH','DELETE','OPTIONS'])assert.equal(isSupportedHttpMethod(method),true);

@@ -90,6 +90,7 @@ test('unverified request-integrity metadata fails closed',()=>{assert.equal(hasN
 test('request trailers cannot mutate metadata after parsing',()=>{assert.equal(hasNoRequestTrailers(undefined),true);assert.equal(hasNoRequestTrailers('Digest'),false);assert.equal(hasNoRequestTrailers(''),false);});
 test('security-relevant headers use byte limits and reject repeated forms',()=>{assert.equal(headerWithinLimit(undefined,4096),true);assert.equal(headerWithinLimit('a'.repeat(4096),4096),true);assert.equal(headerWithinLimit('é'.repeat(2049),4096),false);assert.equal(headerWithinLimit(['a','b'],4096),false);});
 test('user-agent metadata fits its 512-byte operational bound',()=>{assert.equal(headerWithinLimit('browser'.repeat(70),512),true);assert.equal(headerWithinLimit('x'.repeat(513),512),false);});
+test('referer metadata fits its 2048-byte operational bound',()=>{assert.equal(headerWithinLimit('https://portal.example/path',2048),true);assert.equal(headerWithinLimit('x'.repeat(2049),2048),false);});
 
 test('only the bounded REST method set reaches application routes',()=>{
  for(const method of ['GET','HEAD','POST','PUT','PATCH','DELETE','OPTIONS'])assert.equal(isSupportedHttpMethod(method),true);

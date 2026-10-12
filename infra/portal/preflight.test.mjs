@@ -243,6 +243,19 @@ test("keeps secret references distinct across integration roles", () => {
   }
 });
 
+test("rejects active configuration retained by disabled features", () => {
+  for (const changed of [
+    { NOTIFICATION_DELIVERY: "in_app", NOTIFICATION_WEBHOOK_TOKEN: "dormant-token" },
+    { OLLAMA_ENABLED: "false", OLLAMA_BASE_URL: "http://ollama:11434" },
+    { OPENCLAW_ENABLED: "false", OPENCLAW_API_MODE: "ollama" },
+    { SUBSCRIPTIONS_ENABLED: "false", STRIPE_SECRET_KEY: "sk_live_dormant" }
+  ]) {
+    const result = validateEnvironment({ ...production, ...changed });
+    assert.equal(result.ok, false, JSON.stringify(changed));
+    assert.ok(result.errors.some((error) => /^(Disabled customer|Disabled Ollama|Disabled OpenClaw|Disabled subscriptions)/.test(error)));
+  }
+});
+
 test("keeps control and delivery endpoints distinct across roles", () => {
   for (const changed of [
     { INCIDENT_RUNBOOK_URL: production.MONITORING_DASHBOARD_URL },

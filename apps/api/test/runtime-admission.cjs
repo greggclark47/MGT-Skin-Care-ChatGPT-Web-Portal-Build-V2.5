@@ -2,7 +2,7 @@ const assert = require('node:assert/strict');
 const { test } = require('node:test');
 const { spawnSync } = require('node:child_process');
 const path = require('node:path');
-const { validateRuntimeOwnership, validateProductionPortalBoundary, validateProductionDatabaseAdmission, validateProductionOperationsAdmission, validateProductionNotificationAdmission, validateProductionIdentityAdmission, validateProductionBackupAdmission, validateProductionAccessibilityAdmission, validateProductionSubscriptionAdmission, validateProductionAiAdmission, validateProductionProcessSurfaceAdmission, validateProductionImageAdmission, validateProductionSecretIsolation, validateProductionEndpointIsolation, workerIntervalMs, workerReadinessMaxAgeMs } = require('../dist/portal/runtime-admission');
+const { validateRuntimeOwnership, validateProductionPortalBoundary, validateProductionDatabaseAdmission, validateProductionOperationsAdmission, validateProductionNotificationAdmission, validateProductionIdentityAdmission, validateProductionBackupAdmission, validateProductionAccessibilityAdmission, validateProductionSubscriptionAdmission, validateProductionAiAdmission, validateProductionProcessSurfaceAdmission, validateProductionImageAdmission, validateProductionSecretIsolation, validateProductionEndpointIsolation, validateProductionDisabledFeatureResidue, workerIntervalMs, workerReadinessMaxAgeMs } = require('../dist/portal/runtime-admission');
 const { createPortal } = require('../dist/portal/server');
 const owner = 'Gregg Clark of MGT';
 const valid = { NODE_ENV:'production', DEMO_MODE:'false', PUBLIC_ORIGIN:'https://portal.example', PORTAL_DOMAIN:'portal.example', RELEASE_OWNER_NAME:owner, SUPPORT_OWNER_NAME:owner, WORKER_INTERVAL_SECONDS:'60', WORKER_READINESS_MAX_AGE_SECONDS:'300' };
@@ -327,6 +327,24 @@ test('production endpoint isolation matches preflight control-role boundaries', 
   }
 });
 
+test('production disabled-feature residue matches preflight boundaries', async () => {
+  const {validateEnvironment}=await import('../../../infra/portal/preflight.mjs');
+  const processEnv={...valid,...operational,...notification,...identity,...backup,...accessibility,...subscription,...ai,...processSurface,...images};
+  assert.doesNotThrow(()=>validateProductionDisabledFeatureResidue(processEnv));
+  const disabled={...processEnv,NOTIFICATION_DELIVERY:'in_app'};
+  delete disabled.NOTIFICATION_WEBHOOK_URL;delete disabled.NOTIFICATION_WEBHOOK_TOKEN;delete disabled.NOTIFICATION_WEBHOOK_KEY_ID;delete disabled.NOTIFICATION_WEBHOOK_TIMEOUT_MS;
+  for(const overrides of [
+    {NOTIFICATION_DELIVERY:'in_app',NOTIFICATION_WEBHOOK_TOKEN:'dormant-token'},
+    {OLLAMA_ENABLED:'false',OLLAMA_BASE_URL:'http://ollama:11434'},
+    {OPENCLAW_ENABLED:'false',OPENCLAW_API_MODE:'ollama'},
+    {SUBSCRIPTIONS_ENABLED:'false',STRIPE_SECRET_KEY:'sk_live_dormant'}
+  ]){
+    const env={...disabled,...overrides};
+    assert.throws(()=>validateProductionDisabledFeatureResidue(env),error=>error.message==='Production disabled feature residue is invalid.');
+    assert.ok(validateEnvironment(env).errors.some(error=>/^(Disabled customer|Disabled Ollama|Disabled OpenClaw|Disabled subscriptions)/.test(error)));
+  }
+});
+
 // A fake store throws if initialized. This proves the guard runs before any
 // database work, without contacting real services or requiring PostgreSQL.
 function probeStartup(entry, overrides = {}) {
@@ -481,5 +499,11 @@ for (const entry of ['server','worker']) test(`${entry} rejects cross-wired inte
 for (const entry of ['server','worker']) test(`${entry} rejects cross-wired control endpoints before database initialization`, () => {
   for (const overrides of [{INCIDENT_RUNBOOK_URL:operational.MONITORING_DASHBOARD_URL},{ACCESSIBILITY_VALIDATION_REPORT_URL:operational.INCIDENT_RUNBOOK_URL},{NOTIFICATION_WEBHOOK_URL:operational.OPERATIONS_ALERT_WEBHOOK_URL}]) {
     const child=probeStartup(entry,overrides);assert.equal(child.error,undefined);assert.equal(child.status,1);assert.doesNotMatch(child.stderr,/DATABASE_OPENED|mgtskincare\.test/);
+  }
+});
+
+for (const entry of ['server','worker']) test(`${entry} rejects disabled-feature configuration residue before database initialization`, () => {
+  for (const overrides of [{OLLAMA_ENABLED:'false',OLLAMA_BASE_URL:'http://ollama:11434'},{OPENCLAW_ENABLED:'false',OPENCLAW_API_MODE:'ollama'},{SUBSCRIPTIONS_ENABLED:'false',STRIPE_SECRET_KEY:'sk_live_dormant'}]) {
+    const child=probeStartup(entry,overrides);assert.equal(child.error,undefined);assert.equal(child.status,1);assert.doesNotMatch(child.stderr,/DATABASE_OPENED|dormant|ollama:11434/);
   }
 });

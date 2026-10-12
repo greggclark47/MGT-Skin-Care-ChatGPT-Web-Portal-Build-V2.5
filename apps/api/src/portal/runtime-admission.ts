@@ -206,6 +206,15 @@ export function validateProductionEndpointIsolation(env:NodeJS.ProcessEnv):void{
  if(new Set(endpoints).size!==endpoints.length)throw new Error('Production endpoint isolation is invalid.');
 }
 
+export function validateProductionDisabledFeatureResidue(env:NodeJS.ProcessEnv):void{
+ if(env.NODE_ENV!=='production')return;
+ const populated=(keys:string[])=>keys.some(key=>env[key]!==undefined&&env[key]!=='');
+ if(env.NOTIFICATION_DELIVERY==='in_app'&&populated(['NOTIFICATION_WEBHOOK_URL','NOTIFICATION_WEBHOOK_TOKEN','NOTIFICATION_WEBHOOK_KEY_ID','NOTIFICATION_WEBHOOK_TIMEOUT_MS']))throw new Error('Production disabled feature residue is invalid.');
+ if(env.OLLAMA_ENABLED==='false'&&populated(['OLLAMA_BASE_URL']))throw new Error('Production disabled feature residue is invalid.');
+ if(env.OPENCLAW_ENABLED==='false'&&populated(['OPENCLAW_BASE_URL','OPENCLAW_API_MODE','OPENCLAW_API_KEY']))throw new Error('Production disabled feature residue is invalid.');
+ if(env.SUBSCRIPTIONS_ENABLED==='false'&&populated(['STRIPE_LIVE_MODE','STRIPE_SECRET_KEY','STRIPE_SUBSCRIPTION_WEBHOOK_SECRET','STRIPE_PREMIUM_PRODUCT_ID','STRIPE_PREMIUM_MONTHLY_PRICE_ID','STRIPE_PREMIUM_ANNUAL_PRICE_ID']))throw new Error('Production disabled feature residue is invalid.');
+}
+
 export function validateApiRuntimeAdmission(env:NodeJS.ProcessEnv):void{
  validateRuntimeOwnership(env);
  if(env.NODE_ENV==='production'){
@@ -228,6 +237,7 @@ export function validateApiProcessAdmission(env:NodeJS.ProcessEnv):void{
  validateProductionImageAdmission(env);
  validateProductionSecretIsolation(env);
  validateProductionEndpointIsolation(env);
+ validateProductionDisabledFeatureResidue(env);
 }
 
 export function validateWorkerRuntimeAdmission(env:NodeJS.ProcessEnv):number{
@@ -244,5 +254,6 @@ export function validateWorkerRuntimeAdmission(env:NodeJS.ProcessEnv):number{
  validateProductionImageAdmission(env);
  validateProductionSecretIsolation(env);
  validateProductionEndpointIsolation(env);
+ validateProductionDisabledFeatureResidue(env);
  return workerIntervalMs(env);
 }

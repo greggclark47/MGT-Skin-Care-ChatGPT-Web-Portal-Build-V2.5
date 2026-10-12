@@ -2,7 +2,7 @@ const assert = require('node:assert/strict');
 const { test } = require('node:test');
 const { spawnSync } = require('node:child_process');
 const path = require('node:path');
-const { validateRuntimeOwnership, validateProductionPortalBoundary, validateProductionDatabaseAdmission, validateProductionOperationsAdmission, validateProductionNotificationAdmission, validateProductionIdentityAdmission, validateProductionBackupAdmission, validateProductionAccessibilityAdmission, workerIntervalMs, workerReadinessMaxAgeMs } = require('../dist/portal/runtime-admission');
+const { validateRuntimeOwnership, validateProductionPortalBoundary, validateProductionDatabaseAdmission, validateProductionOperationsAdmission, validateProductionNotificationAdmission, validateProductionIdentityAdmission, validateProductionBackupAdmission, validateProductionAccessibilityAdmission, validateProductionSubscriptionAdmission, workerIntervalMs, workerReadinessMaxAgeMs } = require('../dist/portal/runtime-admission');
 const { createPortal } = require('../dist/portal/server');
 const owner = 'Gregg Clark of MGT';
 const valid = { NODE_ENV:'production', DEMO_MODE:'false', PUBLIC_ORIGIN:'https://portal.example', PORTAL_DOMAIN:'portal.example', RELEASE_OWNER_NAME:owner, SUPPORT_OWNER_NAME:owner, WORKER_INTERVAL_SECONDS:'60', WORKER_READINESS_MAX_AGE_SECONDS:'300' };
@@ -127,6 +127,7 @@ const identity = {
 };
 const backup = {BACKUP_MAX_AGE_HOURS:'26',BACKUP_RESTORE_MAX_AGE_DAYS:'90'};
 const accessibility = {ACCESSIBILITY_VALIDATION_REPORT_URL:'https://evidence.mgtskincare.test/accessibility',ACCESSIBILITY_VALIDATED_AT:'2026-01-01T00:00:00.000Z'};
+const subscription = {SUBSCRIPTIONS_ENABLED:'false'};
 
 test('production operations admission matches preflight support, monitoring, and alert boundaries', async () => {
   const {validateEnvironment}=await import('../../../infra/portal/preflight.mjs');
@@ -229,13 +230,27 @@ test('production accessibility admission matches preflight evidence boundaries',
   }
 });
 
+test('production subscription admission matches preflight billing boundaries', async () => {
+  const {validateEnvironment}=await import('../../../infra/portal/preflight.mjs');
+  const enabled={SUBSCRIPTIONS_ENABLED:'true',SUBSCRIPTION_TERMS_APPROVED:'true',STRIPE_LIVE_MODE:'true',STRIPE_SECRET_KEY:'sk_live_configured',STRIPE_SUBSCRIPTION_WEBHOOK_SECRET:'whsec_configured',STRIPE_PREMIUM_PRODUCT_ID:'prod_premium',STRIPE_PREMIUM_MONTHLY_PRICE_ID:'price_premium_month',STRIPE_PREMIUM_ANNUAL_PRICE_ID:'price_premium_year'};
+  const processEnv={...valid,...operational,...notification,...identity,...backup,...accessibility,...enabled};
+  assert.doesNotThrow(()=>validateProductionSubscriptionAdmission(processEnv));
+  assert.doesNotThrow(()=>validateProductionSubscriptionAdmission({...processEnv,SUBSCRIPTIONS_ENABLED:'false'}));
+  for(const overrides of [{SUBSCRIPTIONS_ENABLED:undefined},{SUBSCRIPTIONS_ENABLED:'True'},{SUBSCRIPTION_TERMS_APPROVED:'false'},{STRIPE_LIVE_MODE:'TRUE'},{STRIPE_SECRET_KEY:'sk_test_wrong'},{STRIPE_SUBSCRIPTION_WEBHOOK_SECRET:'invalid'},{STRIPE_PREMIUM_PRODUCT_ID:'price_wrong'},{STRIPE_PREMIUM_MONTHLY_PRICE_ID:'invalid'},{STRIPE_PREMIUM_ANNUAL_PRICE_ID:'price_premium_month'}]){
+    const env={...processEnv,...overrides};let runtimeAccepts=true;
+    try{validateProductionSubscriptionAdmission(env);}catch(error){runtimeAccepts=false;assert.equal(error.message,'Production subscription admission is invalid.');}
+    const report=validateEnvironment(env),keys=new Set(Object.keys(enabled)),preflightAccepts=!report.errors.some(error=>keys.has(error.split(' ')[0])||error.includes('different Stripe Price IDs'));
+    assert.equal(runtimeAccepts,preflightAccepts,JSON.stringify(overrides));
+  }
+});
+
 // A fake store throws if initialized. This proves the guard runs before any
 // database work, without contacting real services or requiring PostgreSQL.
 function probeStartup(entry, overrides = {}) {
   const storePath = require.resolve('../dist/portal/store');
   const entryPath = path.resolve(__dirname,`../dist/portal/${entry}.js`);
   const boot = `const Module=require('node:module');const store=require(${JSON.stringify(storePath)});store.PgStore=class{constructor(){process.stderr.write('DATABASE_OPENED');process.exit(77);}};Module.runMain(${JSON.stringify(entryPath)});`;
-  const env = {...process.env,...valid,...operational,...notification,...identity,...backup,...accessibility,PORTAL_AUTO_MIGRATE:'false',DATABASE_URL:'postgresql://db.invalid/mgt?sslmode=verify-full',...overrides};
+  const env = {...process.env,...valid,...operational,...notification,...identity,...backup,...accessibility,...subscription,PORTAL_AUTO_MIGRATE:'false',DATABASE_URL:'postgresql://db.invalid/mgt?sslmode=verify-full',...overrides};
   return spawnSync(process.execPath,['-e',boot],{env,encoding:'utf8',timeout:10000,windowsHide:true});
 }
 
@@ -344,5 +359,11 @@ for (const entry of ['server','worker']) test(`${entry} rejects unsafe backup co
 for (const entry of ['server','worker']) test(`${entry} rejects unsafe accessibility evidence before database initialization`, () => {
   for (const overrides of [{ACCESSIBILITY_VALIDATION_REPORT_URL:''},{ACCESSIBILITY_VALIDATION_REPORT_URL:'http://evidence.mgtskincare.test/a'},{ACCESSIBILITY_VALIDATED_AT:'2026-01-01T00:00:00Z'},{ACCESSIBILITY_VALIDATED_AT:'2999-01-01T00:00:00.000Z'}]) {
     const child=probeStartup(entry,overrides);assert.equal(child.error,undefined);assert.equal(child.status,1);assert.doesNotMatch(child.stderr,/DATABASE_OPENED|mgtskincare\.test|2999/);
+  }
+});
+
+for (const entry of ['server','worker']) test(`${entry} rejects unsafe subscription controls before database initialization`, () => {
+  for (const overrides of [{SUBSCRIPTIONS_ENABLED:''},{SUBSCRIPTIONS_ENABLED:'False'},{SUBSCRIPTIONS_ENABLED:'true',SUBSCRIPTION_TERMS_APPROVED:'false'}]) {
+    const child=probeStartup(entry,overrides);assert.equal(child.error,undefined);assert.equal(child.status,1);assert.doesNotMatch(child.stderr,/DATABASE_OPENED|False/);
   }
 });

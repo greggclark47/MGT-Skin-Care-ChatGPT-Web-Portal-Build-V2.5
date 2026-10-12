@@ -183,9 +183,9 @@ export function validateEnvironment(env) {
   ]) if (env[key] !== undefined && env[key] !== "" && (typeof env[key] !== "string" || !/^\d+$/.test(env[key]) || !wholeNumber(env[key], minimum, maximum))) errors.push(`${key} must be a whole number between ${minimum} and ${maximum}.`);
   if (wholeNumber(env.OPERATIONS_ALERT_RETRY_COOLDOWN_SECONDS || "300",10,3600) && wholeNumber(env.OPERATIONS_ALERT_MAX_RETRY_DELAY_SECONDS || "3600",10,86400) && Number(env.OPERATIONS_ALERT_MAX_RETRY_DELAY_SECONDS || 3600) < Number(env.OPERATIONS_ALERT_RETRY_COOLDOWN_SECONDS || 300)) errors.push("OPERATIONS_ALERT_MAX_RETRY_DELAY_SECONDS must be at least OPERATIONS_ALERT_RETRY_COOLDOWN_SECONDS.");
 
-  if (!["true", "false"].includes(String(env.SUBSCRIPTIONS_ENABLED).toLowerCase())) errors.push("SUBSCRIPTIONS_ENABLED must be true or false.");
-  if (isTrue(env.SUBSCRIPTIONS_ENABLED)) {
-    if (!isTrue(env.SUBSCRIPTION_TERMS_APPROVED)) errors.push("SUBSCRIPTION_TERMS_APPROVED must be true before subscriptions are enabled.");
+  if (!["true", "false"].includes(env.SUBSCRIPTIONS_ENABLED)) errors.push("SUBSCRIPTIONS_ENABLED must be exactly true or false.");
+  if (env.SUBSCRIPTIONS_ENABLED === "true") {
+    if (env.SUBSCRIPTION_TERMS_APPROVED !== "true") errors.push("SUBSCRIPTION_TERMS_APPROVED must be exactly true before subscriptions are enabled.");
     for (const key of [
       "STRIPE_LIVE_MODE",
       "STRIPE_SECRET_KEY",
@@ -194,7 +194,7 @@ export function validateEnvironment(env) {
       "STRIPE_PREMIUM_MONTHLY_PRICE_ID",
       "STRIPE_PREMIUM_ANNUAL_PRICE_ID"
     ]) requireValue(key);
-    const stripeLiveMode = String(env.STRIPE_LIVE_MODE || "").toLowerCase();
+    const stripeLiveMode = env.STRIPE_LIVE_MODE;
     if (!["true", "false"].includes(stripeLiveMode)) errors.push("STRIPE_LIVE_MODE must be true or false when subscriptions are enabled.");
     const secretPattern = stripeLiveMode === "true" ? /^sk_live_[A-Za-z0-9_]+$/ : /^sk_test_[A-Za-z0-9_]+$/;
     if (!secretPattern.test(String(env.STRIPE_SECRET_KEY || ""))) errors.push(`STRIPE_SECRET_KEY must match the configured ${stripeLiveMode === "true" ? "live" : "test"} Stripe mode.`);

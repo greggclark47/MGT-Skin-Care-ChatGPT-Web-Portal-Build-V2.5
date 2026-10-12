@@ -127,6 +127,18 @@ export function validateProductionAccessibilityAdmission(env:NodeJS.ProcessEnv):
  if(!productionHttpsUrl(env.ACCESSIBILITY_VALIDATION_REPORT_URL)||!productionPastIso(env.ACCESSIBILITY_VALIDATED_AT))throw new Error('Production accessibility admission is invalid.');
 }
 
+export function validateProductionSubscriptionAdmission(env:NodeJS.ProcessEnv):void{
+ if(env.NODE_ENV!=='production')return;
+ if(env.SUBSCRIPTIONS_ENABLED!=='true'&&env.SUBSCRIPTIONS_ENABLED!=='false')throw new Error('Production subscription admission is invalid.');
+ if(env.SUBSCRIPTIONS_ENABLED==='false')return;
+ if(env.SUBSCRIPTION_TERMS_APPROVED!=='true'||(env.STRIPE_LIVE_MODE!=='true'&&env.STRIPE_LIVE_MODE!=='false'))throw new Error('Production subscription admission is invalid.');
+ if(typeof env.STRIPE_SECRET_KEY!=='string'||!(env.STRIPE_LIVE_MODE==='true'?/^sk_live_[A-Za-z0-9_]+$/:/^sk_test_[A-Za-z0-9_]+$/).test(env.STRIPE_SECRET_KEY))throw new Error('Production subscription admission is invalid.');
+ if(typeof env.STRIPE_SUBSCRIPTION_WEBHOOK_SECRET!=='string'||!/^whsec_[A-Za-z0-9_]+$/.test(env.STRIPE_SUBSCRIPTION_WEBHOOK_SECRET))throw new Error('Production subscription admission is invalid.');
+ if(typeof env.STRIPE_PREMIUM_PRODUCT_ID!=='string'||!/^prod_[A-Za-z0-9_]+$/.test(env.STRIPE_PREMIUM_PRODUCT_ID))throw new Error('Production subscription admission is invalid.');
+ if(typeof env.STRIPE_PREMIUM_MONTHLY_PRICE_ID!=='string'||!/^price_[A-Za-z0-9_]+$/.test(env.STRIPE_PREMIUM_MONTHLY_PRICE_ID))throw new Error('Production subscription admission is invalid.');
+ if(typeof env.STRIPE_PREMIUM_ANNUAL_PRICE_ID!=='string'||!/^price_[A-Za-z0-9_]+$/.test(env.STRIPE_PREMIUM_ANNUAL_PRICE_ID)||sameText(env.STRIPE_PREMIUM_MONTHLY_PRICE_ID,env.STRIPE_PREMIUM_ANNUAL_PRICE_ID))throw new Error('Production subscription admission is invalid.');
+}
+
 export function validateApiRuntimeAdmission(env:NodeJS.ProcessEnv):void{
  validateRuntimeOwnership(env);
  if(env.NODE_ENV==='production'){
@@ -143,6 +155,7 @@ export function validateApiProcessAdmission(env:NodeJS.ProcessEnv):void{
  validateProductionIdentityAdmission(env);
  validateProductionBackupAdmission(env);
  validateProductionAccessibilityAdmission(env);
+ validateProductionSubscriptionAdmission(env);
 }
 
 export function validateWorkerRuntimeAdmission(env:NodeJS.ProcessEnv):number{
@@ -153,5 +166,6 @@ export function validateWorkerRuntimeAdmission(env:NodeJS.ProcessEnv):number{
  validateProductionIdentityAdmission(env);
  validateProductionBackupAdmission(env);
  validateProductionAccessibilityAdmission(env);
+ validateProductionSubscriptionAdmission(env);
  return workerIntervalMs(env);
 }

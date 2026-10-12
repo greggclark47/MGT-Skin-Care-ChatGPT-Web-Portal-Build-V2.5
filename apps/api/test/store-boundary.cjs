@@ -12,3 +12,8 @@ test('stored records reject unsupported JSON values instead of dropping them',()
   assert.throws(()=>serializeRecord(value),/Stored record is invalid/);
  }
 });
+
+test('stored records reject cyclic references with a bounded error',()=>{
+ const value={name:'safe'};value.self=value;
+ assert.throws(()=>serializeRecord(value),/^Error: Stored record is invalid\.$/);
+});

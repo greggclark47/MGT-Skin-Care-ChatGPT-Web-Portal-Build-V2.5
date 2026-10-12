@@ -38,6 +38,10 @@ export function acceptsBodyForMethod(method:string|undefined,contentLength:strin
  return !readOnly||!hasBody;
 }
 
+export function hasNoMethodOverride(...headers:(string|string[]|undefined)[]):boolean{
+ return headers.every(value=>value===undefined);
+}
+
 export function apiSecurityHeaders(env:NodeJS.ProcessEnv):Record<string,string>{
  const headers:Record<string,string>={
   'X-Content-Type-Options':'nosniff',

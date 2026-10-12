@@ -49,6 +49,7 @@ export function hasNoPartialBody(contentRange:string|undefined):boolean{
 export function hasNoPathOverride(...headers:(string|string[]|undefined)[]):boolean{
  return headers.every(value=>value===undefined);
 }
+export const hasNoRangeRequest=(range:string|undefined):boolean=>range===undefined;
 
 export function apiSecurityHeaders(env:NodeJS.ProcessEnv):Record<string,string>{
  const headers:Record<string,string>={

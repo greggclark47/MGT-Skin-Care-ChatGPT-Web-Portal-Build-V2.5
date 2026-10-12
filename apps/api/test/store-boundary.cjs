@@ -1,6 +1,6 @@
 const assert=require('node:assert/strict');
 const {test}=require('node:test');
-const {serializeRecord,deserializeRecord,validateRecordAddress,portalTransactionBegin,rollbackPgTransaction}=require('../dist/portal/store');
+const {serializeRecord,deserializeRecord,validateRecordAddress,portalTransactionBegin,rollbackPgTransaction,destroyPgClientAfterCommitFailure}=require('../dist/portal/store');
 
 test('stored records reject non-finite numeric values',()=>{
  assert.equal(serializeRecord({count:3}),'{"count":3}');
@@ -54,4 +54,10 @@ test('rollback failure destroys the client without masking the original error',a
  const client={query:async()=>{throw rollback;},release:error=>released.push(error)};
  await assert.rejects(rollbackPgTransaction(client,original),error=>error===original);
  assert.deepEqual(released,[rollback]);
+});
+
+test('an uncertain commit destroys its pooled client',()=>{
+ const original=new Error('commit transport failure'),released=[];
+ assert.throws(()=>destroyPgClientAfterCommitFailure({query:async()=>{},release:error=>released.push(error)},original),error=>error===original);
+ assert.deepEqual(released,[original]);
 });

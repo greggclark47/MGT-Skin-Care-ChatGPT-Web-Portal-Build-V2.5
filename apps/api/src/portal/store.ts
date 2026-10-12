@@ -19,6 +19,9 @@ type ReleasableQueryClient={query:(statement:string,...args:any[])=>Promise<any>
 export async function rollbackPgTransaction(client:ReleasableQueryClient,original:unknown):Promise<never>{
  try{await client.query('ROLLBACK');client.release();}catch(rollback){client.release(rollback instanceof Error?rollback:new Error('Database rollback failed.'));}throw original;
 }
+export function destroyPgClientAfterCommitFailure(client:ReleasableQueryClient,original:unknown):never{
+ client.release(original instanceof Error?original:new Error('Database commit failed.'));throw original;
+}
 function validateRecordGraph(value:unknown,ancestors:Set<object>=new Set(),depth=0):void{
  if(!value||typeof value!=='object')return;
  if(depth>32)throw new Error('Stored record is invalid.');
@@ -67,14 +70,14 @@ export class PgStore implements Store{
    return this;
   }catch(error){await this.pool.end();throw error;}
  }
- async tx<T>(fn:(r:Records)=>Promise<T>):Promise<T>{const c=await this.pool.connect();try{await c.query(portalTransactionBegin);const r:Records={
+ async tx<T>(fn:(r:Records)=>Promise<T>):Promise<T>{const c=await this.pool.connect();let committing=false;try{await c.query(portalTransactionBegin);const r:Records={
  get:async(s,i)=>{validateRecordAddress(s,i);const q=await c.query('SELECT body FROM hub_records WHERE scope=$1 AND id=$2',[s,i]);return q.rows[0]?deserializeRecord(q.rows[0].body):undefined;},
  put:async(s,i,v)=>{validateRecordAddress(s,i);await c.query('INSERT INTO hub_records(scope,id,body) VALUES($1,$2,$3) ON CONFLICT(scope,id) DO UPDATE SET body=excluded.body',[s,i,serializeRecord(v)]);},
  list:async(s)=>{validateRecordAddress(s);const q=await c.query('SELECT body FROM hub_records WHERE scope=$1 ORDER BY id',[s]);return q.rows.map(x=>deserializeRecord(x.body));},
  entries:async(s)=>{validateRecordAddress(s);const q=await c.query('SELECT id,body FROM hub_records WHERE scope=$1 ORDER BY id',[s]);return q.rows.map(x=>({id:x.id,value:deserializeRecord(x.body)}));},
  remove:async(s,i)=>{validateRecordAddress(s,i);await c.query('DELETE FROM hub_records WHERE scope=$1 AND id=$2',[s,i]);},
  lock:async(key)=>{if(!/^[a-zA-Z0-9:_-]{1,240}$/.test(key))throw new Error('Invalid transaction lock key.');await c.query('SELECT pg_advisory_xact_lock(hashtext($1))',[key]);}
- };const result=await fn(r);await c.query('COMMIT');c.release();return result;}catch(e){return rollbackPgTransaction(c,e);}}
+ };const result=await fn(r);committing=true;await c.query('COMMIT');c.release();return result;}catch(e){if(committing)return destroyPgClientAfterCommitFailure(c,e);return rollbackPgTransaction(c,e);}}
  async close(){await this.pool.end();}
 }
 export function startupMigrations(env:NodeJS.ProcessEnv){

@@ -28,9 +28,16 @@ export function validateProductionDatabaseUrl(url:string,env:NodeJS.ProcessEnv=p
 export function portalPoolConfig(url:string):PoolConfig{
  return {connectionString:url,max:10,connectionTimeoutMillis:5000,statement_timeout:10000,query_timeout:12000,idleTimeoutMillis:30000,maxLifetimeSeconds:300,keepAlive:true,keepAliveInitialDelayMillis:10000};
 }
+type PoolErrorSource={on:(event:'error',listener:(error:Error&{code?:string})=>void)=>unknown};
+export function installDatabasePoolErrorBoundary(pool:PoolErrorSource,log:(record:{event:string;code:string})=>void=(record)=>console.error(JSON.stringify(record))):void{
+ pool.on('error',error=>{
+  const code=typeof error.code==='string'&&/^[A-Z0-9_]{1,16}$/.test(error.code)?error.code:'database_pool_error';
+  log({event:'database_pool_error',code});
+ });
+}
 export class PgStore implements Store{
  kind='postgres'; private pool:Pool;
- constructor(url:string,env:NodeJS.ProcessEnv=process.env){validateProductionDatabaseUrl(url,env);this.pool=new Pool(portalPoolConfig(url));}
+ constructor(url:string,env:NodeJS.ProcessEnv=process.env){validateProductionDatabaseUrl(url,env);this.pool=new Pool(portalPoolConfig(url));installDatabasePoolErrorBoundary(this.pool);}
  async init(migrate=false){
   try{
    if(migrate)await applyPortalMigrations(this.pool);

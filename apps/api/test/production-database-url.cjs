@@ -1,5 +1,5 @@
 const assert = require('node:assert/strict');
-const { PgStore, portalPoolConfig, startupMigrations, validateProductionDatabaseUrl } = require('../dist/portal/store');
+const { installDatabasePoolErrorBoundary, PgStore, portalPoolConfig, startupMigrations, validateProductionDatabaseUrl } = require('../dist/portal/store');
 
 const production = { NODE_ENV: 'production' };
 const baseline = new URL('postgresql://db.internal/mgt');
@@ -10,6 +10,12 @@ assert.equal(portalPoolConfig(baseline.toString()).query_timeout,12000);
 assert.equal(portalPoolConfig(baseline.toString()).maxLifetimeSeconds,300);
 assert.equal(portalPoolConfig(baseline.toString()).keepAlive,true);
 assert.equal(portalPoolConfig(baseline.toString()).keepAliveInitialDelayMillis,10000);
+let poolErrorListener;
+const poolLogs=[];
+installDatabasePoolErrorBoundary({on:(event,listener)=>{assert.equal(event,'error');poolErrorListener=listener;}},record=>poolLogs.push(record));
+poolErrorListener(Object.assign(new Error('raw database host and query must not be logged'),{code:'57P01'}));
+poolErrorListener(Object.assign(new Error('secret'),{code:'bad code'}));
+assert.deepEqual(poolLogs,[{event:'database_pool_error',code:'57P01'},{event:'database_pool_error',code:'database_pool_error'}]);
 
 const unsafe = [
   url => url.searchParams.append('sslmode', 'disable'),

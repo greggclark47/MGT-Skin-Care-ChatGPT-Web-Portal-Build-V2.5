@@ -61,7 +61,8 @@ function productionEmail(value:unknown):boolean{
  return typeof value==='string'&&/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(value)&&!productionPlaceholder.test(value);
 }
 function productionHttpsUrl(value:unknown):boolean{
- try{const parsed=new URL(String(value));return parsed.protocol==='https:'&&!parsed.username&&!parsed.password&&!productionPlaceholder.test(String(value));}catch{return false;}
+ if(typeof value!=='string'||value.length>2048||value!==value.trim())return false;
+ try{const parsed=new URL(value);return parsed.protocol==='https:'&&!parsed.username&&!parsed.password&&!parsed.search&&!parsed.hash&&!productionPlaceholder.test(value);}catch{return false;}
 }
 function productionHttpsOrigin(value:unknown):boolean{
  try{const parsed=new URL(String(value));return parsed.protocol==='https:'&&!parsed.username&&!parsed.password&&!parsed.port&&parsed.pathname==='/'&&!parsed.search&&!parsed.hash&&parsed.origin===value&&!productionPlaceholder.test(String(value));}catch{return false;}

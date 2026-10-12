@@ -212,6 +212,19 @@ test("rejects secret references with whitespace or control characters", () => {
   }
 });
 
+test("rejects query strings and fragments on control and evidence URLs", () => {
+  for (const [key, value] of [
+    ["MONITORING_DASHBOARD_URL", `${production.MONITORING_DASHBOARD_URL}?token=hidden`],
+    ["INCIDENT_RUNBOOK_URL", `${production.INCIDENT_RUNBOOK_URL}#alternate`],
+    ["ACCESSIBILITY_VALIDATION_REPORT_URL", `${production.ACCESSIBILITY_VALIDATION_REPORT_URL}?download=1`],
+    ["OPERATIONS_ALERT_WEBHOOK_URL", `${production.OPERATIONS_ALERT_WEBHOOK_URL}#alternate`]
+  ]) {
+    const result = validateEnvironment({ ...production, [key]: value });
+    assert.equal(result.ok, false, key);
+    assert.ok(result.errors.some((error) => error.startsWith(key)), key);
+  }
+});
+
 test("requires secure webhook delivery settings", () => {
   const result = validateEnvironment({
     ...production,

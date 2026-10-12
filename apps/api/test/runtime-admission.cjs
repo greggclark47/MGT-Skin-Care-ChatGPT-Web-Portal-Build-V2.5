@@ -139,8 +139,8 @@ test('production operations admission matches preflight support, monitoring, and
   assert.doesNotThrow(()=>validateProductionOperationsAdmission(processEnv));
   const cases=[
     {SUPPORT_OWNER_EMAIL:''},{ALERT_OWNER_EMAIL:'invalid'},{MONITORING_DASHBOARD_URL:'http://monitoring.mgtskincare.test'},
-    {INCIDENT_RUNBOOK_URL:'https://operator@operations.mgtskincare.test/runbook'},{SUPPORT_RESPONSE_TARGET_HOURS:'24.0'},
-    {OPERATIONS_ALERT_DELIVERY:'disabled'},{OPERATIONS_ALERT_WEBHOOK_URL:'http://alerts.mgtskincare.test/events'},
+    {MONITORING_DASHBOARD_URL:'https://monitoring.mgtskincare.test/dashboard?token=hidden'},{INCIDENT_RUNBOOK_URL:'https://operator@operations.mgtskincare.test/runbook'},{INCIDENT_RUNBOOK_URL:'https://operations.mgtskincare.test/runbook#alternate'},{SUPPORT_RESPONSE_TARGET_HOURS:'24.0'},
+    {OPERATIONS_ALERT_DELIVERY:'disabled'},{OPERATIONS_ALERT_WEBHOOK_URL:'http://alerts.mgtskincare.test/events'},{OPERATIONS_ALERT_WEBHOOK_URL:'https://alerts.mgtskincare.test/events?token=hidden'},
     {OPERATIONS_ALERT_WEBHOOK_TOKEN:'change-me'},{OPERATIONS_ALERT_WEBHOOK_TOKEN:' configured-alert-token '},{OPERATIONS_ALERT_WEBHOOK_TOKEN:'configured\nalert-token'},{OPERATIONS_ALERT_TIMEOUT_MS:'1e4'},
     {OPERATIONS_ALERT_RETRY_COOLDOWN_SECONDS:'9'},{OPERATIONS_ALERT_EVENT_RETENTION_DAYS:'0'},
     {OPERATIONS_ALERT_LEASE_SECONDS:'9'},{OPERATIONS_ALERT_MAX_RETRY_DELAY_SECONDS:'299'},
@@ -166,7 +166,7 @@ test('production notification admission matches preflight delivery and retry bou
   const cases=[
     {NOTIFICATION_DELIVERY:undefined},{NOTIFICATION_DELIVERY:'disabled'},
     {NOTIFICATION_WEBHOOK_URL:'http://notifications.mgtskincare.test/events'},
-    {NOTIFICATION_WEBHOOK_URL:'https://operator@notifications.mgtskincare.test/events'},
+    {NOTIFICATION_WEBHOOK_URL:'https://operator@notifications.mgtskincare.test/events'},{NOTIFICATION_WEBHOOK_URL:'https://notifications.mgtskincare.test/events#alternate'},
     {NOTIFICATION_WEBHOOK_TOKEN:''},{NOTIFICATION_WEBHOOK_TOKEN:'change-me'},{NOTIFICATION_WEBHOOK_TOKEN:' configured-notification-token '},{NOTIFICATION_WEBHOOK_TOKEN:'configured\tnotification-token'},
     {NOTIFICATION_WEBHOOK_KEY_ID:''},{NOTIFICATION_WEBHOOK_KEY_ID:'not valid'},
     {NOTIFICATION_WEBHOOK_TIMEOUT_MS:''},{NOTIFICATION_WEBHOOK_TIMEOUT_MS:'1e4'},
@@ -227,7 +227,7 @@ test('production accessibility admission matches preflight evidence boundaries',
   const {validateEnvironment}=await import('../../../infra/portal/preflight.mjs');
   const processEnv={...valid,...operational,...notification,...identity,...backup,...accessibility};
   assert.doesNotThrow(()=>validateProductionAccessibilityAdmission(processEnv));
-  for(const overrides of [{ACCESSIBILITY_VALIDATION_REPORT_URL:''},{ACCESSIBILITY_VALIDATION_REPORT_URL:'http://evidence.mgtskincare.test/a'},{ACCESSIBILITY_VALIDATION_REPORT_URL:'https://operator@evidence.mgtskincare.test/a'},{ACCESSIBILITY_VALIDATED_AT:''},{ACCESSIBILITY_VALIDATED_AT:'2026-01-01T00:00:00Z'},{ACCESSIBILITY_VALIDATED_AT:'2999-01-01T00:00:00.000Z'}]){
+  for(const overrides of [{ACCESSIBILITY_VALIDATION_REPORT_URL:''},{ACCESSIBILITY_VALIDATION_REPORT_URL:'http://evidence.mgtskincare.test/a'},{ACCESSIBILITY_VALIDATION_REPORT_URL:'https://operator@evidence.mgtskincare.test/a'},{ACCESSIBILITY_VALIDATION_REPORT_URL:'https://evidence.mgtskincare.test/a?token=hidden'},{ACCESSIBILITY_VALIDATION_REPORT_URL:'https://evidence.mgtskincare.test/a#alternate'},{ACCESSIBILITY_VALIDATED_AT:''},{ACCESSIBILITY_VALIDATED_AT:'2026-01-01T00:00:00Z'},{ACCESSIBILITY_VALIDATED_AT:'2999-01-01T00:00:00.000Z'}]){
     const env={...processEnv,...overrides};let runtimeAccepts=true;
     try{validateProductionAccessibilityAdmission(env);}catch(error){runtimeAccepts=false;assert.equal(error.message,'Production accessibility admission is invalid.');}
     const report=validateEnvironment(env),preflightAccepts=!report.errors.some(error=>error.startsWith('ACCESSIBILITY_'));
@@ -349,7 +349,7 @@ for (const entry of ['server','worker']) test(`${entry} rejects unsafe operation
   for (const overrides of [
     {SUPPORT_OWNER_EMAIL:''},{ALERT_OWNER_EMAIL:'invalid'},{MONITORING_DASHBOARD_URL:'http://monitoring.mgtskincare.test'},
     {SUPPORT_RESPONSE_TARGET_HOURS:'24.0'},{OPERATIONS_ALERT_DELIVERY:'disabled'},
-    {OPERATIONS_ALERT_WEBHOOK_URL:'http://alerts.mgtskincare.test/events'},{OPERATIONS_ALERT_WEBHOOK_TOKEN:'change-me'},{OPERATIONS_ALERT_WEBHOOK_TOKEN:' configured-alert-token '},{OPERATIONS_ALERT_WEBHOOK_TOKEN:'configured\nalert-token'},
+    {OPERATIONS_ALERT_WEBHOOK_URL:'http://alerts.mgtskincare.test/events'},{OPERATIONS_ALERT_WEBHOOK_URL:'https://alerts.mgtskincare.test/events?token=hidden'},{OPERATIONS_ALERT_WEBHOOK_TOKEN:'change-me'},{OPERATIONS_ALERT_WEBHOOK_TOKEN:' configured-alert-token '},{OPERATIONS_ALERT_WEBHOOK_TOKEN:'configured\nalert-token'},
     {OPERATIONS_ALERT_TIMEOUT_MS:'1e4'},{OPERATIONS_ALERT_LEASE_SECONDS:'9'},
     {OPERATIONS_ALERT_MAX_RETRY_DELAY_SECONDS:'299'},{OPERATIONS_ALERT_MAX_ATTEMPTS:'21'},{OPERATIONS_ALERT_KEY_ID:'not valid'}
   ]) {
@@ -363,7 +363,7 @@ for (const entry of ['server','worker']) test(`${entry} rejects unsafe operation
 
 for (const entry of ['server','worker']) test(`${entry} rejects unsafe notification controls before database initialization`, () => {
   for (const overrides of [
-    {NOTIFICATION_DELIVERY:'disabled'},{NOTIFICATION_WEBHOOK_URL:'http://notifications.mgtskincare.test/events'},
+    {NOTIFICATION_DELIVERY:'disabled'},{NOTIFICATION_WEBHOOK_URL:'http://notifications.mgtskincare.test/events'},{NOTIFICATION_WEBHOOK_URL:'https://notifications.mgtskincare.test/events#alternate'},
     {NOTIFICATION_WEBHOOK_TOKEN:'change-me'},{NOTIFICATION_WEBHOOK_TOKEN:' configured-notification-token '},{NOTIFICATION_WEBHOOK_TOKEN:'configured\tnotification-token'},{NOTIFICATION_WEBHOOK_KEY_ID:'not valid'},
     {NOTIFICATION_WEBHOOK_TIMEOUT_MS:'1e4'},{NOTIFICATION_RETRY_COOLDOWN_SECONDS:'3e2'},
     {NOTIFICATION_MAX_RETRY_DELAY_SECONDS:'299'},{NOTIFICATION_MAX_ATTEMPTS:'0'},
@@ -401,7 +401,7 @@ for (const entry of ['server','worker']) test(`${entry} rejects unsafe backup co
 });
 
 for (const entry of ['server','worker']) test(`${entry} rejects unsafe accessibility evidence before database initialization`, () => {
-  for (const overrides of [{ACCESSIBILITY_VALIDATION_REPORT_URL:''},{ACCESSIBILITY_VALIDATION_REPORT_URL:'http://evidence.mgtskincare.test/a'},{ACCESSIBILITY_VALIDATED_AT:'2026-01-01T00:00:00Z'},{ACCESSIBILITY_VALIDATED_AT:'2999-01-01T00:00:00.000Z'}]) {
+  for (const overrides of [{ACCESSIBILITY_VALIDATION_REPORT_URL:''},{ACCESSIBILITY_VALIDATION_REPORT_URL:'http://evidence.mgtskincare.test/a'},{ACCESSIBILITY_VALIDATION_REPORT_URL:'https://evidence.mgtskincare.test/a?token=hidden'},{ACCESSIBILITY_VALIDATION_REPORT_URL:'https://evidence.mgtskincare.test/a#alternate'},{ACCESSIBILITY_VALIDATED_AT:'2026-01-01T00:00:00Z'},{ACCESSIBILITY_VALIDATED_AT:'2999-01-01T00:00:00.000Z'}]) {
     const child=probeStartup(entry,overrides);assert.equal(child.error,undefined);assert.equal(child.status,1);assert.doesNotMatch(child.stderr,/DATABASE_OPENED|mgtskincare\.test|2999/);
   }
 });

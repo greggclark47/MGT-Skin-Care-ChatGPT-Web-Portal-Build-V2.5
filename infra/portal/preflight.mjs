@@ -42,7 +42,8 @@ function validSecretReference(value) {
 function validControlUrl(value) {
   try {
     const url = new URL(value);
-    return url.protocol === "https:" && !url.username && !url.password && !placeholder.test(value);
+    return typeof value === "string" && value.length <= 2048 && value === value.trim()
+      && url.protocol === "https:" && !url.username && !url.password && !url.search && !url.hash && !placeholder.test(value);
   } catch {
     return false;
   }

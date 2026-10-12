@@ -1,10 +1,11 @@
 const assert = require('node:assert/strict');
-const { PgStore, startupMigrations, validateProductionDatabaseUrl } = require('../dist/portal/store');
+const { PgStore, portalPoolConfig, startupMigrations, validateProductionDatabaseUrl } = require('../dist/portal/store');
 
 const production = { NODE_ENV: 'production' };
 const baseline = new URL('postgresql://db.internal/mgt');
 baseline.searchParams.set('sslmode', 'verify-full');
 assert.doesNotThrow(() => validateProductionDatabaseUrl(baseline.toString(), production));
+assert.equal(portalPoolConfig(baseline.toString()).idleTimeoutMillis,30000);
 
 const unsafe = [
   url => url.searchParams.append('sslmode', 'disable'),

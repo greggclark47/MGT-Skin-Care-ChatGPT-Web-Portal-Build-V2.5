@@ -1,4 +1,4 @@
-import { Pool } from 'pg';
+import { Pool, type PoolConfig } from 'pg';
 import fs from 'node:fs';
 import path from 'node:path';
 import { applyPortalMigrations } from './migrations';
@@ -25,9 +25,12 @@ export function validateProductionDatabaseUrl(url:string,env:NodeJS.ProcessEnv=p
  }catch{ /* Only a bounded diagnostic is emitted; the URL may contain credentials. */ }
  throw new Error('Production DATABASE_URL requires one host and verified TLS without query target overrides.');
 }
+export function portalPoolConfig(url:string):PoolConfig{
+ return {connectionString:url,max:10,connectionTimeoutMillis:5000,statement_timeout:10000,idleTimeoutMillis:30000};
+}
 export class PgStore implements Store{
  kind='postgres'; private pool:Pool;
- constructor(url:string,env:NodeJS.ProcessEnv=process.env){validateProductionDatabaseUrl(url,env);this.pool=new Pool({connectionString:url,max:10,connectionTimeoutMillis:5000,statement_timeout:10000});}
+ constructor(url:string,env:NodeJS.ProcessEnv=process.env){validateProductionDatabaseUrl(url,env);this.pool=new Pool(portalPoolConfig(url));}
  async init(migrate=false){
   try{
    if(migrate)await applyPortalMigrations(this.pool);

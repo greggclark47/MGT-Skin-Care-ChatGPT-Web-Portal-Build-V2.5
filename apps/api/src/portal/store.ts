@@ -15,6 +15,10 @@ export interface Records {
 export interface Store { tx<T>(fn:(r:Records)=>Promise<T>):Promise<T>; close():Promise<void>; kind:string }
 const schema='CREATE TABLE IF NOT EXISTS hub_records (scope TEXT NOT NULL, id TEXT NOT NULL, body TEXT NOT NULL, PRIMARY KEY(scope,id))';
 export const portalTransactionBegin='BEGIN ISOLATION LEVEL READ COMMITTED';
+type ReleasableQueryClient={query:(statement:string,...args:any[])=>Promise<any>;release:(error?:Error|boolean)=>void};
+export async function rollbackPgTransaction(client:ReleasableQueryClient,original:unknown):Promise<never>{
+ try{await client.query('ROLLBACK');client.release();}catch(rollback){client.release(rollback instanceof Error?rollback:new Error('Database rollback failed.'));}throw original;
+}
 function validateRecordGraph(value:unknown,ancestors:Set<object>=new Set(),depth=0):void{
  if(!value||typeof value!=='object')return;
  if(depth>32)throw new Error('Stored record is invalid.');
@@ -70,7 +74,7 @@ export class PgStore implements Store{
  entries:async(s)=>{validateRecordAddress(s);const q=await c.query('SELECT id,body FROM hub_records WHERE scope=$1 ORDER BY id',[s]);return q.rows.map(x=>({id:x.id,value:deserializeRecord(x.body)}));},
  remove:async(s,i)=>{validateRecordAddress(s,i);await c.query('DELETE FROM hub_records WHERE scope=$1 AND id=$2',[s,i]);},
  lock:async(key)=>{if(!/^[a-zA-Z0-9:_-]{1,240}$/.test(key))throw new Error('Invalid transaction lock key.');await c.query('SELECT pg_advisory_xact_lock(hashtext($1))',[key]);}
- };const result=await fn(r);await c.query('COMMIT');return result;}catch(e){await c.query('ROLLBACK');throw e;}finally{c.release();}}
+ };const result=await fn(r);await c.query('COMMIT');c.release();return result;}catch(e){return rollbackPgTransaction(c,e);}}
  async close(){await this.pool.end();}
 }
 export function startupMigrations(env:NodeJS.ProcessEnv){

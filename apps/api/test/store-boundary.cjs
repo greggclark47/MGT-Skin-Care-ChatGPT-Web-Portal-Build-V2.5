@@ -1,6 +1,6 @@
 const assert=require('node:assert/strict');
 const {test}=require('node:test');
-const {serializeRecord,deserializeRecord,validateRecordAddress,portalTransactionBegin}=require('../dist/portal/store');
+const {serializeRecord,deserializeRecord,validateRecordAddress,portalTransactionBegin,rollbackPgTransaction}=require('../dist/portal/store');
 
 test('stored records reject non-finite numeric values',()=>{
  assert.equal(serializeRecord({count:3}),'{"count":3}');
@@ -47,4 +47,11 @@ test('stored record reads reject corrupt and oversized encoded bodies',()=>{
 
 test('PostgreSQL transactions declare the supported isolation level',()=>{
  assert.equal(portalTransactionBegin,'BEGIN ISOLATION LEVEL READ COMMITTED');
+});
+
+test('rollback failure destroys the client without masking the original error',async()=>{
+ const original=new Error('business failure'),rollback=new Error('rollback failure'),released=[];
+ const client={query:async()=>{throw rollback;},release:error=>released.push(error)};
+ await assert.rejects(rollbackPgTransaction(client,original),error=>error===original);
+ assert.deepEqual(released,[rollback]);
 });

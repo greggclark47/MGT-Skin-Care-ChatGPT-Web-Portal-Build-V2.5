@@ -254,6 +254,14 @@ export function validateEnvironment(env) {
   if (!String(env.OPENAI_API_KEY || "").trim()) warnings.push("Hosted OpenAI escalation is disabled; local routes remain available.");
   else if (!validSecretReference(env.OPENAI_API_KEY)) errors.push("OPENAI_API_KEY must be injected as a bounded non-placeholder reference without whitespace or control characters.");
 
+  const secretKeys = ["SUPABASE_ANON_KEY", "SUPABASE_SERVICE_ROLE_KEY", "OPERATIONS_ALERT_WEBHOOK_TOKEN"];
+  if (env.NOTIFICATION_DELIVERY === "webhook") secretKeys.push("NOTIFICATION_WEBHOOK_TOKEN");
+  if (env.OPENCLAW_ENABLED === "true" && env.OPENCLAW_API_MODE === "openai-completions") secretKeys.push("OPENCLAW_API_KEY");
+  if (validSecretReference(env.OPENAI_API_KEY)) secretKeys.push("OPENAI_API_KEY");
+  if (env.SUBSCRIPTIONS_ENABLED === "true") secretKeys.push("STRIPE_SECRET_KEY", "STRIPE_SUBSCRIPTION_WEBHOOK_SECRET");
+  const secretReferences = secretKeys.map((key) => env[key]).filter(validSecretReference);
+  if (new Set(secretReferences).size !== secretReferences.length) errors.push("Production secret references must remain distinct across integration roles.");
+
   return { ok: errors.length === 0, errors, warnings };
 }
 

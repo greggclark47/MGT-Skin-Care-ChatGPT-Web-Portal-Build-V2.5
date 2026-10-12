@@ -2,7 +2,7 @@ const assert = require('node:assert/strict');
 const { test } = require('node:test');
 const { spawnSync } = require('node:child_process');
 const path = require('node:path');
-const { validateRuntimeOwnership, validateProductionPortalBoundary, validateProductionDatabaseAdmission, validateProductionOperationsAdmission, validateProductionNotificationAdmission, validateProductionIdentityAdmission, validateProductionBackupAdmission, validateProductionAccessibilityAdmission, validateProductionSubscriptionAdmission, validateProductionAiAdmission, validateProductionProcessSurfaceAdmission, validateProductionImageAdmission, workerIntervalMs, workerReadinessMaxAgeMs } = require('../dist/portal/runtime-admission');
+const { validateRuntimeOwnership, validateProductionPortalBoundary, validateProductionDatabaseAdmission, validateProductionOperationsAdmission, validateProductionNotificationAdmission, validateProductionIdentityAdmission, validateProductionBackupAdmission, validateProductionAccessibilityAdmission, validateProductionSubscriptionAdmission, validateProductionAiAdmission, validateProductionProcessSurfaceAdmission, validateProductionImageAdmission, validateProductionSecretIsolation, workerIntervalMs, workerReadinessMaxAgeMs } = require('../dist/portal/runtime-admission');
 const { createPortal } = require('../dist/portal/server');
 const owner = 'Gregg Clark of MGT';
 const valid = { NODE_ENV:'production', DEMO_MODE:'false', PUBLIC_ORIGIN:'https://portal.example', PORTAL_DOMAIN:'portal.example', RELEASE_OWNER_NAME:owner, SUPPORT_OWNER_NAME:owner, WORKER_INTERVAL_SECONDS:'60', WORKER_READINESS_MAX_AGE_SECONDS:'300' };
@@ -296,6 +296,21 @@ test('production image admission matches preflight immutable digest boundaries',
   }
 });
 
+test('production secret isolation matches preflight integration-role boundaries', async () => {
+  const {validateEnvironment}=await import('../../../infra/portal/preflight.mjs');
+  const processEnv={...valid,...operational,...notification,...identity,...backup,...accessibility,...subscription,...ai,...processSurface,...images};
+  assert.doesNotThrow(()=>validateProductionSecretIsolation(processEnv));
+  for(const overrides of [
+    {OPERATIONS_ALERT_WEBHOOK_TOKEN:identity.SUPABASE_SERVICE_ROLE_KEY},
+    {NOTIFICATION_WEBHOOK_TOKEN:operational.OPERATIONS_ALERT_WEBHOOK_TOKEN},
+    {OPENAI_API_KEY:identity.SUPABASE_ANON_KEY}
+  ]){
+    const env={...processEnv,...overrides};
+    assert.throws(()=>validateProductionSecretIsolation(env),error=>error.message==='Production secret isolation is invalid.');
+    assert.ok(validateEnvironment(env).errors.some(error=>error.startsWith('Production secret references')));
+  }
+});
+
 // A fake store throws if initialized. This proves the guard runs before any
 // database work, without contacting real services or requiring PostgreSQL.
 function probeStartup(entry, overrides = {}) {
@@ -437,5 +452,11 @@ for (const entry of ['server','worker']) test(`${entry} rejects unsafe process s
 for (const entry of ['server','worker']) test(`${entry} rejects mutable or malformed image references before database initialization`, () => {
   for (const overrides of [{NODE_IMAGE:'node:latest'},{API_IMAGE:'ghcr.io/mgt/api:latest'},{WEB_IMAGE:''},{OLLAMA_IMAGE:'ollama/ollama@sha256:bad'},{CADDY_IMAGE:'caddy@sha256:'+'A'.repeat(64)}]) {
     const child=probeStartup(entry,overrides);assert.equal(child.error,undefined);assert.equal(child.status,1);assert.doesNotMatch(child.stderr,/DATABASE_OPENED|latest|sha256/);
+  }
+});
+
+for (const entry of ['server','worker']) test(`${entry} rejects cross-wired integration secrets before database initialization`, () => {
+  for (const overrides of [{OPERATIONS_ALERT_WEBHOOK_TOKEN:'service'},{NOTIFICATION_WEBHOOK_TOKEN:'configured-alert-token'},{OPENAI_API_KEY:'anon'}]) {
+    const child=probeStartup(entry,overrides);assert.equal(child.error,undefined);assert.equal(child.status,1);assert.doesNotMatch(child.stderr,/DATABASE_OPENED|configured-alert-token|service|anon/);
   }
 });

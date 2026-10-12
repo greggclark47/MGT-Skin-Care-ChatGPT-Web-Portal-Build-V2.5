@@ -181,6 +181,17 @@ export function validateProductionImageAdmission(env:NodeJS.ProcessEnv):void{
  }
 }
 
+export function validateProductionSecretIsolation(env:NodeJS.ProcessEnv):void{
+ if(env.NODE_ENV!=='production')return;
+ const keys=['SUPABASE_ANON_KEY','SUPABASE_SERVICE_ROLE_KEY','OPERATIONS_ALERT_WEBHOOK_TOKEN'];
+ if(env.NOTIFICATION_DELIVERY==='webhook')keys.push('NOTIFICATION_WEBHOOK_TOKEN');
+ if(env.OPENCLAW_ENABLED==='true'&&env.OPENCLAW_API_MODE==='openai-completions')keys.push('OPENCLAW_API_KEY');
+ if(configuredReference(env.OPENAI_API_KEY))keys.push('OPENAI_API_KEY');
+ if(env.SUBSCRIPTIONS_ENABLED==='true')keys.push('STRIPE_SECRET_KEY','STRIPE_SUBSCRIPTION_WEBHOOK_SECRET');
+ const references=keys.map(key=>env[key]).filter(configuredReference);
+ if(new Set(references).size!==references.length)throw new Error('Production secret isolation is invalid.');
+}
+
 export function validateApiRuntimeAdmission(env:NodeJS.ProcessEnv):void{
  validateRuntimeOwnership(env);
  if(env.NODE_ENV==='production'){
@@ -201,6 +212,7 @@ export function validateApiProcessAdmission(env:NodeJS.ProcessEnv):void{
  validateProductionAiAdmission(env);
  validateProductionProcessSurfaceAdmission(env);
  validateProductionImageAdmission(env);
+ validateProductionSecretIsolation(env);
 }
 
 export function validateWorkerRuntimeAdmission(env:NodeJS.ProcessEnv):number{
@@ -215,5 +227,6 @@ export function validateWorkerRuntimeAdmission(env:NodeJS.ProcessEnv):number{
  validateProductionAiAdmission(env);
  validateProductionProcessSurfaceAdmission(env);
  validateProductionImageAdmission(env);
+ validateProductionSecretIsolation(env);
  return workerIntervalMs(env);
 }

@@ -229,6 +229,18 @@ test("rejects secret references with whitespace or control characters", () => {
   }
 });
 
+test("keeps secret references distinct across integration roles", () => {
+  for (const changed of [
+    { OPERATIONS_ALERT_WEBHOOK_TOKEN: production.SUPABASE_SERVICE_ROLE_KEY },
+    { OPENAI_API_KEY: production.SUPABASE_ANON_KEY },
+    { NOTIFICATION_DELIVERY: "webhook", NOTIFICATION_WEBHOOK_URL: "https://notify.mgtskincare.test/events", NOTIFICATION_WEBHOOK_TOKEN: production.OPERATIONS_ALERT_WEBHOOK_TOKEN }
+  ]) {
+    const result = validateEnvironment({ ...production, ...changed });
+    assert.equal(result.ok, false, JSON.stringify(changed));
+    assert.ok(result.errors.some((error) => error.startsWith("Production secret references")));
+  }
+});
+
 test("rejects query strings and fragments on control and evidence URLs", () => {
   for (const [key, value] of [
     ["MONITORING_DASHBOARD_URL", `${production.MONITORING_DASHBOARD_URL}?token=hidden`],

@@ -1,7 +1,7 @@
 const assert=require('node:assert/strict');
 const {test}=require('node:test');
 const {createServer}=require('node:http');
-const {acceptsApiContentEncoding,acceptsApiJsonBody,acceptsApiJsonCharset,acceptsBodyForMethod,apiSecurityHeaders,applyProductionHttpTimeouts,applyProductionHttpLimits,applyProductionExpressBoundary,closeProductionHttpServer,hasNoMethodOverride,hasNoPartialBody,hasNoPathOverride,hasNoRangeRequest,hasNoRequestTrailers,hasNoUnverifiedIntegrity,headerWithinLimit,installClientErrorBoundary,isSupportedHttpMethod,requestTargetWithinLimit}=require('../dist/portal/http-runtime');
+const {acceptsApiContentEncoding,acceptsApiJsonBody,acceptsApiJsonCharset,acceptsBodyForMethod,apiSecurityHeaders,applyProductionHttpTimeouts,applyProductionHttpLimits,applyProductionExpressBoundary,closeProductionHttpServer,hasNoMethodOverride,hasNoPartialBody,hasNoPathOverride,hasNoRangeRequest,hasNoRequestTrailers,hasNoUnverifiedIntegrity,headerWithinLimit,installClientErrorBoundary,isSupportedHttpMethod,queryStringWithinLimit,requestTargetWithinLimit}=require('../dist/portal/http-runtime');
 
 test('request targets are bounded by UTF-8 byte length',()=>{
  assert.equal(requestTargetWithinLimit('/api/hub/catalog?query=clean'),true);
@@ -91,6 +91,7 @@ test('request trailers cannot mutate metadata after parsing',()=>{assert.equal(h
 test('security-relevant headers use byte limits and reject repeated forms',()=>{assert.equal(headerWithinLimit(undefined,4096),true);assert.equal(headerWithinLimit('a'.repeat(4096),4096),true);assert.equal(headerWithinLimit('é'.repeat(2049),4096),false);assert.equal(headerWithinLimit(['a','b'],4096),false);});
 test('user-agent metadata fits its 512-byte operational bound',()=>{assert.equal(headerWithinLimit('browser'.repeat(70),512),true);assert.equal(headerWithinLimit('x'.repeat(513),512),false);});
 test('referer metadata fits its 2048-byte operational bound',()=>{assert.equal(headerWithinLimit('https://portal.example/path',2048),true);assert.equal(headerWithinLimit('x'.repeat(2049),2048),false);});
+test('query strings fit a separate 2048-byte bound',()=>{assert.equal(queryStringWithinLimit('/api/hub/catalog?q=clean'),true);assert.equal(queryStringWithinLimit('/api?'+ 'a'.repeat(2048)),true);assert.equal(queryStringWithinLimit('/api?'+ 'é'.repeat(1025)),false);});
 
 test('only the bounded REST method set reaches application routes',()=>{
  for(const method of ['GET','HEAD','POST','PUT','PATCH','DELETE','OPTIONS'])assert.equal(isSupportedHttpMethod(method),true);

@@ -55,6 +55,10 @@ export const hasNoRequestTrailers=(trailer:string|undefined):boolean=>trailer===
 export function headerWithinLimit(value:string|string[]|undefined,maxBytes:number):boolean{
  return value===undefined||(typeof value==='string'&&Buffer.byteLength(value,'utf8')<=maxBytes);
 }
+const rawQuery=(target:string):string=>{const at=target.indexOf('?');return at<0?'':target.slice(at+1);};
+export function queryStringWithinLimit(target:string|undefined,maxBytes=2048):boolean{
+ return typeof target==='string'&&Buffer.byteLength(rawQuery(target),'utf8')<=maxBytes;
+}
 
 export function apiSecurityHeaders(env:NodeJS.ProcessEnv):Record<string,string>{
  const headers:Record<string,string>={

@@ -16,7 +16,7 @@ import type {AiGateway} from '@mgt/ai-gateway';
 import Stripe from 'stripe';
 import {RETAILERS,SHOP_SEGMENTS,COMMERCE_MODEL} from './retailers';
 import {aiRuntimeReadiness,operationalReadiness,operationalSnapshot} from './operations';
-import {acceptsApiContentEncoding,acceptsApiJsonBody,acceptsApiJsonCharset,acceptsBodyForMethod,apiSecurityHeaders,applyProductionExpressBoundary,applyProductionHttpLimits,applyProductionHttpTimeouts,closeProductionHttpServer,hasNoMethodOverride,hasNoPartialBody,hasNoPathOverride,hasNoRangeRequest,hasNoRequestTrailers,hasNoUnverifiedIntegrity,headerWithinLimit,installClientErrorBoundary,isSupportedHttpMethod,requestTargetWithinLimit} from './http-runtime';
+import {acceptsApiContentEncoding,acceptsApiJsonBody,acceptsApiJsonCharset,acceptsBodyForMethod,apiSecurityHeaders,applyProductionExpressBoundary,applyProductionHttpLimits,applyProductionHttpTimeouts,closeProductionHttpServer,hasNoMethodOverride,hasNoPartialBody,hasNoPathOverride,hasNoRangeRequest,hasNoRequestTrailers,hasNoUnverifiedIntegrity,headerWithinLimit,installClientErrorBoundary,isSupportedHttpMethod,queryStringWithinLimit,requestTargetWithinLimit} from './http-runtime';
 import {BILLING_CYCLES,PLAN_DEFINITIONS,priceIdFor} from './plans';
 type StripeClient=Stripe;
 export interface PortalOptions{store:Store;env?:NodeJS.ProcessEnv;stripe?:StripeClient;coach?:SafeCoach;analysisGateway?:AiGateway;verifyOtp?:(email:string,otp:string)=>Promise<{id:string,email:string}>}
@@ -118,6 +118,7 @@ export async function createPortal(options:PortalOptions){
   res.status(healthy?200:503).json({status:healthy?'ok':'not_ready',operations:{healthy:issues.length===0,issues}});
  }));
  installSubscriptionWebhook(app,db,stripe,env);
+ app.use(['/api/hub','/api/v1'],(req,res,next)=>queryStringWithinLimit(req.originalUrl)?next():res.status(414).json({error:{code:'query_string_too_long',message:'The query string is too long.',request_id:(req as HubRequest).requestId}}));
  app.use(['/api/hub','/api/v1'],(req,res,next)=>hasNoPathOverride(req.headers['x-original-url'],req.headers['x-rewrite-url'],req.headers['x-forwarded-uri'])?next():res.status(400).json({error:{code:'path_override_rejected',message:'Alternate request-path headers are not supported.',request_id:(req as HubRequest).requestId}}));
  app.use(['/api/hub','/api/v1'],(req,res,next)=>hasNoRangeRequest(req.headers.range)?next():res.status(400).json({error:{code:'range_request_rejected',message:'Partial API responses are not supported.',request_id:(req as HubRequest).requestId}}));
  app.use(['/api/hub','/api/v1'],(req,res,next)=>hasNoUnverifiedIntegrity(req.headers['content-md5'],req.headers.digest,req.headers['content-digest'])?next():res.status(400).json({error:{code:'unverified_integrity_rejected',message:'Unverified request integrity headers are not supported.',request_id:(req as HubRequest).requestId}}));

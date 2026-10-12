@@ -76,7 +76,7 @@ test('production portal boundary requires explicit non-demo mode and one exact H
     {DEMO_MODE:undefined},{DEMO_MODE:'true'},{DEMO_MODE:'False'},
     {PUBLIC_ORIGIN:undefined},{PUBLIC_ORIGIN:'http://portal.example'},{PUBLIC_ORIGIN:'https://portal.example/path'},
     {PUBLIC_ORIGIN:'https://operator@portal.example'},{PUBLIC_ORIGIN:'https://portal.example:443'},
-    {PORTAL_DOMAIN:undefined},{PORTAL_DOMAIN:'other.example'},{PORTAL_DOMAIN:'https://portal.example'}
+    {PORTAL_DOMAIN:undefined},{PORTAL_DOMAIN:'other.example'},{PORTAL_DOMAIN:'https://portal.example'},{PORTAL_DOMAIN:'portal_example'},{PORTAL_DOMAIN:'-portal.example'},{PORTAL_DOMAIN:'portal..example'},{PORTAL_DOMAIN:'portal.example.'},{PORTAL_DOMAIN:'192.0.2.10'}
   ]) assert.throws(()=>validateProductionPortalBoundary({...valid,...overrides}),error=>error.message==='Production portal boundary is invalid.');
   assert.doesNotThrow(()=>validateProductionPortalBoundary({NODE_ENV:'test'}));
 });

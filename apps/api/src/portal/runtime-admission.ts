@@ -36,7 +36,7 @@ export function validateProductionPortalBoundary(env:NodeJS.ProcessEnv):void{
  if(env.DEMO_MODE!=='false')throw new Error('Production portal boundary is invalid.');
  const origin=env.PUBLIC_ORIGIN,domain=env.PORTAL_DOMAIN;
  try{
-  if(typeof origin!=='string'||typeof domain!=='string'||!domain||domain.includes('://')||domain.includes('/'))throw new Error();
+  if(typeof origin!=='string'||!productionHostname(domain))throw new Error();
   const parsed=new URL(origin);
   if(parsed.protocol!=='https:'||!parsed.hostname||parsed.username||parsed.password||parsed.port||parsed.pathname!=='/'||parsed.search||parsed.hash||parsed.origin!==origin||parsed.hostname!==domain)throw new Error();
  }catch{throw new Error('Production portal boundary is invalid.');}
@@ -82,6 +82,10 @@ function productionPastIso(value:unknown):boolean{
  if(typeof value!=='string')return false;
  const time=Date.parse(value);
  return Number.isFinite(time)&&new Date(time).toISOString()===value&&time<=Date.now();
+}
+function productionHostname(value:unknown):value is string{
+ if(typeof value!=='string'||value.length>253||value!==value.toLowerCase()||!value.includes('.')||/^\d+(?:\.\d+){3}$/.test(value))return false;
+ return value.split('.').every(label=>/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(label));
 }
 
 export function validateProductionOperationsAdmission(env:NodeJS.ProcessEnv):void{

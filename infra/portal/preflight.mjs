@@ -65,6 +65,11 @@ function validIsoDate(value) {
   return Number.isFinite(time) && new Date(time).toISOString() === text && time <= Date.now();
 }
 
+function validProductionHostname(value) {
+  if (typeof value !== "string" || value.length > 253 || value !== value.toLowerCase() || !value.includes(".") || /^\d+(?:\.\d+){3}$/.test(value)) return false;
+  return value.split(".").every((label) => /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(label));
+}
+
 // pg-connection-string takes the last duplicate query value and lets a query
 // `host` replace the URL hostname. Validate the exact target the client uses.
 export function validProductionDatabaseUrl(value) {
@@ -112,8 +117,8 @@ export function validateEnvironment(env) {
   warnings.push("Configuration checks do not prove target-project identity, schema compatibility, RLS isolation, or data reconciliation. Those require separate release evidence.");
 
   const portalDomain = requireValue("PORTAL_DOMAIN");
-  if (portalDomain && (portalDomain.includes("://") || portalDomain.includes("/") || placeholder.test(portalDomain))) {
-    errors.push("PORTAL_DOMAIN must be a production hostname without a scheme or path.");
+  if (portalDomain && (!validProductionHostname(portalDomain) || placeholder.test(portalDomain))) {
+    errors.push("PORTAL_DOMAIN must be a canonical lowercase production DNS hostname.");
   }
   if (publicOrigin && portalDomain && !validProductionOrigin(publicOrigin, portalDomain)) errors.push("PUBLIC_ORIGIN must be the exact HTTPS origin for PORTAL_DOMAIN, without credentials, port, path, query, or fragment.");
 

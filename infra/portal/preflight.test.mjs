@@ -97,6 +97,14 @@ test("production database URL requires one database path and no fragment", () =>
   ]) assert.equal(validProductionDatabaseUrl(value), false, value);
 });
 
+test("requires a canonical lowercase DNS portal hostname", () => {
+  for (const changed of ["PORTAL.EXAMPLE", "portal_example", "-portal.example", "portal..example", "portal.example.", "192.0.2.10"]) {
+    const result = validateEnvironment({ ...production, PORTAL_DOMAIN: changed });
+    assert.equal(result.ok, false, changed);
+    assert.ok(result.errors.some((error) => error.startsWith("PORTAL_DOMAIN")));
+  }
+});
+
 test("binds the public HTTPS origin to the production portal domain", () => {
   assert.equal(validProductionOrigin(production.PUBLIC_ORIGIN, production.PORTAL_DOMAIN), true);
   for (const changed of [

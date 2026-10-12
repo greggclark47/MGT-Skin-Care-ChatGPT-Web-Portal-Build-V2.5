@@ -26,7 +26,7 @@ export function validateProductionDatabaseUrl(url:string,env:NodeJS.ProcessEnv=p
  throw new Error('Production DATABASE_URL requires one host and verified TLS without query target overrides.');
 }
 export function portalPoolConfig(url:string):PoolConfig{
- return {connectionString:url,max:10,connectionTimeoutMillis:5000,statement_timeout:10000,query_timeout:12000,idleTimeoutMillis:30000};
+ return {connectionString:url,max:10,connectionTimeoutMillis:5000,statement_timeout:10000,query_timeout:12000,idleTimeoutMillis:30000,maxLifetimeSeconds:300};
 }
 export class PgStore implements Store{
  kind='postgres'; private pool:Pool;

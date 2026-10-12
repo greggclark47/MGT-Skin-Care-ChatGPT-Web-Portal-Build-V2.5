@@ -7,6 +7,7 @@ baseline.searchParams.set('sslmode', 'verify-full');
 assert.doesNotThrow(() => validateProductionDatabaseUrl(baseline.toString(), production));
 assert.equal(portalPoolConfig(baseline.toString()).idleTimeoutMillis,30000);
 assert.equal(portalPoolConfig(baseline.toString()).query_timeout,12000);
+assert.equal(portalPoolConfig(baseline.toString()).maxLifetimeSeconds,300);
 
 const unsafe = [
   url => url.searchParams.append('sslmode', 'disable'),

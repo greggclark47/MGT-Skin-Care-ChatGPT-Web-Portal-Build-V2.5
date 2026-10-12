@@ -7,6 +7,7 @@ baseline.searchParams.set('sslmode', 'verify-full');
 assert.doesNotThrow(() => validateProductionDatabaseUrl(baseline.toString(), production));
 assert.equal(portalPoolConfig(baseline.toString()).idleTimeoutMillis,30000);
 assert.equal(portalPoolConfig(baseline.toString()).query_timeout,12000);
+assert.equal(portalPoolConfig(baseline.toString()).idle_in_transaction_session_timeout,15000);
 assert.equal(portalPoolConfig(baseline.toString()).maxLifetimeSeconds,300);
 assert.equal(portalPoolConfig(baseline.toString()).keepAlive,true);
 assert.equal(portalPoolConfig(baseline.toString()).keepAliveInitialDelayMillis,10000);

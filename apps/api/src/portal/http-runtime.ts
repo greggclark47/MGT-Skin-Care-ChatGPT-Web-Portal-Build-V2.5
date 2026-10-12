@@ -20,6 +20,20 @@ export function acceptsApiJsonBody(method:string|undefined,contentType:string|un
  return typeof contentType==='string'&&/^application\/(?:[a-z0-9!#$&^_.+-]+\+)?json(?:\s*;|$)/i.test(contentType.trim());
 }
 
+export function apiSecurityHeaders(env:NodeJS.ProcessEnv):Record<string,string>{
+ const headers:Record<string,string>={
+  'X-Content-Type-Options':'nosniff',
+  'Referrer-Policy':'same-origin',
+  'Cache-Control':'no-store',
+  'Content-Security-Policy':"default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'",
+  'Permissions-Policy':'accelerometer=(), camera=(), geolocation=(), gyroscope=(), microphone=(), payment=(), usb=()',
+  'Cross-Origin-Resource-Policy':'same-origin',
+  'Cross-Origin-Opener-Policy':'same-origin'
+ };
+ if(env.NODE_ENV==='production')headers['Strict-Transport-Security']='max-age=31536000; includeSubDomains';
+ return headers;
+}
+
 export function applyProductionHttpTimeouts(server:HttpTimeoutServer,env:NodeJS.ProcessEnv):void{
  if(env.NODE_ENV!=='production')return;
  server.requestTimeout=30_000;

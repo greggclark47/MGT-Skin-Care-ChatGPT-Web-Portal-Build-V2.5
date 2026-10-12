@@ -1,13 +1,24 @@
 const assert=require('node:assert/strict');
 const {test}=require('node:test');
 const {createServer}=require('node:http');
-const {acceptsApiJsonBody,applyProductionHttpTimeouts,applyProductionHttpLimits,applyProductionExpressBoundary,closeProductionHttpServer,isSupportedHttpMethod,requestTargetWithinLimit}=require('../dist/portal/http-runtime');
+const {acceptsApiJsonBody,apiSecurityHeaders,applyProductionHttpTimeouts,applyProductionHttpLimits,applyProductionExpressBoundary,closeProductionHttpServer,isSupportedHttpMethod,requestTargetWithinLimit}=require('../dist/portal/http-runtime');
 
 test('request targets are bounded by UTF-8 byte length',()=>{
  assert.equal(requestTargetWithinLimit('/api/hub/catalog?query=clean'),true);
  assert.equal(requestTargetWithinLimit('/'+ 'a'.repeat(4096)),false);
  assert.equal(requestTargetWithinLimit('/'+ 'é'.repeat(2048)),false);
  assert.equal(requestTargetWithinLimit(undefined),false);
+});
+
+test('API security headers deny browser capabilities and enable HSTS only in production',()=>{
+ const production=apiSecurityHeaders({NODE_ENV:'production'}),testHeaders=apiSecurityHeaders({NODE_ENV:'test'});
+ assert.match(production['Content-Security-Policy'],/default-src 'none'/);
+ assert.match(production['Content-Security-Policy'],/frame-ancestors 'none'/);
+ assert.equal(production['Cross-Origin-Resource-Policy'],'same-origin');
+ assert.equal(production['Cross-Origin-Opener-Policy'],'same-origin');
+ assert.match(production['Permissions-Policy'],/camera=\(\)/);
+ assert.equal(production['Strict-Transport-Security'],'max-age=31536000; includeSubDomains');
+ assert.equal(testHeaders['Strict-Transport-Security'],undefined);
 });
 
 test('API mutation bodies require an explicit JSON media type',()=>{

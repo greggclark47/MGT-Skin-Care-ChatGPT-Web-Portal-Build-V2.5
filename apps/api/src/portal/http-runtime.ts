@@ -42,6 +42,10 @@ export function hasNoMethodOverride(...headers:(string|string[]|undefined)[]):bo
  return headers.every(value=>value===undefined);
 }
 
+export function hasNoPartialBody(contentRange:string|undefined):boolean{
+ return contentRange===undefined;
+}
+
 export function apiSecurityHeaders(env:NodeJS.ProcessEnv):Record<string,string>{
  const headers:Record<string,string>={
   'X-Content-Type-Options':'nosniff',

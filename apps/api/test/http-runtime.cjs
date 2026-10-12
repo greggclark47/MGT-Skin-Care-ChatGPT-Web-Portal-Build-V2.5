@@ -1,7 +1,7 @@
 const assert=require('node:assert/strict');
 const {test}=require('node:test');
 const {createServer}=require('node:http');
-const {acceptsApiContentEncoding,acceptsApiJsonBody,acceptsApiJsonCharset,acceptsBodyForMethod,apiSecurityHeaders,applyProductionHttpTimeouts,applyProductionHttpLimits,applyProductionExpressBoundary,closeProductionHttpServer,hasNoMethodOverride,installClientErrorBoundary,isSupportedHttpMethod,requestTargetWithinLimit}=require('../dist/portal/http-runtime');
+const {acceptsApiContentEncoding,acceptsApiJsonBody,acceptsApiJsonCharset,acceptsBodyForMethod,apiSecurityHeaders,applyProductionHttpTimeouts,applyProductionHttpLimits,applyProductionExpressBoundary,closeProductionHttpServer,hasNoMethodOverride,hasNoPartialBody,installClientErrorBoundary,isSupportedHttpMethod,requestTargetWithinLimit}=require('../dist/portal/http-runtime');
 
 test('request targets are bounded by UTF-8 byte length',()=>{
  assert.equal(requestTargetWithinLimit('/api/hub/catalog?query=clean'),true);
@@ -72,6 +72,12 @@ test('method override metadata cannot change route semantics',()=>{
  assert.equal(hasNoMethodOverride('DELETE',undefined,undefined),false);
  assert.equal(hasNoMethodOverride(undefined,['PATCH'],undefined),false);
  assert.equal(hasNoMethodOverride(undefined,undefined,''),false);
+});
+
+test('partial request-body semantics are rejected',()=>{
+ assert.equal(hasNoPartialBody(undefined),true);
+ assert.equal(hasNoPartialBody('bytes 0-99/200'),false);
+ assert.equal(hasNoPartialBody(''),false);
 });
 
 test('only the bounded REST method set reaches application routes',()=>{

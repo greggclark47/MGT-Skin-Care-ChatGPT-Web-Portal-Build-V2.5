@@ -194,6 +194,14 @@ export function validateProductionSecretIsolation(env:NodeJS.ProcessEnv):void{
  if(new Set(references).size!==references.length)throw new Error('Production secret isolation is invalid.');
 }
 
+export function validateProductionEndpointIsolation(env:NodeJS.ProcessEnv):void{
+ if(env.NODE_ENV!=='production')return;
+ const keys=['MONITORING_DASHBOARD_URL','INCIDENT_RUNBOOK_URL','ACCESSIBILITY_VALIDATION_REPORT_URL','OPERATIONS_ALERT_WEBHOOK_URL'];
+ if(env.NOTIFICATION_DELIVERY==='webhook')keys.push('NOTIFICATION_WEBHOOK_URL');
+ const endpoints=keys.map(key=>env[key]).filter((value):value is string=>typeof value==='string'&&value.length>0);
+ if(new Set(endpoints).size!==endpoints.length)throw new Error('Production endpoint isolation is invalid.');
+}
+
 export function validateApiRuntimeAdmission(env:NodeJS.ProcessEnv):void{
  validateRuntimeOwnership(env);
  if(env.NODE_ENV==='production'){
@@ -215,6 +223,7 @@ export function validateApiProcessAdmission(env:NodeJS.ProcessEnv):void{
  validateProductionProcessSurfaceAdmission(env);
  validateProductionImageAdmission(env);
  validateProductionSecretIsolation(env);
+ validateProductionEndpointIsolation(env);
 }
 
 export function validateWorkerRuntimeAdmission(env:NodeJS.ProcessEnv):number{
@@ -230,5 +239,6 @@ export function validateWorkerRuntimeAdmission(env:NodeJS.ProcessEnv):number{
  validateProductionProcessSurfaceAdmission(env);
  validateProductionImageAdmission(env);
  validateProductionSecretIsolation(env);
+ validateProductionEndpointIsolation(env);
  return workerIntervalMs(env);
 }

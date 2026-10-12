@@ -264,6 +264,11 @@ export function validateEnvironment(env) {
   const secretReferences = secretKeys.map((key) => env[key]).filter(validSecretReference);
   if (new Set(secretReferences).size !== secretReferences.length) errors.push("Production secret references must remain distinct across integration roles.");
 
+  const endpointKeys = ["MONITORING_DASHBOARD_URL", "INCIDENT_RUNBOOK_URL", "ACCESSIBILITY_VALIDATION_REPORT_URL", "OPERATIONS_ALERT_WEBHOOK_URL"];
+  if (env.NOTIFICATION_DELIVERY === "webhook") endpointKeys.push("NOTIFICATION_WEBHOOK_URL");
+  const endpointReferences = endpointKeys.map((key) => env[key]).filter((value) => typeof value === "string" && value.length > 0);
+  if (new Set(endpointReferences).size !== endpointReferences.length) errors.push("Production control and delivery endpoints must remain distinct across roles.");
+
   return { ok: errors.length === 0, errors, warnings };
 }
 

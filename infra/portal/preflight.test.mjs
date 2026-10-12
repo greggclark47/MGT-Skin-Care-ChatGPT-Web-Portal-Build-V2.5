@@ -241,6 +241,18 @@ test("keeps secret references distinct across integration roles", () => {
   }
 });
 
+test("keeps control and delivery endpoints distinct across roles", () => {
+  for (const changed of [
+    { INCIDENT_RUNBOOK_URL: production.MONITORING_DASHBOARD_URL },
+    { ACCESSIBILITY_VALIDATION_REPORT_URL: production.INCIDENT_RUNBOOK_URL },
+    { NOTIFICATION_DELIVERY: "webhook", NOTIFICATION_WEBHOOK_URL: production.OPERATIONS_ALERT_WEBHOOK_URL, NOTIFICATION_WEBHOOK_TOKEN: "configured-notification-token" }
+  ]) {
+    const result = validateEnvironment({ ...production, ...changed });
+    assert.equal(result.ok, false, JSON.stringify(changed));
+    assert.ok(result.errors.some((error) => error.startsWith("Production control and delivery endpoints")));
+  }
+});
+
 test("rejects query strings and fragments on control and evidence URLs", () => {
   for (const [key, value] of [
     ["MONITORING_DASHBOARD_URL", `${production.MONITORING_DASHBOARD_URL}?token=hidden`],

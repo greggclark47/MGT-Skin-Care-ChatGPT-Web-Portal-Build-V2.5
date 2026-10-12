@@ -2,7 +2,7 @@ const assert = require('node:assert/strict');
 const { test } = require('node:test');
 const { spawnSync } = require('node:child_process');
 const path = require('node:path');
-const { validateRuntimeOwnership, validateProductionPortalBoundary, validateProductionDatabaseAdmission, validateProductionOperationsAdmission, validateProductionNotificationAdmission, validateProductionIdentityAdmission, validateProductionBackupAdmission, validateProductionAccessibilityAdmission, validateProductionSubscriptionAdmission, validateProductionAiAdmission, validateProductionProcessSurfaceAdmission, validateProductionImageAdmission, validateProductionSecretIsolation, workerIntervalMs, workerReadinessMaxAgeMs } = require('../dist/portal/runtime-admission');
+const { validateRuntimeOwnership, validateProductionPortalBoundary, validateProductionDatabaseAdmission, validateProductionOperationsAdmission, validateProductionNotificationAdmission, validateProductionIdentityAdmission, validateProductionBackupAdmission, validateProductionAccessibilityAdmission, validateProductionSubscriptionAdmission, validateProductionAiAdmission, validateProductionProcessSurfaceAdmission, validateProductionImageAdmission, validateProductionSecretIsolation, validateProductionEndpointIsolation, workerIntervalMs, workerReadinessMaxAgeMs } = require('../dist/portal/runtime-admission');
 const { createPortal } = require('../dist/portal/server');
 const owner = 'Gregg Clark of MGT';
 const valid = { NODE_ENV:'production', DEMO_MODE:'false', PUBLIC_ORIGIN:'https://portal.example', PORTAL_DOMAIN:'portal.example', RELEASE_OWNER_NAME:owner, SUPPORT_OWNER_NAME:owner, WORKER_INTERVAL_SECONDS:'60', WORKER_READINESS_MAX_AGE_SECONDS:'300' };
@@ -311,6 +311,21 @@ test('production secret isolation matches preflight integration-role boundaries'
   }
 });
 
+test('production endpoint isolation matches preflight control-role boundaries', async () => {
+  const {validateEnvironment}=await import('../../../infra/portal/preflight.mjs');
+  const processEnv={...valid,...operational,...notification,...identity,...backup,...accessibility,...subscription,...ai,...processSurface,...images};
+  assert.doesNotThrow(()=>validateProductionEndpointIsolation(processEnv));
+  for(const overrides of [
+    {INCIDENT_RUNBOOK_URL:operational.MONITORING_DASHBOARD_URL},
+    {ACCESSIBILITY_VALIDATION_REPORT_URL:operational.INCIDENT_RUNBOOK_URL},
+    {NOTIFICATION_WEBHOOK_URL:operational.OPERATIONS_ALERT_WEBHOOK_URL}
+  ]){
+    const env={...processEnv,...overrides};
+    assert.throws(()=>validateProductionEndpointIsolation(env),error=>error.message==='Production endpoint isolation is invalid.');
+    assert.ok(validateEnvironment(env).errors.some(error=>error.startsWith('Production control and delivery endpoints')));
+  }
+});
+
 // A fake store throws if initialized. This proves the guard runs before any
 // database work, without contacting real services or requiring PostgreSQL.
 function probeStartup(entry, overrides = {}) {
@@ -458,5 +473,11 @@ for (const entry of ['server','worker']) test(`${entry} rejects mutable or malfo
 for (const entry of ['server','worker']) test(`${entry} rejects cross-wired integration secrets before database initialization`, () => {
   for (const overrides of [{OPERATIONS_ALERT_WEBHOOK_TOKEN:'service'},{NOTIFICATION_WEBHOOK_TOKEN:'configured-alert-token'},{OPENAI_API_KEY:'anon'}]) {
     const child=probeStartup(entry,overrides);assert.equal(child.error,undefined);assert.equal(child.status,1);assert.doesNotMatch(child.stderr,/DATABASE_OPENED|configured-alert-token|service|anon/);
+  }
+});
+
+for (const entry of ['server','worker']) test(`${entry} rejects cross-wired control endpoints before database initialization`, () => {
+  for (const overrides of [{INCIDENT_RUNBOOK_URL:operational.MONITORING_DASHBOARD_URL},{ACCESSIBILITY_VALIDATION_REPORT_URL:operational.INCIDENT_RUNBOOK_URL},{NOTIFICATION_WEBHOOK_URL:operational.OPERATIONS_ALERT_WEBHOOK_URL}]) {
+    const child=probeStartup(entry,overrides);assert.equal(child.error,undefined);assert.equal(child.status,1);assert.doesNotMatch(child.stderr,/DATABASE_OPENED|mgtskincare\.test/);
   }
 });

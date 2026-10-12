@@ -59,6 +59,9 @@ const rawQuery=(target:string):string=>{const at=target.indexOf('?');return at<0
 export function queryStringWithinLimit(target:string|undefined,maxBytes=2048):boolean{
  return typeof target==='string'&&Buffer.byteLength(rawQuery(target),'utf8')<=maxBytes;
 }
+export function queryPairCountWithinLimit(target:string|undefined,maxPairs=50):boolean{
+ if(typeof target!=='string')return false;const query=rawQuery(target);return query===''||query.split('&').length<=maxPairs;
+}
 
 export function apiSecurityHeaders(env:NodeJS.ProcessEnv):Record<string,string>{
  const headers:Record<string,string>={

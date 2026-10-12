@@ -22,6 +22,10 @@ export function acceptsApiJsonBody(method:string|undefined,contentType:string|un
  return typeof contentType==='string'&&/^application\/(?:[a-z0-9!#$&^_.+-]+\+)?json(?:\s*;|$)/i.test(contentType.trim());
 }
 
+export function acceptsApiContentEncoding(contentEncoding:string|undefined):boolean{
+ return contentEncoding===undefined||contentEncoding.trim().toLowerCase()==='identity';
+}
+
 export function apiSecurityHeaders(env:NodeJS.ProcessEnv):Record<string,string>{
  const headers:Record<string,string>={
   'X-Content-Type-Options':'nosniff',

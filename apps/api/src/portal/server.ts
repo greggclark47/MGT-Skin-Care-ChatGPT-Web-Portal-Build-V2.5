@@ -16,7 +16,7 @@ import type {AiGateway} from '@mgt/ai-gateway';
 import Stripe from 'stripe';
 import {RETAILERS,SHOP_SEGMENTS,COMMERCE_MODEL} from './retailers';
 import {aiRuntimeReadiness,operationalReadiness,operationalSnapshot} from './operations';
-import {acceptsApiJsonBody,apiSecurityHeaders,applyProductionExpressBoundary,applyProductionHttpLimits,applyProductionHttpTimeouts,closeProductionHttpServer,installClientErrorBoundary,isSupportedHttpMethod,requestTargetWithinLimit} from './http-runtime';
+import {acceptsApiContentEncoding,acceptsApiJsonBody,apiSecurityHeaders,applyProductionExpressBoundary,applyProductionHttpLimits,applyProductionHttpTimeouts,closeProductionHttpServer,installClientErrorBoundary,isSupportedHttpMethod,requestTargetWithinLimit} from './http-runtime';
 import {BILLING_CYCLES,PLAN_DEFINITIONS,priceIdFor} from './plans';
 type StripeClient=Stripe;
 export interface PortalOptions{store:Store;env?:NodeJS.ProcessEnv;stripe?:StripeClient;coach?:SafeCoach;analysisGateway?:AiGateway;verifyOtp?:(email:string,otp:string)=>Promise<{id:string,email:string}>}
@@ -118,6 +118,7 @@ export async function createPortal(options:PortalOptions){
   res.status(healthy?200:503).json({status:healthy?'ok':'not_ready',operations:{healthy:issues.length===0,issues}});
  }));
  installSubscriptionWebhook(app,db,stripe,env);
+ app.use(['/api/hub','/api/v1'],(req,res,next)=>acceptsApiContentEncoding(req.headers['content-encoding'])?next():res.status(415).json({error:{code:'unsupported_content_encoding',message:'Compressed request bodies are not supported.',request_id:(req as HubRequest).requestId}}));
  app.use(['/api/hub','/api/v1'],(req,res,next)=>acceptsApiJsonBody(req.method,req.headers['content-type'],req.headers['content-length'],req.headers['transfer-encoding'])?next():res.status(415).json({error:{code:'unsupported_media_type',message:'Send request bodies as application/json.',request_id:(req as HubRequest).requestId}}));
  app.use(express.json({limit:'64kb'}));
  app.use(['/api/hub','/api/v1'],wrap(async(req,_res,next)=>{if(!['GET','HEAD','OPTIONS'].includes(req.method))check(req.body&&typeof req.body==='object'&&!Array.isArray(req.body),400,'invalid_request','Send a valid request object.');next();}));

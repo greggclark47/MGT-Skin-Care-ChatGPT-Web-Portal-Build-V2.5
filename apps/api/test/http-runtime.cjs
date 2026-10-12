@@ -1,7 +1,7 @@
 const assert=require('node:assert/strict');
 const {test}=require('node:test');
 const {createServer}=require('node:http');
-const {acceptsApiJsonBody,apiSecurityHeaders,applyProductionHttpTimeouts,applyProductionHttpLimits,applyProductionExpressBoundary,closeProductionHttpServer,installClientErrorBoundary,isSupportedHttpMethod,requestTargetWithinLimit}=require('../dist/portal/http-runtime');
+const {acceptsApiContentEncoding,acceptsApiJsonBody,apiSecurityHeaders,applyProductionHttpTimeouts,applyProductionHttpLimits,applyProductionExpressBoundary,closeProductionHttpServer,installClientErrorBoundary,isSupportedHttpMethod,requestTargetWithinLimit}=require('../dist/portal/http-runtime');
 
 test('request targets are bounded by UTF-8 byte length',()=>{
  assert.equal(requestTargetWithinLimit('/api/hub/catalog?query=clean'),true);
@@ -42,6 +42,12 @@ test('API mutation bodies require an explicit JSON media type',()=>{
  assert.equal(acceptsApiJsonBody('POST',undefined,undefined,'chunked'),false);
  assert.equal(acceptsApiJsonBody('POST',undefined,'0',undefined),true);
  assert.equal(acceptsApiJsonBody('GET','text/plain','2',undefined),true);
+});
+
+test('API request bodies cannot bypass size limits through compression',()=>{
+ assert.equal(acceptsApiContentEncoding(undefined),true);
+ assert.equal(acceptsApiContentEncoding('identity'),true);
+ for(const encoding of ['gzip','br','deflate','gzip, br'])assert.equal(acceptsApiContentEncoding(encoding),false);
 });
 
 test('only the bounded REST method set reaches application routes',()=>{

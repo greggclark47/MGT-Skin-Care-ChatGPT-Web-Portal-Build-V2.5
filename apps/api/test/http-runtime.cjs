@@ -31,5 +31,5 @@ test('production HTTP server caps requests, headers, and concurrent connections'
 test('production Express boundary disables proxy trust and nested query parsing',()=>{
  const calls=[],app={disable:name=>calls.push(['disable',name]),set:(name,value)=>calls.push(['set',name,value])};
  applyProductionExpressBoundary(app,{NODE_ENV:'production'});
- assert.deepEqual(calls,[['disable','trust proxy'],['set','query parser','simple']]);
+ assert.deepEqual(calls,[['disable','trust proxy'],['disable','etag'],['set','query parser','simple'],['set','json escape',true]]);
 });

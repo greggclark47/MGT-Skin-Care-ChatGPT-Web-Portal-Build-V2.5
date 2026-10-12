@@ -19,5 +19,7 @@ export function applyProductionHttpLimits(server:HttpLimitServer,env:NodeJS.Proc
 export function applyProductionExpressBoundary(app:ExpressBoundary,env:NodeJS.ProcessEnv):void{
  if(env.NODE_ENV!=='production')return;
  app.disable('trust proxy');
+ app.disable('etag');
  app.set('query parser','simple');
+ app.set('json escape',true);
 }

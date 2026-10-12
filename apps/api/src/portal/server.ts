@@ -16,7 +16,7 @@ import type {AiGateway} from '@mgt/ai-gateway';
 import Stripe from 'stripe';
 import {RETAILERS,SHOP_SEGMENTS,COMMERCE_MODEL} from './retailers';
 import {aiRuntimeReadiness,operationalReadiness,operationalSnapshot} from './operations';
-import {applyProductionHttpTimeouts} from './http-runtime';
+import {applyProductionHttpLimits,applyProductionHttpTimeouts} from './http-runtime';
 import {BILLING_CYCLES,PLAN_DEFINITIONS,priceIdFor} from './plans';
 type StripeClient=Stripe;
 export interface PortalOptions{store:Store;env?:NodeJS.ProcessEnv;stripe?:StripeClient;coach?:SafeCoach;analysisGateway?:AiGateway;verifyOtp?:(email:string,otp:string)=>Promise<{id:string,email:string}>}
@@ -549,5 +549,5 @@ export async function createPortal(options:PortalOptions){
  app.use((err:any,req:express.Request,res:Response,_next:express.NextFunction)=>{const known=err instanceof Fault;const status=known?err.status:err.type==='entity.too.large'?413:err.type==='entity.parse.failed'?400:500;res.status(status).json({error:{code:known?err.code:status===400?'invalid_json':'request_failed',message:known?err.message:status===413?'The request is too large.':status===400?'Send valid JSON.':'The request could not be completed.',request_id:(req as HubRequest).requestId}});if(status>=500)console.error(JSON.stringify({request_id:(req as HubRequest).requestId,event:'request_failed',code:known?err.code:'internal'}));});
  return app;
 }
-async function main(){validateApiProcessAdmission(process.env);const migrate=startupMigrations(process.env);const store=process.env.DATABASE_URL?await new PgStore(process.env.DATABASE_URL,process.env).init(migrate):new LocalStore(process.env.PORTAL_DB_PATH||'../../work/data/portal.sqlite');const app=await createPortal({store});const server=app.listen(Number(process.env.PORT||3100),process.env.HOST||'127.0.0.1',()=>console.log('MGT portal API listening at http://127.0.0.1:'+(process.env.PORT||3100)));applyProductionHttpTimeouts(server,process.env);const close=()=>server.close(()=>{void store.close().then(()=>process.exit(0));});process.on('SIGTERM',close);process.on('SIGINT',close);}
+async function main(){validateApiProcessAdmission(process.env);const migrate=startupMigrations(process.env);const store=process.env.DATABASE_URL?await new PgStore(process.env.DATABASE_URL,process.env).init(migrate):new LocalStore(process.env.PORTAL_DB_PATH||'../../work/data/portal.sqlite');const app=await createPortal({store});const server=app.listen(Number(process.env.PORT||3100),process.env.HOST||'127.0.0.1',()=>console.log('MGT portal API listening at http://127.0.0.1:'+(process.env.PORT||3100)));applyProductionHttpTimeouts(server,process.env);applyProductionHttpLimits(server,process.env);const close=()=>server.close(()=>{void store.close().then(()=>process.exit(0));});process.on('SIGTERM',close);process.on('SIGINT',close);}
 if(require.main===module)void main().catch(()=>{console.error(JSON.stringify({event:'portal_startup_failed',code:'startup_failed'}));process.exit(1);});

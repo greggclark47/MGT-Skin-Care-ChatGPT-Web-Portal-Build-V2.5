@@ -113,13 +113,13 @@ export function validateEnvironment(env) {
   const serviceRole = requireValue("SUPABASE_SERVICE_ROLE_KEY");
   if (serviceRole && serviceRole === env.SUPABASE_ANON_KEY) errors.push("SUPABASE_SERVICE_ROLE_KEY must differ from SUPABASE_ANON_KEY.");
 
-  if (!["true", "false"].includes(String(env.OLLAMA_ENABLED).toLowerCase())) errors.push("OLLAMA_ENABLED must be true or false.");
-  if (isTrue(env.OLLAMA_ENABLED) && !validUrl(env.OLLAMA_BASE_URL, ["http:", "https:"])) errors.push("OLLAMA_BASE_URL must be a valid HTTP(S) URL when Ollama is enabled.");
+  if (!["true", "false"].includes(env.OLLAMA_ENABLED)) errors.push("OLLAMA_ENABLED must be exactly true or false.");
+  if (env.OLLAMA_ENABLED === "true" && (!validUrl(env.OLLAMA_BASE_URL, ["http:", "https:"]) || /^(?:https?:\/\/)?[^/]*@/i.test(String(env.OLLAMA_BASE_URL)))) errors.push("OLLAMA_BASE_URL must be a credential-free HTTP(S) URL when Ollama is enabled.");
 
-  if (!["true", "false"].includes(String(env.OPENCLAW_ENABLED).toLowerCase())) errors.push("OPENCLAW_ENABLED must be true or false.");
-  if (isTrue(env.OPENCLAW_ENABLED)) {
-    if (!validUrl(env.OPENCLAW_BASE_URL, ["http:", "https:"])) errors.push("OPENCLAW_BASE_URL must be a valid HTTP(S) URL when OpenClaw is enabled.");
-    const openClawMode = String(env.OPENCLAW_API_MODE || "ollama");
+  if (!["true", "false"].includes(env.OPENCLAW_ENABLED)) errors.push("OPENCLAW_ENABLED must be exactly true or false.");
+  if (env.OPENCLAW_ENABLED === "true") {
+    if (!validUrl(env.OPENCLAW_BASE_URL, ["http:", "https:"]) || /^(?:https?:\/\/)?[^/]*@/i.test(String(env.OPENCLAW_BASE_URL))) errors.push("OPENCLAW_BASE_URL must be a credential-free HTTP(S) URL when OpenClaw is enabled.");
+    const openClawMode = env.OPENCLAW_API_MODE;
     if (!["ollama", "openai-completions"].includes(openClawMode)) errors.push("OPENCLAW_API_MODE must be ollama or openai-completions.");
     if (openClawMode === "openai-completions") requireValue("OPENCLAW_API_KEY");
   } else {
@@ -210,6 +210,7 @@ export function validateEnvironment(env) {
   }
 
   if (!String(env.OPENAI_API_KEY || "").trim()) warnings.push("Hosted OpenAI escalation is disabled; local routes remain available.");
+  else if (placeholder.test(env.OPENAI_API_KEY)) errors.push("OPENAI_API_KEY must be injected from an approved non-placeholder reference when configured.");
 
   return { ok: errors.length === 0, errors, warnings };
 }

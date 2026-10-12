@@ -62,6 +62,11 @@ function productionEmail(value:unknown):boolean{
 function productionHttpsUrl(value:unknown):boolean{
  try{const parsed=new URL(String(value));return parsed.protocol==='https:'&&!parsed.username&&!parsed.password&&!productionPlaceholder.test(String(value));}catch{return false;}
 }
+function productionServiceUrl(value:unknown):boolean{
+ try{const parsed=new URL(String(value));return (parsed.protocol==='http:'||parsed.protocol==='https:')&&!parsed.username&&!parsed.password&&!productionPlaceholder.test(String(value));}catch{return false;}
+}
+function configuredReference(value:unknown):boolean{return typeof value==='string'&&!!value.trim()&&!productionPlaceholder.test(value);}
+function optionalReference(value:unknown):boolean{return value===undefined||value===''||configuredReference(value);}
 function productionInteger(value:unknown,minimum:number,maximum:number,optional=false):boolean{
  if(optional&&(value===undefined||value===''))return true;
  return typeof value==='string'&&/^\d+$/.test(value)&&Number.isSafeInteger(Number(value))&&Number(value)>=minimum&&Number(value)<=maximum;
@@ -139,6 +144,18 @@ export function validateProductionSubscriptionAdmission(env:NodeJS.ProcessEnv):v
  if(typeof env.STRIPE_PREMIUM_ANNUAL_PRICE_ID!=='string'||!/^price_[A-Za-z0-9_]+$/.test(env.STRIPE_PREMIUM_ANNUAL_PRICE_ID)||sameText(env.STRIPE_PREMIUM_MONTHLY_PRICE_ID,env.STRIPE_PREMIUM_ANNUAL_PRICE_ID))throw new Error('Production subscription admission is invalid.');
 }
 
+export function validateProductionAiAdmission(env:NodeJS.ProcessEnv):void{
+ if(env.NODE_ENV!=='production')return;
+ if(env.OLLAMA_ENABLED!=='true'&&env.OLLAMA_ENABLED!=='false')throw new Error('Production AI admission is invalid.');
+ if(env.OLLAMA_ENABLED==='true'&&!productionServiceUrl(env.OLLAMA_BASE_URL))throw new Error('Production AI admission is invalid.');
+ if(env.OPENCLAW_ENABLED!=='true'&&env.OPENCLAW_ENABLED!=='false')throw new Error('Production AI admission is invalid.');
+ if(env.OPENCLAW_ENABLED==='true'){
+  if(!productionServiceUrl(env.OPENCLAW_BASE_URL)||(env.OPENCLAW_API_MODE!=='ollama'&&env.OPENCLAW_API_MODE!=='openai-completions'))throw new Error('Production AI admission is invalid.');
+  if(env.OPENCLAW_API_MODE==='openai-completions'&&!configuredReference(env.OPENCLAW_API_KEY))throw new Error('Production AI admission is invalid.');
+ }
+ if(!optionalReference(env.OPENAI_API_KEY))throw new Error('Production AI admission is invalid.');
+}
+
 export function validateApiRuntimeAdmission(env:NodeJS.ProcessEnv):void{
  validateRuntimeOwnership(env);
  if(env.NODE_ENV==='production'){
@@ -156,6 +173,7 @@ export function validateApiProcessAdmission(env:NodeJS.ProcessEnv):void{
  validateProductionBackupAdmission(env);
  validateProductionAccessibilityAdmission(env);
  validateProductionSubscriptionAdmission(env);
+ validateProductionAiAdmission(env);
 }
 
 export function validateWorkerRuntimeAdmission(env:NodeJS.ProcessEnv):number{
@@ -167,5 +185,6 @@ export function validateWorkerRuntimeAdmission(env:NodeJS.ProcessEnv):number{
  validateProductionBackupAdmission(env);
  validateProductionAccessibilityAdmission(env);
  validateProductionSubscriptionAdmission(env);
+ validateProductionAiAdmission(env);
  return workerIntervalMs(env);
 }

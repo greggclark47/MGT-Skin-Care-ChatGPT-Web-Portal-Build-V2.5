@@ -70,6 +70,10 @@ export function hasUniqueQueryKeys(target:string|undefined):boolean{
  if(typeof target!=='string')return false;const query=rawQuery(target);if(query==='')return true;const seen=new Set<string>();
  for(const pair of query.split('&')){const rawKey=pair.split('=',1)[0];let key:string;try{key=decodeURIComponent(rawKey.replace(/\+/g,' '));}catch{return true;}if(seen.has(key))return false;seen.add(key);}return true;
 }
+export function hasValidQueryEncoding(target:string|undefined):boolean{
+ if(typeof target!=='string')return false;const query=rawQuery(target);if(/%(?![0-9a-f]{2})/i.test(query))return false;
+ try{return !/[\u0000-\u001f\u007f]/.test(decodeURIComponent(query.replace(/\+/g,'%20')));}catch{return false;}
+}
 
 export function apiSecurityHeaders(env:NodeJS.ProcessEnv):Record<string,string>{
  const headers:Record<string,string>={

@@ -1,6 +1,6 @@
 const assert=require('node:assert/strict');
 const {test}=require('node:test');
-const {serializeRecord,deserializeRecord,validateRecordAddress,portalTransactionBegin,rollbackPgTransaction,destroyPgClientAfterCommitFailure}=require('../dist/portal/store');
+const {serializeRecord,deserializeRecord,validateRecordAddress,portalTransactionBegin,rollbackPgTransaction,destroyPgClientAfterCommitFailure,LocalStore}=require('../dist/portal/store');
 
 test('stored records reject non-finite numeric values',()=>{
  assert.equal(serializeRecord({count:3}),'{"count":3}');
@@ -60,4 +60,10 @@ test('an uncertain commit destroys its pooled client',()=>{
  const original=new Error('commit transport failure'),released=[];
  assert.throws(()=>destroyPgClientAfterCommitFailure({query:async()=>{},release:error=>released.push(error)},original),error=>error===original);
  assert.deepEqual(released,[original]);
+});
+
+test('local persistence securely removes deleted content',async()=>{
+ const store=new LocalStore(':memory:');
+ assert.equal(store.db.prepare('PRAGMA secure_delete').get().secure_delete,1);
+ await store.close();
 });

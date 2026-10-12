@@ -79,3 +79,9 @@ test('local persistence bounds write-ahead log checkpoint growth',async()=>{
  assert.equal(store.db.prepare('PRAGMA wal_autocheckpoint').get().wal_autocheckpoint,1000);
  await store.close();
 });
+
+test('store close is idempotent under concurrent shutdown',async()=>{
+ const store=new LocalStore(':memory:');
+ await Promise.all([store.close(),store.close()]);
+ await store.close();
+});

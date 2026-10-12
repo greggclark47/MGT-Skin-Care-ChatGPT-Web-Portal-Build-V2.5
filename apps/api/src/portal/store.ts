@@ -60,7 +60,7 @@ export function installDatabasePoolErrorBoundary(pool:PoolErrorSource,log:(recor
  });
 }
 export class PgStore implements Store{
- kind='postgres'; private pool:Pool;
+ kind='postgres';private pool:Pool;private closing?:Promise<void>;
  constructor(url:string,env:NodeJS.ProcessEnv=process.env){validateProductionDatabaseUrl(url,env);this.pool=new Pool(portalPoolConfig(url));installDatabasePoolErrorBoundary(this.pool);}
  async init(migrate=false){
   try{
@@ -78,7 +78,7 @@ export class PgStore implements Store{
  remove:async(s,i)=>{validateRecordAddress(s,i);await c.query('DELETE FROM hub_records WHERE scope=$1 AND id=$2',[s,i]);},
  lock:async(key)=>{if(!/^[a-zA-Z0-9:_-]{1,240}$/.test(key))throw new Error('Invalid transaction lock key.');await c.query('SELECT pg_advisory_xact_lock(hashtext($1))',[key]);}
  };const result=await fn(r);committing=true;await c.query('COMMIT');c.release();return result;}catch(e){if(committing)return destroyPgClientAfterCommitFailure(c,e);return rollbackPgTransaction(c,e);}}
- async close(){await this.pool.end();}
+ async close(){await(this.closing??=this.pool.end());}
 }
 export function startupMigrations(env:NodeJS.ProcessEnv){
  if(env.NODE_ENV==='production'&&env.PORTAL_AUTO_MIGRATE!=='false')throw new Error('Production database changes require an explicit no-auto-migration declaration.');
@@ -87,7 +87,7 @@ export function startupMigrations(env:NodeJS.ProcessEnv){
 // SQLite is a persistent local development adapter. Production requires PostgreSQL.
 // Only this queue accesses the connection; asynchronous callbacks cannot overlap transactions.
 export class LocalStore implements Store{
- kind='sqlite';private db:any;private tail:Promise<any>=Promise.resolve();
+ kind='sqlite';private db:any;private tail:Promise<any>=Promise.resolve();private closing?:Promise<void>;
  constructor(file:string){if(file!==':memory:')fs.mkdirSync(path.dirname(file),{recursive:true});const {DatabaseSync}=require('node:sqlite');this.db=new DatabaseSync(file);this.db.exec('PRAGMA journal_mode=WAL; PRAGMA busy_timeout=5000; PRAGMA secure_delete=ON; PRAGMA trusted_schema=OFF; PRAGMA wal_autocheckpoint=1000;');this.db.exec(schema);}
  tx<T>(fn:(r:Records)=>Promise<T>):Promise<T>{const run=async()=>{this.db.exec('BEGIN IMMEDIATE');const r:Records={
  get:async(s,i)=>{validateRecordAddress(s,i);const v=this.db.prepare('SELECT body FROM hub_records WHERE scope=? AND id=?').get(s,i);return v?deserializeRecord(v.body):undefined;},
@@ -98,5 +98,5 @@ export class LocalStore implements Store{
  lock:async()=>{}
  };try{const result=await fn(r);this.db.exec('COMMIT');return result;}catch(e){this.db.exec('ROLLBACK');throw e;}};
  const pending=this.tail.then(run);this.tail=pending.catch(()=>{});return pending;}
- async close(){await this.tail;this.db.close();}
+ async close(){await(this.closing??=(async()=>{await this.tail;this.db.close();})());}
 }

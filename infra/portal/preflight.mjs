@@ -139,17 +139,19 @@ export function validateEnvironment(env) {
   const delivery = String(env.NOTIFICATION_DELIVERY || "");
   if (!["in_app", "webhook"].includes(delivery)) errors.push("NOTIFICATION_DELIVERY must be in_app or webhook.");
   if (delivery === "webhook") {
-    if (!validUrl(env.NOTIFICATION_WEBHOOK_URL, ["https:"])) errors.push("NOTIFICATION_WEBHOOK_URL must be HTTPS for webhook delivery.");
+    if (!validControlUrl(env.NOTIFICATION_WEBHOOK_URL)) errors.push("NOTIFICATION_WEBHOOK_URL must be HTTPS without embedded credentials for webhook delivery.");
     requireValue("NOTIFICATION_WEBHOOK_TOKEN");
-    if (env.NOTIFICATION_WEBHOOK_KEY_ID && !/^[A-Za-z0-9_-]{1,64}$/.test(env.NOTIFICATION_WEBHOOK_KEY_ID)) errors.push("NOTIFICATION_WEBHOOK_KEY_ID must contain only letters, numbers, underscores or hyphens.");
-    if (env.NOTIFICATION_WEBHOOK_TIMEOUT_MS !== undefined && !wholeNumber(env.NOTIFICATION_WEBHOOK_TIMEOUT_MS, 1000, 30000)) errors.push("NOTIFICATION_WEBHOOK_TIMEOUT_MS must be a whole number between 1000 and 30000.");
+    if (env.NOTIFICATION_WEBHOOK_KEY_ID !== undefined && !/^[A-Za-z0-9_-]{1,64}$/.test(env.NOTIFICATION_WEBHOOK_KEY_ID)) errors.push("NOTIFICATION_WEBHOOK_KEY_ID must contain only letters, numbers, underscores or hyphens.");
+    if (env.NOTIFICATION_WEBHOOK_TIMEOUT_MS !== undefined && (typeof env.NOTIFICATION_WEBHOOK_TIMEOUT_MS !== "string" || !/^\d+$/.test(env.NOTIFICATION_WEBHOOK_TIMEOUT_MS) || !wholeNumber(env.NOTIFICATION_WEBHOOK_TIMEOUT_MS, 1000, 30000))) errors.push("NOTIFICATION_WEBHOOK_TIMEOUT_MS must be a whole number between 1000 and 30000.");
   }
-  const notificationRetryBase = env.NOTIFICATION_RETRY_COOLDOWN_SECONDS || "300";
-  const notificationRetryMax = env.NOTIFICATION_MAX_RETRY_DELAY_SECONDS || "3600";
-  const notificationMaxAttempts = env.NOTIFICATION_MAX_ATTEMPTS || "3";
-  if (!wholeNumber(notificationRetryBase, 10, 3600)) errors.push("NOTIFICATION_RETRY_COOLDOWN_SECONDS must be a whole number between 10 and 3600.");
-  if (!wholeNumber(notificationRetryMax, 10, 86400)) errors.push("NOTIFICATION_MAX_RETRY_DELAY_SECONDS must be a whole number between 10 and 86400.");
-  if (!wholeNumber(notificationMaxAttempts, 1, 20)) errors.push("NOTIFICATION_MAX_ATTEMPTS must be a whole number between 1 and 20.");
+  const notificationRetryBase = env.NOTIFICATION_RETRY_COOLDOWN_SECONDS ?? "300";
+  const notificationRetryMax = env.NOTIFICATION_MAX_RETRY_DELAY_SECONDS ?? "3600";
+  const notificationMaxAttempts = env.NOTIFICATION_MAX_ATTEMPTS ?? "3";
+  const notificationRetention = env.OPERATIONS_NOTIFICATION_RETENTION_DAYS ?? "90";
+  if (typeof notificationRetryBase !== "string" || !/^\d+$/.test(notificationRetryBase) || !wholeNumber(notificationRetryBase, 10, 3600)) errors.push("NOTIFICATION_RETRY_COOLDOWN_SECONDS must be a whole number between 10 and 3600.");
+  if (typeof notificationRetryMax !== "string" || !/^\d+$/.test(notificationRetryMax) || !wholeNumber(notificationRetryMax, 10, 86400)) errors.push("NOTIFICATION_MAX_RETRY_DELAY_SECONDS must be a whole number between 10 and 86400.");
+  if (typeof notificationMaxAttempts !== "string" || !/^\d+$/.test(notificationMaxAttempts) || !wholeNumber(notificationMaxAttempts, 1, 20)) errors.push("NOTIFICATION_MAX_ATTEMPTS must be a whole number between 1 and 20.");
+  if (typeof notificationRetention !== "string" || !/^\d+$/.test(notificationRetention) || !wholeNumber(notificationRetention, 1, 3650)) errors.push("OPERATIONS_NOTIFICATION_RETENTION_DAYS must be a whole number between 1 and 3650.");
   if (wholeNumber(notificationRetryBase, 10, 3600) && wholeNumber(notificationRetryMax, 10, 86400) && Number(notificationRetryMax) < Number(notificationRetryBase)) errors.push("NOTIFICATION_MAX_RETRY_DELAY_SECONDS must be at least NOTIFICATION_RETRY_COOLDOWN_SECONDS.");
 
   const supportOwnerEmail = requireValue("SUPPORT_OWNER_EMAIL");

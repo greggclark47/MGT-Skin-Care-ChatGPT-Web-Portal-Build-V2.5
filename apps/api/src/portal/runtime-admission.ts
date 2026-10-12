@@ -85,6 +85,24 @@ export function validateProductionOperationsAdmission(env:NodeJS.ProcessEnv):voi
  if(!validCore||!validOptional||retryMax<retryBase)throw new Error('Production operations admission is invalid.');
 }
 
+export function validateProductionNotificationAdmission(env:NodeJS.ProcessEnv):void{
+ if(env.NODE_ENV!=='production')return;
+ const delivery=env.NOTIFICATION_DELIVERY;
+ if(delivery!=='in_app'&&delivery!=='webhook')throw new Error('Production notification admission is invalid.');
+ if(delivery==='webhook'){
+  if(!productionHttpsUrl(env.NOTIFICATION_WEBHOOK_URL))throw new Error('Production notification admission is invalid.');
+  if(typeof env.NOTIFICATION_WEBHOOK_TOKEN!=='string'||!env.NOTIFICATION_WEBHOOK_TOKEN.trim()||productionPlaceholder.test(env.NOTIFICATION_WEBHOOK_TOKEN))throw new Error('Production notification admission is invalid.');
+  if(env.NOTIFICATION_WEBHOOK_KEY_ID!==undefined&&!/^[A-Za-z0-9_-]{1,64}$/.test(env.NOTIFICATION_WEBHOOK_KEY_ID))throw new Error('Production notification admission is invalid.');
+  if(env.NOTIFICATION_WEBHOOK_TIMEOUT_MS!==undefined&&!productionInteger(env.NOTIFICATION_WEBHOOK_TIMEOUT_MS,1000,30000))throw new Error('Production notification admission is invalid.');
+ }
+ const retryBase=env.NOTIFICATION_RETRY_COOLDOWN_SECONDS??'300',retryMax=env.NOTIFICATION_MAX_RETRY_DELAY_SECONDS??'3600';
+ const validPolicy=productionInteger(retryBase,10,3600)&&productionInteger(retryMax,10,86400)
+  &&productionInteger(env.NOTIFICATION_MAX_ATTEMPTS??'3',1,20)
+  &&productionInteger(env.OPERATIONS_NOTIFICATION_RETENTION_DAYS??'90',1,3650)
+  &&Number(retryMax)>=Number(retryBase);
+ if(!validPolicy)throw new Error('Production notification admission is invalid.');
+}
+
 export function validateApiRuntimeAdmission(env:NodeJS.ProcessEnv):void{
  validateRuntimeOwnership(env);
  if(env.NODE_ENV==='production'){
@@ -97,11 +115,13 @@ export function validateApiProcessAdmission(env:NodeJS.ProcessEnv):void{
  validateApiRuntimeAdmission(env);
  validateProductionDatabaseAdmission(env);
  validateProductionOperationsAdmission(env);
+ validateProductionNotificationAdmission(env);
 }
 
 export function validateWorkerRuntimeAdmission(env:NodeJS.ProcessEnv):number{
  validateRuntimeOwnership(env);
  validateProductionDatabaseAdmission(env);
  validateProductionOperationsAdmission(env);
+ validateProductionNotificationAdmission(env);
  return workerIntervalMs(env);
 }

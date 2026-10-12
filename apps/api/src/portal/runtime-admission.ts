@@ -176,9 +176,11 @@ export function validateProductionProcessSurfaceAdmission(env:NodeJS.ProcessEnv)
 
 export function validateProductionImageAdmission(env:NodeJS.ProcessEnv):void{
  if(env.NODE_ENV!=='production')return;
- for(const key of ['NODE_IMAGE','API_IMAGE','WEB_IMAGE','OLLAMA_IMAGE','CADDY_IMAGE']){
+ const keys=['NODE_IMAGE','API_IMAGE','WEB_IMAGE','OLLAMA_IMAGE','CADDY_IMAGE'];
+ for(const key of keys){
   if(!productionDigestImage(env[key]))throw new Error('Production image admission is invalid.');
  }
+ if(new Set(keys.map(key=>env[key])).size!==keys.length)throw new Error('Production image admission is invalid.');
 }
 
 export function validateProductionSecretIsolation(env:NodeJS.ProcessEnv):void{

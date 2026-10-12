@@ -380,6 +380,18 @@ test("requires an immutable Node base image for application builds", () => {
   assert.ok(result.errors.some((error) => error.startsWith("NODE_IMAGE")));
 });
 
+test("keeps immutable image references distinct across deployment roles", () => {
+  for (const changed of [
+    { WEB_IMAGE: production.API_IMAGE },
+    { CADDY_IMAGE: production.NODE_IMAGE },
+    { OLLAMA_IMAGE: production.WEB_IMAGE }
+  ]) {
+    const result = validateEnvironment({ ...production, ...changed });
+    assert.equal(result.ok, false, JSON.stringify(changed));
+    assert.ok(result.errors.some((error) => error.startsWith("Production image references")));
+  }
+});
+
 test("requires immutable deployable API and web application images", () => {
   const result = validateEnvironment({ ...production, API_IMAGE: "ghcr.io/mgt/api:latest", WEB_IMAGE: "" });
   assert.equal(result.ok, false);

@@ -288,10 +288,10 @@ test('production image admission matches preflight immutable digest boundaries',
   const {validateEnvironment}=await import('../../../infra/portal/preflight.mjs');
   const processEnv={...valid,...operational,...notification,...identity,...backup,...accessibility,...subscription,...ai,...processSurface,...images};
   assert.doesNotThrow(()=>validateProductionImageAdmission(processEnv));
-  for(const overrides of [{NODE_IMAGE:undefined},{API_IMAGE:'ghcr.io/mgt/api:latest'},{WEB_IMAGE:'ghcr.io/mgt/web@sha256:ABC'},{OLLAMA_IMAGE:'ollama/ollama@sha256:'+'a'.repeat(63)},{CADDY_IMAGE:'https://registry.test/caddy@sha256:'+'e'.repeat(64)}]){
+  for(const overrides of [{NODE_IMAGE:undefined},{API_IMAGE:'ghcr.io/mgt/api:latest'},{WEB_IMAGE:'ghcr.io/mgt/web@sha256:ABC'},{OLLAMA_IMAGE:'ollama/ollama@sha256:'+'a'.repeat(63)},{CADDY_IMAGE:'https://registry.test/caddy@sha256:'+'e'.repeat(64)},{WEB_IMAGE:images.API_IMAGE},{CADDY_IMAGE:images.NODE_IMAGE}]){
     const env={...processEnv,...overrides};let runtimeAccepts=true;
     try{validateProductionImageAdmission(env);}catch(error){runtimeAccepts=false;assert.equal(error.message,'Production image admission is invalid.');}
-    const report=validateEnvironment(env),preflightAccepts=!report.errors.some(error=>/^(NODE_IMAGE|API_IMAGE|WEB_IMAGE|OLLAMA_IMAGE|CADDY_IMAGE)/.test(error));
+    const report=validateEnvironment(env),preflightAccepts=!report.errors.some(error=>/^(NODE_IMAGE|API_IMAGE|WEB_IMAGE|OLLAMA_IMAGE|CADDY_IMAGE|Production image references)/.test(error));
     assert.equal(runtimeAccepts,preflightAccepts,JSON.stringify(overrides));
   }
 });
@@ -450,7 +450,7 @@ for (const entry of ['server','worker']) test(`${entry} rejects unsafe process s
 });
 
 for (const entry of ['server','worker']) test(`${entry} rejects mutable or malformed image references before database initialization`, () => {
-  for (const overrides of [{NODE_IMAGE:'node:latest'},{API_IMAGE:'ghcr.io/mgt/api:latest'},{WEB_IMAGE:''},{OLLAMA_IMAGE:'ollama/ollama@sha256:bad'},{CADDY_IMAGE:'caddy@sha256:'+'A'.repeat(64)}]) {
+  for (const overrides of [{NODE_IMAGE:'node:latest'},{API_IMAGE:'ghcr.io/mgt/api:latest'},{WEB_IMAGE:''},{OLLAMA_IMAGE:'ollama/ollama@sha256:bad'},{CADDY_IMAGE:'caddy@sha256:'+'A'.repeat(64)},{WEB_IMAGE:images.API_IMAGE},{CADDY_IMAGE:images.NODE_IMAGE}]) {
     const child=probeStartup(entry,overrides);assert.equal(child.error,undefined);assert.equal(child.status,1);assert.doesNotMatch(child.stderr,/DATABASE_OPENED|latest|sha256/);
   }
 });

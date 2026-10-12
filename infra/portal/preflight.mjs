@@ -137,6 +137,8 @@ export function validateEnvironment(env) {
   if (!digestImage(env.WEB_IMAGE)) errors.push("WEB_IMAGE must use an approved immutable @sha256 application image digest.");
   if (!digestImage(env.OLLAMA_IMAGE)) errors.push("OLLAMA_IMAGE must use an approved immutable @sha256 image digest.");
   if (!digestImage(env.CADDY_IMAGE)) errors.push("CADDY_IMAGE must use an approved immutable @sha256 image digest.");
+  const imageReferences = [env.NODE_IMAGE, env.API_IMAGE, env.WEB_IMAGE, env.OLLAMA_IMAGE, env.CADDY_IMAGE].filter(digestImage);
+  if (new Set(imageReferences).size !== imageReferences.length) errors.push("Production image references must remain distinct across deployment roles.");
 
   const supabaseUrl = requireValue("SUPABASE_URL");
   if (supabaseUrl && !validServiceOrigin(supabaseUrl)) errors.push("SUPABASE_URL must be an exact production HTTPS origin without credentials, port, path, query, or fragment.");

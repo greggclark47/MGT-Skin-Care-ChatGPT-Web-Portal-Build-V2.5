@@ -1,13 +1,22 @@
 const assert=require('node:assert/strict');
 const {test}=require('node:test');
 const {createServer}=require('node:http');
-const {applyProductionHttpTimeouts,applyProductionHttpLimits,applyProductionExpressBoundary,closeProductionHttpServer,isSupportedHttpMethod,requestTargetWithinLimit}=require('../dist/portal/http-runtime');
+const {acceptsApiJsonBody,applyProductionHttpTimeouts,applyProductionHttpLimits,applyProductionExpressBoundary,closeProductionHttpServer,isSupportedHttpMethod,requestTargetWithinLimit}=require('../dist/portal/http-runtime');
 
 test('request targets are bounded by UTF-8 byte length',()=>{
  assert.equal(requestTargetWithinLimit('/api/hub/catalog?query=clean'),true);
  assert.equal(requestTargetWithinLimit('/'+ 'a'.repeat(4096)),false);
  assert.equal(requestTargetWithinLimit('/'+ 'é'.repeat(2048)),false);
  assert.equal(requestTargetWithinLimit(undefined),false);
+});
+
+test('API mutation bodies require an explicit JSON media type',()=>{
+ assert.equal(acceptsApiJsonBody('POST','application/json','2',undefined),true);
+ assert.equal(acceptsApiJsonBody('PATCH','application/problem+json; charset=utf-8',undefined,'chunked'),true);
+ assert.equal(acceptsApiJsonBody('POST','text/plain','2',undefined),false);
+ assert.equal(acceptsApiJsonBody('POST',undefined,undefined,'chunked'),false);
+ assert.equal(acceptsApiJsonBody('POST',undefined,'0',undefined),true);
+ assert.equal(acceptsApiJsonBody('GET','text/plain','2',undefined),true);
 });
 
 test('only the bounded REST method set reaches application routes',()=>{

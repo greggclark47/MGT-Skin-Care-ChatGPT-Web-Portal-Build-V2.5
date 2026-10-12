@@ -13,6 +13,13 @@ export function isSupportedHttpMethod(method:string|undefined):boolean{
  return typeof method==='string'&&SUPPORTED_HTTP_METHODS.has(method.toUpperCase());
 }
 
+export function acceptsApiJsonBody(method:string|undefined,contentType:string|undefined,contentLength:string|undefined,transferEncoding:string|undefined):boolean{
+ const mutation=typeof method==='string'&&['POST','PUT','PATCH'].includes(method.toUpperCase());
+ const hasBody=transferEncoding!==undefined||(contentLength!==undefined&&contentLength!=='0');
+ if(!mutation||!hasBody)return true;
+ return typeof contentType==='string'&&/^application\/(?:[a-z0-9!#$&^_.+-]+\+)?json(?:\s*;|$)/i.test(contentType.trim());
+}
+
 export function applyProductionHttpTimeouts(server:HttpTimeoutServer,env:NodeJS.ProcessEnv):void{
  if(env.NODE_ENV!=='production')return;
  server.requestTimeout=30_000;

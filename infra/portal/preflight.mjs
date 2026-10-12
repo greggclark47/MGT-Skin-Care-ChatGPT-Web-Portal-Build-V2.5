@@ -133,6 +133,10 @@ export function validateEnvironment(env) {
   if (Number.isFinite(workerInterval) && Number.isFinite(readinessAge) && readinessAge < workerInterval * 2) {
     errors.push("WORKER_READINESS_MAX_AGE_SECONDS must be at least twice WORKER_INTERVAL_SECONDS.");
   }
+  if (!["0.0.0.0", "::"].includes(env.HOST)) errors.push("HOST must bind the production container on 0.0.0.0 or ::.");
+  if (typeof env.PORT !== "string" || !/^\d+$/.test(env.PORT) || !wholeNumber(env.PORT, 1024, 65535)) errors.push("PORT must be a whole number between 1024 and 65535.");
+  const workerHealthFile = env.WORKER_HEALTH_FILE;
+  if (typeof workerHealthFile !== "string" || !workerHealthFile.startsWith("/") || workerHealthFile.includes("\\") || workerHealthFile.split("/").includes("..") || workerHealthFile.length > 240 || !/^[A-Za-z0-9._/-]+\.json$/.test(workerHealthFile)) errors.push("WORKER_HEALTH_FILE must be a bounded absolute JSON path without traversal.");
   if (typeof env.BACKUP_MAX_AGE_HOURS !== "string" || !/^\d+$/.test(env.BACKUP_MAX_AGE_HOURS) || !wholeNumber(env.BACKUP_MAX_AGE_HOURS, 1, 72)) errors.push("BACKUP_MAX_AGE_HOURS must be a whole number between 1 and 72.");
   if (typeof env.BACKUP_RESTORE_MAX_AGE_DAYS !== "string" || !/^\d+$/.test(env.BACKUP_RESTORE_MAX_AGE_DAYS) || !wholeNumber(env.BACKUP_RESTORE_MAX_AGE_DAYS, 1, 365)) errors.push("BACKUP_RESTORE_MAX_AGE_DAYS must be a whole number between 1 and 365.");
 

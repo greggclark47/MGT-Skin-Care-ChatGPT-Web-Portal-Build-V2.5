@@ -12,6 +12,7 @@ const BUILD_TIME = "2026-01-01T02:00:00.000Z";
 const VALIDATE_TIME = "2026-01-01T03:00:00.000Z";
 const ENV = {
   NODE_ENV: "production", DEMO_MODE: "false", PUBLIC_ORIGIN: "https://portal.mgt-skin-care.test",
+  HOST: "0.0.0.0", PORT: "8787", WORKER_HEALTH_FILE: "/tmp/mgt-worker-health.json",
   DATABASE_URL: "postgresql://u:p@db.mgt-skin-care.test:5432/postgres?sslmode=verify-full", PORTAL_AUTO_MIGRATE: "false",
   PORTAL_DOMAIN: "portal.mgt-skin-care.test", NODE_IMAGE: "node@sha256:" + "a".repeat(64), API_IMAGE: "ghcr.io/mgt/api@sha256:" + "d".repeat(64),
   WEB_IMAGE: "ghcr.io/mgt/web@sha256:" + "e".repeat(64), OLLAMA_IMAGE: "ollama/ollama@sha256:" + "b".repeat(64), CADDY_IMAGE: "caddy@sha256:" + "c".repeat(64),

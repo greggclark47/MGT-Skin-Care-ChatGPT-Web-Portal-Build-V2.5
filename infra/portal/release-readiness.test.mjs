@@ -5,6 +5,9 @@ import { buildReleaseReadiness, liveEvidenceFromEnvironment, RELEASE_PHASES, REL
 const base = {
   NODE_ENV: "production",
   DEMO_MODE: "false",
+  HOST: "0.0.0.0",
+  PORT: "8787",
+  WORKER_HEALTH_FILE: "/tmp/mgt-worker-health.json",
   PUBLIC_ORIGIN: "https://portal.mgtskincare.test",
   DATABASE_URL: "postgresql://mgt:secure@db.internal:5432/mgt?sslmode=verify-full",
   PORTAL_AUTO_MIGRATE: "false",

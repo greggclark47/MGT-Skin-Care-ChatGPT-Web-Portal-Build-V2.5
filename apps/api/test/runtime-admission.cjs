@@ -2,7 +2,7 @@ const assert = require('node:assert/strict');
 const { test } = require('node:test');
 const { spawnSync } = require('node:child_process');
 const path = require('node:path');
-const { validateRuntimeOwnership, validateProductionPortalBoundary, validateProductionDatabaseAdmission, validateProductionOperationsAdmission, validateProductionNotificationAdmission, validateProductionIdentityAdmission, validateProductionBackupAdmission, validateProductionAccessibilityAdmission, validateProductionSubscriptionAdmission, validateProductionAiAdmission, workerIntervalMs, workerReadinessMaxAgeMs } = require('../dist/portal/runtime-admission');
+const { validateRuntimeOwnership, validateProductionPortalBoundary, validateProductionDatabaseAdmission, validateProductionOperationsAdmission, validateProductionNotificationAdmission, validateProductionIdentityAdmission, validateProductionBackupAdmission, validateProductionAccessibilityAdmission, validateProductionSubscriptionAdmission, validateProductionAiAdmission, validateProductionProcessSurfaceAdmission, workerIntervalMs, workerReadinessMaxAgeMs } = require('../dist/portal/runtime-admission');
 const { createPortal } = require('../dist/portal/server');
 const owner = 'Gregg Clark of MGT';
 const valid = { NODE_ENV:'production', DEMO_MODE:'false', PUBLIC_ORIGIN:'https://portal.example', PORTAL_DOMAIN:'portal.example', RELEASE_OWNER_NAME:owner, SUPPORT_OWNER_NAME:owner, WORKER_INTERVAL_SECONDS:'60', WORKER_READINESS_MAX_AGE_SECONDS:'300' };
@@ -129,6 +129,7 @@ const backup = {BACKUP_MAX_AGE_HOURS:'26',BACKUP_RESTORE_MAX_AGE_DAYS:'90'};
 const accessibility = {ACCESSIBILITY_VALIDATION_REPORT_URL:'https://evidence.mgtskincare.test/accessibility',ACCESSIBILITY_VALIDATED_AT:'2026-01-01T00:00:00.000Z'};
 const subscription = {SUBSCRIPTIONS_ENABLED:'false'};
 const ai = {OLLAMA_ENABLED:'false',OPENCLAW_ENABLED:'false'};
+const processSurface = {HOST:'0.0.0.0',PORT:'3100',WORKER_HEALTH_FILE:'/tmp/mgt-worker-health.json'};
 
 test('production operations admission matches preflight support, monitoring, and alert boundaries', async () => {
   const {validateEnvironment}=await import('../../../infra/portal/preflight.mjs');
@@ -258,13 +259,25 @@ test('production AI admission matches preflight provider boundaries', async () =
   }
 });
 
+test('production process surface admission matches preflight listener and health-file boundaries', async () => {
+  const {validateEnvironment}=await import('../../../infra/portal/preflight.mjs');
+  const processEnv={...valid,...operational,...notification,...identity,...backup,...accessibility,...subscription,...ai,...processSurface};
+  assert.doesNotThrow(()=>validateProductionProcessSurfaceAdmission(processEnv));
+  for(const overrides of [{HOST:undefined},{HOST:'127.0.0.1'},{PORT:''},{PORT:'3100.0'},{PORT:'80'},{PORT:'65536'},{WORKER_HEALTH_FILE:''},{WORKER_HEALTH_FILE:'relative.json'},{WORKER_HEALTH_FILE:'/tmp/../health.json'},{WORKER_HEALTH_FILE:'C:\\tmp\\health.json'},{WORKER_HEALTH_FILE:'/tmp/health.txt'}]){
+    const env={...processEnv,...overrides};let runtimeAccepts=true;
+    try{validateProductionProcessSurfaceAdmission(env);}catch(error){runtimeAccepts=false;assert.equal(error.message,'Production process surface admission is invalid.');}
+    const report=validateEnvironment(env),preflightAccepts=!report.errors.some(error=>/^(HOST|PORT|WORKER_HEALTH_FILE)/.test(error));
+    assert.equal(runtimeAccepts,preflightAccepts,JSON.stringify(overrides));
+  }
+});
+
 // A fake store throws if initialized. This proves the guard runs before any
 // database work, without contacting real services or requiring PostgreSQL.
 function probeStartup(entry, overrides = {}) {
   const storePath = require.resolve('../dist/portal/store');
   const entryPath = path.resolve(__dirname,`../dist/portal/${entry}.js`);
   const boot = `const Module=require('node:module');const store=require(${JSON.stringify(storePath)});store.PgStore=class{constructor(){process.stderr.write('DATABASE_OPENED');process.exit(77);}};Module.runMain(${JSON.stringify(entryPath)});`;
-  const env = {...process.env,...valid,...operational,...notification,...identity,...backup,...accessibility,...subscription,...ai,PORTAL_AUTO_MIGRATE:'false',DATABASE_URL:'postgresql://db.invalid/mgt?sslmode=verify-full',...overrides};
+  const env = {...process.env,...valid,...operational,...notification,...identity,...backup,...accessibility,...subscription,...ai,...processSurface,PORTAL_AUTO_MIGRATE:'false',DATABASE_URL:'postgresql://db.invalid/mgt?sslmode=verify-full',...overrides};
   return spawnSync(process.execPath,['-e',boot],{env,encoding:'utf8',timeout:10000,windowsHide:true});
 }
 
@@ -385,5 +398,11 @@ for (const entry of ['server','worker']) test(`${entry} rejects unsafe subscript
 for (const entry of ['server','worker']) test(`${entry} rejects unsafe AI provider controls before database initialization`, () => {
   for (const overrides of [{OLLAMA_ENABLED:'True'},{OLLAMA_ENABLED:'true',OLLAMA_BASE_URL:'http://localhost:11434'},{OPENCLAW_ENABLED:'TRUE'},{OPENCLAW_ENABLED:'true',OPENCLAW_BASE_URL:'http://localhost:8080',OPENCLAW_API_MODE:'ollama'},{OPENAI_API_KEY:'change-me'}]) {
     const child=probeStartup(entry,overrides);assert.equal(child.error,undefined);assert.equal(child.status,1);assert.doesNotMatch(child.stderr,/DATABASE_OPENED|localhost|change-me/);
+  }
+});
+
+for (const entry of ['server','worker']) test(`${entry} rejects unsafe process surfaces before database initialization`, () => {
+  for (const overrides of [{HOST:'127.0.0.1'},{PORT:'3100.0'},{PORT:'80'},{WORKER_HEALTH_FILE:'relative.json'},{WORKER_HEALTH_FILE:'/tmp/../health.json'}]) {
+    const child=probeStartup(entry,overrides);assert.equal(child.error,undefined);assert.equal(child.status,1);assert.doesNotMatch(child.stderr,/DATABASE_OPENED|127\.0\.0\.1|relative\.json/);
   }
 });

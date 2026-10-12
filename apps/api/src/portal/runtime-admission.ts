@@ -156,6 +156,13 @@ export function validateProductionAiAdmission(env:NodeJS.ProcessEnv):void{
  if(!optionalReference(env.OPENAI_API_KEY))throw new Error('Production AI admission is invalid.');
 }
 
+export function validateProductionProcessSurfaceAdmission(env:NodeJS.ProcessEnv):void{
+ if(env.NODE_ENV!=='production')return;
+ if((env.HOST!=='0.0.0.0'&&env.HOST!=='::')||!productionInteger(env.PORT,1024,65535))throw new Error('Production process surface admission is invalid.');
+ const file=env.WORKER_HEALTH_FILE;
+ if(typeof file!=='string'||!file.startsWith('/')||file.includes('\\')||file.split('/').includes('..')||file.length>240||!/^[A-Za-z0-9._/-]+\.json$/.test(file))throw new Error('Production process surface admission is invalid.');
+}
+
 export function validateApiRuntimeAdmission(env:NodeJS.ProcessEnv):void{
  validateRuntimeOwnership(env);
  if(env.NODE_ENV==='production'){
@@ -174,6 +181,7 @@ export function validateApiProcessAdmission(env:NodeJS.ProcessEnv):void{
  validateProductionAccessibilityAdmission(env);
  validateProductionSubscriptionAdmission(env);
  validateProductionAiAdmission(env);
+ validateProductionProcessSurfaceAdmission(env);
 }
 
 export function validateWorkerRuntimeAdmission(env:NodeJS.ProcessEnv):number{
@@ -186,5 +194,6 @@ export function validateWorkerRuntimeAdmission(env:NodeJS.ProcessEnv):number{
  validateProductionAccessibilityAdmission(env);
  validateProductionSubscriptionAdmission(env);
  validateProductionAiAdmission(env);
+ validateProductionProcessSurfaceAdmission(env);
  return workerIntervalMs(env);
 }

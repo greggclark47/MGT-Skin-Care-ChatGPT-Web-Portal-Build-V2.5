@@ -73,3 +73,9 @@ test('local persistence does not trust executable schema content',async()=>{
  assert.equal(store.db.prepare('PRAGMA trusted_schema').get().trusted_schema,0);
  await store.close();
 });
+
+test('local persistence bounds write-ahead log checkpoint growth',async()=>{
+ const store=new LocalStore(':memory:');
+ assert.equal(store.db.prepare('PRAGMA wal_autocheckpoint').get().wal_autocheckpoint,1000);
+ await store.close();
+});

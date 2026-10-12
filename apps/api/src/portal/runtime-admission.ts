@@ -71,6 +71,7 @@ function productionInteger(value:unknown,minimum:number,maximum:number,optional=
  if(optional&&(value===undefined||value===''))return true;
  return typeof value==='string'&&/^\d+$/.test(value)&&Number.isSafeInteger(Number(value))&&Number(value)>=minimum&&Number(value)<=maximum;
 }
+function productionDigestImage(value:unknown):boolean{return typeof value==='string'&&/^[a-z0-9./_-]+@sha256:[a-f0-9]{64}$/.test(value);}
 function sameText(left:string,right:string):boolean{return left===right;}
 function productionPastIso(value:unknown):boolean{
  if(typeof value!=='string')return false;
@@ -163,6 +164,13 @@ export function validateProductionProcessSurfaceAdmission(env:NodeJS.ProcessEnv)
  if(typeof file!=='string'||!file.startsWith('/')||file.includes('\\')||file.split('/').includes('..')||file.length>240||!/^[A-Za-z0-9._/-]+\.json$/.test(file))throw new Error('Production process surface admission is invalid.');
 }
 
+export function validateProductionImageAdmission(env:NodeJS.ProcessEnv):void{
+ if(env.NODE_ENV!=='production')return;
+ for(const key of ['NODE_IMAGE','API_IMAGE','WEB_IMAGE','OLLAMA_IMAGE','CADDY_IMAGE']){
+  if(!productionDigestImage(env[key]))throw new Error('Production image admission is invalid.');
+ }
+}
+
 export function validateApiRuntimeAdmission(env:NodeJS.ProcessEnv):void{
  validateRuntimeOwnership(env);
  if(env.NODE_ENV==='production'){
@@ -182,6 +190,7 @@ export function validateApiProcessAdmission(env:NodeJS.ProcessEnv):void{
  validateProductionSubscriptionAdmission(env);
  validateProductionAiAdmission(env);
  validateProductionProcessSurfaceAdmission(env);
+ validateProductionImageAdmission(env);
 }
 
 export function validateWorkerRuntimeAdmission(env:NodeJS.ProcessEnv):number{
@@ -195,5 +204,6 @@ export function validateWorkerRuntimeAdmission(env:NodeJS.ProcessEnv):number{
  validateProductionSubscriptionAdmission(env);
  validateProductionAiAdmission(env);
  validateProductionProcessSurfaceAdmission(env);
+ validateProductionImageAdmission(env);
  return workerIntervalMs(env);
 }

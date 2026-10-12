@@ -67,3 +67,9 @@ test('local persistence securely removes deleted content',async()=>{
  assert.equal(store.db.prepare('PRAGMA secure_delete').get().secure_delete,1);
  await store.close();
 });
+
+test('local persistence does not trust executable schema content',async()=>{
+ const store=new LocalStore(':memory:');
+ assert.equal(store.db.prepare('PRAGMA trusted_schema').get().trusted_schema,0);
+ await store.close();
+});

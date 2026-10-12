@@ -88,7 +88,7 @@ export function startupMigrations(env:NodeJS.ProcessEnv){
 // Only this queue accesses the connection; asynchronous callbacks cannot overlap transactions.
 export class LocalStore implements Store{
  kind='sqlite';private db:any;private tail:Promise<any>=Promise.resolve();
- constructor(file:string){if(file!==':memory:')fs.mkdirSync(path.dirname(file),{recursive:true});const {DatabaseSync}=require('node:sqlite');this.db=new DatabaseSync(file);this.db.exec('PRAGMA journal_mode=WAL; PRAGMA busy_timeout=5000; PRAGMA secure_delete=ON;');this.db.exec(schema);}
+ constructor(file:string){if(file!==':memory:')fs.mkdirSync(path.dirname(file),{recursive:true});const {DatabaseSync}=require('node:sqlite');this.db=new DatabaseSync(file);this.db.exec('PRAGMA journal_mode=WAL; PRAGMA busy_timeout=5000; PRAGMA secure_delete=ON; PRAGMA trusted_schema=OFF;');this.db.exec(schema);}
  tx<T>(fn:(r:Records)=>Promise<T>):Promise<T>{const run=async()=>{this.db.exec('BEGIN IMMEDIATE');const r:Records={
  get:async(s,i)=>{validateRecordAddress(s,i);const v=this.db.prepare('SELECT body FROM hub_records WHERE scope=? AND id=?').get(s,i);return v?deserializeRecord(v.body):undefined;},
  put:async(s,i,v)=>{validateRecordAddress(s,i);this.db.prepare('INSERT INTO hub_records(scope,id,body) VALUES(?,?,?) ON CONFLICT(scope,id) DO UPDATE SET body=excluded.body').run(s,i,serializeRecord(v));},

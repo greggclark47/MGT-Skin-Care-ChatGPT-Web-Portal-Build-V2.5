@@ -1,7 +1,7 @@
 const assert=require('node:assert/strict');
 const {test}=require('node:test');
 const {createServer}=require('node:http');
-const {acceptsApiContentEncoding,acceptsApiJsonBody,acceptsApiJsonCharset,acceptsBodyForMethod,apiSecurityHeaders,applyProductionHttpTimeouts,applyProductionHttpLimits,applyProductionExpressBoundary,closeProductionHttpServer,hasNoMethodOverride,hasNoPartialBody,installClientErrorBoundary,isSupportedHttpMethod,requestTargetWithinLimit}=require('../dist/portal/http-runtime');
+const {acceptsApiContentEncoding,acceptsApiJsonBody,acceptsApiJsonCharset,acceptsBodyForMethod,apiSecurityHeaders,applyProductionHttpTimeouts,applyProductionHttpLimits,applyProductionExpressBoundary,closeProductionHttpServer,hasNoMethodOverride,hasNoPartialBody,hasNoPathOverride,installClientErrorBoundary,isSupportedHttpMethod,requestTargetWithinLimit}=require('../dist/portal/http-runtime');
 
 test('request targets are bounded by UTF-8 byte length',()=>{
  assert.equal(requestTargetWithinLimit('/api/hub/catalog?query=clean'),true);
@@ -78,6 +78,12 @@ test('partial request-body semantics are rejected',()=>{
  assert.equal(hasNoPartialBody(undefined),true);
  assert.equal(hasNoPartialBody('bytes 0-99/200'),false);
  assert.equal(hasNoPartialBody(''),false);
+});
+
+test('alternate path metadata cannot replace the authenticated route',()=>{
+ assert.equal(hasNoPathOverride(undefined,undefined,undefined),true);
+ assert.equal(hasNoPathOverride('/admin',undefined,undefined),false);
+ assert.equal(hasNoPathOverride(undefined,['/other'],undefined),false);
 });
 
 test('only the bounded REST method set reaches application routes',()=>{

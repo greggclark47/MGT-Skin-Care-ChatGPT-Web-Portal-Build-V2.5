@@ -18,7 +18,8 @@ function validateRecordGraph(value:unknown,ancestors:Set<object>=new Set(),depth
  if(!value||typeof value!=='object')return;
  if(depth>32)throw new Error('Stored record is invalid.');
  if(ancestors.has(value))throw new Error('Stored record is invalid.');
- ancestors.add(value);for(const item of Object.values(value))validateRecordGraph(item,ancestors,depth+1);ancestors.delete(value);
+ const items=Object.values(value);if(items.length>1000)throw new Error('Stored record is invalid.');
+ ancestors.add(value);for(const item of items)validateRecordGraph(item,ancestors,depth+1);ancestors.delete(value);
 }
 export function serializeRecord(value:unknown):string{
  try{validateRecordGraph(value);const encoded=JSON.stringify(value,(_key,item)=>{if(typeof item==='number'&&!Number.isFinite(item))throw new Error();if(['undefined','function','symbol','bigint'].includes(typeof item))throw new Error();return item;});if(encoded===undefined||Buffer.byteLength(encoded,'utf8')>262144)throw new Error();return encoded;}catch{throw new Error('Stored record is invalid.');}

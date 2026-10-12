@@ -28,3 +28,8 @@ test('stored records enforce a 32-level nesting boundary',()=>{
  assert.doesNotThrow(()=>serializeRecord(nested(32)));
  assert.throws(()=>serializeRecord(nested(33)),/Stored record is invalid/);
 });
+
+test('stored records enforce a 1000-entry container boundary',()=>{
+ assert.doesNotThrow(()=>serializeRecord(Array.from({length:1000},(_,index)=>index)));
+ assert.throws(()=>serializeRecord(Array.from({length:1001},(_,index)=>index)),/Stored record is invalid/);
+});

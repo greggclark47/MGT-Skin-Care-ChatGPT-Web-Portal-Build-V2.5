@@ -8,6 +8,8 @@ assert.doesNotThrow(() => validateProductionDatabaseUrl(baseline.toString(), pro
 assert.equal(portalPoolConfig(baseline.toString()).idleTimeoutMillis,30000);
 assert.equal(portalPoolConfig(baseline.toString()).query_timeout,12000);
 assert.equal(portalPoolConfig(baseline.toString()).maxLifetimeSeconds,300);
+assert.equal(portalPoolConfig(baseline.toString()).keepAlive,true);
+assert.equal(portalPoolConfig(baseline.toString()).keepAliveInitialDelayMillis,10000);
 
 const unsafe = [
   url => url.searchParams.append('sslmode', 'disable'),

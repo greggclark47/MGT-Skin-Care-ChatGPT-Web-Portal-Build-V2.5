@@ -17,3 +17,8 @@ test('stored records reject cyclic references with a bounded error',()=>{
  const value={name:'safe'};value.self=value;
  assert.throws(()=>serializeRecord(value),/^Error: Stored record is invalid\.$/);
 });
+
+test('stored records enforce the 256 KiB encoded boundary',()=>{
+ assert.doesNotThrow(()=>serializeRecord('x'.repeat(262142)));
+ assert.throws(()=>serializeRecord('x'.repeat(262143)),/Stored record is invalid/);
+});

@@ -1,7 +1,7 @@
 const assert=require('node:assert/strict');
 const {test}=require('node:test');
 const {createServer}=require('node:http');
-const {acceptsApiContentEncoding,acceptsApiJsonBody,acceptsApiJsonCharset,acceptsBodyForMethod,apiSecurityHeaders,applyProductionHttpTimeouts,applyProductionHttpLimits,applyProductionExpressBoundary,closeProductionHttpServer,hasNoMethodOverride,hasNoPartialBody,hasNoPathOverride,hasNoRangeRequest,hasNoRequestTrailers,hasNoUnverifiedIntegrity,installClientErrorBoundary,isSupportedHttpMethod,requestTargetWithinLimit}=require('../dist/portal/http-runtime');
+const {acceptsApiContentEncoding,acceptsApiJsonBody,acceptsApiJsonCharset,acceptsBodyForMethod,apiSecurityHeaders,applyProductionHttpTimeouts,applyProductionHttpLimits,applyProductionExpressBoundary,closeProductionHttpServer,hasNoMethodOverride,hasNoPartialBody,hasNoPathOverride,hasNoRangeRequest,hasNoRequestTrailers,hasNoUnverifiedIntegrity,headerWithinLimit,installClientErrorBoundary,isSupportedHttpMethod,requestTargetWithinLimit}=require('../dist/portal/http-runtime');
 
 test('request targets are bounded by UTF-8 byte length',()=>{
  assert.equal(requestTargetWithinLimit('/api/hub/catalog?query=clean'),true);
@@ -88,6 +88,7 @@ test('alternate path metadata cannot replace the authenticated route',()=>{
 test('API range requests fail closed',()=>{assert.equal(hasNoRangeRequest(undefined),true);assert.equal(hasNoRangeRequest('bytes=0-99'),false);assert.equal(hasNoRangeRequest(''),false);});
 test('unverified request-integrity metadata fails closed',()=>{assert.equal(hasNoUnverifiedIntegrity(undefined,undefined,undefined),true);assert.equal(hasNoUnverifiedIntegrity('digest',undefined,undefined),false);assert.equal(hasNoUnverifiedIntegrity(undefined,['sha-256=x'],undefined),false);});
 test('request trailers cannot mutate metadata after parsing',()=>{assert.equal(hasNoRequestTrailers(undefined),true);assert.equal(hasNoRequestTrailers('Digest'),false);assert.equal(hasNoRequestTrailers(''),false);});
+test('security-relevant headers use byte limits and reject repeated forms',()=>{assert.equal(headerWithinLimit(undefined,4096),true);assert.equal(headerWithinLimit('a'.repeat(4096),4096),true);assert.equal(headerWithinLimit('é'.repeat(2049),4096),false);assert.equal(headerWithinLimit(['a','b'],4096),false);});
 
 test('only the bounded REST method set reaches application routes',()=>{
  for(const method of ['GET','HEAD','POST','PUT','PATCH','DELETE','OPTIONS'])assert.equal(isSupportedHttpMethod(method),true);

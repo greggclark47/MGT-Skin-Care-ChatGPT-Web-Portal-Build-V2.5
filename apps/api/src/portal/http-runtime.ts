@@ -62,6 +62,10 @@ export function queryStringWithinLimit(target:string|undefined,maxBytes=2048):bo
 export function queryPairCountWithinLimit(target:string|undefined,maxPairs=50):boolean{
  if(typeof target!=='string')return false;const query=rawQuery(target);return query===''||query.split('&').length<=maxPairs;
 }
+export function queryComponentsWithinLimit(target:string|undefined,maxKeyBytes=128,maxValueBytes=1024):boolean{
+ if(typeof target!=='string')return false;const query=rawQuery(target);if(query==='')return true;
+ return query.split('&').every(pair=>{const at=pair.indexOf('=');const key=at<0?pair:pair.slice(0,at),value=at<0?'':pair.slice(at+1);return Buffer.byteLength(key,'utf8')<=maxKeyBytes&&Buffer.byteLength(value,'utf8')<=maxValueBytes;});
+}
 
 export function apiSecurityHeaders(env:NodeJS.ProcessEnv):Record<string,string>{
  const headers:Record<string,string>={

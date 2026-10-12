@@ -67,6 +67,11 @@ function productionInteger(value:unknown,minimum:number,maximum:number,optional=
  return typeof value==='string'&&/^\d+$/.test(value)&&Number.isSafeInteger(Number(value))&&Number(value)>=minimum&&Number(value)<=maximum;
 }
 function sameText(left:string,right:string):boolean{return left===right;}
+function productionPastIso(value:unknown):boolean{
+ if(typeof value!=='string')return false;
+ const time=Date.parse(value);
+ return Number.isFinite(time)&&new Date(time).toISOString()===value&&time<=Date.now();
+}
 
 export function validateProductionOperationsAdmission(env:NodeJS.ProcessEnv):void{
  if(env.NODE_ENV!=='production')return;
@@ -117,6 +122,11 @@ export function validateProductionBackupAdmission(env:NodeJS.ProcessEnv):void{
  if(!productionInteger(env.BACKUP_MAX_AGE_HOURS,1,72)||!productionInteger(env.BACKUP_RESTORE_MAX_AGE_DAYS,1,365))throw new Error('Production backup admission is invalid.');
 }
 
+export function validateProductionAccessibilityAdmission(env:NodeJS.ProcessEnv):void{
+ if(env.NODE_ENV!=='production')return;
+ if(!productionHttpsUrl(env.ACCESSIBILITY_VALIDATION_REPORT_URL)||!productionPastIso(env.ACCESSIBILITY_VALIDATED_AT))throw new Error('Production accessibility admission is invalid.');
+}
+
 export function validateApiRuntimeAdmission(env:NodeJS.ProcessEnv):void{
  validateRuntimeOwnership(env);
  if(env.NODE_ENV==='production'){
@@ -132,6 +142,7 @@ export function validateApiProcessAdmission(env:NodeJS.ProcessEnv):void{
  validateProductionNotificationAdmission(env);
  validateProductionIdentityAdmission(env);
  validateProductionBackupAdmission(env);
+ validateProductionAccessibilityAdmission(env);
 }
 
 export function validateWorkerRuntimeAdmission(env:NodeJS.ProcessEnv):number{
@@ -141,5 +152,6 @@ export function validateWorkerRuntimeAdmission(env:NodeJS.ProcessEnv):number{
  validateProductionNotificationAdmission(env);
  validateProductionIdentityAdmission(env);
  validateProductionBackupAdmission(env);
+ validateProductionAccessibilityAdmission(env);
  return workerIntervalMs(env);
 }

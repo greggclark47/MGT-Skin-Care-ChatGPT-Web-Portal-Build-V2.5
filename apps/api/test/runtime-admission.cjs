@@ -2,7 +2,7 @@ const assert = require('node:assert/strict');
 const { test } = require('node:test');
 const { spawnSync } = require('node:child_process');
 const path = require('node:path');
-const { validateRuntimeOwnership, validateProductionPortalBoundary, validateProductionDatabaseAdmission, validateProductionOperationsAdmission, validateProductionNotificationAdmission, validateProductionIdentityAdmission, validateProductionBackupAdmission, workerIntervalMs, workerReadinessMaxAgeMs } = require('../dist/portal/runtime-admission');
+const { validateRuntimeOwnership, validateProductionPortalBoundary, validateProductionDatabaseAdmission, validateProductionOperationsAdmission, validateProductionNotificationAdmission, validateProductionIdentityAdmission, validateProductionBackupAdmission, validateProductionAccessibilityAdmission, workerIntervalMs, workerReadinessMaxAgeMs } = require('../dist/portal/runtime-admission');
 const { createPortal } = require('../dist/portal/server');
 const owner = 'Gregg Clark of MGT';
 const valid = { NODE_ENV:'production', DEMO_MODE:'false', PUBLIC_ORIGIN:'https://portal.example', PORTAL_DOMAIN:'portal.example', RELEASE_OWNER_NAME:owner, SUPPORT_OWNER_NAME:owner, WORKER_INTERVAL_SECONDS:'60', WORKER_READINESS_MAX_AGE_SECONDS:'300' };
@@ -126,6 +126,7 @@ const identity = {
   SUPABASE_URL:'https://identity.mgtskincare.test', SUPABASE_ANON_KEY:'anon', SUPABASE_SERVICE_ROLE_KEY:'service'
 };
 const backup = {BACKUP_MAX_AGE_HOURS:'26',BACKUP_RESTORE_MAX_AGE_DAYS:'90'};
+const accessibility = {ACCESSIBILITY_VALIDATION_REPORT_URL:'https://evidence.mgtskincare.test/accessibility',ACCESSIBILITY_VALIDATED_AT:'2026-01-01T00:00:00.000Z'};
 
 test('production operations admission matches preflight support, monitoring, and alert boundaries', async () => {
   const {validateEnvironment}=await import('../../../infra/portal/preflight.mjs');
@@ -216,13 +217,25 @@ test('production backup admission matches preflight freshness boundaries', async
   }
 });
 
+test('production accessibility admission matches preflight evidence boundaries', async () => {
+  const {validateEnvironment}=await import('../../../infra/portal/preflight.mjs');
+  const processEnv={...valid,...operational,...notification,...identity,...backup,...accessibility};
+  assert.doesNotThrow(()=>validateProductionAccessibilityAdmission(processEnv));
+  for(const overrides of [{ACCESSIBILITY_VALIDATION_REPORT_URL:''},{ACCESSIBILITY_VALIDATION_REPORT_URL:'http://evidence.mgtskincare.test/a'},{ACCESSIBILITY_VALIDATION_REPORT_URL:'https://operator@evidence.mgtskincare.test/a'},{ACCESSIBILITY_VALIDATED_AT:''},{ACCESSIBILITY_VALIDATED_AT:'2026-01-01T00:00:00Z'},{ACCESSIBILITY_VALIDATED_AT:'2999-01-01T00:00:00.000Z'}]){
+    const env={...processEnv,...overrides};let runtimeAccepts=true;
+    try{validateProductionAccessibilityAdmission(env);}catch(error){runtimeAccepts=false;assert.equal(error.message,'Production accessibility admission is invalid.');}
+    const report=validateEnvironment(env),preflightAccepts=!report.errors.some(error=>error.startsWith('ACCESSIBILITY_'));
+    assert.equal(runtimeAccepts,preflightAccepts,JSON.stringify(overrides));
+  }
+});
+
 // A fake store throws if initialized. This proves the guard runs before any
 // database work, without contacting real services or requiring PostgreSQL.
 function probeStartup(entry, overrides = {}) {
   const storePath = require.resolve('../dist/portal/store');
   const entryPath = path.resolve(__dirname,`../dist/portal/${entry}.js`);
   const boot = `const Module=require('node:module');const store=require(${JSON.stringify(storePath)});store.PgStore=class{constructor(){process.stderr.write('DATABASE_OPENED');process.exit(77);}};Module.runMain(${JSON.stringify(entryPath)});`;
-  const env = {...process.env,...valid,...operational,...notification,...identity,...backup,PORTAL_AUTO_MIGRATE:'false',DATABASE_URL:'postgresql://db.invalid/mgt?sslmode=verify-full',...overrides};
+  const env = {...process.env,...valid,...operational,...notification,...identity,...backup,...accessibility,PORTAL_AUTO_MIGRATE:'false',DATABASE_URL:'postgresql://db.invalid/mgt?sslmode=verify-full',...overrides};
   return spawnSync(process.execPath,['-e',boot],{env,encoding:'utf8',timeout:10000,windowsHide:true});
 }
 
@@ -325,5 +338,11 @@ for (const entry of ['server','worker']) test(`${entry} rejects unsafe identity 
 for (const entry of ['server','worker']) test(`${entry} rejects unsafe backup controls before database initialization`, () => {
   for (const overrides of [{BACKUP_MAX_AGE_HOURS:''},{BACKUP_MAX_AGE_HOURS:'72.0'},{BACKUP_MAX_AGE_HOURS:'73'},{BACKUP_RESTORE_MAX_AGE_DAYS:'1e2'},{BACKUP_RESTORE_MAX_AGE_DAYS:'366'}]) {
     const child=probeStartup(entry,overrides);assert.equal(child.error,undefined);assert.equal(child.status,1);assert.doesNotMatch(child.stderr,/DATABASE_OPENED|72\.0|1e2/);
+  }
+});
+
+for (const entry of ['server','worker']) test(`${entry} rejects unsafe accessibility evidence before database initialization`, () => {
+  for (const overrides of [{ACCESSIBILITY_VALIDATION_REPORT_URL:''},{ACCESSIBILITY_VALIDATION_REPORT_URL:'http://evidence.mgtskincare.test/a'},{ACCESSIBILITY_VALIDATED_AT:'2026-01-01T00:00:00Z'},{ACCESSIBILITY_VALIDATED_AT:'2999-01-01T00:00:00.000Z'}]) {
+    const child=probeStartup(entry,overrides);assert.equal(child.error,undefined);assert.equal(child.status,1);assert.doesNotMatch(child.stderr,/DATABASE_OPENED|mgtskincare\.test|2999/);
   }
 });

@@ -46,7 +46,7 @@ function validControlUrl(value) {
 function validIsoDate(value) {
   const text = String(value || "").trim();
   const time = Date.parse(text);
-  return /^\d{4}-\d{2}-\d{2}T/.test(text) && Number.isFinite(time) && time <= Date.now();
+  return Number.isFinite(time) && new Date(time).toISOString() === text && time <= Date.now();
 }
 
 // pg-connection-string takes the last duplicate query value and lets a query
@@ -158,7 +158,7 @@ export function validateEnvironment(env) {
   if (supportOwnerEmail && !validEmail(supportOwnerEmail)) errors.push("SUPPORT_OWNER_EMAIL must be a valid production support owner email.");
 
   const accessibilityReport = requireValue("ACCESSIBILITY_VALIDATION_REPORT_URL");
-  if (accessibilityReport && !validUrl(accessibilityReport, ["https:"])) errors.push("ACCESSIBILITY_VALIDATION_REPORT_URL must be a production HTTPS evidence URL.");
+  if (accessibilityReport && !validControlUrl(accessibilityReport)) errors.push("ACCESSIBILITY_VALIDATION_REPORT_URL must be a production HTTPS evidence URL without embedded credentials.");
   const accessibilityAt = requireValue("ACCESSIBILITY_VALIDATED_AT");
   if (accessibilityAt && !validIsoDate(accessibilityAt)) errors.push("ACCESSIBILITY_VALIDATED_AT must be a past ISO timestamp.");
 

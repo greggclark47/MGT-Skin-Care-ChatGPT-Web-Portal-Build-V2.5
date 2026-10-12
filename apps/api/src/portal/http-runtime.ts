@@ -50,6 +50,7 @@ export function hasNoPathOverride(...headers:(string|string[]|undefined)[]):bool
  return headers.every(value=>value===undefined);
 }
 export const hasNoRangeRequest=(range:string|undefined):boolean=>range===undefined;
+export const hasNoUnverifiedIntegrity=(...headers:(string|string[]|undefined)[]):boolean=>headers.every(value=>value===undefined);
 
 export function apiSecurityHeaders(env:NodeJS.ProcessEnv):Record<string,string>{
  const headers:Record<string,string>={

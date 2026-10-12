@@ -1,7 +1,7 @@
 const assert=require('node:assert/strict');
 const {test}=require('node:test');
 const {createServer}=require('node:http');
-const {acceptsApiContentEncoding,acceptsApiJsonBody,acceptsApiJsonCharset,acceptsBodyForMethod,apiSecurityHeaders,applyProductionHttpTimeouts,applyProductionHttpLimits,applyProductionExpressBoundary,closeProductionHttpServer,hasNoMethodOverride,hasNoPartialBody,hasNoPathOverride,hasNoRangeRequest,installClientErrorBoundary,isSupportedHttpMethod,requestTargetWithinLimit}=require('../dist/portal/http-runtime');
+const {acceptsApiContentEncoding,acceptsApiJsonBody,acceptsApiJsonCharset,acceptsBodyForMethod,apiSecurityHeaders,applyProductionHttpTimeouts,applyProductionHttpLimits,applyProductionExpressBoundary,closeProductionHttpServer,hasNoMethodOverride,hasNoPartialBody,hasNoPathOverride,hasNoRangeRequest,hasNoUnverifiedIntegrity,installClientErrorBoundary,isSupportedHttpMethod,requestTargetWithinLimit}=require('../dist/portal/http-runtime');
 
 test('request targets are bounded by UTF-8 byte length',()=>{
  assert.equal(requestTargetWithinLimit('/api/hub/catalog?query=clean'),true);
@@ -86,6 +86,7 @@ test('alternate path metadata cannot replace the authenticated route',()=>{
  assert.equal(hasNoPathOverride(undefined,['/other'],undefined),false);
 });
 test('API range requests fail closed',()=>{assert.equal(hasNoRangeRequest(undefined),true);assert.equal(hasNoRangeRequest('bytes=0-99'),false);assert.equal(hasNoRangeRequest(''),false);});
+test('unverified request-integrity metadata fails closed',()=>{assert.equal(hasNoUnverifiedIntegrity(undefined,undefined,undefined),true);assert.equal(hasNoUnverifiedIntegrity('digest',undefined,undefined),false);assert.equal(hasNoUnverifiedIntegrity(undefined,['sha-256=x'],undefined),false);});
 
 test('only the bounded REST method set reaches application routes',()=>{
  for(const method of ['GET','HEAD','POST','PUT','PATCH','DELETE','OPTIONS'])assert.equal(isSupportedHttpMethod(method),true);

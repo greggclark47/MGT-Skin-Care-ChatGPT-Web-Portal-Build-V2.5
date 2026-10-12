@@ -14,10 +14,11 @@ export interface Records {
 }
 export interface Store { tx<T>(fn:(r:Records)=>Promise<T>):Promise<T>; close():Promise<void>; kind:string }
 const schema='CREATE TABLE IF NOT EXISTS hub_records (scope TEXT NOT NULL, id TEXT NOT NULL, body TEXT NOT NULL, PRIMARY KEY(scope,id))';
-function validateRecordGraph(value:unknown,ancestors:Set<object>=new Set()):void{
+function validateRecordGraph(value:unknown,ancestors:Set<object>=new Set(),depth=0):void{
  if(!value||typeof value!=='object')return;
+ if(depth>32)throw new Error('Stored record is invalid.');
  if(ancestors.has(value))throw new Error('Stored record is invalid.');
- ancestors.add(value);for(const item of Object.values(value))validateRecordGraph(item,ancestors);ancestors.delete(value);
+ ancestors.add(value);for(const item of Object.values(value))validateRecordGraph(item,ancestors,depth+1);ancestors.delete(value);
 }
 export function serializeRecord(value:unknown):string{
  try{validateRecordGraph(value);const encoded=JSON.stringify(value,(_key,item)=>{if(typeof item==='number'&&!Number.isFinite(item))throw new Error();if(['undefined','function','symbol','bigint'].includes(typeof item))throw new Error();return item;});if(encoded===undefined||Buffer.byteLength(encoded,'utf8')>262144)throw new Error();return encoded;}catch{throw new Error('Stored record is invalid.');}

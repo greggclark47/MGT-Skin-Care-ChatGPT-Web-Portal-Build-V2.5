@@ -1,6 +1,6 @@
 const assert=require('node:assert/strict');
 const {test}=require('node:test');
-const {serializeRecord}=require('../dist/portal/store');
+const {serializeRecord,validateRecordAddress}=require('../dist/portal/store');
 
 test('stored records reject non-finite numeric values',()=>{
  assert.equal(serializeRecord({count:3}),'{"count":3}');
@@ -8,7 +8,8 @@ test('stored records reject non-finite numeric values',()=>{
 });
 
 test('stored records reject unsupported JSON values instead of dropping them',()=>{
- for(const value of [undefined,()=>{},Symbol('record'),1n,{missing:undefined},[undefined]]){
+ assert.equal(serializeRecord({kept:true,missing:undefined}),'{"kept":true}');
+ for(const value of [undefined,()=>{},Symbol('record'),1n,[undefined]]){
   assert.throws(()=>serializeRecord(value),/Stored record is invalid/);
  }
 });
@@ -32,4 +33,9 @@ test('stored records enforce a 32-level nesting boundary',()=>{
 test('stored records enforce a 1000-entry container boundary',()=>{
  assert.doesNotThrow(()=>serializeRecord(Array.from({length:1000},(_,index)=>index)));
  assert.throws(()=>serializeRecord(Array.from({length:1001},(_,index)=>index)),/Stored record is invalid/);
+});
+
+test('stored record addresses have bounded canonical scope and id forms',()=>{
+ assert.doesNotThrow(()=>validateRecordAddress('profile_revisions','guest:abc-123'));
+ for(const args of [['Bad-Scope','id'],['scope',''],['scope','x\n'],['scope','x'.repeat(513)]])assert.throws(()=>validateRecordAddress(...args),/Stored record address is invalid/);
 });

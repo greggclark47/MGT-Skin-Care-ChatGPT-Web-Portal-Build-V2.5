@@ -22,7 +22,10 @@ function validateRecordGraph(value:unknown,ancestors:Set<object>=new Set(),depth
  ancestors.add(value);for(const item of items)validateRecordGraph(item,ancestors,depth+1);ancestors.delete(value);
 }
 export function serializeRecord(value:unknown):string{
- try{validateRecordGraph(value);const encoded=JSON.stringify(value,(_key,item)=>{if(typeof item==='number'&&!Number.isFinite(item))throw new Error();if(['undefined','function','symbol','bigint'].includes(typeof item))throw new Error();return item;});if(encoded===undefined||Buffer.byteLength(encoded,'utf8')>262144)throw new Error();return encoded;}catch{throw new Error('Stored record is invalid.');}
+ try{validateRecordGraph(value);const encoded=JSON.stringify(value,function(this:unknown,_key,item){if(typeof item==='number'&&!Number.isFinite(item))throw new Error();if(typeof item==='undefined'){if(Array.isArray(this)||_key==='')throw new Error();return item;}if(['function','symbol','bigint'].includes(typeof item))throw new Error();return item;});if(encoded===undefined||Buffer.byteLength(encoded,'utf8')>262144)throw new Error();return encoded;}catch{throw new Error('Stored record is invalid.');}
+}
+export function validateRecordAddress(scope:string,id?:string):void{
+ if(!/^[a-z][a-z0-9_]{0,63}$/.test(scope)||(id!==undefined&&(Buffer.byteLength(id,'utf8')>512||id.length===0||/[\u0000-\u001f\u007f]/.test(id))))throw new Error('Stored record address is invalid.');
 }
 export function validateProductionDatabaseUrl(url:string,env:NodeJS.ProcessEnv=process.env):void{
  if(env.NODE_ENV!=='production')return;
@@ -57,11 +60,11 @@ export class PgStore implements Store{
   }catch(error){await this.pool.end();throw error;}
  }
  async tx<T>(fn:(r:Records)=>Promise<T>):Promise<T>{const c=await this.pool.connect();try{await c.query('BEGIN');const r:Records={
- get:async(s,i)=>{const q=await c.query('SELECT body FROM hub_records WHERE scope=$1 AND id=$2',[s,i]);return q.rows[0]?JSON.parse(q.rows[0].body):undefined;},
- put:async(s,i,v)=>{await c.query('INSERT INTO hub_records(scope,id,body) VALUES($1,$2,$3) ON CONFLICT(scope,id) DO UPDATE SET body=excluded.body',[s,i,serializeRecord(v)]);},
- list:async(s)=>{const q=await c.query('SELECT body FROM hub_records WHERE scope=$1 ORDER BY id',[s]);return q.rows.map(x=>JSON.parse(x.body));},
- entries:async(s)=>{const q=await c.query('SELECT id,body FROM hub_records WHERE scope=$1 ORDER BY id',[s]);return q.rows.map(x=>({id:x.id,value:JSON.parse(x.body)}));},
- remove:async(s,i)=>{await c.query('DELETE FROM hub_records WHERE scope=$1 AND id=$2',[s,i]);},
+ get:async(s,i)=>{validateRecordAddress(s,i);const q=await c.query('SELECT body FROM hub_records WHERE scope=$1 AND id=$2',[s,i]);return q.rows[0]?JSON.parse(q.rows[0].body):undefined;},
+ put:async(s,i,v)=>{validateRecordAddress(s,i);await c.query('INSERT INTO hub_records(scope,id,body) VALUES($1,$2,$3) ON CONFLICT(scope,id) DO UPDATE SET body=excluded.body',[s,i,serializeRecord(v)]);},
+ list:async(s)=>{validateRecordAddress(s);const q=await c.query('SELECT body FROM hub_records WHERE scope=$1 ORDER BY id',[s]);return q.rows.map(x=>JSON.parse(x.body));},
+ entries:async(s)=>{validateRecordAddress(s);const q=await c.query('SELECT id,body FROM hub_records WHERE scope=$1 ORDER BY id',[s]);return q.rows.map(x=>({id:x.id,value:JSON.parse(x.body)}));},
+ remove:async(s,i)=>{validateRecordAddress(s,i);await c.query('DELETE FROM hub_records WHERE scope=$1 AND id=$2',[s,i]);},
  lock:async(key)=>{if(!/^[a-zA-Z0-9:_-]{1,240}$/.test(key))throw new Error('Invalid transaction lock key.');await c.query('SELECT pg_advisory_xact_lock(hashtext($1))',[key]);}
  };const result=await fn(r);await c.query('COMMIT');return result;}catch(e){await c.query('ROLLBACK');throw e;}finally{c.release();}}
  async close(){await this.pool.end();}
@@ -76,11 +79,11 @@ export class LocalStore implements Store{
  kind='sqlite';private db:any;private tail:Promise<any>=Promise.resolve();
  constructor(file:string){if(file!==':memory:')fs.mkdirSync(path.dirname(file),{recursive:true});const {DatabaseSync}=require('node:sqlite');this.db=new DatabaseSync(file);this.db.exec('PRAGMA journal_mode=WAL; PRAGMA busy_timeout=5000;');this.db.exec(schema);}
  tx<T>(fn:(r:Records)=>Promise<T>):Promise<T>{const run=async()=>{this.db.exec('BEGIN IMMEDIATE');const r:Records={
- get:async(s,i)=>{const v=this.db.prepare('SELECT body FROM hub_records WHERE scope=? AND id=?').get(s,i);return v?JSON.parse(v.body):undefined;},
- put:async(s,i,v)=>{this.db.prepare('INSERT INTO hub_records(scope,id,body) VALUES(?,?,?) ON CONFLICT(scope,id) DO UPDATE SET body=excluded.body').run(s,i,serializeRecord(v));},
- list:async(s)=>this.db.prepare('SELECT body FROM hub_records WHERE scope=? ORDER BY id').all(s).map((x:any)=>JSON.parse(x.body)),
- entries:async(s)=>this.db.prepare('SELECT id,body FROM hub_records WHERE scope=? ORDER BY id').all(s).map((x:any)=>({id:x.id,value:JSON.parse(x.body)})),
- remove:async(s,i)=>{this.db.prepare('DELETE FROM hub_records WHERE scope=? AND id=?').run(s,i);},
+ get:async(s,i)=>{validateRecordAddress(s,i);const v=this.db.prepare('SELECT body FROM hub_records WHERE scope=? AND id=?').get(s,i);return v?JSON.parse(v.body):undefined;},
+ put:async(s,i,v)=>{validateRecordAddress(s,i);this.db.prepare('INSERT INTO hub_records(scope,id,body) VALUES(?,?,?) ON CONFLICT(scope,id) DO UPDATE SET body=excluded.body').run(s,i,serializeRecord(v));},
+ list:async(s)=>{validateRecordAddress(s);return this.db.prepare('SELECT body FROM hub_records WHERE scope=? ORDER BY id').all(s).map((x:any)=>JSON.parse(x.body));},
+ entries:async(s)=>{validateRecordAddress(s);return this.db.prepare('SELECT id,body FROM hub_records WHERE scope=? ORDER BY id').all(s).map((x:any)=>({id:x.id,value:JSON.parse(x.body)}));},
+ remove:async(s,i)=>{validateRecordAddress(s,i);this.db.prepare('DELETE FROM hub_records WHERE scope=? AND id=?').run(s,i);},
  lock:async()=>{}
  };try{const result=await fn(r);this.db.exec('COMMIT');return result;}catch(e){this.db.exec('ROLLBACK');throw e;}};
  const pending=this.tail.then(run);this.tail=pending.catch(()=>{});return pending;}

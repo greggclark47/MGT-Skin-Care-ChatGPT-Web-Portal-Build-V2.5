@@ -1,6 +1,6 @@
 const assert=require('node:assert/strict');
 const {test}=require('node:test');
-const {serializeRecord,deserializeRecord,validateRecordAddress}=require('../dist/portal/store');
+const {serializeRecord,deserializeRecord,validateRecordAddress,portalTransactionBegin}=require('../dist/portal/store');
 
 test('stored records reject non-finite numeric values',()=>{
  assert.equal(serializeRecord({count:3}),'{"count":3}');
@@ -43,4 +43,8 @@ test('stored record addresses have bounded canonical scope and id forms',()=>{
 test('stored record reads reject corrupt and oversized encoded bodies',()=>{
  assert.deepEqual(deserializeRecord('{"ok":true}'),{ok:true});
  for(const value of ['{"broken":',123,'"'+('x'.repeat(262143))+'"'])assert.throws(()=>deserializeRecord(value),/Stored record is invalid/);
+});
+
+test('PostgreSQL transactions declare the supported isolation level',()=>{
+ assert.equal(portalTransactionBegin,'BEGIN ISOLATION LEVEL READ COMMITTED');
 });

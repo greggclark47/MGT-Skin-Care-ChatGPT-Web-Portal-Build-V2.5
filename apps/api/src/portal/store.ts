@@ -14,6 +14,7 @@ export interface Records {
 }
 export interface Store { tx<T>(fn:(r:Records)=>Promise<T>):Promise<T>; close():Promise<void>; kind:string }
 const schema='CREATE TABLE IF NOT EXISTS hub_records (scope TEXT NOT NULL, id TEXT NOT NULL, body TEXT NOT NULL, PRIMARY KEY(scope,id))';
+export const portalTransactionBegin='BEGIN ISOLATION LEVEL READ COMMITTED';
 function validateRecordGraph(value:unknown,ancestors:Set<object>=new Set(),depth=0):void{
  if(!value||typeof value!=='object')return;
  if(depth>32)throw new Error('Stored record is invalid.');
@@ -62,7 +63,7 @@ export class PgStore implements Store{
    return this;
   }catch(error){await this.pool.end();throw error;}
  }
- async tx<T>(fn:(r:Records)=>Promise<T>):Promise<T>{const c=await this.pool.connect();try{await c.query('BEGIN');const r:Records={
+ async tx<T>(fn:(r:Records)=>Promise<T>):Promise<T>{const c=await this.pool.connect();try{await c.query(portalTransactionBegin);const r:Records={
  get:async(s,i)=>{validateRecordAddress(s,i);const q=await c.query('SELECT body FROM hub_records WHERE scope=$1 AND id=$2',[s,i]);return q.rows[0]?deserializeRecord(q.rows[0].body):undefined;},
  put:async(s,i,v)=>{validateRecordAddress(s,i);await c.query('INSERT INTO hub_records(scope,id,body) VALUES($1,$2,$3) ON CONFLICT(scope,id) DO UPDATE SET body=excluded.body',[s,i,serializeRecord(v)]);},
  list:async(s)=>{validateRecordAddress(s);const q=await c.query('SELECT body FROM hub_records WHERE scope=$1 ORDER BY id',[s]);return q.rows.map(x=>deserializeRecord(x.body));},

@@ -79,7 +79,9 @@ test("rejects database URL settings that the PostgreSQL parser could reinterpret
     `${baseline}&host=other.internal`,
     `${baseline}&%68ost=other.internal`,
     `${baseline}&port=6543`,
-    `${baseline}&user=other`
+    `${baseline}&user=other`,
+    `${baseline}&application_name=alternate`,
+    `${baseline}&options=-csearch_path%3Dother`
   ]) {
     const result = validateEnvironment({ ...production, DATABASE_URL: changed });
     assert.equal(result.ok, false);

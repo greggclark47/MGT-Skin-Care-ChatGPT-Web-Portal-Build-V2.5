@@ -88,6 +88,7 @@ export function validProductionDatabaseUrl(value) {
     if (!["postgres:", "postgresql:"].includes(url.protocol) || !url.hostname || url.hostname.includes("%") || !/^\/[^/]+$/.test(url.pathname) || url.hash) return false;
     if (url.searchParams.getAll("sslmode").length !== 1 || url.searchParams.get("sslmode") !== "verify-full") return false;
     if (["host", "hostaddr", "port", "user", "password", "database"].some((key) => url.searchParams.has(key))) return false;
+    if ([...url.searchParams.keys()].some((key) => key !== "sslmode")) return false;
     return true;
   } catch {
     return false;

@@ -106,6 +106,7 @@ test('production process database admission matches preflight TLS and migration 
   for (const overrides of [
     {DATABASE_URL:undefined},{DATABASE_URL:'postgresql://db.portal.test/mgt'},{DATABASE_URL:'postgresql://db.portal.test/mgt?sslmode=disable'},
     {DATABASE_URL:'postgresql://db.portal.test?sslmode=verify-full'},{DATABASE_URL:'postgresql://db.portal.test/team/mgt?sslmode=verify-full'},{DATABASE_URL:'postgresql://db.portal.test/mgt?sslmode=verify-full#shadow'},
+    {DATABASE_URL:database+'&application_name=alternate'},{DATABASE_URL:database+'&options=-csearch_path%3Dother'},
     {DATABASE_URL:database+'&sslmode=disable'},{DATABASE_URL:database+'&host=other.portal.test'},
     {PORTAL_AUTO_MIGRATE:undefined},{PORTAL_AUTO_MIGRATE:'true'},{PORTAL_AUTO_MIGRATE:'False'}
   ]) {
@@ -374,6 +375,7 @@ for (const entry of ['server','worker']) test(`${entry} rejects unsafe database 
   for (const overrides of [
     {DATABASE_URL:''},{DATABASE_URL:'postgresql://db.invalid/mgt'},{DATABASE_URL:'postgresql://db.invalid/mgt?sslmode=disable'},
     {DATABASE_URL:'postgresql://db.invalid?sslmode=verify-full'},{DATABASE_URL:'postgresql://db.invalid/team/mgt?sslmode=verify-full'},{DATABASE_URL:'postgresql://db.invalid/mgt?sslmode=verify-full#shadow'},
+    {DATABASE_URL:'postgresql://db.invalid/mgt?sslmode=verify-full&application_name=alternate'},{DATABASE_URL:'postgresql://db.invalid/mgt?sslmode=verify-full&options=-csearch_path%3Dother'},
     {DATABASE_URL:'postgresql://db.invalid/mgt?sslmode=verify-full&host=other.invalid'},
     {PORTAL_AUTO_MIGRATE:''},{PORTAL_AUTO_MIGRATE:'true'},{PORTAL_AUTO_MIGRATE:'False'}
   ]) {

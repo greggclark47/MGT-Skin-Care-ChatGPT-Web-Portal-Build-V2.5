@@ -1,6 +1,6 @@
 const assert=require('node:assert/strict');
 const {test}=require('node:test');
-const {serializeRecord,validateRecordAddress}=require('../dist/portal/store');
+const {serializeRecord,deserializeRecord,validateRecordAddress}=require('../dist/portal/store');
 
 test('stored records reject non-finite numeric values',()=>{
  assert.equal(serializeRecord({count:3}),'{"count":3}');
@@ -38,4 +38,9 @@ test('stored records enforce a 1000-entry container boundary',()=>{
 test('stored record addresses have bounded canonical scope and id forms',()=>{
  assert.doesNotThrow(()=>validateRecordAddress('profile_revisions','guest:abc-123'));
  for(const args of [['Bad-Scope','id'],['scope',''],['scope','x\n'],['scope','x'.repeat(513)]])assert.throws(()=>validateRecordAddress(...args),/Stored record address is invalid/);
+});
+
+test('stored record reads reject corrupt and oversized encoded bodies',()=>{
+ assert.deepEqual(deserializeRecord('{"ok":true}'),{ok:true});
+ for(const value of ['{"broken":',123,'"'+('x'.repeat(262143))+'"'])assert.throws(()=>deserializeRecord(value),/Stored record is invalid/);
 });

@@ -1,7 +1,7 @@
 const assert=require('node:assert/strict');
 const {test}=require('node:test');
 const {createServer}=require('node:http');
-const {applyProductionHttpTimeouts,applyProductionHttpLimits,applyProductionExpressBoundary}=require('../dist/portal/http-runtime');
+const {applyProductionHttpTimeouts,applyProductionHttpLimits,applyProductionExpressBoundary,closeProductionHttpServer}=require('../dist/portal/http-runtime');
 
 test('production HTTP server uses bounded request, header, and keep-alive timeouts',()=>{
  const server=createServer();
@@ -32,4 +32,18 @@ test('production Express boundary disables proxy trust and nested query parsing'
  const calls=[],app={disable:name=>calls.push(['disable',name]),set:(name,value)=>calls.push(['set',name,value])};
  applyProductionExpressBoundary(app,{NODE_ENV:'production'});
  assert.deepEqual(calls,[['disable','trust proxy'],['disable','etag'],['set','query parser','simple'],['set','json escape',true]]);
+});
+
+test('production shutdown closes idle connections and storage after graceful drain',async()=>{
+ const calls=[],server={closeIdleConnections:()=>calls.push('idle'),close:callback=>{calls.push('close');callback();},closeAllConnections:()=>calls.push('force')};
+ const outcome=await closeProductionHttpServer(server,async()=>{calls.push('store');},20);
+ assert.equal(outcome,'graceful');
+ assert.deepEqual(calls,['idle','close','store']);
+});
+
+test('production shutdown forces lingering connections at the deadline',async()=>{
+ const calls=[],server={closeIdleConnections:()=>calls.push('idle'),close:()=>calls.push('close'),closeAllConnections:()=>calls.push('force')};
+ const outcome=await closeProductionHttpServer(server,async()=>{calls.push('store');},5);
+ assert.equal(outcome,'forced');
+ assert.deepEqual(calls,['idle','close','force','store']);
 });

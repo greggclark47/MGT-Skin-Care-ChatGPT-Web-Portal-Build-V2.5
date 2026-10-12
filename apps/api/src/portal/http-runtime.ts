@@ -1,6 +1,7 @@
 type HttpTimeoutServer={requestTimeout:number;headersTimeout:number;keepAliveTimeout:number};
 type HttpLimitServer={maxRequestsPerSocket:number|null;maxHeadersCount:number|null;maxConnections:number};
 type ExpressBoundary={disable:(name:string)=>unknown;set:(name:string,value:unknown)=>unknown};
+type ClosableServer={close:(callback:(error?:Error)=>void)=>unknown;closeIdleConnections?:()=>void;closeAllConnections?:()=>void};
 
 export function applyProductionHttpTimeouts(server:HttpTimeoutServer,env:NodeJS.ProcessEnv):void{
  if(env.NODE_ENV!=='production')return;
@@ -22,4 +23,16 @@ export function applyProductionExpressBoundary(app:ExpressBoundary,env:NodeJS.Pr
  app.disable('etag');
  app.set('query parser','simple');
  app.set('json escape',true);
+}
+
+export async function closeProductionHttpServer(server:ClosableServer,closeStore:()=>Promise<unknown>,deadlineMs=10_000):Promise<'graceful'|'forced'>{
+ server.closeIdleConnections?.();
+ let timer:NodeJS.Timeout|undefined;
+ const outcome=await Promise.race([
+  new Promise<'graceful'>((resolve,reject)=>server.close(error=>error?reject(error):resolve('graceful'))),
+  new Promise<'forced'>(resolve=>{timer=setTimeout(()=>{server.closeAllConnections?.();resolve('forced');},deadlineMs);})
+ ]);
+ if(timer)clearTimeout(timer);
+ await closeStore();
+ return outcome;
 }

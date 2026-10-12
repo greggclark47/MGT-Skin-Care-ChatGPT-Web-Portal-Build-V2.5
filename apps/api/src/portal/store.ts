@@ -15,7 +15,7 @@ export interface Records {
 export interface Store { tx<T>(fn:(r:Records)=>Promise<T>):Promise<T>; close():Promise<void>; kind:string }
 const schema='CREATE TABLE IF NOT EXISTS hub_records (scope TEXT NOT NULL, id TEXT NOT NULL, body TEXT NOT NULL, PRIMARY KEY(scope,id))';
 export function serializeRecord(value:unknown):string{
- try{const encoded=JSON.stringify(value,(_key,item)=>{if(typeof item==='number'&&!Number.isFinite(item))throw new Error();return item;});if(encoded===undefined)throw new Error();return encoded;}catch{throw new Error('Stored record is invalid.');}
+ try{const encoded=JSON.stringify(value,(_key,item)=>{if(typeof item==='number'&&!Number.isFinite(item))throw new Error();if(['undefined','function','symbol','bigint'].includes(typeof item))throw new Error();return item;});if(encoded===undefined)throw new Error();return encoded;}catch{throw new Error('Stored record is invalid.');}
 }
 export function validateProductionDatabaseUrl(url:string,env:NodeJS.ProcessEnv=process.env):void{
  if(env.NODE_ENV!=='production')return;

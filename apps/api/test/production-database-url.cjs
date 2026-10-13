@@ -18,7 +18,9 @@ const poolLogs=[];
 installDatabasePoolErrorBoundary({on:(event,listener)=>{assert.equal(event,'error');poolErrorListener=listener;}},record=>poolLogs.push(record));
 poolErrorListener(Object.assign(new Error('raw database host and query must not be logged'),{code:'57P01'}));
 poolErrorListener(Object.assign(new Error('secret'),{code:'bad code'}));
-assert.deepEqual(poolLogs,[{event:'database_pool_error',code:'57P01'},{event:'database_pool_error',code:'database_pool_error'}]);
+poolErrorListener(null);
+assert.deepEqual(poolLogs,[{event:'database_pool_error',code:'57P01'},{event:'database_pool_error',code:'database_pool_error'},{event:'database_pool_error',code:'database_pool_error'}]);
+installDatabasePoolErrorBoundary({on:(event,listener)=>listener(new Error('ignored'))},()=>{throw new Error('logger failure');});
 
 const unsafe = [
   url => url.searchParams.append('sslmode', 'disable'),

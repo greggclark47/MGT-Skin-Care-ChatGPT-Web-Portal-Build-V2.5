@@ -7,7 +7,7 @@ type ClientErrorServer={on:(event:'clientError',listener:(error:Error&{code?:str
 
 export function requestTargetWithinLimit(target:string|undefined,maxBytes=4_096):boolean{
  if(typeof target!=='string'||target.length===0)return false;
- return Buffer.byteLength(target,'utf8')<=maxBytes;
+ return !/[\u0000-\u001f\u007f]/.test(target)&&Buffer.byteLength(target,'utf8')<=maxBytes;
 }
 
 const SUPPORTED_HTTP_METHODS=new Set(['GET','HEAD','POST','PUT','PATCH','DELETE','OPTIONS']);
@@ -68,12 +68,13 @@ export function queryComponentsWithinLimit(target:string|undefined,maxKeyBytes=1
 }
 export function hasUniqueQueryKeys(target:string|undefined):boolean{
  if(typeof target!=='string')return false;const query=rawQuery(target);if(query==='')return true;const seen=new Set<string>();
- for(const pair of query.split('&')){const rawKey=pair.split('=',1)[0];let key:string;try{key=decodeURIComponent(rawKey.replace(/\+/g,' '));}catch{return true;}if(seen.has(key))return false;seen.add(key);}return true;
+ for(const pair of query.split('&')){const rawKey=pair.split('=',1)[0];let key:string;try{key=decodeURIComponent(rawKey.replace(/\+/g,' '));}catch{return false;}if(seen.has(key))return false;seen.add(key);}return true;
 }
 export function hasValidQueryEncoding(target:string|undefined):boolean{
  if(typeof target!=='string')return false;const query=rawQuery(target);if(/%(?![0-9a-f]{2})/i.test(query))return false;
  try{return !/[\u0000-\u001f\u007f]/.test(decodeURIComponent(query.replace(/\+/g,'%20')));}catch{return false;}
 }
+export function hasNoUrlFragment(target:string|undefined):boolean{return typeof target==='string'&&!target.includes('#');}
 
 export function apiSecurityHeaders(env:NodeJS.ProcessEnv):Record<string,string>{
  const headers:Record<string,string>={
@@ -92,9 +93,8 @@ export function apiSecurityHeaders(env:NodeJS.ProcessEnv):Record<string,string>{
 export function installClientErrorBoundary(server:ClientErrorServer,log:(record:{event:string;code:string})=>void=(record)=>console.error(JSON.stringify(record))):void{
  server.on('clientError',(error,socket)=>{
   const code=typeof error.code==='string'&&/^[A-Z0-9_]{1,64}$/.test(error.code)?error.code:'client_error';
-  log({event:'http_client_error',code});
-  if(socket.writable)socket.end('HTTP/1.1 400 Bad Request\r\nConnection: close\r\nContent-Length: 0\r\n\r\n');
-  else socket.destroy();
+  try{log({event:'http_client_error',code});}catch{ /* Logging cannot destabilize malformed-input handling. */ }
+  try{if(socket.writable)socket.end('HTTP/1.1 400 Bad Request\r\nConnection: close\r\nContent-Length: 0\r\n\r\n');else socket.destroy();}catch{try{socket.destroy();}catch{/* Socket cleanup is best effort. */}}
  });
 }
 
@@ -120,14 +120,20 @@ export function applyProductionExpressBoundary(app:ExpressBoundary,env:NodeJS.Pr
  app.set('json escape',true);
 }
 
-export async function closeProductionHttpServer(server:ClosableServer,closeStore:()=>Promise<unknown>,deadlineMs=10_000):Promise<'graceful'|'forced'>{
- server.closeIdleConnections?.();
- let timer:NodeJS.Timeout|undefined;
- const outcome=await Promise.race([
-  new Promise<'graceful'>((resolve,reject)=>server.close(error=>error?reject(error):resolve('graceful'))),
-  new Promise<'forced'>(resolve=>{timer=setTimeout(()=>{server.closeAllConnections?.();resolve('forced');},deadlineMs);})
- ]);
- if(timer)clearTimeout(timer);
- await closeStore();
- return outcome;
+const shutdowns=new WeakMap<object,Promise<'graceful'|'forced'>>();
+export function closeProductionHttpServer(server:ClosableServer,closeStore:()=>Promise<unknown>,deadlineMs=10_000):Promise<'graceful'|'forced'>{
+ if(!Number.isSafeInteger(deadlineMs)||deadlineMs<1||deadlineMs>600_000)throw new Error('HTTP shutdown deadline is invalid.');
+ const existing=shutdowns.get(server as object);if(existing)return existing;
+ const shutdown=(async()=>{
+  server.closeIdleConnections?.();
+  let timer:NodeJS.Timeout|undefined,outcome:'graceful'|'forced'|undefined,failure:unknown;
+  try{outcome=await Promise.race([
+   new Promise<'graceful'>((resolve,reject)=>server.close(error=>error?reject(error):resolve('graceful'))),
+   new Promise<'forced'>(resolve=>{timer=setTimeout(()=>{server.closeAllConnections?.();resolve('forced');},deadlineMs);})
+  ]);}catch(error){failure=error;}finally{if(timer)clearTimeout(timer);}
+  try{await closeStore();}catch(error){if(failure===undefined)failure=error;}
+  if(failure!==undefined)throw failure;
+  return outcome as 'graceful'|'forced';
+ })();
+ shutdowns.set(server as object,shutdown);return shutdown;
 }

@@ -1,6 +1,6 @@
 const assert=require('node:assert/strict');
 const {test}=require('node:test');
-const {serializeRecord,deserializeRecord,validateRecordAddress,portalTransactionBegin,rollbackPgTransaction,destroyPgClientAfterCommitFailure,LocalStore}=require('../dist/portal/store');
+const {serializeRecord,deserializeRecord,validateRecordAddress,validateTransactionLockKey,portalTransactionBegin,rollbackPgTransaction,destroyPgClientAfterCommitFailure,LocalStore}=require('../dist/portal/store');
 
 test('stored records reject non-finite numeric values',()=>{
  assert.equal(serializeRecord({count:3}),'{"count":3}');
@@ -37,7 +37,12 @@ test('stored records enforce a 1000-entry container boundary',()=>{
 
 test('stored record addresses have bounded canonical scope and id forms',()=>{
  assert.doesNotThrow(()=>validateRecordAddress('profile_revisions','guest:abc-123'));
- for(const args of [['Bad-Scope','id'],['scope',''],['scope','x\n'],['scope','x'.repeat(513)]])assert.throws(()=>validateRecordAddress(...args),/Stored record address is invalid/);
+ for(const args of [['Bad-Scope','id'],['scope',''],['scope',123],['scope','x\n'],['scope','x'.repeat(513)]])assert.throws(()=>validateRecordAddress(...args),/Stored record address is invalid/);
+});
+
+test('transaction lock keys use one bounded string contract',()=>{
+ assert.doesNotThrow(()=>validateTransactionLockKey('analytics:2026-10-13:next_step_opened:onboarding:/skin-match'));
+ for(const value of ['',123,'x'.repeat(241),'bad key'])assert.throws(()=>validateTransactionLockKey(value),/Invalid transaction lock key/);
 });
 
 test('stored record reads reject corrupt and oversized encoded bodies',()=>{
@@ -62,6 +67,12 @@ test('an uncertain commit destroys its pooled client',()=>{
  assert.deepEqual(released,[original]);
 });
 
+test('release failures do not replace transaction failures',async()=>{
+ const original=new Error('business failure');
+ await assert.rejects(rollbackPgTransaction({query:async()=>{},release:()=>{throw new Error('release failure');}},original),error=>error===original);
+ assert.throws(()=>destroyPgClientAfterCommitFailure({release:()=>{throw new Error('release failure');}},original),error=>error===original);
+});
+
 test('local persistence securely removes deleted content',async()=>{
  const store=new LocalStore(':memory:');
  assert.equal(store.db.prepare('PRAGMA secure_delete').get().secure_delete,1);
@@ -84,4 +95,15 @@ test('store close is idempotent under concurrent shutdown',async()=>{
  const store=new LocalStore(':memory:');
  await Promise.all([store.close(),store.close()]);
  await store.close();
+});
+
+test('local store rejects transactions after shutdown begins',async()=>{
+ const store=new LocalStore(':memory:');
+ await store.close();
+ await assert.rejects(store.tx(async()=>{}),/Store is closed/);
+});
+
+test('local store rejects empty and oversized paths',()=>{
+ assert.throws(()=>new LocalStore(''),/Local store path is invalid/);
+ assert.throws(()=>new LocalStore('x'.repeat(1025)),/Local store path is invalid/);
 });

@@ -17,10 +17,14 @@ const schema='CREATE TABLE IF NOT EXISTS hub_records (scope TEXT NOT NULL, id TE
 export const portalTransactionBegin='BEGIN ISOLATION LEVEL READ COMMITTED';
 type ReleasableQueryClient={query:(statement:string,...args:any[])=>Promise<any>;release:(error?:Error|boolean)=>void};
 export async function rollbackPgTransaction(client:ReleasableQueryClient,original:unknown):Promise<never>{
- try{await client.query('ROLLBACK');client.release();}catch(rollback){client.release(rollback instanceof Error?rollback:new Error('Database rollback failed.'));}throw original;
+ let releaseError:Error|undefined;
+ try{await client.query('ROLLBACK');}catch(rollback){releaseError=rollback instanceof Error?rollback:new Error('Database rollback failed.');}
+ try{client.release(releaseError);}catch{ /* A release failure must not replace the original transaction failure. */ }
+ throw original;
 }
 export function destroyPgClientAfterCommitFailure(client:ReleasableQueryClient,original:unknown):never{
- client.release(original instanceof Error?original:new Error('Database commit failed.'));throw original;
+ try{client.release(original instanceof Error?original:new Error('Database commit failed.'));}catch{ /* The commit outcome is already uncertain and remains authoritative. */ }
+ throw original;
 }
 function validateRecordGraph(value:unknown,ancestors:Set<object>=new Set(),depth=0):void{
  if(!value||typeof value!=='object')return;
@@ -36,7 +40,10 @@ export function deserializeRecord<T=unknown>(encoded:unknown):T{
  try{if(typeof encoded!=='string'||Buffer.byteLength(encoded,'utf8')>262144)throw new Error();const value=JSON.parse(encoded);serializeRecord(value);return value as T;}catch{throw new Error('Stored record is invalid.');}
 }
 export function validateRecordAddress(scope:string,id?:string):void{
- if(!/^[a-z][a-z0-9_]{0,63}$/.test(scope)||(id!==undefined&&(Buffer.byteLength(id,'utf8')>512||id.length===0||/[\u0000-\u001f\u007f]/.test(id))))throw new Error('Stored record address is invalid.');
+ if(typeof scope!=='string'||!/^[a-z][a-z0-9_]{0,63}$/.test(scope)||(id!==undefined&&(typeof id!=='string'||Buffer.byteLength(id,'utf8')>512||id.length===0||/[\u0000-\u001f\u007f]/.test(id))))throw new Error('Stored record address is invalid.');
+}
+export function validateTransactionLockKey(key:string):void{
+ if(typeof key!=='string'||!/^[a-zA-Z0-9:_./-]{1,240}$/.test(key))throw new Error('Invalid transaction lock key.');
 }
 export function validateProductionDatabaseUrl(url:string,env:NodeJS.ProcessEnv=process.env):void{
  if(env.NODE_ENV!=='production')return;
@@ -55,8 +62,9 @@ export function portalPoolConfig(url:string):PoolConfig{
 type PoolErrorSource={on:(event:'error',listener:(error:Error&{code?:string})=>void)=>unknown};
 export function installDatabasePoolErrorBoundary(pool:PoolErrorSource,log:(record:{event:string;code:string})=>void=(record)=>console.error(JSON.stringify(record))):void{
  pool.on('error',error=>{
-  const code=typeof error.code==='string'&&/^[A-Z0-9_]{1,16}$/.test(error.code)?error.code:'database_pool_error';
-  log({event:'database_pool_error',code});
+  const candidate=(error as {code?:unknown}|null|undefined)?.code;
+  const code=typeof candidate==='string'&&/^[A-Z0-9_]{1,16}$/.test(candidate)?candidate:'database_pool_error';
+  try{log({event:'database_pool_error',code});}catch{ /* Logging cannot destabilize the pool boundary. */ }
  });
 }
 export class PgStore implements Store{
@@ -76,7 +84,7 @@ export class PgStore implements Store{
  list:async(s)=>{validateRecordAddress(s);const q=await c.query('SELECT body FROM hub_records WHERE scope=$1 ORDER BY id',[s]);return q.rows.map(x=>deserializeRecord(x.body));},
  entries:async(s)=>{validateRecordAddress(s);const q=await c.query('SELECT id,body FROM hub_records WHERE scope=$1 ORDER BY id',[s]);return q.rows.map(x=>({id:x.id,value:deserializeRecord(x.body)}));},
  remove:async(s,i)=>{validateRecordAddress(s,i);await c.query('DELETE FROM hub_records WHERE scope=$1 AND id=$2',[s,i]);},
- lock:async(key)=>{if(!/^[a-zA-Z0-9:_-]{1,240}$/.test(key))throw new Error('Invalid transaction lock key.');await c.query('SELECT pg_advisory_xact_lock(hashtext($1))',[key]);}
+ lock:async(key)=>{validateTransactionLockKey(key);await c.query('SELECT pg_advisory_xact_lock(hashtext($1))',[key]);}
  };const result=await fn(r);committing=true;await c.query('COMMIT');c.release();return result;}catch(e){if(committing)return destroyPgClientAfterCommitFailure(c,e);return rollbackPgTransaction(c,e);}}
  async close(){await(this.closing??=this.pool.end());}
 }
@@ -88,15 +96,15 @@ export function startupMigrations(env:NodeJS.ProcessEnv){
 // Only this queue accesses the connection; asynchronous callbacks cannot overlap transactions.
 export class LocalStore implements Store{
  kind='sqlite';private db:any;private tail:Promise<any>=Promise.resolve();private closing?:Promise<void>;
- constructor(file:string){if(file!==':memory:')fs.mkdirSync(path.dirname(file),{recursive:true});const {DatabaseSync}=require('node:sqlite');this.db=new DatabaseSync(file);this.db.exec('PRAGMA journal_mode=WAL; PRAGMA busy_timeout=5000; PRAGMA secure_delete=ON; PRAGMA trusted_schema=OFF; PRAGMA wal_autocheckpoint=1000;');this.db.exec(schema);}
- tx<T>(fn:(r:Records)=>Promise<T>):Promise<T>{const run=async()=>{this.db.exec('BEGIN IMMEDIATE');const r:Records={
+ constructor(file:string){if(typeof file!=='string'||file.length===0||Buffer.byteLength(file,'utf8')>1024)throw new Error('Local store path is invalid.');if(file!==':memory:')fs.mkdirSync(path.dirname(file),{recursive:true});const {DatabaseSync}=require('node:sqlite');this.db=new DatabaseSync(file);this.db.exec('PRAGMA journal_mode=WAL; PRAGMA busy_timeout=5000; PRAGMA secure_delete=ON; PRAGMA trusted_schema=OFF; PRAGMA wal_autocheckpoint=1000;');this.db.exec(schema);}
+ tx<T>(fn:(r:Records)=>Promise<T>):Promise<T>{if(this.closing)return Promise.reject(new Error('Store is closed.'));const run=async()=>{this.db.exec('BEGIN IMMEDIATE');const r:Records={
  get:async(s,i)=>{validateRecordAddress(s,i);const v=this.db.prepare('SELECT body FROM hub_records WHERE scope=? AND id=?').get(s,i);return v?deserializeRecord(v.body):undefined;},
  put:async(s,i,v)=>{validateRecordAddress(s,i);this.db.prepare('INSERT INTO hub_records(scope,id,body) VALUES(?,?,?) ON CONFLICT(scope,id) DO UPDATE SET body=excluded.body').run(s,i,serializeRecord(v));},
  list:async(s)=>{validateRecordAddress(s);return this.db.prepare('SELECT body FROM hub_records WHERE scope=? ORDER BY id').all(s).map((x:any)=>deserializeRecord(x.body));},
  entries:async(s)=>{validateRecordAddress(s);return this.db.prepare('SELECT id,body FROM hub_records WHERE scope=? ORDER BY id').all(s).map((x:any)=>({id:x.id,value:deserializeRecord(x.body)}));},
  remove:async(s,i)=>{validateRecordAddress(s,i);this.db.prepare('DELETE FROM hub_records WHERE scope=? AND id=?').run(s,i);},
- lock:async()=>{}
- };try{const result=await fn(r);this.db.exec('COMMIT');return result;}catch(e){this.db.exec('ROLLBACK');throw e;}};
+ lock:async(key)=>{validateTransactionLockKey(key)}
+ };try{const result=await fn(r);this.db.exec('COMMIT');return result;}catch(e){try{this.db.exec('ROLLBACK');}catch{ /* The original transaction failure remains authoritative. */ }throw e;}};
  const pending=this.tail.then(run);this.tail=pending.catch(()=>{});return pending;}
  async close(){await(this.closing??=(async()=>{await this.tail;this.db.close();})());}
 }

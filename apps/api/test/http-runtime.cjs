@@ -1,12 +1,13 @@
 const assert=require('node:assert/strict');
 const {test}=require('node:test');
 const {createServer}=require('node:http');
-const {acceptsApiContentEncoding,acceptsApiJsonBody,acceptsApiJsonCharset,acceptsBodyForMethod,apiSecurityHeaders,applyProductionHttpTimeouts,applyProductionHttpLimits,applyProductionExpressBoundary,closeProductionHttpServer,hasNoMethodOverride,hasNoPartialBody,hasNoPathOverride,hasNoRangeRequest,hasNoRequestTrailers,hasNoUnverifiedIntegrity,hasUniqueQueryKeys,hasValidQueryEncoding,headerWithinLimit,installClientErrorBoundary,isSupportedHttpMethod,queryComponentsWithinLimit,queryPairCountWithinLimit,queryStringWithinLimit,requestTargetWithinLimit}=require('../dist/portal/http-runtime');
+const {acceptsApiContentEncoding,acceptsApiJsonBody,acceptsApiJsonCharset,acceptsBodyForMethod,apiSecurityHeaders,applyProductionHttpTimeouts,applyProductionHttpLimits,applyProductionExpressBoundary,closeProductionHttpServer,hasNoMethodOverride,hasNoPartialBody,hasNoPathOverride,hasNoRangeRequest,hasNoRequestTrailers,hasNoUnverifiedIntegrity,hasNoUrlFragment,hasUniqueQueryKeys,hasValidQueryEncoding,headerWithinLimit,installClientErrorBoundary,isSupportedHttpMethod,queryComponentsWithinLimit,queryPairCountWithinLimit,queryStringWithinLimit,requestTargetWithinLimit}=require('../dist/portal/http-runtime');
 
 test('request targets are bounded by UTF-8 byte length',()=>{
  assert.equal(requestTargetWithinLimit('/api/hub/catalog?query=clean'),true);
  assert.equal(requestTargetWithinLimit('/'+ 'a'.repeat(4096)),false);
  assert.equal(requestTargetWithinLimit('/'+ 'é'.repeat(2048)),false);
+ assert.equal(requestTargetWithinLimit('/api\r\nHost:evil'),false);
  assert.equal(requestTargetWithinLimit(undefined),false);
 });
 
@@ -21,6 +22,13 @@ test('malformed socket input receives a minimal close response and sanitized aud
  assert.equal(destroyed,false);
  listener(Object.assign(new Error('secret'),{code:'bad code'}),{writable:false,end:()=>{},destroy:()=>{destroyed=true;}});
  assert.deepEqual(logs[1],{event:'http_client_error',code:'client_error'});
+ assert.equal(destroyed,true);
+});
+
+test('malformed socket cleanup and logging failures stay contained',()=>{
+ let listener,destroyed=false;const server={on:(event,callback)=>{listener=callback;}};
+ installClientErrorBoundary(server,()=>{throw new Error('logger failure');});
+ listener(new Error('bad input'),{writable:true,end:()=>{throw new Error('socket failure');},destroy:()=>{destroyed=true;}});
  assert.equal(destroyed,true);
 });
 
@@ -94,7 +102,8 @@ test('referer metadata fits its 2048-byte operational bound',()=>{assert.equal(h
 test('query strings fit a separate 2048-byte bound',()=>{assert.equal(queryStringWithinLimit('/api/hub/catalog?q=clean'),true);assert.equal(queryStringWithinLimit('/api?'+ 'a'.repeat(2048)),true);assert.equal(queryStringWithinLimit('/api?'+ 'é'.repeat(1025)),false);});
 test('query strings contain at most fifty pairs',()=>{assert.equal(queryPairCountWithinLimit('/api'),true);assert.equal(queryPairCountWithinLimit('/api?'+Array.from({length:50},(_,i)=>`k${i}=v`).join('&')),true);assert.equal(queryPairCountWithinLimit('/api?'+Array.from({length:51},(_,i)=>`k${i}=v`).join('&')),false);assert.equal(queryPairCountWithinLimit('/api?'+'&'.repeat(50)),false);});
 test('query keys and values have independent byte bounds',()=>{assert.equal(queryComponentsWithinLimit('/api?key=value'),true);assert.equal(queryComponentsWithinLimit('/api?'+ 'k'.repeat(129)+'=v'),false);assert.equal(queryComponentsWithinLimit('/api?k='+ 'v'.repeat(1025)),false);assert.equal(queryComponentsWithinLimit('/api?k='+ 'é'.repeat(513)),false);});
-test('query keys are unique after canonical decoding',()=>{assert.equal(hasUniqueQueryKeys('/api?a=1&b=2'),true);assert.equal(hasUniqueQueryKeys('/api?a=1&a=2'),false);assert.equal(hasUniqueQueryKeys('/api?a+b=1&a%20b=2'),false);assert.equal(hasUniqueQueryKeys('/api?%61=1&a=2'),false);});
+test('query keys are unique after canonical decoding',()=>{assert.equal(hasUniqueQueryKeys('/api?a=1&b=2'),true);assert.equal(hasUniqueQueryKeys('/api?a=1&a=2'),false);assert.equal(hasUniqueQueryKeys('/api?a+b=1&a%20b=2'),false);assert.equal(hasUniqueQueryKeys('/api?%61=1&a=2'),false);assert.equal(hasUniqueQueryKeys('/api?%ZZ=1'),false);});
+test('URL fragments are rejected at the API boundary',()=>{assert.equal(hasNoUrlFragment('/api?q=skin'),true);assert.equal(hasNoUrlFragment('/api?q=skin#private'),false);assert.equal(hasNoUrlFragment(undefined),false);});
 test('query encoding is valid UTF-8 without decoded controls',()=>{assert.equal(hasValidQueryEncoding('/api?q=skin%20care'),true);assert.equal(hasValidQueryEncoding('/api?q=%E2%9C%93'),true);assert.equal(hasValidQueryEncoding('/api?q=%ZZ'),false);assert.equal(hasValidQueryEncoding('/api?q=%E0%A4%A'),false);assert.equal(hasValidQueryEncoding('/api?q=%00'),false);assert.equal(hasValidQueryEncoding('/api?q=%0d%0a'),false);});
 
 test('only the bounded REST method set reaches application routes',()=>{
@@ -146,4 +155,24 @@ test('production shutdown forces lingering connections at the deadline',async()=
  const outcome=await closeProductionHttpServer(server,async()=>{calls.push('store');},5);
  assert.equal(outcome,'forced');
  assert.deepEqual(calls,['idle','close','force','store']);
+});
+
+test('production shutdown shares one promise across concurrent callers',async()=>{
+ const calls=[];let finish;const server={closeIdleConnections:()=>calls.push('idle'),close:callback=>{calls.push('close');finish=callback;},closeAllConnections:()=>calls.push('force')};
+ const first=closeProductionHttpServer(server,async()=>{calls.push('store');},20),second=closeProductionHttpServer(server,async()=>{calls.push('store-again');},20);
+ assert.equal(first,second);
+ finish();
+ assert.equal(await first,'graceful');
+ assert.deepEqual(calls,['idle','close','store']);
+});
+
+test('production shutdown closes storage when the server close reports an error',async()=>{
+ const closeError=new Error('server already closed'),calls=[],server={closeIdleConnections:()=>calls.push('idle'),close:callback=>{calls.push('close');callback(closeError)},closeAllConnections:()=>calls.push('force')};
+ await assert.rejects(closeProductionHttpServer(server,async()=>{calls.push('store');},20),error=>error===closeError);
+ assert.deepEqual(calls,['idle','close','store']);
+});
+
+test('production shutdown rejects unsafe deadlines before touching the server',()=>{
+ const server={close:()=>{throw new Error('must not run')}};
+ for(const value of [0,-1,600001,1.5,Infinity])assert.throws(()=>closeProductionHttpServer(server,async()=>{},value),/HTTP shutdown deadline is invalid/);
 });

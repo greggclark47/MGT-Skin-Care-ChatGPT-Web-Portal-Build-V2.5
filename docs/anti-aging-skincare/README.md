@@ -1,6 +1,6 @@
 # Anti-aging skincare platform — Phase 1 discovery package
 
-Status: Phase 1 architecture and implementation planning complete locally. The v2.230 foundation checkpoint now adds the first read-only canonical contracts and API seams; production database application remains separately gated.
+Status: Phase 1 architecture and implementation planning complete locally. The v2.275 experience checkpoint now adds the first consent-aware onboarding, deterministic routine preview, discovery explorer, and cautious provider handoff; production database application remains separately gated.
 
 Baseline audited: MGT Skin Care v2.195 at commit `2c67a3bfee9d02d73237d2b44706f323db97e59f`.
 
@@ -13,6 +13,7 @@ Baseline audited: MGT Skin Care v2.195 at commit `2c67a3bfee9d02d73237d2b44706f3
 5. [Validation and operations](./VALIDATION-OPERATIONS.md) — test strategy, observability, release gates, and failure behavior.
 6. [Prioritized implementation backlog](./IMPLEMENTATION-BACKLOG.md) — staged increments, dependencies, acceptance criteria, estimates, and launch priorities.
 7. [Foundation checkpoint v2.230](./FOUNDATION-CHECKPOINT-v2.230.md) — 35 implemented AA-01 through AA-05 increments and verification status.
+8. [Experience checkpoint v2.275](./EXPERIENCE-CHECKPOINT-v2.275.md) — 45 implemented AA-06 through AA-10 increments and verification status.
 
 ## Recommended next move
 

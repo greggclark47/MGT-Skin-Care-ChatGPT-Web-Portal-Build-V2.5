@@ -16,11 +16,11 @@ Estimates are relative engineering effort for the existing repository, not commi
 
 | ID | Increment | Acceptance criteria | Estimate | Depends on |
 |---|---|---|---:|---|
-| AA-06 | Anti-aging onboarding extension | Existing Skin Match collects goals/preferences without duplicating profile data; consent and review remain explicit | M | AA-01, AA-04 |
-| AA-07 | Ingredient explorer | Search, evidence level, benefits, limitations, compatibility, and safety notes render from reviewed records | M | AA-05 |
-| AA-08 | Product comparison | Deterministic eligibility and match reasons are shown; commercial labels never masquerade as evidence ranking | M | AA-05 |
-| AA-09 | Routine planner | AM/PM routine preview, order, frequency, cautions, and user confirmation use existing routine engine | M | AA-05, AA-06 |
-| AA-10 | Clinic/provider directory | Filter by location/service/verification, show qualifications and limitations, and provide safe external handoff | L | AA-03, AA-05 |
+| AA-06 | Anti-aging onboarding extension | Implemented as a consent-aware, non-persistent preview with bounded goals and sensitivity; existing Skin Match profile remains authoritative | M | AA-01, AA-04 |
+| AA-07 | Ingredient explorer | Implemented with reviewed records, bounded search, evidence, compatibility notes, provenance, and safety copy | M | AA-05 |
+| AA-08 | Product comparison | Implemented as metadata-only selection and comparison; sample products cannot be purchased and commercial labels do not rank evidence | M | AA-05 |
+| AA-09 | Routine planner | Implemented as a deterministic AM/PM preview with avoidance exclusions, cautions, safety notes, and explicit confirmation-required state | M | AA-05, AA-06 |
+| AA-10 | Clinic/provider directory | Implemented as fixture-backed location/provider discovery with independent external handoff, zero shared data, and no live booking | L | AA-03, AA-05 |
 
 ## Phase 4 — AI intelligence (P1)
 

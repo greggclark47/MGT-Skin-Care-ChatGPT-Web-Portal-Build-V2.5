@@ -21,6 +21,11 @@ export const CONSENT_PURPOSES = [
 ] as const;
 export type ConsentPurpose = typeof CONSENT_PURPOSES[number];
 
+export const ANTI_AGING_GOALS = ['visible_signs_of_aging', 'texture', 'brightening', 'barrier_support', 'antioxidant_education'] as const;
+export type AntiAgingGoal = typeof ANTI_AGING_GOALS[number];
+export const ANTI_AGING_SENSITIVITIES = ['none', 'mild', 'moderate', 'high'] as const;
+export type AntiAgingSensitivity = typeof ANTI_AGING_SENSITIVITIES[number];
+
 export const INGREDIENT_CATEGORIES = ['antioxidant', 'retinoid', 'peptide', 'hydrator', 'barrier', 'brightener'] as const;
 export type IngredientCategory = typeof INGREDIENT_CATEGORIES[number];
 
@@ -96,6 +101,44 @@ export interface ConsentRecord {
   revoked_at: string | null;
 }
 
+export interface AntiAgingOnboardingInput {
+  goals: AntiAgingGoal[];
+  sensitivity: AntiAgingSensitivity;
+  avoid_ingredient_ids: string[];
+  consent: ConsentPurpose | null;
+}
+
+export interface AntiAgingOnboardingPreview {
+  status: 'consent_required' | 'ready';
+  next_step: 'ingredient_explorer' | 'routine_preview';
+  goals: AntiAgingGoal[];
+  sensitivity: AntiAgingSensitivity;
+  safety_notes: string[];
+}
+
+export interface RoutinePreviewRequest {
+  product_ids: string[];
+  avoid_ingredient_ids: string[];
+  sensitivity: AntiAgingSensitivity;
+}
+
+export interface RoutinePreviewStep {
+  order: number;
+  time: 'am' | 'pm';
+  category: ProductRecord['category'];
+  product_id: string;
+  product_name: string;
+  cautions: string[];
+}
+
+export interface RoutinePreview {
+  status: 'preview_only';
+  steps: RoutinePreviewStep[];
+  excluded_product_ids: string[];
+  safety_notes: string[];
+  confirmation_required: true;
+}
+
 export interface ReadOnlyPage<T> {
   items: T[];
   next_cursor: string | null;
@@ -110,6 +153,14 @@ export interface AntiAgingResponseMeta {
 
 export function isConsentPurpose(value: unknown): value is ConsentPurpose {
   return typeof value === 'string' && (CONSENT_PURPOSES as readonly string[]).includes(value);
+}
+
+export function isAntiAgingGoal(value: unknown): value is AntiAgingGoal {
+  return typeof value === 'string' && (ANTI_AGING_GOALS as readonly string[]).includes(value);
+}
+
+export function isAntiAgingSensitivity(value: unknown): value is AntiAgingSensitivity {
+  return typeof value === 'string' && (ANTI_AGING_SENSITIVITIES as readonly string[]).includes(value);
 }
 
 export function isCanonicalId(value: unknown): value is string {

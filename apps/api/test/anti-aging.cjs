@@ -33,6 +33,13 @@ const { LocalStore } = require('../dist/portal/store');
     assert.equal(compatibility.data.data.status, 'general_education_only');
     assert.equal(compatibility.data.data.professional_assessment_required, false);
 
+    const onboarding = await get('/api/v1/onboarding/preview?goals=texture& sensitivity=mild'.replace(' ', ''));
+    assert.equal(onboarding.status, 200);
+    assert.equal(onboarding.data.data.status, 'consent_required');
+    const personalized = await get('/api/v1/onboarding/preview?goals=texture,brightening&sensitivity=mild&consent=personalization');
+    assert.equal(personalized.status, 200);
+    assert.equal(personalized.data.data.status, 'ready');
+
     const products = await get('/api/v1/products?ingredient=ingredient-vitamin-c&limit=1');
     assert.equal(products.status, 200);
     assert.equal(products.data.data.items.length, 1);
@@ -44,6 +51,12 @@ const { LocalStore } = require('../dist/portal/store');
     assert.equal(compare.data.data.items.length, 2);
     assert.equal(compare.data.data.comparison_scope, 'educational_metadata_only');
 
+    const routinePreview = await get('/api/v1/routines/preview?product_ids=product-c-brightening-serum,product-night-renewal-serum&avoid_ingredient_ids=ingredient-retinol&sensitivity=mild');
+    assert.equal(routinePreview.status, 200);
+    assert.equal(routinePreview.data.data.status, 'preview_only');
+    assert.deepEqual(routinePreview.data.data.excluded_product_ids, ['product-night-renewal-serum']);
+    assert.equal(routinePreview.data.data.confirmation_required, true);
+
     const treatment = await get('/api/v1/treatments/treatment-dermatology-consultation');
     assert.equal(treatment.status, 200);
     assert.equal(treatment.data.data.professional_assessment_required, true);
@@ -52,6 +65,10 @@ const { LocalStore } = require('../dist/portal/store');
     assert.equal(provider.status, 200);
     assert.equal(provider.data.data.items[0].independent_provider, true);
     assert.equal(provider.data.data.items[0].website_url.startsWith('https://'), true);
+    const handoff = await get('/api/v1/providers/provider-example-dermatology/handoff');
+    assert.equal(handoff.status, 200);
+    assert.deepEqual(handoff.data.data.data_shared, []);
+    assert.equal(handoff.data.data.booking_supported, false);
 
     const malformed = await get('/api/v1/products?limit=51');
     assert.equal(malformed.status, 400);

@@ -109,6 +109,18 @@ export class ApiClient {
   listProviders(query: { q?: string; city?: string; provider_type?: string; category?: string; limit?: number } = {}) {
     return this.get<AntiAgingListResponse<ProviderRecord>>(`/api/v1/providers${queryString(query)}`);
   }
+
+  previewOnboarding(query: { goals: string[]; sensitivity: string; consent?: 'personalization' }) {
+    return this.get<AntiAgingRecordResponse<unknown>>(`/api/v1/onboarding/preview${queryString({ goals: query.goals.join(','), sensitivity: query.sensitivity, consent: query.consent })}`);
+  }
+
+  previewRoutine(query: { product_ids: string[]; avoid_ingredient_ids?: string[]; sensitivity: string }) {
+    return this.get<AntiAgingRecordResponse<unknown>>(`/api/v1/routines/preview${queryString({ product_ids: query.product_ids.join(','), avoid_ingredient_ids: query.avoid_ingredient_ids?.join(','), sensitivity: query.sensitivity })}`);
+  }
+
+  providerHandoff(id: string) {
+    return this.get<AntiAgingRecordResponse<{ provider_id: string; handoff_type: string; handoff_url: string; data_shared: string[]; booking_supported: false; disclosure: string }>>(`/api/v1/providers/${encodeURIComponent(id)}/handoff`);
+  }
 }
 
 function queryString(values: Record<string, string | number | undefined>): string {

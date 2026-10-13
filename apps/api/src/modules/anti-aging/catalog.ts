@@ -1,5 +1,6 @@
 import type {
-  IngredientRecord, ProductRecord, ProviderRecord, TreatmentRecord, ReadOnlyPage,
+  IngredientRecord, ProductRecord, ProviderRecord, TreatmentRecord, ReadOnlyPage, RoutinePreview,
+  RoutinePreviewRequest,
 } from '@mgt/domain';
 
 export interface AntiAgingListQuery {
@@ -21,6 +22,7 @@ export interface AntiAgingCatalog {
   getTreatment(id: string): TreatmentRecord | undefined;
   listProviders(query: AntiAgingListQuery): ReadOnlyPage<ProviderRecord>;
   getProvider(id: string): ProviderRecord | undefined;
+  buildRoutinePreview(input: RoutinePreviewRequest): RoutinePreview;
 }
 
 const DATE = '2026-10-13T00:00:00.000Z';
@@ -135,4 +137,25 @@ export class SeedAntiAgingCatalog implements AntiAgingCatalog {
       (!type || item.provider_type === type) && (!service || item.services.includes(service))), query.limit);
   }
   getProvider(id: string) { return this.providers.find(item => item.id === id); }
+  buildRoutinePreview(input: RoutinePreviewRequest): RoutinePreview {
+    const selected = input.product_ids.map(id => this.getProduct(id)).filter((item): item is ProductRecord => !!item);
+    const excluded_product_ids = selected.filter(item => item.ingredient_ids.some(id => input.avoid_ingredient_ids.includes(id))).map(item => item.id);
+    const safe = selected.filter(item => !excluded_product_ids.includes(item.id));
+    const categoryOrder: ProductRecord['category'][] = ['cleanser', 'serum', 'treatment', 'eye', 'moisturizer', 'sunscreen'];
+    const cautions = (item: ProductRecord) => {
+      const notes: string[] = [];
+      if (item.ingredient_ids.includes('ingredient-retinol')) notes.push('Introduce gradually and follow the product label.');
+      if (input.sensitivity !== 'none' && item.ingredient_ids.includes('ingredient-retinol')) notes.push('Consider professional guidance if irritation persists.');
+      return notes;
+    };
+    const steps = safe.sort((a, b) => categoryOrder.indexOf(a.category) - categoryOrder.indexOf(b.category)).map((item, index) => ({
+      order: index + 1, time: item.category === 'sunscreen' ? 'am' as const : 'pm' as const,
+      category: item.category, product_id: item.id, product_name: item.name, cautions: cautions(item),
+    }));
+    return {
+      status: 'preview_only', steps, excluded_product_ids,
+      safety_notes: ['Preview only: nothing is saved or purchased.', 'Patch test new products and follow product labels.', 'Stop and seek professional advice for persistent or severe reactions.'],
+      confirmation_required: true,
+    };
+  }
 }

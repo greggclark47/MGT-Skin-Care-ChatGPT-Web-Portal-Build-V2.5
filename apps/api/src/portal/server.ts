@@ -145,7 +145,7 @@ export async function createPortal(options:PortalOptions){
  app.use(['/api/hub','/api/v1'],session);
  app.use(['/api/hub','/api/v1'],wrap(async(req,_res,next)=>{await db.tx(async r=>rate(r,'request:'+req.actor,180,60000));next();}));
  app.use(['/api/hub','/api/v1'],wrap(async(req,_res,next)=>{
-  const allowed=['/session','/auth/','/account/','/guest-access','/billing','/subscriptions','/entitlement','/company','/retailers','/catalog','/knowledge','/support','/assistant','/ingredients','/products','/treatments','/providers'];
+  const allowed=['/session','/auth/','/account/','/guest-access','/billing','/subscriptions','/entitlement','/company','/retailers','/catalog','/knowledge','/support','/assistant','/ingredients','/products','/treatments','/providers','/onboarding','/routines'];
   if(!allowed.some(path=>req.path===path||req.path.startsWith(path.endsWith('/')?path:path+'/'))){
    await db.tx(async r=>{const invited=await r.get('guest_memberships',req.actor);check(!invited||!!await activeGuestAccess(r,req.actor)||(await ownEntitlement(r,req.actor)).premium,403,'guest_access_ended','Your invited access has ended. Review full access or ask the owner for a new invitation.');});
   }

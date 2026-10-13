@@ -1,5 +1,7 @@
 import { Router, type Response } from 'express';
-import { isCanonicalId, type AntiAgingResponseMeta } from '@mgt/domain';
+import {
+  isCanonicalId, isAntiAgingGoal, isAntiAgingSensitivity, type AntiAgingResponseMeta,
+} from '@mgt/domain';
 import { SeedAntiAgingCatalog, type AntiAgingCatalog, type AntiAgingListQuery } from './catalog';
 
 const POLICY_VERSION = 'anti-aging-read-only-1';
@@ -33,12 +35,53 @@ function idParam(value: unknown): string | null {
   return isCanonicalId(value) ? value : null;
 }
 
+function csvQuery(value: unknown, max = 6): string[] | null {
+  if (value === undefined) return [];
+  if (Array.isArray(value) || typeof value !== 'string' || value.length > max * 81) return null;
+  const raw = value.trim();
+  if (!raw) return [];
+  const values = raw.split(',').map(item => item.trim()).filter(Boolean);
+  return values.length <= max ? [...new Set(values)] : null;
+}
+
 function pageResponse<T>(res: Response, page: { items: T[]; next_cursor: string | null }) {
   res.json({ data: page, meta });
 }
 
 export function antiAgingRouter(catalog: AntiAgingCatalog = new SeedAntiAgingCatalog()): Router {
   const router = Router();
+
+  router.get('/onboarding/preview', (req, res) => {
+    const goals = csvQuery(req.query.goals, 3);
+    const sensitivity = queryValue(req.query.sensitivity);
+    const consent = queryValue(req.query.consent);
+    if (!goals || goals.length < 1 || goals.some(goal => !isAntiAgingGoal(goal)) ||
+      !sensitivity || !isAntiAgingSensitivity(sensitivity) || consent === null ||
+      (consent !== undefined && consent !== 'personalization')) {
+      return fail(res, 400, 'invalid_onboarding', 'Choose one to three goals, a sensitivity level, and an optional personalization consent.');
+    }
+    const ready = consent === 'personalization';
+    return res.json({ data: {
+      status: ready ? 'ready' : 'consent_required', next_step: ready ? 'routine_preview' : 'ingredient_explorer',
+      goals, sensitivity, safety_notes: [
+        'This preview is educational and is not a diagnosis or treatment plan.',
+        'Personalization consent is optional and is not implied by browsing.',
+        'Seek professional advice for persistent, severe, or changing symptoms.',
+      ],
+    }, meta });
+  });
+
+  router.get('/routines/preview', (req, res) => {
+    const productIds = csvQuery(req.query.product_ids, 6);
+    const avoidIds = csvQuery(req.query.avoid_ingredient_ids, 20);
+    const sensitivity = queryValue(req.query.sensitivity);
+    if (!productIds || productIds.length < 1 || productIds.some(id => !isCanonicalId(id)) ||
+      !avoidIds || avoidIds.some(id => !isCanonicalId(id)) || !sensitivity || !isAntiAgingSensitivity(sensitivity)) {
+      return fail(res, 400, 'invalid_routine_preview', 'Choose valid product, ingredient, and sensitivity values.');
+    }
+    if (productIds.some(id => !catalog.getProduct(id))) return fail(res, 404, 'not_found', 'One or more products were not found.');
+    return res.json({ data: catalog.buildRoutinePreview({ product_ids: productIds, avoid_ingredient_ids: avoidIds, sensitivity }), meta });
+  });
 
   router.get('/ingredients', (req, res) => {
     const query = listQuery(req); if (!query) return fail(res, 400, 'invalid_query', 'Use one short value per supported query parameter.');
@@ -88,6 +131,12 @@ export function antiAgingRouter(catalog: AntiAgingCatalog = new SeedAntiAgingCat
   router.get('/providers', (req, res) => {
     const query = listQuery(req); if (!query) return fail(res, 400, 'invalid_query', 'Use one short value per supported query parameter.');
     return pageResponse(res, catalog.listProviders(query));
+  });
+  router.get('/providers/:id/handoff', (req, res) => {
+    const id = idParam(req.params.id); if (!id) return fail(res, 400, 'invalid_id', 'Use a valid record identifier.');
+    const item = catalog.getProvider(id); if (!item) return fail(res, 404, 'not_found', 'Provider not found.');
+    return res.json({ data: { provider_id: item.id, handoff_type: 'external_referral', handoff_url: item.website_url,
+      data_shared: [], booking_supported: false, disclosure: 'You are leaving MGT Skin Care for an independent provider destination.' }, meta });
   });
   router.get('/providers/:id', (req, res) => {
     const id = idParam(req.params.id); if (!id) return fail(res, 400, 'invalid_id', 'Use a valid record identifier.');

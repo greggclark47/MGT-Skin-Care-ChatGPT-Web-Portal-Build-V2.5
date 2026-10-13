@@ -234,7 +234,7 @@ const demoFlows = {
     step: "Optional check-in · Private by default",
     body: `
       <p class="flow-intro">A check-in records how a routine step felt. It is an adherence note, not a measure of health, treatment response, or diagnosis.</p>
-      <div class="routine-preview"><div><b>01</b><span>Today felt comfortable</span><small>Saved to your private progress record</small></div><div><b>02</b><span>Weekly reminder</span><small>Opt-in · pause or remove anytime</small></div><div><b>03</b><span>Provider handoff</span><small>Independent destination · no profile shared</small></div></div>
+      <div class="routine-preview"><div><b>01</b><span>Today felt comfortable</span><small>Saved to your private progress record</small></div><div><b>02</b><span>Weekly reminder</span><small>Opt-in · pause, snooze, or remove anytime</small></div><div><b>03</b><span>Provider handoff</span><small>Independent destination · no profile shared</small></div><div><b>04</b><span>Portable export</span><small>Download your own JSON copy</small></div></div>
       <button class="flow-action" data-flow-action="anti-aging" type="button">Review the boundaries <span>→</span></button>
     `
   },
@@ -242,13 +242,19 @@ const demoFlows = {
     kicker: "REMINDERS · SAMPLE FLOW",
     title: "You stay in control",
     step: "Consent-scoped · Pauseable · Removable",
-    body: `<div class="flow-result"><span>REMINDER SAFETY</span><h3>Opt-in by purpose</h3><p>Choose daily or weekly delivery only after giving reminder consent. A paused reminder never enters the worker queue, and deleting progress also removes its reminders.</p><div class="flow-meta"><span>ACTOR-SCOPED</span><span>RETENTION-AWARE</span><span>NO DIAGNOSTIC INFERENCE</span></div></div>`
+    body: `<div class="flow-result"><span>REMINDER SAFETY</span><h3>Opt-in by purpose</h3><p>Choose daily or weekly delivery only after giving reminder consent. A paused or snoozed reminder stays under your control, and deleting progress also removes its reminders.</p><div class="flow-meta"><span>ACTOR-SCOPED</span><span>PAUSE + SNOOZE</span><span>NO DIAGNOSTIC INFERENCE</span></div></div>`
   },
   "Provider handoff": {
     kicker: "PROVIDER DISCOVERY · SAMPLE FLOW",
     title: "A referral, not a booking",
     step: "City-bounded · External confirmation required",
-    body: `<div class="flow-result"><span>INDEPENDENT HANDOFF</span><h3>Availability stays outside MGT</h3><p>The portal can show a reviewed provider in the selected city and prepare a consented handoff. It does not book, rank by sponsorship, or send your profile.</p><div class="flow-meta"><span>CITY ONLY</span><span>DATA SHARED: NONE</span><span>BOOKING DISABLED</span></div></div>`
+    body: `<div class="flow-result"><span>INDEPENDENT HANDOFF</span><h3>Availability stays outside MGT</h3><p>The portal can show a reviewed provider in the selected city and prepare a consented handoff. You can withdraw the handoff from your account; it does not book, rank by sponsorship, or send your profile.</p><div class="flow-meta"><span>CITY ONLY</span><span>WITHDRAWABLE</span><span>BOOKING DISABLED</span></div></div>`
+  },
+  "Moderation & evidence": {
+    kicker: "ANTI-AGING · EVIDENCE VIEW",
+    title: "Keep control visible",
+    step: "v2.640 · Reviewed locally",
+    body: `<div class="flow-result"><span>CONTROL CENTER</span><h3>Evidence without overclaiming</h3><p>The personal surface separates downloadable records, reminder controls, and provider handoffs. The operator surface keeps moderation and readiness as review evidence—not launch authorization.</p><div class="flow-meta"><span>EXPORTABLE</span><span>REVERSIBLE</span><span>NO LIVE CLAIMS</span></div></div>`
   },
   "Data export": {
     kicker: "ACCOUNT DATA · SAMPLE FLOW",

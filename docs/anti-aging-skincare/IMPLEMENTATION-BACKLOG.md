@@ -38,13 +38,13 @@ Estimates are relative engineering effort for the existing repository, not commi
 | AA-15 | Fixture-backed catalog adapter | Implemented with import, dedupe, provenance, freshness, conflict reporting, deterministic replay, and quarantine without live credentials | M | AA-02 |
 | AA-16 | Provider directory adapter | Implemented with provider submissions, qualification verification state, city/region normalization, rejection quarantine, and moderation queue | L | AA-03 |
 | AA-17 | Merchant referral adapter | Implemented as an allowlisted HTTPS referral boundary with disclosure labels, aggregate click measurement, and no profile data in URLs | M | AA-05 |
-| AA-18 | Appointment request adapter | Implemented as an idempotent, consented external-handoff seam with status/webhook semantics and user-visible uncertainty; live booking remains disabled | L | AA-03, AA-04 |
+| AA-18 | Appointment request adapter | Implemented as an idempotent, consented external-handoff seam with status/webhook semantics, actor-scoped listing, reversible withdrawal, and user-visible uncertainty; live booking remains disabled | L | AA-03, AA-04 |
 
 ## Phase 6 — optimization and launch (P2)
 
 | ID | Increment | Acceptance criteria | Estimate | Depends on |
 |---|---|---|---:|---|
-| AA-19 | Progress/adherence | Implemented as consented progress records, deletion, retention, aggregate analytics, opt-in daily/weekly reminders, deterministic notification enqueue, pause/resume/snooze controls, and no diagnostic inference | M | AA-04, AA-09 |
+| AA-19 | Progress/adherence | Implemented as consented progress records, deletion, retention, aggregate analytics, actor-scoped downloadable export with summary, opt-in daily/weekly reminders, deterministic notification enqueue, pause/resume/snooze controls, and no diagnostic inference | M | AA-04, AA-09 |
 | AA-20 | Admin/data quality | Implemented as fixture quality counts, actionable freshness/source/review issues, moderation summary with review/quarantine distinction, restricted admin reporting, and readiness reporting; full export workflow remains deferred | L | AA-02, AA-03, AA-15, AA-16 |
 | AA-21 | Search/geospatial scale | Implemented as privacy-preserving city-bounded discovery with explicit no-geocoding and aggregate latency/fallback SLO reporting; geocoding and production scale remain gated | L | AA-10, AA-16 |
 | AA-22 | Launch readiness | Implemented as a non-authorizing readiness gate report with per-gate evidence covering live AI, commerce, booking, image analysis, catalog approval, accessibility, restore, and privacy; full launch review remains incomplete | L | All P0/P1 |

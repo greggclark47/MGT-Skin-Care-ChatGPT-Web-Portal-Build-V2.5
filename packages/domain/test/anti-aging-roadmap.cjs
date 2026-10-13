@@ -40,4 +40,10 @@ assert.equal(Date.parse(domain.snoozeProgressReminder(reminder, 3, Date.parse(no
 const moderation = domain.summarizeCatalogModeration(qualityIssues);
 assert.equal(moderation.status, 'quarantine_required');
 assert.equal(domain.aggregateProviderSearchSlo([{ result_count: 1, latency_ms: 100, fallback: false, created_at: now }, { result_count: 0, latency_ms: 900, fallback: true, created_at: now }], 750, 0.4).status, 'review_required');
+const exportSummary = domain.summarizeProgressExport(entries, [reminder, { ...reminder, id: 'aa_rem_2', paused: true }]);
+assert.equal(exportSummary.entries, 2);
+assert.equal(exportSummary.reminders, 2);
+assert.equal(exportSummary.paused_reminders, 1);
+assert.deepEqual(exportSummary.data_shared, []);
+assert.equal(domain.withdrawAppointmentRequest(request, now).status, 'closed');
 console.log('anti-aging-roadmap: ok');

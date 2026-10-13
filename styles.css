@@ -501,7 +501,7 @@ body.has-compare .toast { bottom: 105px; }
 .coach-input { width: 100%; min-height: 102px; margin-bottom: 12px; padding: 13px; color: var(--text); border: 1px solid var(--border); border-radius: 10px; background: var(--surface); resize: vertical; font: .88rem/1.55 "DM Sans"; }
 .export-preview { overflow: auto; margin: 17px 0; padding: 16px; color: #e5e9e2; border-radius: 10px; background: #060a13; font: .7rem/1.6 "DM Mono"; white-space: pre; }
 .anti-aging-demo-section { border-top: 1px solid var(--border); }
-.anti-aging-demo-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; }
+.anti-aging-demo-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; }
 .anti-aging-demo-grid article { display: flex; min-height: 215px; flex-direction: column; gap: 10px; padding: 19px; border: 1px solid var(--border); border-radius: 14px; background: var(--panel); box-shadow: var(--soft-shadow); }
 .anti-aging-demo-grid strong { font: 600 1.18rem Fraunces, Georgia, serif; }
 .anti-aging-demo-grid p { margin: 0; color: var(--muted); font-size: .78rem; line-height: 1.55; }

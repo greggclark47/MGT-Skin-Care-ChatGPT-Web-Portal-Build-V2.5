@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import {
-  aggregateProgress, buildAppointmentRequest, buildMerchantReferral, buildProgressReminder, isCanonicalId, isProgressReminderCadence, isProgressStatus, progressReminderState, snoozeProgressReminder, validateProgressEntry,
+  aggregateProgress, buildAppointmentRequest, buildMerchantReferral, buildProgressReminder, isCanonicalId, isProgressReminderCadence, isProgressStatus, progressReminderState, snoozeProgressReminder, summarizeProgressExport, validateProgressEntry, withdrawAppointmentRequest,
   type AppointmentRequestInput, type ProgressEntry, type ProgressReminder,
 } from '@mgt/domain';
 import { check, hash, wrap } from '../../portal/security';
@@ -79,7 +79,18 @@ export function antiAgingRoadmapRouter(catalog: AntiAgingCatalog, store?: Store)
       entries: (await records.entries<ProgressEntry>('anti_aging_progress')).map(item => item.value).filter(item => item.actor === actor),
       reminders: (await records.entries<ProgressReminder>('anti_aging_reminders')).map(item => item.value).filter(item => item.actor === actor),
     }));
-    res.json({ data: { ...bundle, export_format: 'json', data_shared: [], note: 'Portable personal copy; not a diagnosis or treatment record.' } });
+    res.setHeader('Content-Disposition', 'attachment; filename="mgt-skin-care-progress-export.json"');
+    res.json({ data: { ...bundle, summary: summarizeProgressExport(bundle.entries, bundle.reminders), export_format: 'json', data_shared: [], note: 'Portable personal copy; not a diagnosis or treatment record.' } });
+  }));
+
+  router.get('/progress/export/summary', wrap(async (req, res) => {
+    missingStore(store);
+    const actor = actorOf(req);
+    const bundle = await store.tx(async records => ({
+      entries: (await records.entries<ProgressEntry>('anti_aging_progress')).map(item => item.value).filter(item => item.actor === actor),
+      reminders: (await records.entries<ProgressReminder>('anti_aging_reminders')).map(item => item.value).filter(item => item.actor === actor),
+    }));
+    res.json({ data: summarizeProgressExport(bundle.entries, bundle.reminders), consent_scope: ['progress_tracking', 'reminders'] });
   }));
 
   router.delete('/progress', wrap(async (req, res) => {
@@ -149,6 +160,13 @@ export function antiAgingRoadmapRouter(catalog: AntiAgingCatalog, store?: Store)
     res.status(202).json({ data: result });
   }));
 
+  router.get('/appointment-requests', wrap(async (req, res) => {
+    missingStore(store);
+    const actor = actorOf(req);
+    const requests = await store.tx(async records => (await records.entries<any>('anti_aging_appointment_requests')).map(item => item.value).filter(item => item.actor === actor));
+    res.json({ data: { items: requests, data_shared: [], booking_supported: false, note: 'These are handoff requests only; no appointment is booked in this portal.' } });
+  }));
+
   router.get('/appointment-requests/:id', wrap(async (req, res) => {
     missingStore(store);
     const actor = actorOf(req);
@@ -157,6 +175,18 @@ export function antiAgingRoadmapRouter(catalog: AntiAgingCatalog, store?: Store)
     const request = await store.tx(records => records.get<any>('anti_aging_appointment_requests', id));
     check(request?.actor === actor, 404, 'request_not_found', 'No appointment handoff request was found.');
     res.json({ data: request });
+  }));
+
+  router.delete('/appointment-requests/:id', wrap(async (req, res) => {
+    missingStore(store);
+    const actor = actorOf(req);
+    const id = typeof req.params.id === 'string' ? req.params.id : '';
+    check(isCanonicalId(id), 400, 'invalid_request', 'Use a valid appointment request reference.');
+    const request = await store.tx(records => records.get<any>('anti_aging_appointment_requests', id));
+    check(request?.actor === actor, 404, 'request_not_found', 'No appointment handoff request was found.');
+    const withdrawn = withdrawAppointmentRequest(request);
+    await store.tx(records => records.put('anti_aging_appointment_requests', id, withdrawn));
+    res.json({ data: { ...withdrawn, withdrawn: true } });
   }));
 
   return router;

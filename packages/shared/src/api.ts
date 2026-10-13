@@ -1,7 +1,7 @@
 import type {
   SkinProfileInput, Routine, ProfileVector, AvoidFlags, IngredientRecord, ProductRecord,
   ProviderRecord, TreatmentRecord, ReadOnlyPage, AntiAgingResponseMeta, GroundedAntiAgingExplanation, GroundedSearchResult,
-  MerchantReferral, ProgressEntry, ProgressAggregate, ProgressReminder, AppointmentRequest,
+  MerchantReferral, ProgressEntry, ProgressAggregate, ProgressReminder, ProgressExportSummary, AppointmentRequest,
 } from '@mgt/domain';
 
 // One API client shared by web and mobile (Section C.1: "no separate business logic per
@@ -162,7 +162,11 @@ export class ApiClient {
   }
 
   exportAntiAgingProgress(token?: string) {
-    return this.get<{ data: { entries: ProgressEntry[]; reminders: ProgressReminder[]; export_format: 'json'; data_shared: []; note: string } }>('/api/v1/progress/export', token);
+    return this.get<{ data: { entries: ProgressEntry[]; reminders: ProgressReminder[]; summary: ProgressExportSummary; export_format: 'json'; data_shared: []; note: string } }>('/api/v1/progress/export', token);
+  }
+
+  summarizeAntiAgingProgressExport(token?: string) {
+    return this.get<{ data: ProgressExportSummary; consent_scope: ['progress_tracking', 'reminders'] }>('/api/v1/progress/export/summary', token);
   }
 
   saveAntiAgingProgress(input: { entry_id: string; status: string; completed_at: string; consent_version: string }, token?: string) {
@@ -199,6 +203,14 @@ export class ApiClient {
 
   getAppointmentRequest(id: string, token?: string) {
     return this.get<{ data: AppointmentRequest }>(`/api/v1/appointment-requests/${encodeURIComponent(id)}`, token);
+  }
+
+  listAppointmentRequests(token?: string) {
+    return this.get<{ data: { items: AppointmentRequest[]; data_shared: []; booking_supported: false; note: string } }>('/api/v1/appointment-requests', token);
+  }
+
+  withdrawAppointmentRequest(id: string, token?: string) {
+    return this.delete<{ data: AppointmentRequest & { withdrawn: true } }>(`/api/v1/appointment-requests/${encodeURIComponent(id)}`, {}, token);
   }
 }
 

@@ -207,6 +207,8 @@ console.log('\n== 7c. Anti-aging progress surface preserves optional, non-diagno
   check('progress surface identifies optional check-in', html.includes('OPTIONAL CHECK-IN'));
   check('progress surface includes private-by-default copy', html.includes('Private by default'));
   check('progress surface states it is not health measurement', html.includes('not a measure of health'));
+  check('progress surface exposes personal control summary', html.includes('Personal controls') && html.includes('nothing shared'));
+  check('progress surface explains reversible reminder control', html.includes('pause or snooze'));
 }
 
 // ============ Destination screens ============

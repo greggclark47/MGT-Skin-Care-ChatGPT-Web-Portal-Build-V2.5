@@ -42,6 +42,16 @@ export interface ProgressAggregate {
   note: string;
 }
 
+export interface ProgressExportSummary {
+  entries: number;
+  reminders: number;
+  completed: number;
+  paused_reminders: number;
+  next_reminder_at: string | null;
+  data_shared: [];
+  note: string;
+}
+
 export interface ProgressReminder {
   id: string;
   actor: string;
@@ -176,6 +186,20 @@ export function aggregateProgress(entries: ProgressEntry[]): ProgressAggregate {
     note: 'Aggregate adherence signal only. It is not a measure of health, treatment response, or diagnosis.' };
 }
 
+export function summarizeProgressExport(entries: ProgressEntry[], reminders: ProgressReminder[]): ProgressExportSummary {
+  const aggregate = aggregateProgress(entries);
+  const active = reminders.filter(item => !item.paused).sort((a, b) => Date.parse(a.next_at) - Date.parse(b.next_at));
+  return {
+    entries: entries.length,
+    reminders: reminders.length,
+    completed: aggregate.completed,
+    paused_reminders: reminders.filter(item => item.paused).length,
+    next_reminder_at: active[0]?.next_at || null,
+    data_shared: [],
+    note: 'Private control summary only. It is not a diagnosis, treatment record, or health outcome.',
+  };
+}
+
 export function buildProgressReminder(input: { entry_id: string; cadence: ProgressReminderCadence; days_from_now: number; consent_version: string }, actor: string, id: string, now = new Date().toISOString()): ProgressReminder {
   if (!isCanonicalId(input.entry_id) || !isProgressReminderCadence(input.cadence) || !Number.isInteger(input.days_from_now) || input.days_from_now < 1 || input.days_from_now > 365 || typeof input.consent_version !== 'string' || input.consent_version.length < 1 || input.consent_version.length > 80) throw new Error('progress_reminder_invalid');
   const next = new Date(Date.parse(now) + input.days_from_now * 86400000);
@@ -209,6 +233,10 @@ export function applyAppointmentStatusWebhook(request: AppointmentRequest, statu
   if (status === 'partner_acknowledged') return { ...request, status, updated_at: now, uncertainty: 'The independent provider acknowledged the handoff; availability and booking remain outside this portal.' };
   if (status === 'uncertain') return { ...request, status, updated_at: now, uncertainty: 'The external provider status could not be confirmed. Contact the provider directly.' };
   return { ...request, status, updated_at: now };
+}
+
+export function withdrawAppointmentRequest(request: AppointmentRequest, now = new Date().toISOString()): AppointmentRequest {
+  return { ...request, status: 'closed', updated_at: now, uncertainty: 'The provider handoff was withdrawn. Contact the independent provider directly if you still want to arrange care.' };
 }
 
 export function summarizeCatalogQuality(records: Array<{ type: string; record: CanonicalRecord }>, observedAt = Date.now()): CatalogQualitySummary {

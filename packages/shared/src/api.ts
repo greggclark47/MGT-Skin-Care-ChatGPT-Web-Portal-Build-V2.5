@@ -1,7 +1,7 @@
 import type {
   SkinProfileInput, Routine, ProfileVector, AvoidFlags, IngredientRecord, ProductRecord,
   ProviderRecord, TreatmentRecord, ReadOnlyPage, AntiAgingResponseMeta, GroundedAntiAgingExplanation, GroundedSearchResult,
-  MerchantReferral, ProgressEntry, ProgressAggregate, ProgressReminder, ProgressExportSummary, AppointmentRequest,
+  MerchantReferral, ProgressEntry, ProgressAggregate, ProgressReminder, ProgressExportManifest, ProgressExportSummary, ProgressReminderPreview, AppointmentRequest,
 } from '@mgt/domain';
 
 // One API client shared by web and mobile (Section C.1: "no separate business logic per
@@ -162,7 +162,11 @@ export class ApiClient {
   }
 
   exportAntiAgingProgress(token?: string) {
-    return this.get<{ data: { entries: ProgressEntry[]; reminders: ProgressReminder[]; summary: ProgressExportSummary; export_format: 'json'; data_shared: []; note: string } }>('/api/v1/progress/export', token);
+    return this.get<{ data: { entries: ProgressEntry[]; reminders: ProgressReminder[]; summary: ProgressExportSummary; manifest: ProgressExportManifest; export_format: 'json'; data_shared: []; note: string } }>('/api/v1/progress/export', token);
+  }
+
+  getAntiAgingProgressExportManifest(token?: string) {
+    return this.get<{ data: ProgressExportManifest }>('/api/v1/progress/export/manifest', token);
   }
 
   summarizeAntiAgingProgressExport(token?: string) {
@@ -179,6 +183,10 @@ export class ApiClient {
 
   listAntiAgingReminders(token?: string) {
     return this.get<{ data: { reminders: ProgressReminder[]; states: Record<string, number>; consent_scope: 'reminders' } }>('/api/v1/progress/reminders', token);
+  }
+
+  previewAntiAgingReminders(token?: string) {
+    return this.get<{ data: { items: ProgressReminderPreview[]; delivery: 'in_app_only'; data_shared: []; consent_scope: 'reminders' } }>('/api/v1/progress/reminders/preview', token);
   }
 
   createAntiAgingReminder(input: { entry_id: string; cadence: 'daily' | 'weekly'; days_from_now: number; consent_version: string }, token?: string) {

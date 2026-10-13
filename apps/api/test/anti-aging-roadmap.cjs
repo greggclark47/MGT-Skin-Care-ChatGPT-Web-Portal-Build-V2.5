@@ -38,6 +38,15 @@ const { OperationalWorker, InAppNotificationDelivery } = require('../dist/portal
     assert.equal(exported.data.data.export_format, 'json');
     assert.deepEqual(exported.data.data.data_shared, []);
     assert.equal(exported.data.data.summary.entries, 1);
+    assert.equal(exported.data.data.manifest.entries, 1);
+    assert.deepEqual(exported.data.data.manifest.data_shared, []);
+    const manifest = await call('/api/v1/progress/export/manifest');
+    assert.equal(manifest.data.data.export_format, 'json');
+    assert.deepEqual(manifest.data.data.scopes, ['progress_tracking', 'reminders']);
+    const preview = await call('/api/v1/progress/reminders/preview');
+    assert.equal(preview.data.data.delivery, 'in_app_only');
+    assert.deepEqual(preview.data.data.data_shared, []);
+    assert.equal(preview.data.data.items[0].state, 'scheduled');
     await store.tx(async records => { const saved = await records.get('anti_aging_reminders', reminder.data.data.id); await records.put('anti_aging_reminders', saved.id, { ...saved, next_at: new Date(Date.now() - 1000).toISOString() }); });
     const worker = new OperationalWorker(store, { delivery: new InAppNotificationDelivery(), env: { NODE_ENV: 'test', OPERATIONS_ALERT_DELIVERY: 'disabled' } });
     const workerResult = await worker.runOnce(Date.now());

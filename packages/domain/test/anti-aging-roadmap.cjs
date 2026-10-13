@@ -58,4 +58,15 @@ const dailySlo = domain.aggregateProviderSearchSloByDay([
   { result_count: 0, latency_ms: 800, fallback: true, created_at: '2026-10-13T12:00:00.000Z' },
 ]);
 assert.deepEqual(dailySlo.map(item => item.day), ['2026-10-12', '2026-10-13']);
+const manifest = domain.buildProgressExportManifest(entries, [reminder]);
+assert.equal(manifest.export_format, 'json');
+assert.deepEqual(manifest.scopes, ['progress_tracking', 'reminders']);
+assert.deepEqual(manifest.data_shared, []);
+const reminderPreview = domain.previewProgressReminder(reminder, Date.parse(now));
+assert.equal(reminderPreview.delivery, 'in_app_only');
+assert.deepEqual(reminderPreview.data_shared, []);
+const digest = domain.buildAntiAgingOperationsDigest({ moderation, queue, search: domain.aggregateProviderSearchSlo([]), daily_search: [], readiness, evidence: evidenceSummary }, now);
+assert.equal(digest.authorization, 'not_authorized');
+assert.equal(digest.moderation_queue_items, queue.length);
+assert.equal(digest.readiness_status, 'ready');
 console.log('anti-aging-roadmap: ok');

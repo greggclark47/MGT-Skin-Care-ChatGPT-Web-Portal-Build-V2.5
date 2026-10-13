@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import {
-  aggregateProgress, buildAppointmentRequest, buildMerchantReferral, buildProgressReminder, isCanonicalId, isProgressReminderCadence, isProgressStatus, progressReminderState, snoozeProgressReminder, summarizeProgressExport, validateProgressEntry, withdrawAppointmentRequest,
+  aggregateProgress, buildAppointmentRequest, buildMerchantReferral, buildProgressExportManifest, buildProgressReminder, isCanonicalId, isProgressReminderCadence, isProgressStatus, previewProgressReminder, progressReminderState, snoozeProgressReminder, summarizeProgressExport, validateProgressEntry, withdrawAppointmentRequest,
   type AppointmentRequestInput, type ProgressEntry, type ProgressReminder,
 } from '@mgt/domain';
 import { check, hash, wrap } from '../../portal/security';
@@ -80,7 +80,17 @@ export function antiAgingRoadmapRouter(catalog: AntiAgingCatalog, store?: Store)
       reminders: (await records.entries<ProgressReminder>('anti_aging_reminders')).map(item => item.value).filter(item => item.actor === actor),
     }));
     res.setHeader('Content-Disposition', 'attachment; filename="mgt-skin-care-progress-export.json"');
-    res.json({ data: { ...bundle, summary: summarizeProgressExport(bundle.entries, bundle.reminders), export_format: 'json', data_shared: [], note: 'Portable personal copy; not a diagnosis or treatment record.' } });
+    res.json({ data: { ...bundle, summary: summarizeProgressExport(bundle.entries, bundle.reminders), manifest: buildProgressExportManifest(bundle.entries, bundle.reminders), export_format: 'json', data_shared: [], note: 'Portable personal copy; not a diagnosis or treatment record.' } });
+  }));
+
+  router.get('/progress/export/manifest', wrap(async (req, res) => {
+    missingStore(store);
+    const actor = actorOf(req);
+    const bundle = await store.tx(async records => ({
+      entries: (await records.entries<ProgressEntry>('anti_aging_progress')).map(item => item.value).filter(item => item.actor === actor),
+      reminders: (await records.entries<ProgressReminder>('anti_aging_reminders')).map(item => item.value).filter(item => item.actor === actor),
+    }));
+    res.json({ data: buildProgressExportManifest(bundle.entries, bundle.reminders) });
   }));
 
   router.get('/progress/export/summary', wrap(async (req, res) => {
@@ -106,6 +116,13 @@ export function antiAgingRoadmapRouter(catalog: AntiAgingCatalog, store?: Store)
     const actor = actorOf(req);
     const reminders = await store.tx(async records => (await records.entries<ProgressReminder>('anti_aging_reminders')).map(item => item.value).filter(item => item.actor === actor));
     res.json({ data: { reminders, states: reminders.reduce((summary, reminder) => { const state = progressReminderState(reminder); summary[state]++; return summary; }, { paused: 0, due: 0, scheduled: 0 } as Record<string, number>), consent_scope: 'reminders' } });
+  }));
+
+  router.get('/progress/reminders/preview', wrap(async (req, res) => {
+    missingStore(store);
+    const actor = actorOf(req);
+    const reminders = await store.tx(async records => (await records.entries<ProgressReminder>('anti_aging_reminders')).map(item => item.value).filter(item => item.actor === actor));
+    res.json({ data: { items: reminders.map(reminder => previewProgressReminder(reminder)), delivery: 'in_app_only', data_shared: [], consent_scope: 'reminders' } });
   }));
 
   router.post('/progress/reminders', wrap(async (req, res) => {

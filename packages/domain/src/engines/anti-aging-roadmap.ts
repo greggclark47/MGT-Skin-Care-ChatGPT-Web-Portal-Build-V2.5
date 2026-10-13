@@ -52,6 +52,16 @@ export interface ProgressExportSummary {
   note: string;
 }
 
+export interface ProgressExportManifest {
+  export_format: 'json';
+  policy_version: string;
+  scopes: ['progress_tracking', 'reminders'];
+  entries: number;
+  reminders: number;
+  data_shared: [];
+  note: string;
+}
+
 export interface ProgressReminder {
   id: string;
   actor: string;
@@ -63,6 +73,18 @@ export interface ProgressReminder {
   created_at: string;
   updated_at: string;
   policy_version: string;
+}
+
+export interface ProgressReminderPreview {
+  id: string;
+  entry_id: string;
+  cadence: ProgressReminderCadence;
+  next_at: string;
+  paused: boolean;
+  state: ProgressReminderState;
+  delivery: 'in_app_only';
+  data_shared: [];
+  note: string;
 }
 
 export interface AppointmentRequestInput {
@@ -170,6 +192,27 @@ export interface LaunchEvidenceSummary {
   note: string;
 }
 
+export interface AntiAgingOperationsDigestInput {
+  moderation: CatalogModerationSummary;
+  queue: CatalogModerationQueueItem[];
+  search: ProviderSearchSloSummary;
+  daily_search: ProviderSearchDailySummary[];
+  readiness: AntiAgingLaunchReadiness;
+  evidence: LaunchEvidenceSummary;
+}
+
+export interface AntiAgingOperationsDigest {
+  generated_at: string;
+  moderation_queue_items: number;
+  moderation_blockers: number;
+  search_days: number;
+  search_status: ProviderSearchSloSummary['status'];
+  readiness_status: AntiAgingLaunchReadiness['status'];
+  evidence_failed: number;
+  authorization: 'not_authorized';
+  note: string;
+}
+
 const STATUSES: readonly ProgressStatus[] = ['completed', 'skipped', 'irritation', 'no_change'];
 const APPOINTMENT_STATUSES: readonly AppointmentRequestStatus[] = ['handoff_pending', 'partner_acknowledged', 'uncertain', 'closed'];
 
@@ -218,6 +261,18 @@ export function summarizeProgressExport(entries: ProgressEntry[], reminders: Pro
   };
 }
 
+export function buildProgressExportManifest(entries: ProgressEntry[], reminders: ProgressReminder[]): ProgressExportManifest {
+  return {
+    export_format: 'json',
+    policy_version: ANTI_AGING_ROADMAP_POLICY_VERSION,
+    scopes: ['progress_tracking', 'reminders'],
+    entries: entries.length,
+    reminders: reminders.length,
+    data_shared: [],
+    note: 'Manifest describes the portable personal export; it contains no diagnosis, treatment conclusion, provider handoff, or external delivery permission.',
+  };
+}
+
 export function buildProgressReminder(input: { entry_id: string; cadence: ProgressReminderCadence; days_from_now: number; consent_version: string }, actor: string, id: string, now = new Date().toISOString()): ProgressReminder {
   if (!isCanonicalId(input.entry_id) || !isProgressReminderCadence(input.cadence) || !Number.isInteger(input.days_from_now) || input.days_from_now < 1 || input.days_from_now > 365 || typeof input.consent_version !== 'string' || input.consent_version.length < 1 || input.consent_version.length > 80) throw new Error('progress_reminder_invalid');
   const next = new Date(Date.parse(now) + input.days_from_now * 86400000);
@@ -238,6 +293,20 @@ export function snoozeProgressReminder(reminder: ProgressReminder, days: number,
 export function progressReminderState(reminder: ProgressReminder, now = Date.now()): ProgressReminderState {
   if (reminder.paused) return 'paused';
   return Date.parse(reminder.next_at) <= now ? 'due' : 'scheduled';
+}
+
+export function previewProgressReminder(reminder: ProgressReminder, now = Date.now()): ProgressReminderPreview {
+  return {
+    id: reminder.id,
+    entry_id: reminder.entry_id,
+    cadence: reminder.cadence,
+    next_at: reminder.next_at,
+    paused: reminder.paused,
+    state: progressReminderState(reminder, now),
+    delivery: 'in_app_only',
+    data_shared: [],
+    note: 'Preview only. No email, SMS, partner, or provider delivery is enabled by this record.',
+  };
 }
 
 export function buildAppointmentRequest(input: AppointmentRequestInput, actor: string, id: string, now = new Date().toISOString()): AppointmentRequest {
@@ -314,6 +383,20 @@ export function buildLaunchGateEvidence(readiness: AntiAgingLaunchReadiness, obs
 export function summarizeLaunchGateEvidence(evidence: LaunchGateEvidence[]): LaunchEvidenceSummary {
   const blockers = evidence.filter(item => !item.passed).map(item => item.gate);
   return { total: evidence.length, passed: evidence.length - blockers.length, failed: blockers.length, blockers, authorization: 'not_authorized', note: 'Evidence summarizes gates only; it is not launch authorization.' };
+}
+
+export function buildAntiAgingOperationsDigest(input: AntiAgingOperationsDigestInput, generatedAt = new Date().toISOString()): AntiAgingOperationsDigest {
+  return {
+    generated_at: generatedAt,
+    moderation_queue_items: input.queue.length,
+    moderation_blockers: input.moderation.blocker_count,
+    search_days: input.daily_search.length,
+    search_status: input.search.status,
+    readiness_status: input.readiness.status,
+    evidence_failed: input.evidence.failed,
+    authorization: 'not_authorized',
+    note: 'Read-only operations digest for accountable review. It does not approve launch, publish catalog records, book care, or share personal data.',
+  };
 }
 
 export function providerMatchesCity(provider: ProviderRecord, city: string): boolean {

@@ -18,6 +18,7 @@ import {RETAILERS,SHOP_SEGMENTS,COMMERCE_MODEL} from './retailers';
 import {aiRuntimeReadiness,operationalReadiness,operationalSnapshot} from './operations';
 import {acceptsApiContentEncoding,acceptsApiJsonBody,acceptsApiJsonCharset,acceptsBodyForMethod,apiSecurityHeaders,applyProductionExpressBoundary,applyProductionHttpLimits,applyProductionHttpTimeouts,closeProductionHttpServer,hasNoMethodOverride,hasNoPartialBody,hasNoPathOverride,hasNoRangeRequest,hasNoRequestTrailers,hasNoUnverifiedIntegrity,hasNoUrlFragment,hasNonEmptyQueryKeys,hasOriginFormRequestTarget,hasUniqueQueryKeys,hasValidQueryEncoding,headerWithinLimit,installClientErrorBoundary,isSupportedHttpMethod,queryComponentsWithinLimit,queryPairCountWithinLimit,queryStringWithinLimit,requestTargetWithinLimit} from './http-runtime';
 import {BILLING_CYCLES,PLAN_DEFINITIONS,priceIdFor} from './plans';
+import { antiAgingRouter } from '../modules/anti-aging/router';
 type StripeClient=Stripe;
 export interface PortalOptions{store:Store;env?:NodeJS.ProcessEnv;stripe?:StripeClient;coach?:SafeCoach;analysisGateway?:AiGateway;verifyOtp?:(email:string,otp:string)=>Promise<{id:string,email:string}>}
 const now=()=>new Date().toISOString();
@@ -144,7 +145,7 @@ export async function createPortal(options:PortalOptions){
  app.use(['/api/hub','/api/v1'],session);
  app.use(['/api/hub','/api/v1'],wrap(async(req,_res,next)=>{await db.tx(async r=>rate(r,'request:'+req.actor,180,60000));next();}));
  app.use(['/api/hub','/api/v1'],wrap(async(req,_res,next)=>{
-  const allowed=['/session','/auth/','/account/','/guest-access','/billing','/subscriptions','/entitlement','/company','/retailers','/catalog','/knowledge','/support','/assistant'];
+  const allowed=['/session','/auth/','/account/','/guest-access','/billing','/subscriptions','/entitlement','/company','/retailers','/catalog','/knowledge','/support','/assistant','/ingredients','/products','/treatments','/providers'];
   if(!allowed.some(path=>req.path===path||req.path.startsWith(path.endsWith('/')?path:path+'/'))){
    await db.tx(async r=>{const invited=await r.get('guest_memberships',req.actor);check(!invited||!!await activeGuestAccess(r,req.actor)||(await ownEntitlement(r,req.actor)).premium,403,'guest_access_ended','Your invited access has ended. Review full access or ask the owner for a new invitation.');});
   }

@@ -1,4 +1,7 @@
-import type { SkinProfileInput, Routine, ProfileVector, AvoidFlags } from '@mgt/domain';
+import type {
+  SkinProfileInput, Routine, ProfileVector, AvoidFlags, IngredientRecord, ProductRecord,
+  ProviderRecord, TreatmentRecord, ReadOnlyPage, AntiAgingResponseMeta,
+} from '@mgt/domain';
 
 // One API client shared by web and mobile (Section C.1: "no separate business logic per
 // platform"). Every call goes to the Express API — the clients never call external
@@ -14,6 +17,16 @@ export interface SkinMatchResult {
 
 export interface ApiErrorShape {
   error: { code: string; message: string; details?: unknown; request_id: string };
+}
+
+export interface AntiAgingListResponse<T> {
+  data: ReadOnlyPage<T>;
+  meta: AntiAgingResponseMeta;
+}
+
+export interface AntiAgingRecordResponse<T> {
+  data: T;
+  meta: AntiAgingResponseMeta;
 }
 
 export class ApiClient {
@@ -76,6 +89,32 @@ export class ApiClient {
   orderStatus(orderId: string) {
     return this.get<{ status: string }>(`/api/checkout/orders/${encodeURIComponent(orderId)}/status`);
   }
+
+  listIngredients(query: { q?: string; category?: string; limit?: number } = {}) {
+    return this.get<AntiAgingListResponse<IngredientRecord>>(`/api/v1/ingredients${queryString(query)}`);
+  }
+
+  getIngredient(id: string) {
+    return this.get<AntiAgingRecordResponse<IngredientRecord>>(`/api/v1/ingredients/${encodeURIComponent(id)}`);
+  }
+
+  listProducts(query: { q?: string; category?: string; concern?: string; ingredient?: string; limit?: number } = {}) {
+    return this.get<AntiAgingListResponse<ProductRecord>>(`/api/v1/products${queryString(query)}`);
+  }
+
+  listTreatments(query: { q?: string; category?: string; limit?: number } = {}) {
+    return this.get<AntiAgingListResponse<TreatmentRecord>>(`/api/v1/treatments${queryString(query)}`);
+  }
+
+  listProviders(query: { q?: string; city?: string; provider_type?: string; category?: string; limit?: number } = {}) {
+    return this.get<AntiAgingListResponse<ProviderRecord>>(`/api/v1/providers${queryString(query)}`);
+  }
+}
+
+function queryString(values: Record<string, string | number | undefined>): string {
+  const query = Object.entries(values).filter(([, value]) => value !== undefined)
+    .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`).join('&');
+  return query ? `?${query}` : '';
 }
 
 export class ApiError extends Error {

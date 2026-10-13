@@ -4,6 +4,7 @@
 
 export * from './types/enums';
 export * from './types/skin-profile';
+export * from './types/anti-aging';
 
 export * from './engines/rules-engine';
 export * from './engines/scoring-engine';

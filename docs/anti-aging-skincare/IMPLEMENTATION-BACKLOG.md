@@ -6,11 +6,11 @@ Estimates are relative engineering effort for the existing repository, not commi
 
 | ID | Increment | Acceptance criteria | Estimate | Depends on |
 |---|---|---|---:|---|
-| AA-01 | Shared contract package | New typed entities, enums, provenance, commercial labels, pagination, error codes compile in domain/shared/mobile/web | M | Phase 1 docs |
-| AA-02 | Catalog/ingredient schema | Product, brand, formulation, ingredient, merchant, evidence/provenance tables have stable IDs, uniqueness, freshness, review status, and RLS/service policies | L | AA-01 |
-| AA-03 | Treatment/provider schema | Treatment, technology, risk, clinic, practitioner, qualification, location, service, appointment-request tables and constraints are migration-tested | L | AA-01 |
-| AA-04 | Consent/access policy | Consent matrix, user-owned repository ports, deletion/redaction behavior, and audit events are tested | M | AA-01 |
-| AA-05 | Read-only v1 routes | Ingredients, products, treatments, and providers expose bounded, reviewed, provenance-bearing responses | M | AA-02, AA-03 |
+| AA-01 | Shared contract package | Implemented in `@mgt/domain` and `@mgt/shared`; typed entities, provenance, commercial labels, consent purposes, pagination, and response policy metadata compile | M | Phase 1 docs |
+| AA-02 | Catalog/ingredient schema | Implemented as a server-owned migration and fixture-backed catalog with stable IDs, freshness, review status, and RLS | L | AA-01 |
+| AA-03 | Treatment/provider schema | Implemented as canonical records and the initial server-owned schema; live qualification/appointment adapters remain deferred | L | AA-01 |
+| AA-04 | Consent/access policy | Implemented as purpose-scoped contracts/schema; user-owned write flows and deletion integration remain deferred to the next increment | M | AA-01 |
+| AA-05 | Read-only v1 routes | Implemented and tested for bounded ingredient, product, treatment, and provider reads with provenance and safety metadata | M | AA-02, AA-03 |
 
 ## Phase 3 — initial experience (P0/P1)
 

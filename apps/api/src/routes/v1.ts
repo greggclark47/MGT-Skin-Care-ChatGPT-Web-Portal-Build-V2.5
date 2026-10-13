@@ -33,6 +33,7 @@ export interface V1Routers {
   checkout: Router;
   subscriptions: Router;
   entitlement?: Router;
+  antiAging?: Router;
 }
 
 export function createV1Router(routers: V1Routers): Router {
@@ -41,6 +42,7 @@ export function createV1Router(routers: V1Routers): Router {
   v1.use('/checkout', routers.checkout);
   v1.use('/subscriptions', routers.subscriptions);
   if (routers.entitlement) v1.use('/entitlement', routers.entitlement);
+  if (routers.antiAging) v1.use(routers.antiAging);
 
   // Scoped 404 so an unknown /api/v1/* path answers in the v1 envelope rather than
   // falling through to the app-level `{ error: 'Not found' }`.

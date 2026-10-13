@@ -1,0 +1,4 @@
+-- Portal migration lineage marker for the anti-aging foundation.
+-- The authoritative schema lives in infra/db/migrations/0011_anti_aging_catalog.sql;
+-- portal deployments must apply the approved database migration set before enabling it.
+-- No portal_schema_migrations row is inserted by application startup.

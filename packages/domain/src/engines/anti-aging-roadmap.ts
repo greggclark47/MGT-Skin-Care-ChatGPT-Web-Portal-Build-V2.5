@@ -112,6 +112,11 @@ export interface CatalogModerationSummary {
   status: 'clear' | 'review_required' | 'quarantine_required';
 }
 
+export interface CatalogModerationQueueItem extends CatalogQualityIssue {
+  key: string;
+  owner_role: 'catalog_editor' | 'sme' | 'compliance';
+}
+
 export interface AntiAgingLaunchInput {
   live_ai_enabled: boolean;
   checkout_enabled: boolean;
@@ -150,6 +155,19 @@ export interface ProviderSearchSloSummary {
   fallback_rate: number;
   p95_latency_ms: number;
   status: 'within_target' | 'review_required';
+}
+
+export interface ProviderSearchDailySummary extends ProviderSearchSloSummary {
+  day: string;
+}
+
+export interface LaunchEvidenceSummary {
+  total: number;
+  passed: number;
+  failed: number;
+  blockers: string[];
+  authorization: 'not_authorized';
+  note: string;
 }
 
 const STATUSES: readonly ProgressStatus[] = ['completed', 'skipped', 'irritation', 'no_change'];
@@ -267,6 +285,14 @@ export function summarizeCatalogModeration(issues: CatalogQualityIssue[]): Catal
   return { issue_count: issues.length, blocker_count, review_count, status: blocker_count ? 'quarantine_required' : review_count ? 'review_required' : 'clear' };
 }
 
+export function catalogModerationKey(issue: CatalogQualityIssue): string {
+  return `${issue.record_type}:${issue.record_id}:${issue.issue}`;
+}
+
+export function buildCatalogModerationQueue(issues: CatalogQualityIssue[]): CatalogModerationQueueItem[] {
+  return issues.map(issue => ({ ...issue, key: catalogModerationKey(issue), owner_role: issue.severity === 'blocker' ? 'compliance' : issue.issue === 'unapproved' ? 'sme' : 'catalog_editor' }));
+}
+
 export function buildLaunchReadiness(input: AntiAgingLaunchInput): AntiAgingLaunchReadiness {
   const gates = { referral_only_commerce: !input.checkout_enabled, no_live_booking: !input.booking_enabled, no_image_analysis: !input.image_analysis_enabled,
     grounded_ai_gate: !input.live_ai_enabled, catalog_approved: input.approved_catalog_records > 0, accessibility: input.accessibility_verified,
@@ -285,6 +311,11 @@ export function buildLaunchGateEvidence(readiness: AntiAgingLaunchReadiness, obs
   }));
 }
 
+export function summarizeLaunchGateEvidence(evidence: LaunchGateEvidence[]): LaunchEvidenceSummary {
+  const blockers = evidence.filter(item => !item.passed).map(item => item.gate);
+  return { total: evidence.length, passed: evidence.length - blockers.length, failed: blockers.length, blockers, authorization: 'not_authorized', note: 'Evidence summarizes gates only; it is not launch authorization.' };
+}
+
 export function providerMatchesCity(provider: ProviderRecord, city: string): boolean {
   return provider.city.trim().toLowerCase() === city.trim().replace(/\s+/g, ' ').toLowerCase();
 }
@@ -296,4 +327,16 @@ export function aggregateProviderSearchSlo(events: ProviderSearchTelemetryEvent[
   const fallbackRate = events.length ? fallbackCount / events.length : 0;
   const p95 = latencies.length ? latencies[Math.floor((latencies.length - 1) * 0.95)] : 0;
   return { requests: events.length, empty_results: empty, fallback_rate: Number(fallbackRate.toFixed(4)), p95_latency_ms: p95, status: p95 <= latencyTargetMs && fallbackRate <= fallbackTarget ? 'within_target' : 'review_required' };
+}
+
+export function aggregateProviderSearchSloByDay(events: ProviderSearchTelemetryEvent[], latencyTargetMs = 750, fallbackTarget = 0.5): ProviderSearchDailySummary[] {
+  const grouped = new Map<string, ProviderSearchTelemetryEvent[]>();
+  for (const event of events) {
+    const timestamp = Date.parse(event.created_at);
+    const day = Number.isFinite(timestamp) ? new Date(timestamp).toISOString().slice(0, 10) : event.created_at.slice(0, 10);
+    const list = grouped.get(day) || [];
+    list.push(event);
+    grouped.set(day, list);
+  }
+  return [...grouped.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([day, dayEvents]) => ({ day, ...aggregateProviderSearchSlo(dayEvents, latencyTargetMs, fallbackTarget) }));
 }

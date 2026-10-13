@@ -253,8 +253,8 @@ const demoFlows = {
   "Moderation & evidence": {
     kicker: "ANTI-AGING · EVIDENCE VIEW",
     title: "Keep control visible",
-    step: "v2.640 · Reviewed locally",
-    body: `<div class="flow-result"><span>CONTROL CENTER</span><h3>Evidence without overclaiming</h3><p>The personal surface separates downloadable records, reminder controls, and provider handoffs. The operator surface keeps moderation and readiness as review evidence—not launch authorization.</p><div class="flow-meta"><span>EXPORTABLE</span><span>REVERSIBLE</span><span>NO LIVE CLAIMS</span></div></div>`
+    step: "v2.725 · Reviewed locally",
+    body: `<div class="flow-result"><span>CONTROL CENTER</span><h3>Evidence without overclaiming</h3><p>The personal surface separates downloadable records, reminder controls, and provider handoffs. The operator surface adds moderation queue ownership, daily search SLOs, and readiness rollups as review evidence—not launch authorization.</p><div class="flow-meta"><span>EXPORTABLE</span><span>DAILY SLO</span><span>NO LIVE CLAIMS</span></div></div>`
   },
   "Data export": {
     kicker: "ACCOUNT DATA · SAMPLE FLOW",

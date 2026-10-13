@@ -46,4 +46,16 @@ assert.equal(exportSummary.reminders, 2);
 assert.equal(exportSummary.paused_reminders, 1);
 assert.deepEqual(exportSummary.data_shared, []);
 assert.equal(domain.withdrawAppointmentRequest(request, now).status, 'closed');
+const queue = domain.buildCatalogModerationQueue(qualityIssues);
+assert.equal(queue.length, qualityIssues.length);
+assert.equal(queue[0].key.includes('ingredient-test'), true);
+assert.equal(queue.find(item => item.issue === 'invalid_source').owner_role, 'compliance');
+const evidenceSummary = domain.summarizeLaunchGateEvidence(domain.buildLaunchGateEvidence(readiness, now));
+assert.equal(evidenceSummary.authorization, 'not_authorized');
+assert.equal(evidenceSummary.failed, 0);
+const dailySlo = domain.aggregateProviderSearchSloByDay([
+  { result_count: 1, latency_ms: 100, fallback: false, created_at: '2026-10-12T12:00:00.000Z' },
+  { result_count: 0, latency_ms: 800, fallback: true, created_at: '2026-10-13T12:00:00.000Z' },
+]);
+assert.deepEqual(dailySlo.map(item => item.day), ['2026-10-12', '2026-10-13']);
 console.log('anti-aging-roadmap: ok');

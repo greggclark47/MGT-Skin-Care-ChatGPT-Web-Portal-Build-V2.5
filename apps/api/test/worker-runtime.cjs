@@ -37,6 +37,18 @@ const clock = () => {
   assert.equal(stopped, true);
   assert.equal(scheduler.pending.length, 0, 'shutdown does not schedule more work');
 
+  const concurrentScheduler = clock();
+  const concurrentReleases = [];
+  const stopConcurrentLoop = startWorkerLoop(async () => {
+    await new Promise(resolve => concurrentReleases.push(resolve));
+  }, 1000, () => assert.fail('No failure expected'), concurrentScheduler);
+  const firstStop = stopConcurrentLoop();
+  const secondStop = stopConcurrentLoop();
+  assert.equal(firstStop, secondStop, 'concurrent shutdown callers share one completion promise');
+  concurrentReleases.shift()();
+  await Promise.all([firstStop, secondStop]);
+  assert.equal(concurrentScheduler.pending.length, 0);
+
   const failures = [];
   const failureClock = clock();
   const stopFailureLoop = startWorkerLoop(async () => { throw new Error('provider secret in raw exception'); }, 1000, code => failures.push(code), failureClock);

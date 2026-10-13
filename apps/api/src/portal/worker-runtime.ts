@@ -10,7 +10,7 @@ const systemClock:Clock={schedule:(task,delayMs)=>setTimeout(task,delayMs),cance
 // next sweep in the same process. Cross-process claims remain database-fenced.
 export function startWorkerLoop(run:()=>Promise<void>,intervalMs:number,onFailure:(code:'worker_run_failed')=>void,clock:Clock=systemClock){
  if(!Number.isSafeInteger(intervalMs)||intervalMs<1)throw new Error('Worker interval must be a positive whole number.');
- let stopped=false,timer:Timer|undefined,active:Promise<void>|undefined;
+ let stopped=false,timer:Timer|undefined,active:Promise<void>|undefined,stopping:Promise<void>|undefined;
  const cycle=()=>{
   if(stopped)return;
   active=(async()=>{
@@ -20,9 +20,9 @@ export function startWorkerLoop(run:()=>Promise<void>,intervalMs:number,onFailur
   })();
  };
  cycle();
- return async()=>{
+ return ()=>stopping??=(async()=>{
   stopped=true;
   if(timer!==undefined)clock.cancel(timer);
   await active;
- };
+ })();
 }

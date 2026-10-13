@@ -15,7 +15,7 @@ export function isSupportedHttpMethod(method:string|undefined):boolean{
  return typeof method==='string'&&SUPPORTED_HTTP_METHODS.has(method);
 }
 export function hasNoConflictingBodyFraming(contentLength:string|undefined,transferEncoding:string|undefined):boolean{
- return !(contentLength!==undefined&&transferEncoding!==undefined);
+ return (contentLength===undefined||typeof contentLength==='string')&&(transferEncoding===undefined||typeof transferEncoding==='string')&&!(contentLength!==undefined&&transferEncoding!==undefined);
 }
 
 export function acceptsApiJsonBody(method:string|undefined,contentType:string|undefined,contentLength:string|undefined,transferEncoding:string|undefined):boolean{
@@ -59,7 +59,7 @@ export const hasNoRangeRequest=(range:string|undefined):boolean=>range===undefin
 export const hasNoUnverifiedIntegrity=(...headers:(string|string[]|undefined)[]):boolean=>headers.every(value=>value===undefined);
 export const hasNoRequestTrailers=(trailer:string|undefined):boolean=>trailer===undefined;
 export function headerWithinLimit(value:string|string[]|undefined,maxBytes:number):boolean{
- return Number.isSafeInteger(maxBytes)&&maxBytes>=1&&maxBytes<=32_768&&(value===undefined||(typeof value==='string'&&Buffer.byteLength(value,'utf8')<=maxBytes));
+ return Number.isSafeInteger(maxBytes)&&maxBytes>=1&&maxBytes<=32_768&&(value===undefined||(typeof value==='string'&&!/[\u0000-\u001f\u007f]/.test(value)&&Buffer.byteLength(value,'utf8')<=maxBytes));
 }
 const rawQuery=(target:string):string=>{const at=target.indexOf('?');return at<0?'':target.slice(at+1);};
 export function queryStringWithinLimit(target:string|undefined,maxBytes=2048):boolean{
@@ -70,7 +70,7 @@ export function queryPairCountWithinLimit(target:string|undefined,maxPairs=50):b
 }
 export function queryComponentsWithinLimit(target:string|undefined,maxKeyBytes=128,maxValueBytes=1024):boolean{
  if(typeof target!=='string'||!Number.isSafeInteger(maxKeyBytes)||maxKeyBytes<1||maxKeyBytes>4096||!Number.isSafeInteger(maxValueBytes)||maxValueBytes<1||maxValueBytes>8192)return false;const query=rawQuery(target);if(query==='')return true;
- return query.split('&').every(pair=>{const at=pair.indexOf('=');const key=at<0?pair:pair.slice(0,at),value=at<0?'':pair.slice(at+1);return Buffer.byteLength(key,'utf8')<=maxKeyBytes&&Buffer.byteLength(value,'utf8')<=maxValueBytes;});
+ return query.split('&').every(pair=>{const at=pair.indexOf('=');const key=at<0?pair:pair.slice(0,at),value=at<0?'':pair.slice(at+1);if(Buffer.byteLength(key,'utf8')>maxKeyBytes||Buffer.byteLength(value,'utf8')>maxValueBytes)return false;try{return Buffer.byteLength(decodeURIComponent(key.replace(/\+/g,' ')),'utf8')<=maxKeyBytes&&Buffer.byteLength(decodeURIComponent(value.replace(/\+/g,' ')),'utf8')<=maxValueBytes;}catch{return false;}});
 }
 export function hasValidContentLength(value:string|undefined):boolean{
  return value===undefined||(typeof value==='string'&&/^(?:0|[1-9][0-9]{0,7})$/.test(value)&&Number(value)<=10_485_760);
@@ -89,7 +89,7 @@ export function hasValidQueryEncoding(target:string|undefined):boolean{
  try{return !/[\u0000-\u001f\u007f]/.test(decodeURIComponent(query.replace(/\+/g,'%20')));}catch{return false;}
 }
 export function hasNoUrlFragment(target:string|undefined):boolean{return typeof target==='string'&&!target.includes('#');}
-export function hasOriginFormRequestTarget(target:string|undefined):boolean{return typeof target==='string'&&target.startsWith('/')&&!target.startsWith('//')&&!target.includes('\\');}
+export function hasOriginFormRequestTarget(target:string|undefined):boolean{if(typeof target!=='string'||!target.startsWith('/')||target.startsWith('//')||target.includes('\\'))return false;try{return !decodeURIComponent(target).includes('\\');}catch{return false;}}
 
 export function apiSecurityHeaders(env:NodeJS.ProcessEnv):Record<string,string>{
  const headers:Record<string,string>={

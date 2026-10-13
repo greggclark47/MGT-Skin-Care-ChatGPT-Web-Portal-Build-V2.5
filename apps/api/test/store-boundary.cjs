@@ -12,6 +12,8 @@ test('stored records reject unsupported JSON values instead of dropping them',()
  for(const value of [undefined,()=>{},Symbol('record'),1n,[undefined],new Date(),{'__proto__':{polluted:true}}]){
   assert.throws(()=>serializeRecord(value),/Stored record is invalid/);
  }
+ assert.throws(()=>serializeRecord({toJSON(){return {safe:true};}}),/Stored record is invalid/);
+ const accessor={};Object.defineProperty(accessor,'secret',{enumerable:true,get(){return 'hidden';}});assert.throws(()=>serializeRecord(accessor),/Stored record is invalid/);
 });
 
 test('stored records reject cyclic references with a bounded error',()=>{
@@ -37,7 +39,7 @@ test('stored records enforce a 1000-entry container boundary',()=>{
 
 test('stored record addresses have bounded canonical scope and id forms',()=>{
  assert.doesNotThrow(()=>validateRecordAddress('profile_revisions','guest:abc-123'));
- for(const args of [['Bad-Scope','id'],['scope',''],['scope',123],['scope','x\n'],['scope',' x'],['scope','x '.repeat(257)]])assert.throws(()=>validateRecordAddress(...args),/Stored record address is invalid/);
+ for(const args of [['Bad-Scope','id'],['scope',''],['scope',123],['scope','x\n'],['scope',' x'],['scope','.'],['scope','..'],['scope','x '.repeat(257)]])assert.throws(()=>validateRecordAddress(...args),/Stored record address is invalid/);
 });
 
 test('transaction lock keys use one bounded string contract',()=>{
@@ -107,4 +109,5 @@ test('local store rejects empty and oversized paths',()=>{
  assert.throws(()=>new LocalStore(''),/Local store path is invalid/);
  assert.throws(()=>new LocalStore('x'.repeat(1025)),/Local store path is invalid/);
  assert.throws(()=>new LocalStore('safe\0path'),/Local store path is invalid/);
+ assert.throws(()=>new LocalStore(' safe'),/Local store path is invalid/);
 });

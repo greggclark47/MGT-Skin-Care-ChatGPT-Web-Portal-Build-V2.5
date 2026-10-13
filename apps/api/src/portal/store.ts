@@ -30,9 +30,11 @@ function validateRecordGraph(value:unknown,ancestors:Set<object>=new Set(),depth
  if(!value||typeof value!=='object')return;
  const prototype=Object.getPrototypeOf(value);
  if(!Array.isArray(value)&&prototype!==Object.prototype&&prototype!==null)throw new Error('Stored record is invalid.');
+ if(!Array.isArray(value)&&'toJSON' in value)throw new Error('Stored record is invalid.');
  if(depth>32)throw new Error('Stored record is invalid.');
  if(ancestors.has(value))throw new Error('Stored record is invalid.');
  const keys=Object.keys(value);if(keys.length>1000||keys.some(key=>key==='__proto__'||key==='constructor'||key==='prototype'))throw new Error('Stored record is invalid.');
+ if(keys.some(key=>{const descriptor=Object.getOwnPropertyDescriptor(value,key);return !descriptor||!!descriptor.get||!!descriptor.set;}))throw new Error('Stored record is invalid.');
  const items=Object.values(value);if(items.length>1000)throw new Error('Stored record is invalid.');
  ancestors.add(value);for(const item of items)validateRecordGraph(item,ancestors,depth+1);ancestors.delete(value);
 }
@@ -43,14 +45,14 @@ export function deserializeRecord<T=unknown>(encoded:unknown):T{
  try{if(typeof encoded!=='string'||Buffer.byteLength(encoded,'utf8')>262144)throw new Error();const value=JSON.parse(encoded);serializeRecord(value);return value as T;}catch{throw new Error('Stored record is invalid.');}
 }
 export function validateRecordAddress(scope:string,id?:string):void{
- if(typeof scope!=='string'||!/^[a-z][a-z0-9_]{0,63}$/.test(scope)||(id!==undefined&&(typeof id!=='string'||Buffer.byteLength(id,'utf8')>512||id.length===0||id!==id.trim()||/[\u0000-\u001f\u007f]/.test(id))))throw new Error('Stored record address is invalid.');
+ if(typeof scope!=='string'||!/^[a-z][a-z0-9_]{0,63}$/.test(scope)||(id!==undefined&&(typeof id!=='string'||Buffer.byteLength(id,'utf8')>512||id.length===0||id==='.'||id==='..'||id!==id.trim()||/[\u0000-\u001f\u007f]/.test(id))))throw new Error('Stored record address is invalid.');
 }
 export function validateTransactionLockKey(key:string):void{
  if(typeof key!=='string'||!/^[a-zA-Z0-9:_./-]{1,240}$/.test(key))throw new Error('Invalid transaction lock key.');
 }
 export function validateProductionDatabaseUrl(url:string,env:NodeJS.ProcessEnv=process.env):void{
  if(env.NODE_ENV!=='production')return;
- if(typeof url!=='string'||Buffer.byteLength(url,'utf8')>4096)throw new Error('Production DATABASE_URL requires one host and verified TLS without query target overrides.');
+ if(typeof url!=='string'||url!==url.trim()||Buffer.byteLength(url,'utf8')>4096)throw new Error('Production DATABASE_URL requires one host and verified TLS without query target overrides.');
  try{
   const parsed=new URL(url);
   const validProtocol=['postgres:','postgresql:'].includes(parsed.protocol);
@@ -61,7 +63,7 @@ export function validateProductionDatabaseUrl(url:string,env:NodeJS.ProcessEnv=p
  throw new Error('Production DATABASE_URL requires one host and verified TLS without query target overrides.');
 }
 export function portalPoolConfig(url:string):PoolConfig{
- if(typeof url!=='string'||Buffer.byteLength(url,'utf8')>4096)throw new Error('Database URL is invalid.');
+ if(typeof url!=='string'||url!==url.trim()||Buffer.byteLength(url,'utf8')>4096)throw new Error('Database URL is invalid.');
  return {connectionString:url,application_name:'mgt_skin_care_portal',max:10,connectionTimeoutMillis:5000,statement_timeout:10000,query_timeout:12000,lock_timeout:5000,idle_in_transaction_session_timeout:15000,idleTimeoutMillis:30000,maxLifetimeSeconds:300,keepAlive:true,keepAliveInitialDelayMillis:10000};
 }
 type PoolErrorSource={on:(event:'error',listener:(error:Error&{code?:string})=>void)=>unknown};
@@ -101,7 +103,7 @@ export function startupMigrations(env:NodeJS.ProcessEnv){
 // Only this queue accesses the connection; asynchronous callbacks cannot overlap transactions.
 export class LocalStore implements Store{
  kind='sqlite';private db:any;private tail:Promise<any>=Promise.resolve();private closing?:Promise<void>;
- constructor(file:string){if(typeof file!=='string'||file.length===0||Buffer.byteLength(file,'utf8')>1024||/[\u0000-\u001f\u007f]/.test(file))throw new Error('Local store path is invalid.');if(file!==':memory:')fs.mkdirSync(path.dirname(file),{recursive:true});const {DatabaseSync}=require('node:sqlite');this.db=new DatabaseSync(file);this.db.exec('PRAGMA journal_mode=WAL; PRAGMA busy_timeout=5000; PRAGMA secure_delete=ON; PRAGMA trusted_schema=OFF; PRAGMA wal_autocheckpoint=1000;');this.db.exec(schema);}
+ constructor(file:string){if(typeof file!=='string'||file.length===0||file!==file.trim()||Buffer.byteLength(file,'utf8')>1024||/[\u0000-\u001f\u007f]/.test(file))throw new Error('Local store path is invalid.');if(file!==':memory:')fs.mkdirSync(path.dirname(file),{recursive:true});const {DatabaseSync}=require('node:sqlite');this.db=new DatabaseSync(file);this.db.exec('PRAGMA journal_mode=WAL; PRAGMA busy_timeout=5000; PRAGMA secure_delete=ON; PRAGMA trusted_schema=OFF; PRAGMA wal_autocheckpoint=1000;');this.db.exec(schema);}
  tx<T>(fn:(r:Records)=>Promise<T>):Promise<T>{if(this.closing)return Promise.reject(new Error('Store is closed.'));const run=async()=>{this.db.exec('BEGIN IMMEDIATE');const r:Records={
  get:async(s,i)=>{validateRecordAddress(s,i);const v=this.db.prepare('SELECT body FROM hub_records WHERE scope=? AND id=?').get(s,i);return v?deserializeRecord(v.body):undefined;},
  put:async(s,i,v)=>{validateRecordAddress(s,i);this.db.prepare('INSERT INTO hub_records(scope,id,body) VALUES(?,?,?) ON CONFLICT(scope,id) DO UPDATE SET body=excluded.body').run(s,i,serializeRecord(v));},

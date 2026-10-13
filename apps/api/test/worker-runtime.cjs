@@ -12,6 +12,7 @@ const clock = () => {
 };
 
 (async () => {
+ assert.throws(() => startWorkerLoop(null, 1000, () => {}, clock()), /dependencies are invalid/);
  assert.throws(() => startWorkerLoop(async () => {}, 86400001, () => {}, clock()), /within one day/);
   const scheduler = clock();
   const releases = [];

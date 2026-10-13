@@ -9,6 +9,7 @@ export type HubRequest=Request & {sid:string;actor:string;csrf:string;account?:{
 export type Session={id:string;actor:string;csrf:string;expires:number;userId?:string};
 export const wrap=(fn:(req:HubRequest,res:Response,next:NextFunction)=>Promise<any>)=>(req:Request,res:Response,next:NextFunction)=>Promise.resolve(fn(req as HubRequest,res,next)).catch(next);
 const same=(a:string,b:string)=>{const x=Buffer.from(a),y=Buffer.from(b);return x.length===y.length&&timingSafeEqual(x,y);};
+export function hasExactOrigin(value:string|string[]|undefined,expected:string):boolean{return typeof value==='string'&&typeof expected==='string'&&expected.length>0&&Buffer.byteLength(expected,'utf8')<=2048&&value===expected;}
 export function sessionCookieValue(header:string|string[]|undefined,name:string):string|undefined{
  if(typeof header!=='string'||typeof name!=='string'||!/^[A-Za-z0-9_-]{1,32}$/.test(name))return undefined;
  const matches=header.split(';').map(value=>value.trim()).filter(value=>value.startsWith(name+'='));
@@ -34,18 +35,18 @@ export function sessionMiddleware(store:Store,origin:string,production:boolean){
   });
   req.sid=session.id;req.actor=session.actor;req.csrf=session.csrf;
   if(!['GET','HEAD','OPTIONS'].includes(req.method)){
-   check(req.headers.origin===origin,403,'origin_rejected','This request must come from the portal.');
+   check(hasExactOrigin(req.headers.origin,origin),403,'origin_rejected','This request must come from the portal.');
    check(typeof req.headers['x-csrf-token']==='string'&&same(req.headers['x-csrf-token'],session.csrf),403,'csrf_rejected','Refresh this page and try again.');
   }
   next();
  });
 }
 export async function rate(db:Records,key:string,limit:number,windowMs:number){
- if(typeof key!=='string'||key.length===0||Buffer.byteLength(key,'utf8')>200||!Number.isSafeInteger(limit)||limit<1||limit>1_000_000||!Number.isSafeInteger(windowMs)||windowMs<1||windowMs>7*86400000)throw new Error('Rate policy is invalid.');
+ if(typeof key!=='string'||key.length===0||Buffer.byteLength(key,'utf8')>200||/[\u0000-\u001f\u007f]/.test(key)||!/^[A-Za-z0-9:_./-]+$/.test(key)||!Number.isSafeInteger(limit)||limit<1||limit>1_000_000||!Number.isSafeInteger(windowMs)||windowMs<1||windowMs>7*86400000)throw new Error('Rate policy is invalid.');
  await db.lock('rate:'+key);
  const now=Date.now();let r=await db.get('rate',key);if(!r||r.reset<=now)r={id:key,count:0,reset:now+windowMs};r.count++;await db.put('rate',key,r);
  check(r.count<=limit,429,'rate_limited','Too many requests. Please wait and try again.');
 }
 export function account(req:HubRequest){check(req.account,401,'sign_in_required','Please sign in to continue.');return req.account;}
 export function role(req:HubRequest,allowed:string[]){const a=account(req);check(a.roles.some(r=>allowed.includes(r)),403,'forbidden','Your account does not have access to this action.');return a;}
-export function text(v:unknown,max=2000){check(Number.isSafeInteger(max)&&max>=1&&max<=1_000_000&&typeof v==='string'&&v.trim().length>0&&Buffer.byteLength(v,'utf8')<=max,400,'invalid_input','Please enter a valid value.');return (v as string).trim();}
+export function text(v:unknown,max=2000){check(Number.isSafeInteger(max)&&max>=1&&max<=1_000_000&&typeof v==='string'&&v.trim().length>0&&Buffer.byteLength(v,'utf8')<=max&&!/[\u0000\u007f]/.test(v),400,'invalid_input','Please enter a valid value.');return (v as string).trim();}

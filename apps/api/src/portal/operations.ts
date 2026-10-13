@@ -16,7 +16,7 @@ export class InAppNotificationDelivery implements NotificationDelivery{
 }
 export class WebhookNotificationDelivery implements NotificationDelivery{
  kind='webhook';
- constructor(private url:string,private secret:string,private keyId='primary',private timeoutMs=10000){}
+ constructor(private url:string,private secret:string,private keyId='primary',private timeoutMs=10000){if(!Number.isSafeInteger(timeoutMs)||timeoutMs<100||timeoutMs>60000)throw new Error('Notification webhook timeout is invalid.');}
  async deliver(notification:Notification){
   const body=JSON.stringify({event:'mgt.notification',notification:{id:notification.id,actor:notification.actor,kind:notification.kind,status:notification.status,scheduled_at:notification.scheduled_at,created_at:notification.created_at,updated_at:notification.updated_at,attempts:notification.attempts,payload:notification.payload}});
   if(Buffer.byteLength(body,'utf8')>65536)throw new Error('Notification payload exceeds the safe delivery limit.');
@@ -36,7 +36,7 @@ class OperationsAlertDeliveryError extends Error{
 export class DisabledOperationsAlertDelivery implements OperationsAlertDelivery{kind='disabled';async deliver(_alert:OperationsAlert){}}
 export class WebhookOperationsAlertDelivery implements OperationsAlertDelivery{
  kind='webhook';
- constructor(private url:string,private secret:string,private timeoutMs=10000,private keyId='primary'){}
+ constructor(private url:string,private secret:string,private timeoutMs=10000,private keyId='primary'){if(!Number.isSafeInteger(timeoutMs)||timeoutMs<100||timeoutMs>60000)throw new Error('Operations alert webhook timeout is invalid.');}
  async deliver(alert:OperationsAlert){
   const timestamp=new Date().toISOString();
   const body=JSON.stringify({event:'mgt.operations.alert',alert});
@@ -91,6 +91,7 @@ const alertFailure=(error:unknown)=>{
 };
 
 export function verifyOperationsAlertSignature(input:{timestamp:string;signature:string;body:string;secret:string;at?:number;maxAgeSeconds?:number}){
+ if(!input||typeof input!=='object'||typeof input.timestamp!=='string'||input.timestamp.length>128||typeof input.signature!=='string'||typeof input.body!=='string'||typeof input.secret!=='string'||input.secret.length===0||input.secret.length>4096||Buffer.byteLength(input.body,'utf8')>65536||!Number.isFinite(input.at??Date.now())||!Number.isFinite(input.maxAgeSeconds??300)||Number(input.maxAgeSeconds??300)<1||Number(input.maxAgeSeconds??300)>604800)return false;
  const at=input.at??Date.now(),received=timestamp(input.timestamp),maxAge=(input.maxAgeSeconds??300)*1000;
  if(!received||received>at+30000||at-received>maxAge||!input.secret||!/^sha256=[a-f0-9]{64}$/.test(input.signature))return false;
  const expected='sha256='+createHmac('sha256',input.secret).update(`${input.timestamp}.${input.body}`).digest('hex');
@@ -98,7 +99,7 @@ export function verifyOperationsAlertSignature(input:{timestamp:string;signature
 }
 
 export function verifyOperationsAlertRequest(input:{event:string;signatureVersion:string;deliveryId:string;attempt:string;timestamp:string;contentDigest:string;signature:string;body:string;secret:string;at?:number;maxAgeSeconds?:number}){
- if(input.event!=='operations.alert'||input.signatureVersion!=='v1'||!/^[-A-Za-z0-9_]{8,128}$/.test(input.deliveryId)||!/^[1-9]\d{0,5}$/.test(input.attempt))return false;
+ if(!input||typeof input!=='object'||typeof input.event!=='string'||typeof input.signatureVersion!=='string'||typeof input.deliveryId!=='string'||typeof input.attempt!=='string'||typeof input.contentDigest!=='string'||typeof input.timestamp!=='string'||typeof input.signature!=='string'||typeof input.body!=='string'||typeof input.secret!=='string'||input.event!=='operations.alert'||input.signatureVersion!=='v1'||!/^[-A-Za-z0-9_]{8,128}$/.test(input.deliveryId)||!/^[1-9]\d{0,5}$/.test(input.attempt))return false;
  if(!/^sha256=[a-f0-9]{64}$/.test(input.contentDigest)||!timingSafeEqual(Buffer.from(input.contentDigest),Buffer.from('sha256='+createHash('sha256').update(input.body).digest('hex'))))return false;
  if(Buffer.byteLength(input.body,'utf8')>65536||!verifyOperationsAlertSignature(input))return false;
  try{
@@ -108,7 +109,7 @@ export function verifyOperationsAlertRequest(input:{event:string;signatureVersio
 }
 
 export function verifyNotificationRequest(input:{event:string;signatureVersion:string;keyId:string;notificationId:string;attempt:string;timestamp:string;contentDigest:string;signature:string;body:string;secret:string;at?:number;maxAgeSeconds?:number}){
- if(input.event!=='mgt.notification'||input.signatureVersion!=='v1'||!/^[A-Za-z0-9_-]{1,64}$/.test(input.keyId)||!/^[A-Za-z0-9_-]{1,128}$/.test(input.notificationId)||!/^[1-9]\d{0,5}$/.test(input.attempt))return false;
+ if(!input||typeof input!=='object'||typeof input.event!=='string'||typeof input.signatureVersion!=='string'||typeof input.keyId!=='string'||typeof input.notificationId!=='string'||typeof input.attempt!=='string'||typeof input.contentDigest!=='string'||typeof input.timestamp!=='string'||typeof input.signature!=='string'||typeof input.body!=='string'||typeof input.secret!=='string'||input.event!=='mgt.notification'||input.signatureVersion!=='v1'||!/^[A-Za-z0-9_-]{1,64}$/.test(input.keyId)||!/^[A-Za-z0-9_-]{1,128}$/.test(input.notificationId)||!/^[1-9]\d{0,5}$/.test(input.attempt))return false;
  if(!/^sha256=[a-f0-9]{64}$/.test(input.contentDigest)||!timingSafeEqual(Buffer.from(input.contentDigest),Buffer.from('sha256='+createHash('sha256').update(input.body).digest('hex'))))return false;
  if(Buffer.byteLength(input.body,'utf8')>65536||!verifyOperationsAlertSignature(input))return false;
  try{
@@ -118,15 +119,18 @@ export function verifyNotificationRequest(input:{event:string;signatureVersion:s
 }
 
 export function operationsAlertRetryAfterSeconds(value:string|null|undefined,at=Date.now()){
+ if(typeof value!=='string'||value.length>128||!Number.isFinite(at))return undefined;
  if(!value)return undefined;
- if(/^\d{1,6}$/.test(value))return Number(value);
- const then=Date.parse(value);return Number.isFinite(then)&&then>at?Math.ceil((then-at)/1000):undefined;
+ if(/^\d{1,6}$/.test(value)){const seconds=Number(value);return seconds<=604800?seconds:undefined;}
+ const then=Date.parse(value);return Number.isFinite(then)&&then>at&&then-at<=604800000?Math.ceil((then-at)/1000):undefined;
 }
 export function operationsAlertRetryDelaySeconds(baseSeconds:number,attempt:number,maxSeconds:number,receiverDelaySeconds=0){
- return Math.min(maxSeconds,Math.max(baseSeconds*Math.pow(2,Math.max(0,attempt-1)),receiverDelaySeconds));
+ const base=Number.isFinite(baseSeconds)&&baseSeconds>=0?baseSeconds:0,tryNumber=Number.isSafeInteger(attempt)&&attempt>=1?attempt:1,max=Number.isFinite(maxSeconds)&&maxSeconds>=0?maxSeconds:0,receiver=Number.isFinite(receiverDelaySeconds)&&receiverDelaySeconds>=0?receiverDelaySeconds:0;
+ return Math.min(604800,max,Math.max(base*Math.pow(2,tryNumber-1),receiver));
 }
 
 export function operationalReadiness(backup:any,runs:{value:any}[],at=Date.now(),workerMaxAgeMs=5*60000){
+ workerMaxAgeMs=Number.isSafeInteger(workerMaxAgeMs)&&workerMaxAgeMs>=1000&&workerMaxAgeMs<=604800000?workerMaxAgeMs:0;
  const lastRun=runs.map(entry=>entry.value).filter(run=>run&&typeof run.completed_at==='string')
   .sort((a,b)=>Date.parse(b.completed_at)-Date.parse(a.completed_at))[0]||null;
  const lastCompleted=timestamp(lastRun?.completed_at);
@@ -138,6 +142,7 @@ export function operationalReadiness(backup:any,runs:{value:any}[],at=Date.now()
 }
 
 export function operationalSnapshot(input:{notifications:any[];deletions:any[];tickets:any[];runs:any[];webhooks:any[]},at=Date.now(),supportTargetHours=24){
+ supportTargetHours=Number.isFinite(supportTargetHours)&&supportTargetHours>=1&&supportTargetHours<=168?supportTargetHours:24;
  const pendingNotifications=input.notifications.filter(item=>['queued','processing'].includes(item?.status));
  const pendingSince=pendingNotifications.map(item=>timestamp(item?.created_at||item?.scheduled_at)).filter((value):value is number=>value!==undefined&&value<=at);
  const dueDeletions=input.deletions.filter(item=>{const due=timestamp(item?.not_before);return due!==undefined&&due<=at&&['pending','processing'].includes(item?.status);});

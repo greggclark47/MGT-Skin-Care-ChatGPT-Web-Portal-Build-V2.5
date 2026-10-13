@@ -9,6 +9,7 @@ const systemClock:Clock={schedule:(task,delayMs)=>setTimeout(task,delayMs),cance
 // Schedule after completion: a slow provider or database never overlaps the
 // next sweep in the same process. Cross-process claims remain database-fenced.
 export function startWorkerLoop(run:()=>Promise<void>,intervalMs:number,onFailure:(code:'worker_run_failed')=>void,clock:Clock=systemClock){
+ if(typeof run!=='function'||typeof onFailure!=='function'||!clock||typeof clock.schedule!=='function'||typeof clock.cancel!=='function')throw new Error('Worker runtime dependencies are invalid.');
  if(!Number.isSafeInteger(intervalMs)||intervalMs<1||intervalMs>86_400_000)throw new Error('Worker interval must be a positive whole number within one day.');
  let stopped=false,timer:Timer|undefined,active:Promise<void>|undefined,stopping:Promise<void>|undefined;
  const cycle=()=>{

@@ -26,17 +26,17 @@ Estimates are relative engineering effort for the existing repository, not commi
 
 | ID | Increment | Acceptance criteria | Estimate | Depends on |
 |---|---|---|---:|---|
-| AA-11 | Grounded explanation tasks | Central task registry, schemas, prompt versions, approved-source retrieval, citations, and fail-closed validation | M | AA-01, AA-02 |
-| AA-12 | Conversational search | Assistant can search approved products/ingredients/treatments/providers with structured results and uncertainty | L | AA-05, AA-11 |
-| AA-13 | Safety evaluation suite | Golden cases cover cosmetic vs medical boundary, contraindications, procedural escalation, unsupported claims, and prompt injection | M | AA-11 |
-| AA-14 | AI feedback/evaluation | Feedback, evaluation runs, schema/citation/claim metrics, cost and latency telemetry are persisted and reviewable | M | AA-11, AA-13 |
+| AA-11 | Grounded explanation tasks | Implemented as a central versioned task registry, structured contracts, approved-provenance citations, and fail-closed validation; live retrieval/provider execution remains gated | M | AA-01, AA-02 |
+| AA-12 | Conversational search | Implemented as bounded reviewed-record search with structured results, no-match behavior, uncertainty, and medical/prompt-injection screening | L | AA-05, AA-11 |
+| AA-13 | Safety evaluation suite | Implemented with deterministic cases covering cosmetic education, medical boundary, unsupported claims, prompt injection, and procedural escalation flags | M | AA-11 |
+| AA-14 | AI feedback/evaluation | Implemented with persisted event/feedback seams, aggregate schema/citation/claim-adjacent metrics, latency/cost telemetry, retention, and restricted admin review | M | AA-11, AA-13 |
 
 ## Phase 5 — partner integrations (P1/P2)
 
 | ID | Increment | Acceptance criteria | Estimate | Depends on |
 |---|---|---|---:|---|
-| AA-15 | Fixture-backed catalog adapter | Import, dedupe, provenance, freshness, conflict reporting, replay, and quarantine work without live credentials | M | AA-02 |
-| AA-16 | Provider directory adapter | Provider submissions, qualification verification state, location normalization, and moderation queue work | L | AA-03 |
+| AA-15 | Fixture-backed catalog adapter | Implemented with import, dedupe, provenance, freshness, conflict reporting, deterministic replay, and quarantine without live credentials | M | AA-02 |
+| AA-16 | Provider directory adapter | Implemented with provider submissions, qualification verification state, city/region normalization, rejection quarantine, and moderation queue | L | AA-03 |
 | AA-17 | Merchant referral adapter | Allowlisted URLs, disclosure labels, click measurement boundary, and no profile data in URLs | M | AA-05 |
 | AA-18 | Appointment request adapter | Idempotent request, consent receipt, partner handoff, status polling/webhook seam, and user-visible uncertainty | L | AA-03, AA-04 |
 

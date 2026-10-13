@@ -1,8 +1,11 @@
 import { Router, type Response } from 'express';
 import {
-  isCanonicalId, isAntiAgingGoal, isAntiAgingSensitivity, type AntiAgingResponseMeta,
+  isCanonicalId, isAntiAgingGoal, isAntiAgingSensitivity, isAntiAgingAiTask, isFeedbackReason, isFeedbackRating,
+  type AntiAgingResponseMeta,
 } from '@mgt/domain';
 import { SeedAntiAgingCatalog, type AntiAgingCatalog, type AntiAgingListQuery } from './catalog';
+import { ANTI_AGING_AI_DISCLAIMER, ANTI_AGING_AI_POLICY_VERSION, explanationForIngredient, explanationForProduct, searchAntiAging, createAntiAgingAiTelemetry } from './ai';
+import type { AntiAgingAiTelemetry } from './telemetry';
 
 const POLICY_VERSION = 'anti-aging-read-only-1';
 const DISCLAIMER = 'Educational discovery only. This portal does not diagnose, prescribe, book care, process purchases, or replace professional advice.';
@@ -48,8 +51,46 @@ function pageResponse<T>(res: Response, page: { items: T[]; next_cursor: string 
   res.json({ data: page, meta });
 }
 
-export function antiAgingRouter(catalog: AntiAgingCatalog = new SeedAntiAgingCatalog()): Router {
+export function antiAgingRouter(catalog: AntiAgingCatalog = new SeedAntiAgingCatalog(), telemetry?: AntiAgingAiTelemetry): Router {
   const router = Router();
+  const aiTelemetry = createAntiAgingAiTelemetry(telemetry);
+
+  router.get('/search', (req, res) => {
+    const q = queryValue(req.query.q);
+    const rawLimit = queryValue(req.query.limit);
+    const limit = rawLimit === undefined ? 8 : Number(rawLimit);
+    if (!q || rawLimit === null || !Number.isInteger(limit) || limit < 1 || limit > 20) return fail(res, 400, 'invalid_search', 'Provide one short search question and a limit from one to twenty.');
+    const result = searchAntiAging(catalog, q, limit);
+    if (result.blocked) return res.status(422).json({ error: { code: 'question_out_of_scope', message: result.message }, meta });
+    return res.json({ data: { results: result.results, uncertainty: result.uncertainty, task: 'anti_aging_search', policy_version: ANTI_AGING_AI_POLICY_VERSION }, meta: { ...meta, disclaimer: ANTI_AGING_AI_DISCLAIMER } });
+  });
+
+  router.get('/explanations/ingredients/:id', (req, res) => {
+    const id = idParam(req.params.id); if (!id) return fail(res, 400, 'invalid_id', 'Use a valid record identifier.');
+    const explanation = explanationForIngredient(catalog, id); if (!explanation) return fail(res, 404, 'not_found', 'Ingredient not found.');
+    return res.json({ data: { task: 'anti_aging_explanation', policy_version: ANTI_AGING_AI_POLICY_VERSION, ...explanation }, meta: { ...meta, disclaimer: ANTI_AGING_AI_DISCLAIMER } });
+  });
+
+  router.get('/explanations/products/:id', (req, res) => {
+    const id = idParam(req.params.id); if (!id) return fail(res, 400, 'invalid_id', 'Use a valid record identifier.');
+    const explanation = explanationForProduct(catalog, id); if (!explanation) return fail(res, 404, 'not_found', 'Product not found.');
+    return res.json({ data: { task: 'anti_aging_explanation', policy_version: ANTI_AGING_AI_POLICY_VERSION, ...explanation }, meta: { ...meta, disclaimer: ANTI_AGING_AI_DISCLAIMER } });
+  });
+
+  router.post('/ai/feedback', (req, res, next) => {
+    const responseId = typeof req.body?.response_id === 'string' ? req.body.response_id : '';
+    const task = req.body?.task;
+    const rating = req.body?.rating;
+    const reason = req.body?.reason;
+    const comment = req.body?.comment;
+    if (!isCanonicalId(responseId) || !isAntiAgingAiTask(task) || !isFeedbackRating(rating) || (reason !== undefined && !isFeedbackReason(reason)) || (comment !== undefined && (typeof comment !== 'string' || comment.length > 500))) {
+      return fail(res, 400, 'invalid_feedback', 'Provide a response reference, supported task, rating, and optional review reason.');
+    }
+    const actor = typeof (req as any).actor === 'string' ? (req as any).actor : 'anonymous';
+    void aiTelemetry.recordFeedback({ response_id: responseId, task, rating, reason, comment, created_at: new Date().toISOString() }, actor)
+      .then(() => res.status(202).json({ data: { recorded: true, response_id: responseId }, meta }))
+      .catch(next);
+  });
 
   router.get('/onboarding/preview', (req, res) => {
     const goals = csvQuery(req.query.goals, 3);

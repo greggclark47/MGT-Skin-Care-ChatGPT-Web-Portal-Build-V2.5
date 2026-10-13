@@ -6,7 +6,7 @@ import {readProfile,lockProfile,saveProfile} from './profiles';
 import {installStyle} from './style';
 import express,{type Response} from 'express';
 import {randomUUID} from 'node:crypto';
-import {SKIN_TYPES,SKIN_CONCERNS,SKIN_SENSITIVITY,AGE_BANDS,ROUTINE_LEVELS,DESIRED_OUTCOMES,BUDGET_RANGES,simplify,type SkinProfileInput} from '@mgt/domain';
+import {SKIN_TYPES,SKIN_CONCERNS,SKIN_SENSITIVITY,AGE_BANDS,ROUTINE_LEVELS,DESIRED_OUTCOMES,BUDGET_RANGES,simplify,aggregateAntiAgingAiMetrics,type SkinProfileInput} from '@mgt/domain';
 import {LocalStore,PgStore,startupMigrations,type Store,type Records} from './store';
 import {check,Fault,hash,token,text,wrap,sessionMiddleware,rate,account,role,type HubRequest,type Session} from './security';
 import {initializeCatalog,match,quote,type Product} from './catalog';
@@ -145,7 +145,7 @@ export async function createPortal(options:PortalOptions){
  app.use(['/api/hub','/api/v1'],session);
  app.use(['/api/hub','/api/v1'],wrap(async(req,_res,next)=>{await db.tx(async r=>rate(r,'request:'+req.actor,180,60000));next();}));
  app.use(['/api/hub','/api/v1'],wrap(async(req,_res,next)=>{
-  const allowed=['/session','/auth/','/account/','/guest-access','/billing','/subscriptions','/entitlement','/company','/retailers','/catalog','/knowledge','/support','/assistant','/ingredients','/products','/treatments','/providers','/onboarding','/routines'];
+  const allowed=['/session','/auth/','/account/','/guest-access','/billing','/subscriptions','/entitlement','/company','/retailers','/catalog','/knowledge','/support','/assistant','/ingredients','/products','/treatments','/providers','/onboarding','/routines','/search','/explanations','/ai'];
   if(!allowed.some(path=>req.path===path||req.path.startsWith(path.endsWith('/')?path:path+'/'))){
    await db.tx(async r=>{const invited=await r.get('guest_memberships',req.actor);check(!invited||!!await activeGuestAccess(r,req.actor)||(await ownEntitlement(r,req.actor)).premium,403,'guest_access_ended','Your invited access has ended. Review full access or ask the owner for a new invitation.');});
   }
@@ -430,6 +430,7 @@ export async function createPortal(options:PortalOptions){
    res.json(result);
   });
   get('/admin/ai-routing',async(req,res)=>{role(req,['superadmin','compliance']);const since=Date.now()-86400000;const logs=await db.tx(async r=>(await r.entries<any>('ai_routing_log')).map(x=>x.value).filter(x=>Date.parse(x.created_at||'')>=since));const routes=new Map<string,any>();for(const log of logs){const key=`${log.task_type||'unknown'}`,row=routes.get(key)||{task:log.task_type||'unknown',requests:0,successes:0,fallbacks:0,validation_failures:0,cost_cents:0,latencies:[] as number[]};row.requests++;row.successes+=log.failure_reason?0:1;row.fallbacks+=log.used_fallback?1:0;row.validation_failures+=log.validation_failed?1:0;row.cost_cents+=Number(log.cost_cents)||0;if(Number.isFinite(log.latency_ms))row.latencies.push(log.latency_ms);routes.set(key,row);}const summary=[...routes.values()].map(row=>{const latencies=row.latencies.sort((a:number,b:number)=>a-b);return{route:routeLabel(row.task),requests:row.requests,successes:row.successes,fallbacks:row.fallbacks,validation_failures:row.validation_failures,cost_cents:Number(row.cost_cents.toFixed(4)),p95_latency_ms:latencies.length?latencies[Math.floor((latencies.length-1)*.95)]:0};}).sort((a,b)=>b.requests-a.requests||a.route.localeCompare(b.route));res.json({window_hours:24,requests:logs.length,cost_cents:Number(summary.reduce((total,row)=>total+row.cost_cents,0).toFixed(4)),routes:summary});});
+ get('/admin/anti-aging-ai',async(req,res)=>{role(req,['superadmin','compliance']);const since=Date.now()-30*86400000;const {events,feedback}=await db.tx(async r=>({events:(await r.entries<any>('anti_aging_ai_events')).map(x=>x.value).filter(x=>Date.parse(x.created_at||'')>=since),feedback:(await r.entries<any>('anti_aging_ai_feedback')).map(x=>x.value).filter(x=>Date.parse(x.created_at||'')>=since)}));const metrics=aggregateAntiAgingAiMetrics(events,feedback);res.json({window_days:30,policy:'anti-aging-grounded-ai-1',metrics,review_note:'Aggregate quality telemetry only; actor identifiers, comments, and source content are excluded.'});});
  get('/admin/ai-economics',async(req,res)=>{
   role(req,['superadmin','compliance']);
   const since=Date.now()-86400000;

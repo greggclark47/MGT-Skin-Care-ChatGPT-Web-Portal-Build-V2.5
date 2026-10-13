@@ -6,6 +6,7 @@ import { account, check, hash, wrap } from './security';
 import { createV1Router } from '../routes/v1';
 import {activeGuestAccess} from './guest-access';
 import { antiAgingRouter } from '../modules/anti-aging/router';
+import { StoreAntiAgingAiTelemetry } from '../modules/anti-aging/telemetry';
 
 type SubscriptionRecord = {
   subscription_id?: string; customer_id?: string; source?: string;
@@ -197,5 +198,5 @@ export function portalV1Router(db: Store, stripe: Stripe | undefined, env: NodeJ
   entitlement.get('/',wrap(async(req,res) => {account(req);res.json(await db.tx(records=>portalEntitlement(records,req.actor)));}));
   const checkout = express.Router();
   checkout.use(wrap(async(req,_res) => {account(req);check(false,409,'external_commerce_only','Product purchases remain with the retailer.');}));
-  return createV1Router({checkout,subscriptions,entitlement,antiAging:antiAgingRouter()});
+  return createV1Router({checkout,subscriptions,entitlement,antiAging:antiAgingRouter(undefined, new StoreAntiAgingAiTelemetry(db))});
 }

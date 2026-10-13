@@ -33,6 +33,18 @@ const { LocalStore } = require('../dist/portal/store');
     assert.equal(compatibility.data.data.status, 'general_education_only');
     assert.equal(compatibility.data.data.professional_assessment_required, false);
 
+    const explanation = await get('/api/v1/explanations/ingredients/ingredient-vitamin-c');
+    assert.equal(explanation.status, 200);
+    assert.equal(explanation.data.data.task, 'anti_aging_explanation');
+    assert.equal(explanation.data.data.citations[0].review_status, 'approved');
+    assert.equal(explanation.data.data.citations[0].source_id, 'ingredient-vitamin-c');
+    const search = await get('/api/v1/search?q=vitamin%20c');
+    assert.equal(search.status, 200);
+    assert.equal(search.data.data.results[0].record_id, 'ingredient-vitamin-c');
+    const blockedSearch = await get('/api/v1/search?q=diagnose%20my%20rash');
+    assert.equal(blockedSearch.status, 422);
+    assert.equal(blockedSearch.data.error.code, 'question_out_of_scope');
+
     const onboarding = await get('/api/v1/onboarding/preview?goals=texture& sensitivity=mild'.replace(' ', ''));
     assert.equal(onboarding.status, 200);
     assert.equal(onboarding.data.data.status, 'consent_required');

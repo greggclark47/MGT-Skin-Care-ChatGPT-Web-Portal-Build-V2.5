@@ -1,6 +1,6 @@
 import type {
   SkinProfileInput, Routine, ProfileVector, AvoidFlags, IngredientRecord, ProductRecord,
-  ProviderRecord, TreatmentRecord, ReadOnlyPage, AntiAgingResponseMeta,
+  ProviderRecord, TreatmentRecord, ReadOnlyPage, AntiAgingResponseMeta, GroundedAntiAgingExplanation, GroundedSearchResult,
 } from '@mgt/domain';
 
 // One API client shared by web and mobile (Section C.1: "no separate business logic per
@@ -26,6 +26,11 @@ export interface AntiAgingListResponse<T> {
 
 export interface AntiAgingRecordResponse<T> {
   data: T;
+  meta: AntiAgingResponseMeta;
+}
+
+export interface AntiAgingSearchResponse {
+  data: { results: GroundedSearchResult[]; uncertainty: string; task: string; policy_version: string };
   meta: AntiAgingResponseMeta;
 }
 
@@ -120,6 +125,18 @@ export class ApiClient {
 
   providerHandoff(id: string) {
     return this.get<AntiAgingRecordResponse<{ provider_id: string; handoff_type: string; handoff_url: string; data_shared: string[]; booking_supported: false; disclosure: string }>>(`/api/v1/providers/${encodeURIComponent(id)}/handoff`);
+  }
+
+  explainIngredient(id: string) {
+    return this.get<AntiAgingRecordResponse<GroundedAntiAgingExplanation & { task: string; policy_version: string }>>(`/api/v1/explanations/ingredients/${encodeURIComponent(id)}`);
+  }
+
+  explainProduct(id: string) {
+    return this.get<AntiAgingRecordResponse<GroundedAntiAgingExplanation & { task: string; policy_version: string }>>(`/api/v1/explanations/products/${encodeURIComponent(id)}`);
+  }
+
+  searchAntiAging(q: string, limit = 8) {
+    return this.get<AntiAgingSearchResponse>(`/api/v1/search${queryString({ q, limit })}`);
   }
 }
 

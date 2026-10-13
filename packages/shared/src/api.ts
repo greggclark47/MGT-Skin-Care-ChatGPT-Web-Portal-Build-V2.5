@@ -161,6 +161,10 @@ export class ApiClient {
     return this.get<{ data: { entries: ProgressEntry[]; aggregate: ProgressAggregate; consent_scope: 'progress_tracking' } }>('/api/v1/progress', token);
   }
 
+  exportAntiAgingProgress(token?: string) {
+    return this.get<{ data: { entries: ProgressEntry[]; reminders: ProgressReminder[]; export_format: 'json'; data_shared: []; note: string } }>('/api/v1/progress/export', token);
+  }
+
   saveAntiAgingProgress(input: { entry_id: string; status: string; completed_at: string; consent_version: string }, token?: string) {
     return this.post<{ data: ProgressEntry; note: string }>('/api/v1/progress', { ...input, consent: 'progress_tracking' }, token);
   }
@@ -170,15 +174,15 @@ export class ApiClient {
   }
 
   listAntiAgingReminders(token?: string) {
-    return this.get<{ data: { reminders: ProgressReminder[]; consent_scope: 'reminders' } }>('/api/v1/progress/reminders', token);
+    return this.get<{ data: { reminders: ProgressReminder[]; states: Record<string, number>; consent_scope: 'reminders' } }>('/api/v1/progress/reminders', token);
   }
 
   createAntiAgingReminder(input: { entry_id: string; cadence: 'daily' | 'weekly'; days_from_now: number; consent_version: string }, token?: string) {
     return this.post<{ data: ProgressReminder }>('/api/v1/progress/reminders', { ...input, consent: 'reminders' }, token);
   }
 
-  setAntiAgingReminderState(id: string, action: 'pause' | 'resume', token?: string) {
-    return this.post<{ data: ProgressReminder }>(`/api/v1/progress/reminders/${encodeURIComponent(id)}`, { action }, token);
+  setAntiAgingReminderState(id: string, action: 'pause' | 'resume' | 'snooze', token?: string, days = 1) {
+    return this.post<{ data: ProgressReminder }>(`/api/v1/progress/reminders/${encodeURIComponent(id)}`, { action, days }, token);
   }
 
   deleteAntiAgingReminder(id: string, token?: string) {

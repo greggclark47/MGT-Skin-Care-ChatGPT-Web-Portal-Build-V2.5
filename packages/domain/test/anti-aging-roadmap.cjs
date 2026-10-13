@@ -34,5 +34,10 @@ assert.equal(domain.providerMatchesCity({ city: 'New York' }, ' new   york '), t
 const reminder = domain.buildProgressReminder({ entry_id: 'routine-step-1', cadence: 'weekly', days_from_now: 7, consent_version: 'reminders-1' }, 'user-1', 'aa_rem_1', now);
 assert.equal(reminder.paused, false);
 assert.equal(domain.advanceProgressReminder(reminder, Date.parse(now)).next_at > reminder.next_at, true);
+assert.equal(domain.progressReminderState(reminder, Date.parse(now)), 'scheduled');
+assert.equal(domain.progressReminderState({ ...reminder, paused: true }, Date.parse(now)), 'paused');
+assert.equal(Date.parse(domain.snoozeProgressReminder(reminder, 3, Date.parse(now)).next_at) > Date.parse(now), true);
+const moderation = domain.summarizeCatalogModeration(qualityIssues);
+assert.equal(moderation.status, 'quarantine_required');
 assert.equal(domain.aggregateProviderSearchSlo([{ result_count: 1, latency_ms: 100, fallback: false, created_at: now }, { result_count: 0, latency_ms: 900, fallback: true, created_at: now }], 750, 0.4).status, 'review_required');
 console.log('anti-aging-roadmap: ok');

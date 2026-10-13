@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import {
-  aggregateProgress, buildAppointmentRequest, buildMerchantReferral, buildProgressReminder, isCanonicalId, isProgressReminderCadence, isProgressStatus, validateProgressEntry,
+  aggregateProgress, buildAppointmentRequest, buildMerchantReferral, buildProgressReminder, isCanonicalId, isProgressReminderCadence, isProgressStatus, progressReminderState, snoozeProgressReminder, validateProgressEntry,
   type AppointmentRequestInput, type ProgressEntry, type ProgressReminder,
 } from '@mgt/domain';
 import { check, hash, wrap } from '../../portal/security';
@@ -72,6 +72,16 @@ export function antiAgingRoadmapRouter(catalog: AntiAgingCatalog, store?: Store)
     res.json({ data: { entries, aggregate: aggregateProgress(entries), consent_scope: 'progress_tracking' } });
   }));
 
+  router.get('/progress/export', wrap(async (req, res) => {
+    missingStore(store);
+    const actor = actorOf(req);
+    const bundle = await store.tx(async records => ({
+      entries: (await records.entries<ProgressEntry>('anti_aging_progress')).map(item => item.value).filter(item => item.actor === actor),
+      reminders: (await records.entries<ProgressReminder>('anti_aging_reminders')).map(item => item.value).filter(item => item.actor === actor),
+    }));
+    res.json({ data: { ...bundle, export_format: 'json', data_shared: [], note: 'Portable personal copy; not a diagnosis or treatment record.' } });
+  }));
+
   router.delete('/progress', wrap(async (req, res) => {
     missingStore(store);
     const actor = actorOf(req);
@@ -84,7 +94,7 @@ export function antiAgingRoadmapRouter(catalog: AntiAgingCatalog, store?: Store)
     missingStore(store);
     const actor = actorOf(req);
     const reminders = await store.tx(async records => (await records.entries<ProgressReminder>('anti_aging_reminders')).map(item => item.value).filter(item => item.actor === actor));
-    res.json({ data: { reminders, consent_scope: 'reminders' } });
+    res.json({ data: { reminders, states: reminders.reduce((summary, reminder) => { const state = progressReminderState(reminder); summary[state]++; return summary; }, { paused: 0, due: 0, scheduled: 0 } as Record<string, number>), consent_scope: 'reminders' } });
   }));
 
   router.post('/progress/reminders', wrap(async (req, res) => {
@@ -106,8 +116,9 @@ export function antiAgingRoadmapRouter(catalog: AntiAgingCatalog, store?: Store)
     const actor = actorOf(req);
     const id = typeof req.params.id === 'string' ? req.params.id : '';
     const action = req.body?.action;
-    check(isCanonicalId(id) && (action === 'pause' || action === 'resume'), 400, 'invalid_reminder', 'Choose pause or resume for this reminder.');
-    const saved = await store.tx(async records => { await records.lock('anti-aging-reminder:' + hash(id)); const reminder = await records.get<ProgressReminder>('anti_aging_reminders', id); check(reminder?.actor === actor, 404, 'reminder_not_found', 'Reminder not found.'); const next = { ...reminder, paused: action === 'pause', updated_at: new Date().toISOString() }; await records.put('anti_aging_reminders', id, next); return next; });
+    check(isCanonicalId(id) && (action === 'pause' || action === 'resume' || action === 'snooze'), 400, 'invalid_reminder', 'Choose pause, resume, or snooze for this reminder.');
+    if (action === 'snooze') check(Number.isInteger(Number(req.body?.days)) && Number(req.body.days) >= 1 && Number(req.body.days) <= 30, 400, 'invalid_reminder', 'Choose a snooze window from 1 to 30 days.');
+    const saved = await store.tx(async records => { await records.lock('anti-aging-reminder:' + hash(id)); const reminder = await records.get<ProgressReminder>('anti_aging_reminders', id); check(reminder?.actor === actor, 404, 'reminder_not_found', 'Reminder not found.'); const next = action === 'snooze' ? snoozeProgressReminder(reminder, Number(req.body?.days || 1)) : { ...reminder, paused: action === 'pause', updated_at: new Date().toISOString() }; await records.put('anti_aging_reminders', id, next); return next; });
     res.json({ data: saved });
   }));
 

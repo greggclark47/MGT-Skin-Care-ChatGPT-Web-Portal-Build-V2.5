@@ -44,8 +44,8 @@ Estimates are relative engineering effort for the existing repository, not commi
 
 | ID | Increment | Acceptance criteria | Estimate | Depends on |
 |---|---|---|---:|---|
-| AA-19 | Progress/adherence | Implemented as consented progress records, deletion, retention, aggregate analytics, opt-in daily/weekly reminders, deterministic notification enqueue, and no diagnostic inference | M | AA-04, AA-09 |
-| AA-20 | Admin/data quality | Implemented as fixture quality counts, actionable freshness/source/review issues, review/quarantine actions, restricted admin reporting, and readiness reporting; full moderation/export workflow remains deferred | L | AA-02, AA-03, AA-15, AA-16 |
+| AA-19 | Progress/adherence | Implemented as consented progress records, deletion, retention, aggregate analytics, opt-in daily/weekly reminders, deterministic notification enqueue, pause/resume/snooze controls, and no diagnostic inference | M | AA-04, AA-09 |
+| AA-20 | Admin/data quality | Implemented as fixture quality counts, actionable freshness/source/review issues, moderation summary with review/quarantine distinction, restricted admin reporting, and readiness reporting; full export workflow remains deferred | L | AA-02, AA-03, AA-15, AA-16 |
 | AA-21 | Search/geospatial scale | Implemented as privacy-preserving city-bounded discovery with explicit no-geocoding and aggregate latency/fallback SLO reporting; geocoding and production scale remain gated | L | AA-10, AA-16 |
 | AA-22 | Launch readiness | Implemented as a non-authorizing readiness gate report with per-gate evidence covering live AI, commerce, booking, image analysis, catalog approval, accessibility, restore, and privacy; full launch review remains incomplete | L | All P0/P1 |
 

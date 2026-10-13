@@ -30,8 +30,13 @@ const { OperationalWorker, InAppNotificationDelivery } = require('../dist/portal
     assert.equal(reminder.status, 202);
     const reminders = await call('/api/v1/progress/reminders');
     assert.equal(reminders.data.data.reminders.length, 1);
+    assert.equal(reminders.data.data.states.scheduled, 1);
     assert.equal((await call('/api/v1/progress/reminders/' + reminder.data.data.id, 'POST', { action: 'pause' })).data.data.paused, true);
     assert.equal((await call('/api/v1/progress/reminders/' + reminder.data.data.id, 'POST', { action: 'resume' })).data.data.paused, false);
+    assert.equal((await call('/api/v1/progress/reminders/' + reminder.data.data.id, 'POST', { action: 'snooze', days: 3 })).data.data.paused, false);
+    const exported = await call('/api/v1/progress/export');
+    assert.equal(exported.data.data.export_format, 'json');
+    assert.deepEqual(exported.data.data.data_shared, []);
     await store.tx(async records => { const saved = await records.get('anti_aging_reminders', reminder.data.data.id); await records.put('anti_aging_reminders', saved.id, { ...saved, next_at: new Date(Date.now() - 1000).toISOString() }); });
     const worker = new OperationalWorker(store, { delivery: new InAppNotificationDelivery(), env: { NODE_ENV: 'test', OPERATIONS_ALERT_DELIVERY: 'disabled' } });
     const workerResult = await worker.runOnce(Date.now());

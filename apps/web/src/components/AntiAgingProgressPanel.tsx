@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 
 type ProgressStatus = 'completed' | 'skipped' | 'irritation' | 'no_change';
+type Reminder = { id: string; cadence: 'daily' | 'weekly'; next_at: string; paused: boolean };
 type ProgressData = { entries: Array<{ entry_id: string; status: ProgressStatus; completed_at: string }>; aggregate: { entries: number; completed: number; completion_rate: number; note: string } };
 
 async function json<T>(path: string, init?: RequestInit): Promise<T> {
@@ -14,6 +15,7 @@ async function json<T>(path: string, init?: RequestInit): Promise<T> {
 export function AntiAgingProgressPanel() {
   const [csrf, setCsrf] = useState('');
   const [data, setData] = useState<ProgressData | null>(null);
+  const [reminders, setReminders] = useState<Reminder[]>([]);
   const [status, setStatus] = useState<ProgressStatus>('completed');
   const [cadence, setCadence] = useState<'daily' | 'weekly'>('weekly');
   const [reminderConsent, setReminderConsent] = useState(false);
@@ -23,7 +25,23 @@ export function AntiAgingProgressPanel() {
   const refresh = async () => {
     const result = await json<{ csrf?: string }>('/api/hub/session');
     setCsrf(result.csrf || '');
-    setData((await json<{ data: ProgressData }>('/api/v1/progress')).data);
+    const [progress, reminderData] = await Promise.all([json<{ data: ProgressData }>('/api/v1/progress'), json<{ data: { reminders: Reminder[] } }>('/api/v1/progress/reminders')]);
+    setData(progress.data);
+    setReminders(reminderData.data.reminders);
+  };
+
+  const toggleReminder = async (reminder: Reminder) => {
+    setBusy(true); setMessage('');
+    try { await json(`/api/v1/progress/reminders/${encodeURIComponent(reminder.id)}`, { method: 'POST', headers: { 'content-type': 'application/json', 'x-csrf-token': csrf }, body: JSON.stringify({ action: reminder.paused ? 'resume' : 'pause' }) }); await refresh(); setMessage(reminder.paused ? 'Reminder resumed.' : 'Reminder paused.'); }
+    catch (error) { setMessage(error instanceof Error ? error.message : 'Reminder is temporarily unavailable.'); }
+    finally { setBusy(false); }
+  };
+
+  const exportProgress = async () => {
+    setBusy(true); setMessage('');
+    try { await json('/api/v1/progress/export'); setMessage('A portable copy is ready to be downloaded from your account.'); }
+    catch (error) { setMessage(error instanceof Error ? error.message : 'Export is temporarily unavailable.'); }
+    finally { setBusy(false); }
   };
   useEffect(() => { void refresh().catch(error => setMessage(error instanceof Error ? error.message : 'Progress is temporarily unavailable.')); }, []);
 
@@ -49,6 +67,7 @@ export function AntiAgingProgressPanel() {
     <div className="section-heading"><div><span className="eyebrow">OPTIONAL CHECK-IN</span><h2 id="anti-aging-progress-heading">Keep a gentle record</h2></div><span className="pill">Private by default</span></div>
     <p>Track whether a routine step felt comfortable. This is an adherence note, not a measure of health or treatment response.</p>
     {data && <p className="anti-aging-progress-summary" role="status"><strong>{data.aggregate.completed}</strong> completed check-ins · {Math.round(data.aggregate.completion_rate * 100)}% completion rate</p>}
+    {reminders.length > 0 && <div className="anti-aging-progress-reminders" aria-label="Your reminder settings"><strong>Reminder settings</strong>{reminders.map(reminder => <div key={reminder.id}><span>{reminder.cadence === 'daily' ? 'Daily' : 'Weekly'} · next {new Date(reminder.next_at).toLocaleDateString()}</span><button className="button" type="button" disabled={busy || !csrf} onClick={() => void toggleReminder(reminder)}>{reminder.paused ? 'Resume' : 'Pause'}</button></div>)}</div>}
     <div className="anti-aging-progress-controls">
       <label className="field">Today felt
         <select value={status} onChange={event => setStatus(event.target.value as ProgressStatus)}><option value="completed">Comfortable</option><option value="no_change">No change</option><option value="irritation">Irritated</option><option value="skipped">Skipped</option></select>
@@ -56,7 +75,7 @@ export function AntiAgingProgressPanel() {
       <label className="check-label"><input type="checkbox" checked={reminderConsent} onChange={event => setReminderConsent(event.target.checked)} />Also remind me {cadence === 'daily' ? 'daily' : 'weekly'}</label>
       {reminderConsent && <label className="field">Reminder cadence<select value={cadence} onChange={event => setCadence(event.target.value as 'daily' | 'weekly')}><option value="weekly">Weekly</option><option value="daily">Daily</option></select></label>}
     </div>
-    <div className="actions"><button className="button primary" type="button" disabled={busy || !csrf} onClick={() => void save()}>Save check-in</button><button className="button" type="button" disabled={busy || !csrf} onClick={() => void remove()}>Remove my records</button></div>
+    <div className="actions"><button className="button primary" type="button" disabled={busy || !csrf} onClick={() => void save()}>Save check-in</button><button className="button" type="button" disabled={busy || !csrf} onClick={() => void exportProgress()}>Prepare my export</button><button className="button" type="button" disabled={busy || !csrf} onClick={() => void remove()}>Remove my records</button></div>
     {message && <p className="notice" role="status">{message}</p>}
   </section>;
 }

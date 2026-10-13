@@ -228,6 +228,28 @@ const demoFlows = {
       <button class="flow-action" data-flow-action="coach" type="button">Route sample question <span>→</span></button>
     `
   },
+  "Anti-aging progress": {
+    kicker: "ANTI-AGING · SAMPLE FLOW",
+    title: "Keep the signal gentle",
+    step: "Optional check-in · Private by default",
+    body: `
+      <p class="flow-intro">A check-in records how a routine step felt. It is an adherence note, not a measure of health, treatment response, or diagnosis.</p>
+      <div class="routine-preview"><div><b>01</b><span>Today felt comfortable</span><small>Saved to your private progress record</small></div><div><b>02</b><span>Weekly reminder</span><small>Opt-in · pause or remove anytime</small></div><div><b>03</b><span>Provider handoff</span><small>Independent destination · no profile shared</small></div></div>
+      <button class="flow-action" data-flow-action="anti-aging" type="button">Review the boundaries <span>→</span></button>
+    `
+  },
+  "Reminder controls": {
+    kicker: "REMINDERS · SAMPLE FLOW",
+    title: "You stay in control",
+    step: "Consent-scoped · Pauseable · Removable",
+    body: `<div class="flow-result"><span>REMINDER SAFETY</span><h3>Opt-in by purpose</h3><p>Choose daily or weekly delivery only after giving reminder consent. A paused reminder never enters the worker queue, and deleting progress also removes its reminders.</p><div class="flow-meta"><span>ACTOR-SCOPED</span><span>RETENTION-AWARE</span><span>NO DIAGNOSTIC INFERENCE</span></div></div>`
+  },
+  "Provider handoff": {
+    kicker: "PROVIDER DISCOVERY · SAMPLE FLOW",
+    title: "A referral, not a booking",
+    step: "City-bounded · External confirmation required",
+    body: `<div class="flow-result"><span>INDEPENDENT HANDOFF</span><h3>Availability stays outside MGT</h3><p>The portal can show a reviewed provider in the selected city and prepare a consented handoff. It does not book, rank by sponsorship, or send your profile.</p><div class="flow-meta"><span>CITY ONLY</span><span>DATA SHARED: NONE</span><span>BOOKING DISABLED</span></div></div>`
+  },
   "Data export": {
     kicker: "ACCOUNT DATA · SAMPLE FLOW",
     title: "Review a portable export",
@@ -584,6 +606,11 @@ function renderFlowResult(action) {
     body.innerHTML = '<div class="flow-result"><span>GUIDANCE REVIEW · SAMPLE OUTPUT</span><h3>Reduce variables for several days</h3><p>Pause optional actives, keep a gentle cleanser and familiar moisturizer, and continue sunscreen if tolerated. Seek professional guidance for persistent pain, swelling, or a severe reaction.</p><div class="flow-meta"><span>CONTEXT REVIEWED</span><span>SAFETY-AWARE</span><span>INCLUDED GUIDANCE</span></div></div>';
     return;
   }
+  if (action === "anti-aging") {
+    $("#demoDialogStep").textContent = "Boundaries reviewed · Sample only";
+    body.innerHTML = '<div class="flow-result"><span>ANTI-AGING SAFETY</span><h3>Useful without overreaching</h3><p>Reviewed records, optional progress notes, and independent referrals can support a calmer experience while keeping diagnosis, treatment decisions, checkout, image analysis, and live booking outside this preview.</p><div class="flow-meta"><span>REVIEWED CONTENT</span><span>OPTIONAL CONSENT</span><span>REFERRAL ONLY</span></div></div>';
+    return;
+  }
   if (action === "export") {
     $("#demoDialogStep").textContent = "Demo export prepared";
     body.insertAdjacentHTML("beforeend", '<div class="flow-result"><span>EXPORT READY</span><h3>Sample package prepared</h3><p>No file was downloaded and no live account data was accessed in this demonstration.</p></div>');
@@ -758,7 +785,7 @@ if ("IntersectionObserver" in window) {
     if (!visible) return;
     navLinks.forEach((link) => link.classList.toggle("active", link.getAttribute("href") === `#${visible.target.id}`));
   }, { rootMargin: "-30% 0px -60% 0px", threshold: [0, .2, .6] });
-  ["home", "applications", "flows", "plans", "shop", "operations", "account"].forEach((id) => observer.observe(document.getElementById(id)));
+  ["home", "applications", "anti-aging", "flows", "plans", "shop", "operations", "account"].forEach((id) => observer.observe(document.getElementById(id)));
 }
 
 activateConsolePanel("privacy");

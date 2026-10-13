@@ -7,6 +7,7 @@ export const APPOINTMENT_HANDOFF_POLICY_VERSION = 'appointment-handoff-boundary-
 export type ProgressStatus = 'completed' | 'skipped' | 'irritation' | 'no_change';
 export type AppointmentRequestStatus = 'handoff_pending' | 'partner_acknowledged' | 'uncertain' | 'closed';
 export type ProgressReminderCadence = 'daily' | 'weekly';
+export type ProgressReminderState = 'paused' | 'due' | 'scheduled';
 
 export interface MerchantReferral {
   record_id: string;
@@ -92,6 +93,13 @@ export interface CatalogQualityIssue {
   issue: 'unapproved' | 'stale' | 'invalid_source';
   severity: 'review' | 'blocker';
   action: 'review' | 'quarantine';
+}
+
+export interface CatalogModerationSummary {
+  issue_count: number;
+  blocker_count: number;
+  review_count: number;
+  status: 'clear' | 'review_required' | 'quarantine_required';
 }
 
 export interface AntiAgingLaunchInput {
@@ -180,6 +188,16 @@ export function advanceProgressReminder(reminder: ProgressReminder, now = Date.n
   return { ...reminder, next_at: new Date(Math.max(Date.parse(reminder.next_at) + interval, now + interval)).toISOString(), updated_at: new Date(now).toISOString(), paused: false };
 }
 
+export function snoozeProgressReminder(reminder: ProgressReminder, days: number, now = Date.now()): ProgressReminder {
+  if (!Number.isInteger(days) || days < 1 || days > 30) throw new Error('progress_reminder_snooze_invalid');
+  return { ...reminder, next_at: new Date(now + days * 86400000).toISOString(), paused: false, updated_at: new Date(now).toISOString() };
+}
+
+export function progressReminderState(reminder: ProgressReminder, now = Date.now()): ProgressReminderState {
+  if (reminder.paused) return 'paused';
+  return Date.parse(reminder.next_at) <= now ? 'due' : 'scheduled';
+}
+
 export function buildAppointmentRequest(input: AppointmentRequestInput, actor: string, id: string, now = new Date().toISOString()): AppointmentRequest {
   if (!isCanonicalId(input.provider_id) || input.consent !== 'provider_handoff' || !/^[a-zA-Z0-9_-]{8,120}$/.test(input.idempotency_key)) throw new Error('appointment_request_invalid');
   if (input.requested_window !== undefined && (typeof input.requested_window !== 'string' || input.requested_window.length > 120)) throw new Error('appointment_window_invalid');
@@ -215,6 +233,12 @@ export function catalogQualityIssues(records: Array<{ type: string; record: Cano
   return issues.sort((a, b) => `${a.severity}:${a.record_type}:${a.record_id}:${a.issue}`.localeCompare(`${b.severity}:${b.record_type}:${b.record_id}:${b.issue}`));
 }
 
+export function summarizeCatalogModeration(issues: CatalogQualityIssue[]): CatalogModerationSummary {
+  const blocker_count = issues.filter(item => item.severity === 'blocker').length;
+  const review_count = issues.filter(item => item.severity === 'review').length;
+  return { issue_count: issues.length, blocker_count, review_count, status: blocker_count ? 'quarantine_required' : review_count ? 'review_required' : 'clear' };
+}
+
 export function buildLaunchReadiness(input: AntiAgingLaunchInput): AntiAgingLaunchReadiness {
   const gates = { referral_only_commerce: !input.checkout_enabled, no_live_booking: !input.booking_enabled, no_image_analysis: !input.image_analysis_enabled,
     grounded_ai_gate: !input.live_ai_enabled, catalog_approved: input.approved_catalog_records > 0, accessibility: input.accessibility_verified,
@@ -240,7 +264,8 @@ export function providerMatchesCity(provider: ProviderRecord, city: string): boo
 export function aggregateProviderSearchSlo(events: ProviderSearchTelemetryEvent[], latencyTargetMs = 750, fallbackTarget = 0.5): ProviderSearchSloSummary {
   const latencies = events.map(item => item.latency_ms).filter(item => Number.isFinite(item) && item >= 0).sort((a, b) => a - b);
   const empty = events.filter(item => item.result_count === 0).length;
-  const fallbackRate = events.length ? empty / events.length : 0;
+  const fallbackCount = events.filter(item => item.fallback).length;
+  const fallbackRate = events.length ? fallbackCount / events.length : 0;
   const p95 = latencies.length ? latencies[Math.floor((latencies.length - 1) * 0.95)] : 0;
   return { requests: events.length, empty_results: empty, fallback_rate: Number(fallbackRate.toFixed(4)), p95_latency_ms: p95, status: p95 <= latencyTargetMs && fallbackRate <= fallbackTarget ? 'within_target' : 'review_required' };
 }

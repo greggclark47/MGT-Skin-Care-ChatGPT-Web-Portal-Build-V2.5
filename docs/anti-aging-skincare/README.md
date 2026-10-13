@@ -1,6 +1,6 @@
 # Anti-aging skincare platform — Phase 1 discovery package
 
-Status: Phase 1 architecture and implementation planning complete locally. The v2.490 operations checkpoint now adds opt-in progress reminders, a user-facing progress surface, aggregate search SLO reporting, actionable catalog quality issues, and launch-gate evidence; live providers, booking, checkout, and production database application remain separately gated.
+Status: Phase 1 architecture and implementation planning complete locally. The v2.555 operations checkpoint now adds reminder snooze/export controls, moderation summaries, a refreshed anti-aging demo surface, and paired GitHub/Google Drive backup evidence; live providers, booking, checkout, and production database application remain separately gated.
 
 Baseline audited: MGT Skin Care v2.195 at commit `2c67a3bfee9d02d73237d2b44706f323db97e59f`.
 
@@ -17,10 +17,11 @@ Baseline audited: MGT Skin Care v2.195 at commit `2c67a3bfee9d02d73237d2b44706f3
 9. [AI foundation checkpoint v2.340](./AI-FOUNDATION-CHECKPOINT-v2.340.md) — 65 safe increments across AA-11 through AA-16, with live providers and partner writes still disabled.
 10. [Roadmap checkpoint v2.405](./ROADMAP-CHECKPOINT-v2.405.md) — 65 safe increments across referral, progress, handoff, quality, and launch-readiness seams.
 11. [Operations checkpoint v2.490](./OPERATIONS-CHECKPOINT-v2.490.md) — 85 safe increments across reminders, moderation, freshness, search telemetry, launch evidence, and the progress surface.
+12. [Operations checkpoint v2.555](./OPERATIONS-CHECKPOINT-v2.555.md) — 65 safe increments across reminder controls, personal exports, moderation summaries, demo boundaries, and backup visibility.
 
 ## Recommended next move
 
-Continue from the v2.490 seams with production partner work only after source approval, privacy review, jurisdiction review, restore verification, and explicit launch authorization. Keep product checkout, medical diagnosis, image analysis, live booking, and sponsored ranking disabled until their safety and partner gates are satisfied.
+Continue from the v2.555 seams with production partner work only after source approval, privacy review, jurisdiction review, restore verification, and explicit launch authorization. Keep product checkout, medical diagnosis, image analysis, live booking, and sponsored ranking disabled until their safety and partner gates are satisfied.
 
 ## Current architectural position
 

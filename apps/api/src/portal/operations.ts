@@ -294,6 +294,9 @@ export class OperationalWorker{
    ['ai_routing_log',int(this.env.OPERATIONS_AI_LOG_RETENTION_DAYS,30,1,3650),(v:any)=>timestamp(v?.at||v?.created_at||v?.timestamp)],
    ['anti_aging_ai_events',int(this.env.OPERATIONS_AI_LOG_RETENTION_DAYS,30,1,3650),(v:any)=>timestamp(v?.created_at)],
    ['anti_aging_ai_feedback',int(this.env.OPERATIONS_AI_LOG_RETENTION_DAYS,30,1,3650),(v:any)=>timestamp(v?.created_at)],
+   ['anti_aging_referral_clicks',int(this.env.OPERATIONS_ANTI_AGING_RETENTION_DAYS,365,30,3650),(v:any)=>timestamp(v?.day)],
+   ['anti_aging_progress',int(this.env.OPERATIONS_ANTI_AGING_RETENTION_DAYS,365,30,3650),(v:any)=>timestamp(v?.created_at)],
+   ['anti_aging_appointment_requests',int(this.env.OPERATIONS_ANTI_AGING_RETENTION_DAYS,365,30,3650),(v:any)=>timestamp(v?.updated_at||v?.created_at)],
    ['notifications',int(this.env.OPERATIONS_NOTIFICATION_RETENTION_DAYS,90,1,3650),(v:any)=>timestamp(v?.delivered_at||v?.read_at||v?.updated_at)],
    ['billing_activity',int(this.env.OPERATIONS_BILLING_RETENTION_DAYS,730,30,3650),(v:any)=>timestamp(v?.at)],
    ['subscription_webhook_receipts',int(this.env.OPERATIONS_WEBHOOK_RECEIPT_RETENTION_DAYS,90,7,3650),(v:any)=>timestamp(v?.last_received_at||v?.first_received_at)],
@@ -406,7 +409,7 @@ export class OperationalWorker{
   for(const scope of ['profiles','profile_revisions','style_profiles','reminders','saved_retailers','carts','memberships'])await records.remove(scope,actor);
   await records.remove('checkout_requests','premium_'+actor);
   for(const scope of ['subscriptions','billing_attempts'])await records.remove(scope,`${actor}:consumer`);
-  for(const scope of ['sessions','notifications','tickets','ai_routing_log','anti_aging_ai_events','anti_aging_ai_feedback','ai_budget','ai_budget_reservations','ai_budget_reconciliations','rate','subscription_commands','subscription_pending']){
+  for(const scope of ['sessions','notifications','tickets','ai_routing_log','anti_aging_ai_events','anti_aging_ai_feedback','anti_aging_progress','anti_aging_appointment_requests','ai_budget','ai_budget_reservations','ai_budget_reconciliations','rate','subscription_commands','subscription_pending']){
    for(const item of await records.entries<any>(scope)){
     const value=item.value;
     const owned=value?.actor===actor||value?.userId===userId||value?.user_id===actor||value?.user_id===userId||this.belongsToUser(item.id,actor,userId)||this.belongsToUser(value?.budget_key,actor,userId);

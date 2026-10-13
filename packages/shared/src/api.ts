@@ -1,6 +1,7 @@
 import type {
   SkinProfileInput, Routine, ProfileVector, AvoidFlags, IngredientRecord, ProductRecord,
   ProviderRecord, TreatmentRecord, ReadOnlyPage, AntiAgingResponseMeta, GroundedAntiAgingExplanation, GroundedSearchResult,
+  MerchantReferral, ProgressEntry, ProgressAggregate, AppointmentRequest,
 } from '@mgt/domain';
 
 // One API client shared by web and mobile (Section C.1: "no separate business logic per
@@ -49,6 +50,15 @@ export class ApiClient {
   private async get<T>(path: string, token?: string): Promise<T> {
     const res = await this.fetchImpl(`${this.baseUrl}${path}`, {
       headers: token ? { authorization: `Bearer ${token}` } : {},
+    });
+    return this.readResponse<T>(res);
+  }
+
+  private async delete<T>(path: string, body: unknown, token?: string): Promise<T> {
+    const res = await this.fetchImpl(`${this.baseUrl}${path}`, {
+      method: 'DELETE',
+      headers: { 'content-type': 'application/json', ...(token ? { authorization: `Bearer ${token}` } : {}) },
+      body: JSON.stringify(body),
     });
     return this.readResponse<T>(res);
   }
@@ -137,6 +147,38 @@ export class ApiClient {
 
   searchAntiAging(q: string, limit = 8) {
     return this.get<AntiAgingSearchResponse>(`/api/v1/search${queryString({ q, limit })}`);
+  }
+
+  referralPreview(productId: string) {
+    return this.get<AntiAgingRecordResponse<MerchantReferral>>(`/api/v1/referrals/preview${queryString({ product_id: productId })}`);
+  }
+
+  recordReferralClick(productId: string, token?: string) {
+    return this.post<{ data: { recorded: true; measurement: string; data_shared: [] } }>('/api/v1/referrals/click', { product_id: productId }, token);
+  }
+
+  listAntiAgingProgress(token?: string) {
+    return this.get<{ data: { entries: ProgressEntry[]; aggregate: ProgressAggregate; consent_scope: 'progress_tracking' } }>('/api/v1/progress', token);
+  }
+
+  saveAntiAgingProgress(input: { entry_id: string; status: string; completed_at: string; consent_version: string }, token?: string) {
+    return this.post<{ data: ProgressEntry; note: string }>('/api/v1/progress', { ...input, consent: 'progress_tracking' }, token);
+  }
+
+  deleteAntiAgingProgress(token?: string) {
+    return this.delete<{ data: { deleted: number; consent_revoked: true } }>('/api/v1/progress', { confirm: true }, token);
+  }
+
+  nearbyAntiAgingProviders(city: string, radiusKm = 10, limit = 20) {
+    return this.get<{ data: { items: ProviderRecord[]; radius_km: number; location_precision: 'city'; geocoding: 'disabled'; uncertainty: string } }>(`/api/v1/providers/nearby${queryString({ city, radius_km: radiusKm, limit })}`);
+  }
+
+  createAppointmentRequest(input: { provider_id: string; idempotency_key: string; requested_window?: string }, token?: string) {
+    return this.post<{ data: AppointmentRequest }>('/api/v1/appointment-requests', { ...input, consent: 'provider_handoff' }, token);
+  }
+
+  getAppointmentRequest(id: string, token?: string) {
+    return this.get<{ data: AppointmentRequest }>(`/api/v1/appointment-requests/${encodeURIComponent(id)}`, token);
   }
 }
 

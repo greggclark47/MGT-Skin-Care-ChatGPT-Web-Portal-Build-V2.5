@@ -45,6 +45,15 @@ const { LocalStore } = require('../dist/portal/store');
     assert.equal(blockedSearch.status, 422);
     assert.equal(blockedSearch.data.error.code, 'question_out_of_scope');
 
+    const referral = await get('/api/v1/referrals/preview?product_id=product-c-brightening-serum');
+    assert.equal(referral.status, 200);
+    assert.equal(referral.data.data.data_shared.length, 0);
+    assert.equal(referral.data.data.destination_url.includes('?'), false);
+    const nearby = await get('/api/v1/providers/nearby?city=New%20York&radius_km=10');
+    assert.equal(nearby.status, 200);
+    assert.equal(nearby.data.data.location_precision, 'city');
+    assert.equal(nearby.data.data.geocoding, 'disabled');
+
     const onboarding = await get('/api/v1/onboarding/preview?goals=texture& sensitivity=mild'.replace(' ', ''));
     assert.equal(onboarding.status, 200);
     assert.equal(onboarding.data.data.status, 'consent_required');

@@ -1,6 +1,6 @@
 # Anti-aging skincare platform — Phase 1 discovery package
 
-Status: Phase 1 architecture and implementation planning complete locally. The v2.340 AI foundation checkpoint now adds grounded explanation contracts, bounded reviewed-record search, safety evaluation cases, feedback telemetry, and fixture-backed catalog/provider adapter seams; live providers and production database application remain separately gated.
+Status: Phase 1 architecture and implementation planning complete locally. The v2.405 roadmap checkpoint now adds consent-scoped progress, referral-only measurement, appointment handoff seams, city-bounded provider discovery, data-quality reporting, and launch-readiness gates; live providers, booking, checkout, and production database application remain separately gated.
 
 Baseline audited: MGT Skin Care v2.195 at commit `2c67a3bfee9d02d73237d2b44706f323db97e59f`.
 
@@ -15,10 +15,11 @@ Baseline audited: MGT Skin Care v2.195 at commit `2c67a3bfee9d02d73237d2b44706f3
 7. [Foundation checkpoint v2.230](./FOUNDATION-CHECKPOINT-v2.230.md) — 35 implemented AA-01 through AA-05 increments and verification status.
 8. [Experience checkpoint v2.275](./EXPERIENCE-CHECKPOINT-v2.275.md) — 45 implemented AA-06 through AA-10 increments and verification status.
 9. [AI foundation checkpoint v2.340](./AI-FOUNDATION-CHECKPOINT-v2.340.md) — 65 safe increments across AA-11 through AA-16, with live providers and partner writes still disabled.
+10. [Roadmap checkpoint v2.405](./ROADMAP-CHECKPOINT-v2.405.md) — 65 safe increments across referral, progress, handoff, quality, and launch-readiness seams.
 
 ## Recommended next move
 
-Continue from the v2.340 contracts with production retrieval and evaluation data only after source approval, privacy review, and operational restore gates are complete. Keep product checkout, medical diagnosis, image analysis, live booking, and sponsored ranking disabled until their explicit safety, partner, and jurisdictional gates are satisfied.
+Continue from the v2.405 seams with production partner work only after source approval, privacy review, jurisdiction review, restore verification, and explicit launch authorization. Keep product checkout, medical diagnosis, image analysis, live booking, and sponsored ranking disabled until their safety and partner gates are satisfied.
 
 ## Current architectural position
 

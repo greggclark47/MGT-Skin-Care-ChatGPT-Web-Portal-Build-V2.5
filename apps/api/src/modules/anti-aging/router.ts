@@ -1,7 +1,7 @@
 import { Router, type Response } from 'express';
 import {
   isCanonicalId, isAntiAgingGoal, isAntiAgingSensitivity, isAntiAgingAiTask, isFeedbackReason, isFeedbackRating,
-  type AntiAgingResponseMeta,
+  providerMatchesCity, type AntiAgingResponseMeta,
 } from '@mgt/domain';
 import { SeedAntiAgingCatalog, type AntiAgingCatalog, type AntiAgingListQuery } from './catalog';
 import { ANTI_AGING_AI_DISCLAIMER, ANTI_AGING_AI_POLICY_VERSION, explanationForIngredient, explanationForProduct, searchAntiAging, createAntiAgingAiTelemetry } from './ai';
@@ -178,6 +178,14 @@ export function antiAgingRouter(catalog: AntiAgingCatalog = new SeedAntiAgingCat
     const item = catalog.getProvider(id); if (!item) return fail(res, 404, 'not_found', 'Provider not found.');
     return res.json({ data: { provider_id: item.id, handoff_type: 'external_referral', handoff_url: item.website_url,
       data_shared: [], booking_supported: false, disclosure: 'You are leaving MGT Skin Care for an independent provider destination.' }, meta });
+  });
+  router.get('/providers/nearby', (req, res) => {
+    const city = typeof req.query.city === 'string' ? req.query.city.trim() : '';
+    const radius = typeof req.query.radius_km === 'string' ? Number(req.query.radius_km) : 10;
+    const limit = typeof req.query.limit === 'string' ? Number(req.query.limit) : 20;
+    if (!city || city.length > 80 || !Number.isFinite(radius) || radius < 0 || radius > 50 || !Number.isInteger(limit) || limit < 1 || limit > 50) return fail(res, 400, 'invalid_location_query', 'Use a city and a bounded radius from zero to fifty kilometres.');
+    const providers = catalog.listProviders({ city, limit: 50 }).items.filter(item => providerMatchesCity(item, city)).slice(0, limit);
+    return res.json({ data: { items: providers, radius_km: radius, location_precision: 'city', geocoding: 'disabled', uncertainty: 'Results use reviewed city records only; no precise location is inferred.' }, meta });
   });
   router.get('/providers/:id', (req, res) => {
     const id = idParam(req.params.id); if (!id) return fail(res, 400, 'invalid_id', 'Use a valid record identifier.');

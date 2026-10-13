@@ -3,6 +3,8 @@ import {
   isCanonicalId, isAntiAgingGoal, isAntiAgingSensitivity, isAntiAgingAiTask, isFeedbackReason, isFeedbackRating,
   providerMatchesCity, type AntiAgingResponseMeta,
 } from '@mgt/domain';
+import { wrap } from '../../portal/security';
+import type { Store } from '../../portal/store';
 import { SeedAntiAgingCatalog, type AntiAgingCatalog, type AntiAgingListQuery } from './catalog';
 import { ANTI_AGING_AI_DISCLAIMER, ANTI_AGING_AI_POLICY_VERSION, explanationForIngredient, explanationForProduct, searchAntiAging, createAntiAgingAiTelemetry } from './ai';
 import type { AntiAgingAiTelemetry } from './telemetry';
@@ -51,7 +53,7 @@ function pageResponse<T>(res: Response, page: { items: T[]; next_cursor: string 
   res.json({ data: page, meta });
 }
 
-export function antiAgingRouter(catalog: AntiAgingCatalog = new SeedAntiAgingCatalog(), telemetry?: AntiAgingAiTelemetry): Router {
+export function antiAgingRouter(catalog: AntiAgingCatalog = new SeedAntiAgingCatalog(), telemetry?: AntiAgingAiTelemetry, store?: Store): Router {
   const router = Router();
   const aiTelemetry = createAntiAgingAiTelemetry(telemetry);
 
@@ -179,14 +181,16 @@ export function antiAgingRouter(catalog: AntiAgingCatalog = new SeedAntiAgingCat
     return res.json({ data: { provider_id: item.id, handoff_type: 'external_referral', handoff_url: item.website_url,
       data_shared: [], booking_supported: false, disclosure: 'You are leaving MGT Skin Care for an independent provider destination.' }, meta });
   });
-  router.get('/providers/nearby', (req, res) => {
+  router.get('/providers/nearby', wrap(async (req, res) => {
+    const started = Date.now();
     const city = typeof req.query.city === 'string' ? req.query.city.trim() : '';
     const radius = typeof req.query.radius_km === 'string' ? Number(req.query.radius_km) : 10;
     const limit = typeof req.query.limit === 'string' ? Number(req.query.limit) : 20;
     if (!city || city.length > 80 || !Number.isFinite(radius) || radius < 0 || radius > 50 || !Number.isInteger(limit) || limit < 1 || limit > 50) return fail(res, 400, 'invalid_location_query', 'Use a city and a bounded radius from zero to fifty kilometres.');
     const providers = catalog.listProviders({ city, limit: 50 }).items.filter(item => providerMatchesCity(item, city)).slice(0, limit);
+    if (store) await store.tx(async records => { const day = new Date().toISOString().slice(0, 10); const key = `city:${day}`; await records.lock('anti-aging-search:' + day); const current = await records.get<any>('anti_aging_search_metrics', key) || { day, requests: 0, empty_results: 0, latencies: [] }; const latencies = Array.isArray(current.latencies) ? current.latencies.filter((item: unknown) => typeof item === 'number').slice(-199) : []; latencies.push(Date.now() - started); await records.put('anti_aging_search_metrics', key, { day, requests: current.requests + 1, empty_results: current.empty_results + (providers.length ? 0 : 1), latencies }); });
     return res.json({ data: { items: providers, radius_km: radius, location_precision: 'city', geocoding: 'disabled', uncertainty: 'Results use reviewed city records only; no precise location is inferred.' }, meta });
-  });
+  }));
   router.get('/providers/:id', (req, res) => {
     const id = idParam(req.params.id); if (!id) return fail(res, 400, 'invalid_id', 'Use a valid record identifier.');
     const item = catalog.getProvider(id); if (!item) return fail(res, 404, 'not_found', 'Provider not found.');

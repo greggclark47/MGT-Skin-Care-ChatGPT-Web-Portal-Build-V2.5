@@ -1,7 +1,7 @@
 import type {
   SkinProfileInput, Routine, ProfileVector, AvoidFlags, IngredientRecord, ProductRecord,
   ProviderRecord, TreatmentRecord, ReadOnlyPage, AntiAgingResponseMeta, GroundedAntiAgingExplanation, GroundedSearchResult,
-  MerchantReferral, ProgressEntry, ProgressAggregate, AppointmentRequest,
+  MerchantReferral, ProgressEntry, ProgressAggregate, ProgressReminder, AppointmentRequest,
 } from '@mgt/domain';
 
 // One API client shared by web and mobile (Section C.1: "no separate business logic per
@@ -167,6 +167,22 @@ export class ApiClient {
 
   deleteAntiAgingProgress(token?: string) {
     return this.delete<{ data: { deleted: number; consent_revoked: true } }>('/api/v1/progress', { confirm: true }, token);
+  }
+
+  listAntiAgingReminders(token?: string) {
+    return this.get<{ data: { reminders: ProgressReminder[]; consent_scope: 'reminders' } }>('/api/v1/progress/reminders', token);
+  }
+
+  createAntiAgingReminder(input: { entry_id: string; cadence: 'daily' | 'weekly'; days_from_now: number; consent_version: string }, token?: string) {
+    return this.post<{ data: ProgressReminder }>('/api/v1/progress/reminders', { ...input, consent: 'reminders' }, token);
+  }
+
+  setAntiAgingReminderState(id: string, action: 'pause' | 'resume', token?: string) {
+    return this.post<{ data: ProgressReminder }>(`/api/v1/progress/reminders/${encodeURIComponent(id)}`, { action }, token);
+  }
+
+  deleteAntiAgingReminder(id: string, token?: string) {
+    return this.delete<{ data: { deleted: true } }>(`/api/v1/progress/reminders/${encodeURIComponent(id)}`, {}, token);
   }
 
   nearbyAntiAgingProviders(city: string, radiusKm = 10, limit = 20) {

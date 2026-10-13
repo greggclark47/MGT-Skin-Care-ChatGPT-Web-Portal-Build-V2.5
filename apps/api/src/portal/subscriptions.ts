@@ -201,7 +201,7 @@ export function portalV1Router(db: Store, stripe: Stripe | undefined, env: NodeJ
   const checkout = express.Router();
   checkout.use(wrap(async(req,_res) => {account(req);check(false,409,'external_commerce_only','Product purchases remain with the retailer.');}));
   const antiAgingCatalog = new SeedAntiAgingCatalog();
-  const antiAging = antiAgingRouter(antiAgingCatalog, new StoreAntiAgingAiTelemetry(db));
+  const antiAging = antiAgingRouter(antiAgingCatalog, new StoreAntiAgingAiTelemetry(db), db);
   antiAging.use(antiAgingRoadmapRouter(antiAgingCatalog, db));
   return createV1Router({checkout,subscriptions,entitlement,antiAging});
 }

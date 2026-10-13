@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import {
-  aggregateProgress, buildAppointmentRequest, buildMerchantReferral, isCanonicalId, isProgressStatus,
-  type AppointmentRequestInput, type ProgressEntry,
+  aggregateProgress, buildAppointmentRequest, buildMerchantReferral, buildProgressReminder, isCanonicalId, isProgressReminderCadence, isProgressStatus, validateProgressEntry,
+  type AppointmentRequestInput, type ProgressEntry, type ProgressReminder,
 } from '@mgt/domain';
 import { check, hash, wrap } from '../../portal/security';
 import type { Store } from '../../portal/store';
@@ -50,7 +50,9 @@ export function antiAgingRoadmapRouter(catalog: AntiAgingCatalog, store?: Store)
     check(typeof req.body?.entry_id === 'string' && isCanonicalId(req.body.entry_id), 400, 'invalid_progress', 'Choose a valid progress entry reference.');
     check(isProgressStatus(req.body?.status), 400, 'invalid_progress', 'Choose a supported progress status.');
     check(typeof req.body?.completed_at === 'string' && typeof req.body?.consent_version === 'string', 400, 'invalid_progress', 'Provide a progress timestamp and consent version.');
-    const input = { entry_id: req.body.entry_id, status: req.body.status, completed_at: req.body.completed_at, consent_version: req.body.consent_version };
+    const validation = validateProgressEntry({ entry_id: req.body.entry_id, status: req.body.status, completed_at: req.body.completed_at, consent_version: req.body.consent_version });
+    check(validation.ok && validation.value, 400, 'invalid_progress', 'Provide a recent progress timestamp and a valid consent version.');
+    const input = validation.value;
     const now = new Date().toISOString();
     const saved = await store.tx(async records => {
       await records.lock('anti-aging-progress:' + hash(actor + ':' + input.entry_id));
@@ -74,8 +76,48 @@ export function antiAgingRoadmapRouter(catalog: AntiAgingCatalog, store?: Store)
     missingStore(store);
     const actor = actorOf(req);
     check(req.body?.confirm === true, 400, 'confirmation_required', 'Confirm removal of progress records.');
-    const removed = await store.tx(async records => { let count = 0; for (const item of await records.entries<ProgressEntry>('anti_aging_progress')) if (item.value.actor === actor) { await records.remove('anti_aging_progress', item.id); count++; } return count; });
-    res.json({ data: { deleted: removed, consent_revoked: true } });
+    const removed = await store.tx(async records => { let count = 0; for (const item of await records.entries<ProgressEntry>('anti_aging_progress')) if (item.value.actor === actor) { await records.remove('anti_aging_progress', item.id); count++; } for (const item of await records.entries<ProgressReminder>('anti_aging_reminders')) if (item.value.actor === actor) await records.remove('anti_aging_reminders', item.id); return count; });
+    res.json({ data: { deleted: removed, reminders_deleted: true, consent_revoked: true } });
+  }));
+
+  router.get('/progress/reminders', wrap(async (req, res) => {
+    missingStore(store);
+    const actor = actorOf(req);
+    const reminders = await store.tx(async records => (await records.entries<ProgressReminder>('anti_aging_reminders')).map(item => item.value).filter(item => item.actor === actor));
+    res.json({ data: { reminders, consent_scope: 'reminders' } });
+  }));
+
+  router.post('/progress/reminders', wrap(async (req, res) => {
+    missingStore(store);
+    const actor = actorOf(req);
+    check(req.body?.consent === 'reminders', 400, 'consent_required', 'Reminder delivery requires purpose-specific consent.');
+    const entryId = typeof req.body?.entry_id === 'string' ? req.body.entry_id : '';
+    const cadence = req.body?.cadence;
+    const days = Number(req.body?.days_from_now);
+    const consentVersion = typeof req.body?.consent_version === 'string' ? req.body.consent_version : '';
+    check(isCanonicalId(entryId) && isProgressReminderCadence(cadence) && Number.isInteger(days) && days >= 1 && days <= 365 && consentVersion.length > 0, 400, 'invalid_reminder', 'Choose a supported cadence, date window, and consent version.');
+    const id = 'aa_rem_' + hash(actor + ':' + entryId + ':' + cadence).slice(0, 56);
+    const reminder = await store.tx(async records => { await records.lock('anti-aging-reminder:' + hash(id)); const saved = buildProgressReminder({ entry_id: entryId, cadence, days_from_now: days, consent_version: consentVersion }, actor, id); await records.put('anti_aging_reminders', id, saved); return saved; });
+    res.status(202).json({ data: reminder });
+  }));
+
+  router.post('/progress/reminders/:id', wrap(async (req, res) => {
+    missingStore(store);
+    const actor = actorOf(req);
+    const id = typeof req.params.id === 'string' ? req.params.id : '';
+    const action = req.body?.action;
+    check(isCanonicalId(id) && (action === 'pause' || action === 'resume'), 400, 'invalid_reminder', 'Choose pause or resume for this reminder.');
+    const saved = await store.tx(async records => { await records.lock('anti-aging-reminder:' + hash(id)); const reminder = await records.get<ProgressReminder>('anti_aging_reminders', id); check(reminder?.actor === actor, 404, 'reminder_not_found', 'Reminder not found.'); const next = { ...reminder, paused: action === 'pause', updated_at: new Date().toISOString() }; await records.put('anti_aging_reminders', id, next); return next; });
+    res.json({ data: saved });
+  }));
+
+  router.delete('/progress/reminders/:id', wrap(async (req, res) => {
+    missingStore(store);
+    const actor = actorOf(req);
+    const id = typeof req.params.id === 'string' ? req.params.id : '';
+    check(isCanonicalId(id), 400, 'invalid_reminder', 'Use a valid reminder reference.');
+    const removed = await store.tx(async records => { const reminder = await records.get<ProgressReminder>('anti_aging_reminders', id); check(reminder?.actor === actor, 404, 'reminder_not_found', 'Reminder not found.'); await records.remove('anti_aging_reminders', id); return true; });
+    res.json({ data: { deleted: removed } });
   }));
 
   router.post('/appointment-requests', wrap(async (req, res) => {

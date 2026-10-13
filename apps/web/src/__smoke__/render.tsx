@@ -8,6 +8,7 @@ import { AccountDeletionPanel, RestockAlerts, SkinFeedbackOptions, SupportHistor
 import { CharacterCount, LoadState } from '../components/HubFrames';
 import { GuestInvitationList } from '../components/GuestAccess';
 import { RetailerSaveButton } from '../components/RetailerDirectory';
+import { AntiAgingProgressPanel } from '../components/AntiAgingProgressPanel';
 import { CORE_STEPS, toggleChoice, progress, toProfileInput, isStepAnswered, type AnswerState } from '@mgt/shared';
 import { color } from '../components/theme-tokens';
 import type { ProductExplanation } from '@mgt/domain';
@@ -199,6 +200,14 @@ console.log('\n== 7b. Customer histories expose state and dates semantically =='
 
 console.log(failures === 0 ? '\nWEB UI: ALL CHECKS PASSED' : `\nWEB UI: ${failures} CHECK(S) FAILED`);
 if (failures > 0) process.exitCode = 1;
+
+console.log('\n== 7c. Anti-aging progress surface preserves optional, non-diagnostic boundaries ==');
+{
+  const html = renderToStaticMarkup(<AntiAgingProgressPanel />);
+  check('progress surface identifies optional check-in', html.includes('OPTIONAL CHECK-IN'));
+  check('progress surface includes private-by-default copy', html.includes('Private by default'));
+  check('progress surface states it is not health measurement', html.includes('not a measure of health'));
+}
 
 // ============ Destination screens ============
 import { SkinProfileView } from '../components/SkinProfileView';

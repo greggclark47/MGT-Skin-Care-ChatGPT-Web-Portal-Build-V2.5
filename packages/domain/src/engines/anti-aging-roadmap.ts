@@ -6,6 +6,7 @@ export const APPOINTMENT_HANDOFF_POLICY_VERSION = 'appointment-handoff-boundary-
 
 export type ProgressStatus = 'completed' | 'skipped' | 'irritation' | 'no_change';
 export type AppointmentRequestStatus = 'handoff_pending' | 'partner_acknowledged' | 'uncertain' | 'closed';
+export type ProgressReminderCadence = 'daily' | 'weekly';
 
 export interface MerchantReferral {
   record_id: string;
@@ -40,6 +41,19 @@ export interface ProgressAggregate {
   note: string;
 }
 
+export interface ProgressReminder {
+  id: string;
+  actor: string;
+  entry_id: string;
+  cadence: ProgressReminderCadence;
+  next_at: string;
+  paused: boolean;
+  consent_version: string;
+  created_at: string;
+  updated_at: string;
+  policy_version: string;
+}
+
 export interface AppointmentRequestInput {
   provider_id: string;
   idempotency_key: string;
@@ -72,6 +86,14 @@ export interface CatalogQualitySummary {
   status: 'ready' | 'review_required';
 }
 
+export interface CatalogQualityIssue {
+  record_id: string;
+  record_type: string;
+  issue: 'unapproved' | 'stale' | 'invalid_source';
+  severity: 'review' | 'blocker';
+  action: 'review' | 'quarantine';
+}
+
 export interface AntiAgingLaunchInput {
   live_ai_enabled: boolean;
   checkout_enabled: boolean;
@@ -90,11 +112,34 @@ export interface AntiAgingLaunchReadiness {
   policy_version: string;
 }
 
+export interface LaunchGateEvidence {
+  gate: string;
+  passed: boolean;
+  observed_at: string;
+  source: 'configuration' | 'catalog_quality' | 'operational_policy';
+}
+
+export interface ProviderSearchTelemetryEvent {
+  result_count: number;
+  latency_ms: number;
+  fallback: boolean;
+  created_at: string;
+}
+
+export interface ProviderSearchSloSummary {
+  requests: number;
+  empty_results: number;
+  fallback_rate: number;
+  p95_latency_ms: number;
+  status: 'within_target' | 'review_required';
+}
+
 const STATUSES: readonly ProgressStatus[] = ['completed', 'skipped', 'irritation', 'no_change'];
 const APPOINTMENT_STATUSES: readonly AppointmentRequestStatus[] = ['handoff_pending', 'partner_acknowledged', 'uncertain', 'closed'];
 
 export function isProgressStatus(value: unknown): value is ProgressStatus { return typeof value === 'string' && STATUSES.includes(value as ProgressStatus); }
 export function isAppointmentRequestStatus(value: unknown): value is AppointmentRequestStatus { return typeof value === 'string' && APPOINTMENT_STATUSES.includes(value as AppointmentRequestStatus); }
+export function isProgressReminderCadence(value: unknown): value is ProgressReminderCadence { return value === 'daily' || value === 'weekly'; }
 
 export function buildMerchantReferral(record: { id: string; external_url: string; commercial_label: MerchantReferral['commercial_label'] }, allowedHosts: string[] = ['example.org']): MerchantReferral {
   if (!isCanonicalId(record.id) || !isHttpsUrl(record.external_url)) throw new Error('referral_destination_invalid');
@@ -123,6 +168,18 @@ export function aggregateProgress(entries: ProgressEntry[]): ProgressAggregate {
     note: 'Aggregate adherence signal only. It is not a measure of health, treatment response, or diagnosis.' };
 }
 
+export function buildProgressReminder(input: { entry_id: string; cadence: ProgressReminderCadence; days_from_now: number; consent_version: string }, actor: string, id: string, now = new Date().toISOString()): ProgressReminder {
+  if (!isCanonicalId(input.entry_id) || !isProgressReminderCadence(input.cadence) || !Number.isInteger(input.days_from_now) || input.days_from_now < 1 || input.days_from_now > 365 || typeof input.consent_version !== 'string' || input.consent_version.length < 1 || input.consent_version.length > 80) throw new Error('progress_reminder_invalid');
+  const next = new Date(Date.parse(now) + input.days_from_now * 86400000);
+  if (!Number.isFinite(next.getTime())) throw new Error('progress_reminder_invalid');
+  return { id, actor, entry_id: input.entry_id, cadence: input.cadence, next_at: next.toISOString(), paused: false, consent_version: input.consent_version, created_at: now, updated_at: now, policy_version: ANTI_AGING_ROADMAP_POLICY_VERSION };
+}
+
+export function advanceProgressReminder(reminder: ProgressReminder, now = Date.now()): ProgressReminder {
+  const interval = reminder.cadence === 'daily' ? 86400000 : 7 * 86400000;
+  return { ...reminder, next_at: new Date(Math.max(Date.parse(reminder.next_at) + interval, now + interval)).toISOString(), updated_at: new Date(now).toISOString(), paused: false };
+}
+
 export function buildAppointmentRequest(input: AppointmentRequestInput, actor: string, id: string, now = new Date().toISOString()): AppointmentRequest {
   if (!isCanonicalId(input.provider_id) || input.consent !== 'provider_handoff' || !/^[a-zA-Z0-9_-]{8,120}$/.test(input.idempotency_key)) throw new Error('appointment_request_invalid');
   if (input.requested_window !== undefined && (typeof input.requested_window !== 'string' || input.requested_window.length > 120)) throw new Error('appointment_window_invalid');
@@ -148,6 +205,16 @@ export function summarizeCatalogQuality(records: Array<{ type: string; record: C
   return summary;
 }
 
+export function catalogQualityIssues(records: Array<{ type: string; record: CanonicalRecord }>, observedAt = Date.now()): CatalogQualityIssue[] {
+  const issues: CatalogQualityIssue[] = [];
+  for (const item of records) {
+    if (item.record.provenance.reviewed_status !== 'approved') issues.push({ record_id: item.record.id, record_type: item.type, issue: 'unapproved', severity: 'review', action: 'review' });
+    if (!isHttpsUrl(item.record.provenance.source_url)) issues.push({ record_id: item.record.id, record_type: item.type, issue: 'invalid_source', severity: 'blocker', action: 'quarantine' });
+    if (item.record.provenance.freshness_until && Date.parse(item.record.provenance.freshness_until) < observedAt) issues.push({ record_id: item.record.id, record_type: item.type, issue: 'stale', severity: 'review', action: 'review' });
+  }
+  return issues.sort((a, b) => `${a.severity}:${a.record_type}:${a.record_id}:${a.issue}`.localeCompare(`${b.severity}:${b.record_type}:${b.record_id}:${b.issue}`));
+}
+
 export function buildLaunchReadiness(input: AntiAgingLaunchInput): AntiAgingLaunchReadiness {
   const gates = { referral_only_commerce: !input.checkout_enabled, no_live_booking: !input.booking_enabled, no_image_analysis: !input.image_analysis_enabled,
     grounded_ai_gate: !input.live_ai_enabled, catalog_approved: input.approved_catalog_records > 0, accessibility: input.accessibility_verified,
@@ -157,6 +224,23 @@ export function buildLaunchReadiness(input: AntiAgingLaunchInput): AntiAgingLaun
   return { status, blockers, gates, policy_version: ANTI_AGING_ROADMAP_POLICY_VERSION };
 }
 
+export function buildLaunchGateEvidence(readiness: AntiAgingLaunchReadiness, observedAt = new Date().toISOString()): LaunchGateEvidence[] {
+  return Object.entries(readiness.gates).map(([gate, passed]) => ({
+    gate,
+    passed,
+    observed_at: observedAt,
+    source: ['catalog_approved'].includes(gate) ? 'catalog_quality' : ['referral_only_commerce', 'no_live_booking', 'no_image_analysis', 'grounded_ai_gate'].includes(gate) ? 'operational_policy' : 'configuration',
+  }));
+}
+
 export function providerMatchesCity(provider: ProviderRecord, city: string): boolean {
   return provider.city.trim().toLowerCase() === city.trim().replace(/\s+/g, ' ').toLowerCase();
+}
+
+export function aggregateProviderSearchSlo(events: ProviderSearchTelemetryEvent[], latencyTargetMs = 750, fallbackTarget = 0.5): ProviderSearchSloSummary {
+  const latencies = events.map(item => item.latency_ms).filter(item => Number.isFinite(item) && item >= 0).sort((a, b) => a - b);
+  const empty = events.filter(item => item.result_count === 0).length;
+  const fallbackRate = events.length ? empty / events.length : 0;
+  const p95 = latencies.length ? latencies[Math.floor((latencies.length - 1) * 0.95)] : 0;
+  return { requests: events.length, empty_results: empty, fallback_rate: Number(fallbackRate.toFixed(4)), p95_latency_ms: p95, status: p95 <= latencyTargetMs && fallbackRate <= fallbackTarget ? 'within_target' : 'review_required' };
 }

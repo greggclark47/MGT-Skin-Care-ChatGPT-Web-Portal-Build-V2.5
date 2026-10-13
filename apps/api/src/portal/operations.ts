@@ -1,10 +1,11 @@
 import { createHash, createHmac, randomUUID, timingSafeEqual } from 'node:crypto';
 import {writeFile,rename} from 'node:fs/promises';
 import type { Records, Store } from './store';
+import { advanceProgressReminder, type ProgressReminder } from '@mgt/domain';
 
 type NotificationFailureCode='delivery_rejected'|'delivery_unavailable'|'delivery_payload_rejected';
 type DeletionFailureCode='identity_rejected'|'identity_unavailable';
-type Notification={id:string;actor:string;kind:'replenishment_reminder';status:'queued'|'processing'|'delivered'|'failed'|'read';scheduled_at:string;created_at:string;updated_at:string;attempts:number;payload:{product_id:string;due_at:string};lease_until?:string;claim_id?:string;retry_not_before?:string;retry_delay_seconds?:number;delivered_at?:string;read_at?:string;last_error_code?:NotificationFailureCode};
+type Notification={id:string;actor:string;kind:'replenishment_reminder'|'anti_aging_progress_reminder';status:'queued'|'processing'|'delivered'|'failed'|'read';scheduled_at:string;created_at:string;updated_at:string;attempts:number;payload:{product_id?:string;entry_id?:string;due_at:string;cadence?:string};lease_until?:string;claim_id?:string;retry_not_before?:string;retry_delay_seconds?:number;delivered_at?:string;read_at?:string;last_error_code?:NotificationFailureCode};
 type Reminder={product_id:string;due_at:string;paused?:boolean;notification_id?:string;last_notified_at?:string};
 type WorkerOptions={env?:NodeJS.ProcessEnv;delivery?:NotificationDelivery;identityDeletion?:IdentityDeletion;alertDelivery?:OperationsAlertDelivery};
 export type WorkerResult={run_id:string;created:number;delivered:number;failed:number;removed:number;deletions_completed:number;deletions_blocked:number;backup_status:'healthy'|'stale'|'unverified'};
@@ -295,7 +296,9 @@ export class OperationalWorker{
    ['anti_aging_ai_events',int(this.env.OPERATIONS_AI_LOG_RETENTION_DAYS,30,1,3650),(v:any)=>timestamp(v?.created_at)],
    ['anti_aging_ai_feedback',int(this.env.OPERATIONS_AI_LOG_RETENTION_DAYS,30,1,3650),(v:any)=>timestamp(v?.created_at)],
    ['anti_aging_referral_clicks',int(this.env.OPERATIONS_ANTI_AGING_RETENTION_DAYS,365,30,3650),(v:any)=>timestamp(v?.day)],
+   ['anti_aging_search_metrics',int(this.env.OPERATIONS_ANTI_AGING_RETENTION_DAYS,365,30,3650),(v:any)=>timestamp(v?.day)],
    ['anti_aging_progress',int(this.env.OPERATIONS_ANTI_AGING_RETENTION_DAYS,365,30,3650),(v:any)=>timestamp(v?.created_at)],
+   ['anti_aging_reminders',int(this.env.OPERATIONS_ANTI_AGING_RETENTION_DAYS,365,30,3650),(v:any)=>timestamp(v?.updated_at||v?.created_at)],
    ['anti_aging_appointment_requests',int(this.env.OPERATIONS_ANTI_AGING_RETENTION_DAYS,365,30,3650),(v:any)=>timestamp(v?.updated_at||v?.created_at)],
    ['notifications',int(this.env.OPERATIONS_NOTIFICATION_RETENTION_DAYS,90,1,3650),(v:any)=>timestamp(v?.delivered_at||v?.read_at||v?.updated_at)],
    ['billing_activity',int(this.env.OPERATIONS_BILLING_RETENTION_DAYS,730,30,3650),(v:any)=>timestamp(v?.at)],
@@ -325,6 +328,14 @@ export class OperationalWorker{
     reminders.push({...reminder,notification_id:id,last_notified_at:created_at});
    }
    if(changed)await records.put('reminders',entry.id,reminders);
+  }
+  for(const entry of await records.entries<ProgressReminder>('anti_aging_reminders')){
+   const reminder=entry.value,due=timestamp(reminder?.next_at);
+   if(!reminder||reminder.paused||due===undefined||due>at)continue;
+   const id='aa_notification_'+createHash('sha256').update(`${entry.id}:${reminder.next_at}`).digest('hex').slice(0,40),created_at=iso(at);
+   await records.put('notifications',id,{id,actor:reminder.actor,kind:'anti_aging_progress_reminder',status:'queued',scheduled_at:reminder.next_at,created_at,updated_at:created_at,attempts:0,payload:{entry_id:reminder.entry_id,due_at:reminder.next_at,cadence:reminder.cadence}} satisfies Notification);
+   await records.put('anti_aging_reminders',entry.id,advanceProgressReminder(reminder,at));
+   created++;
   }
   return created;
  }
@@ -406,10 +417,10 @@ export class OperationalWorker{
   for(const item of await records.entries<any>('profile_merge_pending'))if(item.value?.account_id===userId||item.value?.guest_actor===actor)await records.remove('profile_merge_pending',item.id);
   for(const item of await records.entries<any>('guest_invitations'))if(item.value.owner_actor===actor||item.value.guest_actor===actor||item.value.email===account?.email)await records.remove('guest_invitations',item.id);
   await records.remove('guest_memberships',actor);
-  for(const scope of ['profiles','profile_revisions','style_profiles','reminders','saved_retailers','carts','memberships'])await records.remove(scope,actor);
+  for(const scope of ['profiles','profile_revisions','style_profiles','reminders','anti_aging_reminders','saved_retailers','carts','memberships'])await records.remove(scope,actor);
   await records.remove('checkout_requests','premium_'+actor);
   for(const scope of ['subscriptions','billing_attempts'])await records.remove(scope,`${actor}:consumer`);
-  for(const scope of ['sessions','notifications','tickets','ai_routing_log','anti_aging_ai_events','anti_aging_ai_feedback','anti_aging_progress','anti_aging_appointment_requests','ai_budget','ai_budget_reservations','ai_budget_reconciliations','rate','subscription_commands','subscription_pending']){
+  for(const scope of ['sessions','notifications','tickets','ai_routing_log','anti_aging_ai_events','anti_aging_ai_feedback','anti_aging_progress','anti_aging_reminders','anti_aging_appointment_requests','ai_budget','ai_budget_reservations','ai_budget_reconciliations','rate','subscription_commands','subscription_pending']){
    for(const item of await records.entries<any>(scope)){
     const value=item.value;
     const owned=value?.actor===actor||value?.userId===userId||value?.user_id===actor||value?.user_id===userId||this.belongsToUser(item.id,actor,userId)||this.belongsToUser(value?.budget_key,actor,userId);

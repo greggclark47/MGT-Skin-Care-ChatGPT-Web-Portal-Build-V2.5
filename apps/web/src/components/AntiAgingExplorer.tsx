@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import type { IngredientRecord, ProductRecord, ProviderRecord, TreatmentRecord } from '@mgt/domain';
 import { AppFrame, LoadState } from './HubFrames';
+import { AntiAgingProgressPanel } from './AntiAgingProgressPanel';
 
 type Mode = 'ingredients' | 'products' | 'treatments' | 'providers';
 type RecordItem = IngredientRecord | ProductRecord | TreatmentRecord | ProviderRecord;
@@ -72,6 +73,8 @@ export function AntiAgingExplorer() {
       <button className="button primary" type="button" disabled={!goals.length} onClick={() => void previewOnboarding()}>Preview my starting point</button>
       {onboarding && <div className="notice success" role="status"><strong>{onboarding.data.status === 'ready' ? 'Personalization is ready for review.' : 'Browsing stays private by default.'}</strong><p>{onboarding.data.safety_notes[1]} {onboarding.data.safety_notes[2]}</p></div>}
     </section>
+
+    <AntiAgingProgressPanel />
 
     <section aria-labelledby="anti-aging-library">
       <div className="section-heading"><div><span className="eyebrow">REVIEWED DISCOVERY</span><h2 id="anti-aging-library">Browse the library</h2></div><Link className="text-link" href="/learn">Read our approach ↗</Link></div>

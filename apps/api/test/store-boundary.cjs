@@ -9,7 +9,7 @@ test('stored records reject non-finite numeric values',()=>{
 
 test('stored records reject unsupported JSON values instead of dropping them',()=>{
  assert.equal(serializeRecord({kept:true,missing:undefined}),'{"kept":true}');
- for(const value of [undefined,()=>{},Symbol('record'),1n,[undefined]]){
+ for(const value of [undefined,()=>{},Symbol('record'),1n,[undefined],new Date(),{'__proto__':{polluted:true}}]){
   assert.throws(()=>serializeRecord(value),/Stored record is invalid/);
  }
 });
@@ -37,7 +37,7 @@ test('stored records enforce a 1000-entry container boundary',()=>{
 
 test('stored record addresses have bounded canonical scope and id forms',()=>{
  assert.doesNotThrow(()=>validateRecordAddress('profile_revisions','guest:abc-123'));
- for(const args of [['Bad-Scope','id'],['scope',''],['scope',123],['scope','x\n'],['scope','x'.repeat(513)]])assert.throws(()=>validateRecordAddress(...args),/Stored record address is invalid/);
+ for(const args of [['Bad-Scope','id'],['scope',''],['scope',123],['scope','x\n'],['scope',' x'],['scope','x '.repeat(257)]])assert.throws(()=>validateRecordAddress(...args),/Stored record address is invalid/);
 });
 
 test('transaction lock keys use one bounded string contract',()=>{
@@ -106,4 +106,5 @@ test('local store rejects transactions after shutdown begins',async()=>{
 test('local store rejects empty and oversized paths',()=>{
  assert.throws(()=>new LocalStore(''),/Local store path is invalid/);
  assert.throws(()=>new LocalStore('x'.repeat(1025)),/Local store path is invalid/);
+ assert.throws(()=>new LocalStore('safe\0path'),/Local store path is invalid/);
 });

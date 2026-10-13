@@ -16,7 +16,7 @@ import type {AiGateway} from '@mgt/ai-gateway';
 import Stripe from 'stripe';
 import {RETAILERS,SHOP_SEGMENTS,COMMERCE_MODEL} from './retailers';
 import {aiRuntimeReadiness,operationalReadiness,operationalSnapshot} from './operations';
-import {acceptsApiContentEncoding,acceptsApiJsonBody,acceptsApiJsonCharset,acceptsBodyForMethod,apiSecurityHeaders,applyProductionExpressBoundary,applyProductionHttpLimits,applyProductionHttpTimeouts,closeProductionHttpServer,hasNoMethodOverride,hasNoPartialBody,hasNoPathOverride,hasNoRangeRequest,hasNoRequestTrailers,hasNoUnverifiedIntegrity,hasNoUrlFragment,hasUniqueQueryKeys,hasValidQueryEncoding,headerWithinLimit,installClientErrorBoundary,isSupportedHttpMethod,queryComponentsWithinLimit,queryPairCountWithinLimit,queryStringWithinLimit,requestTargetWithinLimit} from './http-runtime';
+import {acceptsApiContentEncoding,acceptsApiJsonBody,acceptsApiJsonCharset,acceptsBodyForMethod,apiSecurityHeaders,applyProductionExpressBoundary,applyProductionHttpLimits,applyProductionHttpTimeouts,closeProductionHttpServer,hasNoMethodOverride,hasNoPartialBody,hasNoPathOverride,hasNoRangeRequest,hasNoRequestTrailers,hasNoUnverifiedIntegrity,hasNoUrlFragment,hasNonEmptyQueryKeys,hasOriginFormRequestTarget,hasUniqueQueryKeys,hasValidQueryEncoding,headerWithinLimit,installClientErrorBoundary,isSupportedHttpMethod,queryComponentsWithinLimit,queryPairCountWithinLimit,queryStringWithinLimit,requestTargetWithinLimit} from './http-runtime';
 import {BILLING_CYCLES,PLAN_DEFINITIONS,priceIdFor} from './plans';
 type StripeClient=Stripe;
 export interface PortalOptions{store:Store;env?:NodeJS.ProcessEnv;stripe?:StripeClient;coach?:SafeCoach;analysisGateway?:AiGateway;verifyOtp?:(email:string,otp:string)=>Promise<{id:string,email:string}>}
@@ -101,6 +101,7 @@ export async function createPortal(options:PortalOptions){
  const app=express();app.disable('x-powered-by');applyProductionExpressBoundary(app,env);
  app.use((req,res,next)=>{(req as HubRequest).requestId=randomUUID();res.set({...apiSecurityHeaders(env),'X-Request-Id':(req as HubRequest).requestId});next();});
  app.use((req,res,next)=>requestTargetWithinLimit(req.originalUrl)?next():res.status(414).json({error:{code:'request_target_too_long',message:'The request target is too long.',request_id:(req as HubRequest).requestId}}));
+ app.use((req,res,next)=>hasOriginFormRequestTarget(req.originalUrl)?next():res.status(400).json({error:{code:'request_target_invalid',message:'The request target form is not supported.',request_id:(req as HubRequest).requestId}}));
  app.use((req,res,next)=>isSupportedHttpMethod(req.method)?next():res.set('Allow','GET, HEAD, POST, PUT, PATCH, DELETE, OPTIONS').status(405).json({error:{code:'method_not_allowed',message:'The HTTP method is not supported.',request_id:(req as HubRequest).requestId}}));
  // Partner onboarding, payouts, and connected-account operations are deliberately
  // unreachable until the post-launch commercial, legal, and support gates are met.
@@ -121,6 +122,7 @@ export async function createPortal(options:PortalOptions){
  app.use(['/api/hub','/api/v1'],(req,res,next)=>queryStringWithinLimit(req.originalUrl)?next():res.status(414).json({error:{code:'query_string_too_long',message:'The query string is too long.',request_id:(req as HubRequest).requestId}}));
  app.use(['/api/hub','/api/v1'],(req,res,next)=>queryPairCountWithinLimit(req.originalUrl)?next():res.status(400).json({error:{code:'too_many_query_parameters',message:'The request has too many query parameters.',request_id:(req as HubRequest).requestId}}));
  app.use(['/api/hub','/api/v1'],(req,res,next)=>hasNoUrlFragment(req.originalUrl)&&queryComponentsWithinLimit(req.originalUrl)?next():res.status(400).json({error:{code:'query_component_too_long',message:'A query parameter is too long.',request_id:(req as HubRequest).requestId}}));
+ app.use(['/api/hub','/api/v1'],(req,res,next)=>hasNonEmptyQueryKeys(req.originalUrl)?next():res.status(400).json({error:{code:'query_key_invalid',message:'Query parameter names must not be empty.',request_id:(req as HubRequest).requestId}}));
  app.use(['/api/hub','/api/v1'],(req,res,next)=>hasValidQueryEncoding(req.originalUrl)?next():res.status(400).json({error:{code:'invalid_query_encoding',message:'The query string encoding is invalid.',request_id:(req as HubRequest).requestId}}));
  app.use(['/api/hub','/api/v1'],(req,res,next)=>hasUniqueQueryKeys(req.originalUrl)?next():res.status(400).json({error:{code:'duplicate_query_parameter',message:'Query parameter names must be unique.',request_id:(req as HubRequest).requestId}}));
  app.use(['/api/hub','/api/v1'],(req,res,next)=>hasNoPathOverride(req.headers['x-original-url'],req.headers['x-rewrite-url'],req.headers['x-forwarded-uri'])?next():res.status(400).json({error:{code:'path_override_rejected',message:'Alternate request-path headers are not supported.',request_id:(req as HubRequest).requestId}}));

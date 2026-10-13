@@ -6,16 +6,20 @@ type ClientErrorSocket={writable:boolean;end:(data:string)=>unknown;destroy:()=>
 type ClientErrorServer={on:(event:'clientError',listener:(error:Error&{code?:string},socket:ClientErrorSocket)=>void)=>unknown};
 
 export function requestTargetWithinLimit(target:string|undefined,maxBytes=4_096):boolean{
- if(typeof target!=='string'||target.length===0)return false;
+ if(typeof target!=='string'||target.length===0||!Number.isSafeInteger(maxBytes)||maxBytes<1||maxBytes>16_384)return false;
  return !/[\u0000-\u001f\u007f]/.test(target)&&Buffer.byteLength(target,'utf8')<=maxBytes;
 }
 
 const SUPPORTED_HTTP_METHODS=new Set(['GET','HEAD','POST','PUT','PATCH','DELETE','OPTIONS']);
 export function isSupportedHttpMethod(method:string|undefined):boolean{
- return typeof method==='string'&&SUPPORTED_HTTP_METHODS.has(method.toUpperCase());
+ return typeof method==='string'&&SUPPORTED_HTTP_METHODS.has(method);
+}
+export function hasNoConflictingBodyFraming(contentLength:string|undefined,transferEncoding:string|undefined):boolean{
+ return !(contentLength!==undefined&&transferEncoding!==undefined);
 }
 
 export function acceptsApiJsonBody(method:string|undefined,contentType:string|undefined,contentLength:string|undefined,transferEncoding:string|undefined):boolean{
+ if(!hasNoConflictingBodyFraming(contentLength,transferEncoding)||!hasValidContentLength(contentLength)||transferEncoding!==undefined&&typeof transferEncoding!=='string')return false;
  const mutation=typeof method==='string'&&['POST','PUT','PATCH'].includes(method.toUpperCase());
  const hasBody=transferEncoding!==undefined||(contentLength!==undefined&&contentLength!=='0');
  if(!mutation||!hasBody)return true;
@@ -23,16 +27,18 @@ export function acceptsApiJsonBody(method:string|undefined,contentType:string|un
 }
 
 export function acceptsApiContentEncoding(contentEncoding:string|undefined):boolean{
- return contentEncoding===undefined||contentEncoding.trim().toLowerCase()==='identity';
+ return contentEncoding===undefined||(typeof contentEncoding==='string'&&contentEncoding.trim().toLowerCase()==='identity');
 }
 
 export function acceptsApiJsonCharset(contentType:string|undefined):boolean{
  if(contentType===undefined)return true;
+ if(typeof contentType!=='string')return false;
  const charsets=contentType.split(';').slice(1).map(value=>value.trim()).filter(value=>/^charset\s*=/i.test(value));
  return charsets.length===0||(charsets.length===1&&/^charset\s*=\s*"?utf-8"?$/i.test(charsets[0]));
 }
 
 export function acceptsBodyForMethod(method:string|undefined,contentLength:string|undefined,transferEncoding:string|undefined):boolean{
+ if(!hasNoConflictingBodyFraming(contentLength,transferEncoding)||!hasValidContentLength(contentLength)||transferEncoding!==undefined&&typeof transferEncoding!=='string')return false;
  const readOnly=typeof method==='string'&&['GET','HEAD'].includes(method.toUpperCase());
  const hasBody=transferEncoding!==undefined||(contentLength!==undefined&&contentLength!=='0');
  return !readOnly||!hasBody;
@@ -53,18 +59,26 @@ export const hasNoRangeRequest=(range:string|undefined):boolean=>range===undefin
 export const hasNoUnverifiedIntegrity=(...headers:(string|string[]|undefined)[]):boolean=>headers.every(value=>value===undefined);
 export const hasNoRequestTrailers=(trailer:string|undefined):boolean=>trailer===undefined;
 export function headerWithinLimit(value:string|string[]|undefined,maxBytes:number):boolean{
- return value===undefined||(typeof value==='string'&&Buffer.byteLength(value,'utf8')<=maxBytes);
+ return Number.isSafeInteger(maxBytes)&&maxBytes>=1&&maxBytes<=32_768&&(value===undefined||(typeof value==='string'&&Buffer.byteLength(value,'utf8')<=maxBytes));
 }
 const rawQuery=(target:string):string=>{const at=target.indexOf('?');return at<0?'':target.slice(at+1);};
 export function queryStringWithinLimit(target:string|undefined,maxBytes=2048):boolean{
- return typeof target==='string'&&Buffer.byteLength(rawQuery(target),'utf8')<=maxBytes;
+ return typeof target==='string'&&Number.isSafeInteger(maxBytes)&&maxBytes>=1&&maxBytes<=16_384&&Buffer.byteLength(rawQuery(target),'utf8')<=maxBytes;
 }
 export function queryPairCountWithinLimit(target:string|undefined,maxPairs=50):boolean{
- if(typeof target!=='string')return false;const query=rawQuery(target);return query===''||query.split('&').length<=maxPairs;
+ if(typeof target!=='string'||!Number.isSafeInteger(maxPairs)||maxPairs<1||maxPairs>200)return false;const query=rawQuery(target);return query===''||query.split('&').length<=maxPairs;
 }
 export function queryComponentsWithinLimit(target:string|undefined,maxKeyBytes=128,maxValueBytes=1024):boolean{
- if(typeof target!=='string')return false;const query=rawQuery(target);if(query==='')return true;
+ if(typeof target!=='string'||!Number.isSafeInteger(maxKeyBytes)||maxKeyBytes<1||maxKeyBytes>4096||!Number.isSafeInteger(maxValueBytes)||maxValueBytes<1||maxValueBytes>8192)return false;const query=rawQuery(target);if(query==='')return true;
  return query.split('&').every(pair=>{const at=pair.indexOf('=');const key=at<0?pair:pair.slice(0,at),value=at<0?'':pair.slice(at+1);return Buffer.byteLength(key,'utf8')<=maxKeyBytes&&Buffer.byteLength(value,'utf8')<=maxValueBytes;});
+}
+export function hasValidContentLength(value:string|undefined):boolean{
+ return value===undefined||(typeof value==='string'&&/^(?:0|[1-9][0-9]{0,7})$/.test(value)&&Number(value)<=10_485_760);
+}
+export function hasNonEmptyQueryKeys(target:string|undefined):boolean{
+ if(typeof target!=='string')return false;const query=rawQuery(target);if(query==='')return true;
+ for(const pair of query.split('&')){const rawKey=pair.split('=',1)[0];try{if(decodeURIComponent(rawKey.replace(/\+/g,' ')).length===0)return false;}catch{return false;}}
+ return true;
 }
 export function hasUniqueQueryKeys(target:string|undefined):boolean{
  if(typeof target!=='string')return false;const query=rawQuery(target);if(query==='')return true;const seen=new Set<string>();
@@ -75,6 +89,7 @@ export function hasValidQueryEncoding(target:string|undefined):boolean{
  try{return !/[\u0000-\u001f\u007f]/.test(decodeURIComponent(query.replace(/\+/g,'%20')));}catch{return false;}
 }
 export function hasNoUrlFragment(target:string|undefined):boolean{return typeof target==='string'&&!target.includes('#');}
+export function hasOriginFormRequestTarget(target:string|undefined):boolean{return typeof target==='string'&&target.startsWith('/')&&!target.startsWith('//')&&!target.includes('\\');}
 
 export function apiSecurityHeaders(env:NodeJS.ProcessEnv):Record<string,string>{
  const headers:Record<string,string>={
@@ -125,8 +140,8 @@ export function closeProductionHttpServer(server:ClosableServer,closeStore:()=>P
  if(!Number.isSafeInteger(deadlineMs)||deadlineMs<1||deadlineMs>600_000)throw new Error('HTTP shutdown deadline is invalid.');
  const existing=shutdowns.get(server as object);if(existing)return existing;
  const shutdown=(async()=>{
-  server.closeIdleConnections?.();
   let timer:NodeJS.Timeout|undefined,outcome:'graceful'|'forced'|undefined,failure:unknown;
+  try{server.closeIdleConnections?.();}catch(error){failure=error;}
   try{outcome=await Promise.race([
    new Promise<'graceful'>((resolve,reject)=>server.close(error=>error?reject(error):resolve('graceful'))),
    new Promise<'forced'>(resolve=>{timer=setTimeout(()=>{server.closeAllConnections?.();resolve('forced');},deadlineMs);})

@@ -13,6 +13,7 @@ assert.equal(portalPoolConfig(baseline.toString()).application_name,'mgt_skin_ca
 assert.equal(portalPoolConfig(baseline.toString()).maxLifetimeSeconds,300);
 assert.equal(portalPoolConfig(baseline.toString()).keepAlive,true);
 assert.equal(portalPoolConfig(baseline.toString()).keepAliveInitialDelayMillis,10000);
+assert.throws(() => portalPoolConfig('x'.repeat(4097)), /Database URL is invalid/);
 let poolErrorListener;
 const poolLogs=[];
 installDatabasePoolErrorBoundary({on:(event,listener)=>{assert.equal(event,'error');poolErrorListener=listener;}},record=>poolLogs.push(record));
@@ -36,6 +37,7 @@ for (const change of unsafe) {
   assert.throws(() => new PgStore(changed.toString(), production), /verified TLS/);
 }
 assert.doesNotThrow(() => validateProductionDatabaseUrl(baseline.toString(), { NODE_ENV: 'test' }));
+assert.throws(() => validateProductionDatabaseUrl(123, production), /verified TLS/);
 assert.equal(startupMigrations({NODE_ENV:'production',PORTAL_AUTO_MIGRATE:'false'}),false);
 for (const value of [undefined,'','true','False']) assert.throws(
   ()=>startupMigrations({NODE_ENV:'production',PORTAL_AUTO_MIGRATE:value}),

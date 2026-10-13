@@ -1,13 +1,15 @@
 const assert=require('node:assert/strict');
 const {test}=require('node:test');
 const {createServer}=require('node:http');
-const {acceptsApiContentEncoding,acceptsApiJsonBody,acceptsApiJsonCharset,acceptsBodyForMethod,apiSecurityHeaders,applyProductionHttpTimeouts,applyProductionHttpLimits,applyProductionExpressBoundary,closeProductionHttpServer,hasNoMethodOverride,hasNoPartialBody,hasNoPathOverride,hasNoRangeRequest,hasNoRequestTrailers,hasNoUnverifiedIntegrity,hasNoUrlFragment,hasUniqueQueryKeys,hasValidQueryEncoding,headerWithinLimit,installClientErrorBoundary,isSupportedHttpMethod,queryComponentsWithinLimit,queryPairCountWithinLimit,queryStringWithinLimit,requestTargetWithinLimit}=require('../dist/portal/http-runtime');
+const {acceptsApiContentEncoding,acceptsApiJsonBody,acceptsApiJsonCharset,acceptsBodyForMethod,apiSecurityHeaders,applyProductionHttpTimeouts,applyProductionHttpLimits,applyProductionExpressBoundary,closeProductionHttpServer,hasNoConflictingBodyFraming,hasNoMethodOverride,hasNoPartialBody,hasNoPathOverride,hasNoRangeRequest,hasNoRequestTrailers,hasNoUnverifiedIntegrity,hasNoUrlFragment,hasNonEmptyQueryKeys,hasOriginFormRequestTarget,hasUniqueQueryKeys,hasValidContentLength,hasValidQueryEncoding,headerWithinLimit,installClientErrorBoundary,isSupportedHttpMethod,queryComponentsWithinLimit,queryPairCountWithinLimit,queryStringWithinLimit,requestTargetWithinLimit}=require('../dist/portal/http-runtime');
 
 test('request targets are bounded by UTF-8 byte length',()=>{
  assert.equal(requestTargetWithinLimit('/api/hub/catalog?query=clean'),true);
  assert.equal(requestTargetWithinLimit('/'+ 'a'.repeat(4096)),false);
  assert.equal(requestTargetWithinLimit('/'+ 'é'.repeat(2048)),false);
  assert.equal(requestTargetWithinLimit('/api\r\nHost:evil'),false);
+ assert.equal(requestTargetWithinLimit('/ok',0),false);
+ assert.equal(requestTargetWithinLimit('/ok',16385),false);
  assert.equal(requestTargetWithinLimit(undefined),false);
 });
 
@@ -50,11 +52,15 @@ test('API mutation bodies require an explicit JSON media type',()=>{
  assert.equal(acceptsApiJsonBody('POST',undefined,undefined,'chunked'),false);
  assert.equal(acceptsApiJsonBody('POST',undefined,'0',undefined),true);
  assert.equal(acceptsApiJsonBody('GET','text/plain','2',undefined),true);
+ assert.equal(acceptsApiJsonBody('POST','application/json','2','chunked'),false);
+ assert.equal(acceptsApiJsonBody('POST','application/json','-1',undefined),false);
+ assert.equal(acceptsApiJsonBody('POST','application/json','10485761',undefined),false);
 });
 
 test('API request bodies cannot bypass size limits through compression',()=>{
  assert.equal(acceptsApiContentEncoding(undefined),true);
  assert.equal(acceptsApiContentEncoding('identity'),true);
+ assert.equal(acceptsApiContentEncoding(['identity']),false);
  for(const encoding of ['gzip','br','deflate','gzip, br'])assert.equal(acceptsApiContentEncoding(encoding),false);
 });
 
@@ -65,6 +71,7 @@ test('API JSON character decoding is unambiguously UTF-8',()=>{
  assert.equal(acceptsApiJsonCharset('application/json; charset="utf-8"'),true);
  assert.equal(acceptsApiJsonCharset('application/json; charset=iso-8859-1'),false);
  assert.equal(acceptsApiJsonCharset('application/json; charset=utf-8; charset=utf-8'),false);
+ assert.equal(acceptsApiJsonCharset(['application/json']),false);
 });
 
 test('read-only API methods reject request bodies',()=>{
@@ -73,6 +80,7 @@ test('read-only API methods reject request bodies',()=>{
  assert.equal(acceptsBodyForMethod('GET','2',undefined),false);
  assert.equal(acceptsBodyForMethod('HEAD',undefined,'chunked'),false);
  assert.equal(acceptsBodyForMethod('POST','2',undefined),true);
+ assert.equal(acceptsBodyForMethod('POST','01',undefined),false);
 });
 
 test('method override metadata cannot change route semantics',()=>{
@@ -97,12 +105,15 @@ test('API range requests fail closed',()=>{assert.equal(hasNoRangeRequest(undefi
 test('unverified request-integrity metadata fails closed',()=>{assert.equal(hasNoUnverifiedIntegrity(undefined,undefined,undefined),true);assert.equal(hasNoUnverifiedIntegrity('digest',undefined,undefined),false);assert.equal(hasNoUnverifiedIntegrity(undefined,['sha-256=x'],undefined),false);});
 test('request trailers cannot mutate metadata after parsing',()=>{assert.equal(hasNoRequestTrailers(undefined),true);assert.equal(hasNoRequestTrailers('Digest'),false);assert.equal(hasNoRequestTrailers(''),false);});
 test('security-relevant headers use byte limits and reject repeated forms',()=>{assert.equal(headerWithinLimit(undefined,4096),true);assert.equal(headerWithinLimit('a'.repeat(4096),4096),true);assert.equal(headerWithinLimit('é'.repeat(2049),4096),false);assert.equal(headerWithinLimit(['a','b'],4096),false);});
+test('header limits reject unsafe caller-provided bounds',()=>{assert.equal(headerWithinLimit('ok',0),false);assert.equal(headerWithinLimit('ok',32769),false);});
 test('user-agent metadata fits its 512-byte operational bound',()=>{assert.equal(headerWithinLimit('browser'.repeat(70),512),true);assert.equal(headerWithinLimit('x'.repeat(513),512),false);});
 test('referer metadata fits its 2048-byte operational bound',()=>{assert.equal(headerWithinLimit('https://portal.example/path',2048),true);assert.equal(headerWithinLimit('x'.repeat(2049),2048),false);});
 test('query strings fit a separate 2048-byte bound',()=>{assert.equal(queryStringWithinLimit('/api/hub/catalog?q=clean'),true);assert.equal(queryStringWithinLimit('/api?'+ 'a'.repeat(2048)),true);assert.equal(queryStringWithinLimit('/api?'+ 'é'.repeat(1025)),false);});
+test('query limits reject unsafe caller-provided bounds',()=>{assert.equal(queryStringWithinLimit('/api?ok',0),false);assert.equal(queryStringWithinLimit('/api?ok',16385),false);assert.equal(queryPairCountWithinLimit('/api',0),false);assert.equal(queryPairCountWithinLimit('/api',201),false);assert.equal(queryComponentsWithinLimit('/api?ok',0,1024),false);assert.equal(queryComponentsWithinLimit('/api?ok',128,8193),false);});
 test('query strings contain at most fifty pairs',()=>{assert.equal(queryPairCountWithinLimit('/api'),true);assert.equal(queryPairCountWithinLimit('/api?'+Array.from({length:50},(_,i)=>`k${i}=v`).join('&')),true);assert.equal(queryPairCountWithinLimit('/api?'+Array.from({length:51},(_,i)=>`k${i}=v`).join('&')),false);assert.equal(queryPairCountWithinLimit('/api?'+'&'.repeat(50)),false);});
 test('query keys and values have independent byte bounds',()=>{assert.equal(queryComponentsWithinLimit('/api?key=value'),true);assert.equal(queryComponentsWithinLimit('/api?'+ 'k'.repeat(129)+'=v'),false);assert.equal(queryComponentsWithinLimit('/api?k='+ 'v'.repeat(1025)),false);assert.equal(queryComponentsWithinLimit('/api?k='+ 'é'.repeat(513)),false);});
 test('query keys are unique after canonical decoding',()=>{assert.equal(hasUniqueQueryKeys('/api?a=1&b=2'),true);assert.equal(hasUniqueQueryKeys('/api?a=1&a=2'),false);assert.equal(hasUniqueQueryKeys('/api?a+b=1&a%20b=2'),false);assert.equal(hasUniqueQueryKeys('/api?%61=1&a=2'),false);assert.equal(hasUniqueQueryKeys('/api?%ZZ=1'),false);});
+test('query keys are present and content lengths are canonical',()=>{assert.equal(hasNonEmptyQueryKeys('/api?a=1'),true);assert.equal(hasNonEmptyQueryKeys('/api?=1'),false);assert.equal(hasNonEmptyQueryKeys('/api?%ZZ=1'),false);assert.equal(hasValidContentLength(undefined),true);assert.equal(hasValidContentLength('0'),true);assert.equal(hasValidContentLength('01'),false);assert.equal(hasValidContentLength('10485761'),false);});
 test('URL fragments are rejected at the API boundary',()=>{assert.equal(hasNoUrlFragment('/api?q=skin'),true);assert.equal(hasNoUrlFragment('/api?q=skin#private'),false);assert.equal(hasNoUrlFragment(undefined),false);});
 test('query encoding is valid UTF-8 without decoded controls',()=>{assert.equal(hasValidQueryEncoding('/api?q=skin%20care'),true);assert.equal(hasValidQueryEncoding('/api?q=%E2%9C%93'),true);assert.equal(hasValidQueryEncoding('/api?q=%ZZ'),false);assert.equal(hasValidQueryEncoding('/api?q=%E0%A4%A'),false);assert.equal(hasValidQueryEncoding('/api?q=%00'),false);assert.equal(hasValidQueryEncoding('/api?q=%0d%0a'),false);});
 
@@ -110,7 +121,9 @@ test('only the bounded REST method set reaches application routes',()=>{
  for(const method of ['GET','HEAD','POST','PUT','PATCH','DELETE','OPTIONS'])assert.equal(isSupportedHttpMethod(method),true);
  for(const method of ['TRACE','CONNECT','PROPFIND',''])assert.equal(isSupportedHttpMethod(method),false);
  assert.equal(isSupportedHttpMethod(undefined),false);
+ assert.equal(isSupportedHttpMethod('get'),false);
 });
+test('request framing and target form are unambiguous',()=>{assert.equal(hasNoConflictingBodyFraming(undefined,'chunked'),true);assert.equal(hasNoConflictingBodyFraming('2','chunked'),false);assert.equal(hasOriginFormRequestTarget('/api/hub/session'),true);assert.equal(hasOriginFormRequestTarget('http://evil.example/api'),false);assert.equal(hasOriginFormRequestTarget('//evil.example'),false);assert.equal(hasOriginFormRequestTarget('/api\\hub'),false);});
 
 test('production HTTP server uses bounded request, header, and keep-alive timeouts',()=>{
  const server=createServer();
@@ -175,4 +188,9 @@ test('production shutdown closes storage when the server close reports an error'
 test('production shutdown rejects unsafe deadlines before touching the server',()=>{
  const server={close:()=>{throw new Error('must not run')}};
  for(const value of [0,-1,600001,1.5,Infinity])assert.throws(()=>closeProductionHttpServer(server,async()=>{},value),/HTTP shutdown deadline is invalid/);
+});
+test('production shutdown contains idle-connection cleanup failures',async()=>{
+ const idleError=new Error('idle cleanup failure'),calls=[],server={closeIdleConnections:()=>{calls.push('idle');throw idleError;},close:callback=>{calls.push('close');callback();},closeAllConnections:()=>calls.push('force')};
+ await assert.rejects(closeProductionHttpServer(server,async()=>{calls.push('store');},20),error=>error===idleError);
+ assert.deepEqual(calls,['idle','close','store']);
 });

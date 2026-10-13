@@ -12,6 +12,7 @@ const clock = () => {
 };
 
 (async () => {
+ assert.throws(() => startWorkerLoop(async () => {}, 86400001, () => {}, clock()), /within one day/);
   const scheduler = clock();
   const releases = [];
   let started = 0;
@@ -58,5 +59,13 @@ const clock = () => {
   assert.equal(failureClock.pending.length, 1, 'a failed sweep can retry after the interval');
   await stopFailureLoop();
   assert.equal(failureClock.pending.length, 0);
+  const scheduleFailures=[];
+  const scheduleFailLoop=startWorkerLoop(async () => {}, 1000, code => scheduleFailures.push(code), {schedule(){throw new Error('scheduler failure');},cancel(){}});
+  await settled();
+  assert.deepEqual(scheduleFailures,['worker_run_failed']);
+  await scheduleFailLoop();
+  const cancelFailLoop=startWorkerLoop(async () => {}, 1000, () => assert.fail('Cancellation failure must be contained'), {schedule(){return {};},cancel(){throw new Error('cancel failure');}});
+  await settled();
+  await cancelFailLoop();
   console.log('Worker scheduling, shutdown, and bounded failure checks passed.');
 })().catch(error => { console.error(error); process.exitCode = 1; });

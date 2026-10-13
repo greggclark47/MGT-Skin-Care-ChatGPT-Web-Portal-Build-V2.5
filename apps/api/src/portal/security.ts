@@ -9,10 +9,17 @@ export type HubRequest=Request & {sid:string;actor:string;csrf:string;account?:{
 export type Session={id:string;actor:string;csrf:string;expires:number;userId?:string};
 export const wrap=(fn:(req:HubRequest,res:Response,next:NextFunction)=>Promise<any>)=>(req:Request,res:Response,next:NextFunction)=>Promise.resolve(fn(req as HubRequest,res,next)).catch(next);
 const same=(a:string,b:string)=>{const x=Buffer.from(a),y=Buffer.from(b);return x.length===y.length&&timingSafeEqual(x,y);};
+export function sessionCookieValue(header:string|string[]|undefined,name:string):string|undefined{
+ if(typeof header!=='string'||typeof name!=='string'||!/^[A-Za-z0-9_-]{1,32}$/.test(name))return undefined;
+ const matches=header.split(';').map(value=>value.trim()).filter(value=>value.startsWith(name+'='));
+ if(matches.length!==1)return undefined;
+ const value=matches[0].slice(name.length+1);
+ return /^[a-f0-9]{64}$/.test(value)?value:undefined;
+}
 export function sessionMiddleware(store:Store,origin:string,production:boolean){
  const cookie=production?'__Host-mgt':'mgt';
  return wrap(async(req,res,next)=>{
-  const raw=req.headers.cookie?.split(';').map(s=>s.trim()).find(s=>s.startsWith(cookie+'='))?.slice(cookie.length+1);
+  const raw=sessionCookieValue(req.headers.cookie,cookie);
   const session=await store.tx(async db=>{
    const sessionId=raw&&/^[a-f0-9]{64}$/.test(raw)?hash(raw):undefined;
    if(sessionId)await db.lock('session:'+sessionId);
@@ -34,10 +41,11 @@ export function sessionMiddleware(store:Store,origin:string,production:boolean){
  });
 }
 export async function rate(db:Records,key:string,limit:number,windowMs:number){
+ if(typeof key!=='string'||key.length===0||Buffer.byteLength(key,'utf8')>200||!Number.isSafeInteger(limit)||limit<1||limit>1_000_000||!Number.isSafeInteger(windowMs)||windowMs<1||windowMs>7*86400000)throw new Error('Rate policy is invalid.');
  await db.lock('rate:'+key);
  const now=Date.now();let r=await db.get('rate',key);if(!r||r.reset<=now)r={id:key,count:0,reset:now+windowMs};r.count++;await db.put('rate',key,r);
  check(r.count<=limit,429,'rate_limited','Too many requests. Please wait and try again.');
 }
 export function account(req:HubRequest){check(req.account,401,'sign_in_required','Please sign in to continue.');return req.account;}
 export function role(req:HubRequest,allowed:string[]){const a=account(req);check(a.roles.some(r=>allowed.includes(r)),403,'forbidden','Your account does not have access to this action.');return a;}
-export function text(v:unknown,max=2000){check(typeof v==='string'&&v.trim().length>0&&v.length<=max,400,'invalid_input','Please enter a valid value.');return v.trim();}
+export function text(v:unknown,max=2000){check(Number.isSafeInteger(max)&&max>=1&&max<=1_000_000&&typeof v==='string'&&v.trim().length>0&&Buffer.byteLength(v,'utf8')<=max,400,'invalid_input','Please enter a valid value.');return (v as string).trim();}

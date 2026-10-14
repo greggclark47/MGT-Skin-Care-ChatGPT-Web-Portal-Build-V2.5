@@ -265,6 +265,30 @@ export interface AntiAgingReviewPlan {
   note: string;
 }
 
+export interface AntiAgingReviewPlanSummary {
+  total: number;
+  blockers: number;
+  review: number;
+  highest_priority: AntiAgingReviewPriority;
+  requires_attention: boolean;
+  by_action: Record<AntiAgingReviewAction, number>;
+  by_owner_role: Record<CatalogModerationQueueItem['owner_role'] | 'operations', number>;
+  note: string;
+}
+
+export interface AntiAgingReviewSession {
+  session_id: string;
+  generated_at: string;
+  items: AntiAgingReviewPlanItem[];
+  total: number;
+  limit: number;
+  offset: number;
+  has_more: boolean;
+  first_action: AntiAgingReviewPlanItem['action'] | null;
+  authorization: 'not_authorized';
+  note: string;
+}
+
 export interface AntiAgingOperationsDigestInput {
   moderation: CatalogModerationSummary;
   queue: CatalogModerationQueueItem[];
@@ -541,6 +565,22 @@ export function buildAntiAgingReviewPlan(input: {
     authorization: 'not_authorized',
     note: 'Read-only review guidance. Items do not approve, quarantine, publish, book care, enable commerce, or share personal data.',
   };
+}
+
+export function summarizeAntiAgingReviewPlan(plan: AntiAgingReviewPlan): AntiAgingReviewPlanSummary {
+  const by_action = { quarantine_catalog: 0, review_catalog: 0, refresh_evidence: 0, review_search_slo: 0, review_readiness: 0, no_action: 0 } as Record<AntiAgingReviewAction, number>;
+  const by_owner_role = { catalog_editor: 0, sme: 0, compliance: 0, operations: 0 } as Record<CatalogModerationQueueItem['owner_role'] | 'operations', number>;
+  for (const item of plan.items) { by_action[item.action]++; by_owner_role[item.owner_role]++; }
+  const highest_priority = plan.blockers ? 'blocker' : plan.review ? 'review' : 'info';
+  return { total: plan.total, blockers: plan.blockers, review: plan.review, highest_priority, requires_attention: highest_priority !== 'info', by_action, by_owner_role, note: 'Summary is descriptive only; it does not authorize or execute any review action.' };
+}
+
+export function paginateAntiAgingReviewPlan(plan: AntiAgingReviewPlan, limit = 10, offset = 0): AntiAgingReviewSession {
+  const safeLimit = Number.isInteger(limit) ? Math.max(1, Math.min(25, limit)) : 10;
+  const safeOffset = Number.isInteger(offset) ? Math.max(0, Math.min(10000, offset)) : 0;
+  const items = plan.items.slice(safeOffset, safeOffset + safeLimit);
+  const planKey = plan.items[0]?.key || 'no-action';
+  return { session_id: `anti-aging-review:${planKey}`, generated_at: plan.generated_at, items, total: plan.total, limit: safeLimit, offset: safeOffset, has_more: safeOffset + safeLimit < plan.total, first_action: items[0]?.action || null, authorization: 'not_authorized', note: 'Bounded read-only review session. It does not approve, quarantine, publish, book care, enable commerce, or share personal data.' };
 }
 
 export function buildAntiAgingOperationsDigest(input: AntiAgingOperationsDigestInput, generatedAt = new Date().toISOString()): AntiAgingOperationsDigest {

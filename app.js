@@ -253,8 +253,8 @@ const demoFlows = {
   "Moderation & evidence": {
     kicker: "ANTI-AGING · EVIDENCE VIEW",
     title: "Keep control visible",
-    step: "v3.310 · Reviewed locally",
-    body: `<div class="flow-result"><span>CONTROL CENTER</span><h3>Evidence without overclaiming</h3><p>The personal surface keeps the current-actor boundary visible. The operator surface can page through bounded moderation queues and follow a deterministic review plan across catalog blockers, freshness, search SLOs, and readiness gates without granting launch authorization.</p><div class="flow-meta"><span>REVIEW PLAN</span><span>CURRENT ACTOR</span><span>NO LIVE CLAIMS</span></div></div>`
+    step: "v3.510 · Reviewed locally",
+    body: `<div class="flow-result"><span>CONTROL CENTER</span><h3>Evidence without overclaiming</h3><p>The personal surface keeps the current-actor boundary visible. The operator surface can page through bounded moderation queues and bounded review sessions with stable action summaries across catalog blockers, freshness, search SLOs, and readiness gates without granting launch authorization.</p><div class="flow-meta"><span>REVIEW SESSION</span><span>CURRENT ACTOR</span><span>NO LIVE CLAIMS</span></div></div>`
   },
   "Data export": {
     kicker: "ACCOUNT DATA · SAMPLE FLOW",

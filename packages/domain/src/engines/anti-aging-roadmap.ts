@@ -301,7 +301,7 @@ export interface AntiAgingDecisionEvidenceReference {
 
 export interface AntiAgingDecisionPacket {
   packet_id: string;
-  packet_version: 'anti-aging-decision-packet-3';
+  packet_version: 'anti-aging-decision-packet-4';
   generated_at: string;
   plan_generated_at: string;
   session_id: string;
@@ -319,6 +319,7 @@ export interface AntiAgingDecisionPacket {
     complete_plan: boolean;
   };
   fingerprint_algorithm: 'fnv1a32-utf16';
+  fingerprint_scope: AntiAgingDecisionPacketFingerprintField[];
   review_plan_fingerprint: string;
   review_session_fingerprint: string;
   content_fingerprint: string;
@@ -328,11 +329,21 @@ export interface AntiAgingDecisionPacket {
   note: string;
 }
 
+export const ANTI_AGING_DECISION_PACKET_FINGERPRINT_SCOPE = [
+  'packet_version', 'packet_id', 'plan_generated_at', 'session_id', 'status',
+  'publication_authorized', 'selected_decision', 'decision_options', 'evidence_refs',
+  'scope', 'fingerprint_algorithm', 'fingerprint_scope', 'review_plan_fingerprint',
+  'review_session_fingerprint', 'summary', 'accountability', 'authorization', 'note',
+] as const;
+
+export type AntiAgingDecisionPacketFingerprintField = typeof ANTI_AGING_DECISION_PACKET_FINGERPRINT_SCOPE[number];
+
 export interface AntiAgingDecisionPacketIntegrity {
   valid: boolean;
   checks: {
     packet_version: boolean;
     packet_identity: boolean;
+    packet_generated_at: boolean;
     review_session_binding: boolean;
     review_state: boolean;
     scope: boolean;
@@ -340,6 +351,8 @@ export interface AntiAgingDecisionPacketIntegrity {
     summary: boolean;
     review_plan_fingerprint: boolean;
     review_session_fingerprint: boolean;
+    fingerprint_scope: boolean;
+    governance_note: boolean;
     content_fingerprint: boolean;
   };
   errors: string[];
@@ -662,6 +675,43 @@ function sameReviewContent(left: unknown, right: unknown): boolean {
   return JSON.stringify(left) === JSON.stringify(right);
 }
 
+function isIsoUtcTimestamp(value: unknown): value is string {
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(value)) return false;
+  const parsed = new Date(value);
+  return !Number.isNaN(parsed.getTime()) && parsed.toISOString() === value;
+}
+
+function decisionPacketContent(packet: Omit<AntiAgingDecisionPacket, 'generated_at' | 'content_fingerprint'>) {
+  return {
+    packet_version: packet.packet_version,
+    packet_id: packet.packet_id,
+    plan_generated_at: packet.plan_generated_at,
+    session_id: packet.session_id,
+    status: packet.status,
+    publication_authorized: packet.publication_authorized,
+    selected_decision: packet.selected_decision,
+    decision_options: packet.decision_options,
+    evidence_refs: packet.evidence_refs,
+    scope: packet.scope,
+    fingerprint_algorithm: packet.fingerprint_algorithm,
+    fingerprint_scope: packet.fingerprint_scope,
+    review_plan_fingerprint: packet.review_plan_fingerprint,
+    review_session_fingerprint: packet.review_session_fingerprint,
+    summary: packet.summary,
+    accountability: packet.accountability,
+    authorization: packet.authorization,
+    note: packet.note,
+  };
+}
+
+function candidateDecisionPacketFingerprint(packet: Partial<AntiAgingDecisionPacket>): string | null {
+  try {
+    return antiAgingPacketFingerprint(JSON.stringify(decisionPacketContent(packet as Omit<AntiAgingDecisionPacket, 'generated_at' | 'content_fingerprint'>)));
+  } catch {
+    return null;
+  }
+}
+
 export function antiAgingReviewPlanFingerprint(plan: AntiAgingReviewPlan): string {
   return antiAgingPacketFingerprint(JSON.stringify(reviewPlanContent(plan)));
 }
@@ -679,21 +729,26 @@ export function buildAntiAgingDecisionPacket(plan: AntiAgingReviewPlan, summary:
   if (!reviewSessionMatchesPlan(plan, session)) throw new Error('anti_aging_review_session_mismatch');
   const category = (action: AntiAgingReviewAction): AntiAgingDecisionEvidenceReference['category'] => action === 'quarantine_catalog' || action === 'review_catalog' ? 'catalog' : action === 'refresh_evidence' ? 'evidence' : action === 'review_search_slo' ? 'search' : action === 'review_readiness' ? 'readiness' : 'operations';
   const evidence_refs = session.items.map(item => ({ ref_id: `${session.session_id}:${item.key}`, category: category(item.action), subject: item.subject, action: item.action, priority: item.priority }));
-  const packet_version = 'anti-aging-decision-packet-3' as const;
+  const packet_version = 'anti-aging-decision-packet-4' as const;
   const decision_options: AntiAgingDecisionOption[] = ['hold', 'defer', 'request_more_evidence'];
   const scope = { plan_total: plan.total, session_total: session.items.length, offset: session.offset, limit: session.limit, has_more: session.has_more, complete_plan: session.offset === 0 && !session.has_more && session.items.length === plan.total };
   const review_plan_fingerprint = antiAgingReviewPlanFingerprint(plan);
   const review_session_fingerprint = antiAgingReviewSessionFingerprint(session);
-  const content_fingerprint = antiAgingPacketFingerprint(JSON.stringify({ packet_version, plan_generated_at: plan.generated_at, session_id: session.session_id, decision_options, evidence_refs, scope, review_plan_fingerprint, review_session_fingerprint, summary }));
-  return { packet_id: `anti-aging-decision:${session.session_id}`, packet_version, generated_at: generatedAt, plan_generated_at: plan.generated_at, session_id: session.session_id, status: 'pending_human_review', publication_authorized: false, selected_decision: null, decision_options, evidence_refs, scope, fingerprint_algorithm: 'fnv1a32-utf16', review_plan_fingerprint, review_session_fingerprint, content_fingerprint, summary, accountability: 'human_owner_required', authorization: 'not_authorized', note: 'Decision packet is a page-scoped auditable handoff for human review. Its comparison fingerprints bind the plan and page for comparison only; they are not cryptographic signatures or authorization. The packet cannot approve launch, publish catalog records, book care, enable checkout, or share personal data.' };
+  const fingerprint_scope = [...ANTI_AGING_DECISION_PACKET_FINGERPRINT_SCOPE];
+  const note = 'Decision packet is a page-scoped auditable handoff for human review. Its comparison fingerprints bind the plan, page, and stated governance boundary for comparison only; they are not cryptographic signatures or authorization. The packet cannot approve launch, publish catalog records, book care, enable checkout, or share personal data.';
+  const packet = { packet_id: `anti-aging-decision:${session.session_id}`, packet_version, plan_generated_at: plan.generated_at, session_id: session.session_id, status: 'pending_human_review' as const, publication_authorized: false as const, selected_decision: null, decision_options, evidence_refs, scope, fingerprint_algorithm: 'fnv1a32-utf16' as const, fingerprint_scope, review_plan_fingerprint, review_session_fingerprint, summary, accountability: 'human_owner_required' as const, authorization: 'not_authorized' as const, note };
+  const content_fingerprint = antiAgingPacketFingerprint(JSON.stringify(decisionPacketContent(packet)));
+  return { ...packet, generated_at: generatedAt, content_fingerprint };
 }
 
-export function validateAntiAgingDecisionPacket(packet: AntiAgingDecisionPacket, plan: AntiAgingReviewPlan, summary: AntiAgingReviewPlanSummary, session: AntiAgingReviewSession): AntiAgingDecisionPacketIntegrity {
+export function validateAntiAgingDecisionPacket(packet: unknown, plan: AntiAgingReviewPlan, summary: AntiAgingReviewPlanSummary, session: AntiAgingReviewSession): AntiAgingDecisionPacketIntegrity {
   const candidate = packet as Partial<AntiAgingDecisionPacket>;
   const expected = buildAntiAgingDecisionPacket(plan, summary, session, typeof candidate.generated_at === 'string' ? candidate.generated_at : new Date(0).toISOString());
+  const candidate_content_fingerprint = candidateDecisionPacketFingerprint(candidate);
   const checks = {
     packet_version: candidate.packet_version === expected.packet_version,
     packet_identity: candidate.packet_id === expected.packet_id && candidate.session_id === expected.session_id && candidate.plan_generated_at === expected.plan_generated_at,
+    packet_generated_at: isIsoUtcTimestamp(candidate.generated_at) && Date.parse(candidate.generated_at) >= Date.parse(expected.plan_generated_at),
     review_session_binding: reviewSessionMatchesPlan(plan, session),
     review_state: candidate.status === expected.status && candidate.publication_authorized === false && candidate.selected_decision === null && sameReviewContent(candidate.decision_options, expected.decision_options) && candidate.accountability === expected.accountability && candidate.authorization === expected.authorization,
     scope: sameReviewContent(candidate.scope, expected.scope),
@@ -701,10 +756,12 @@ export function validateAntiAgingDecisionPacket(packet: AntiAgingDecisionPacket,
     summary: sameReviewContent(candidate.summary, expected.summary),
     review_plan_fingerprint: candidate.review_plan_fingerprint === expected.review_plan_fingerprint,
     review_session_fingerprint: candidate.review_session_fingerprint === expected.review_session_fingerprint,
-    content_fingerprint: candidate.fingerprint_algorithm === expected.fingerprint_algorithm && candidate.content_fingerprint === expected.content_fingerprint,
+    fingerprint_scope: sameReviewContent(candidate.fingerprint_scope, expected.fingerprint_scope),
+    governance_note: candidate.note === expected.note,
+    content_fingerprint: candidate.fingerprint_algorithm === expected.fingerprint_algorithm && candidate.content_fingerprint === expected.content_fingerprint && candidate.content_fingerprint === candidate_content_fingerprint,
   };
   const errors = Object.entries(checks).filter(([, valid]) => !valid).map(([key]) => key);
-  return { valid: errors.length === 0, checks, errors, authorization: 'not_authorized', note: 'Integrity checks compare the packet with the current bounded review plan and page. A valid result is not a signature, approval, publication authorization, or permission to change records.' };
+  return { valid: errors.length === 0, checks, errors, authorization: 'not_authorized', note: 'Integrity checks compare the packet with the current bounded review plan, page, generation timestamp, fingerprint coverage, and governance boundary. A valid result is not a signature, approval, publication authorization, or permission to change records.' };
 }
 
 export function buildAntiAgingOperationsDigest(input: AntiAgingOperationsDigestInput, generatedAt = new Date().toISOString()): AntiAgingOperationsDigest {

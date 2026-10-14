@@ -1,6 +1,6 @@
 # Anti-aging skincare platform — Phase 1 discovery package
 
-Status: Phase 1 architecture and implementation planning complete locally. The v3.935 operations checkpoint extends the page-scoped decision-packet boundary with plan/page snapshot fingerprints, fail-closed integrity validation, refreshed demo coverage, and paired GitHub/Google Drive backup evidence; live providers, booking, checkout, and production database application remain separately gated.
+Status: Phase 1 architecture and implementation planning complete locally. The v4.035 operations checkpoint makes the decision-packet fingerprint coverage and governance boundary auditable, adds a canonical generation-time guard, refreshes the demo, and retains paired GitHub/Google Drive backup evidence; live providers, booking, checkout, and production database application remain separately gated.
 
 Baseline audited: MGT Skin Care v2.195 at commit `2c67a3bfee9d02d73237d2b44706f323db97e59f`.
 
@@ -29,10 +29,11 @@ Baseline audited: MGT Skin Care v2.195 at commit `2c67a3bfee9d02d73237d2b44706f3
 21. [Operations checkpoint v3.810](./OPERATIONS-CHECKPOINT-v3.810.md) — 300 safe increments across auditable decision packets, evidence references, human review boundaries, demo continuity, and backup verification.
 22. [Operations checkpoint v3.835](./OPERATIONS-CHECKPOINT-v3.835.md) — 25 safe increments across regression repair, page-scoped sessions, packet completeness, deterministic comparison fingerprints, demo continuity, and backup verification.
 23. [Operations checkpoint v3.935](./OPERATIONS-CHECKPOINT-v3.935.md) — 100 safe increments across review-plan/page binding, fail-closed packet integrity, API contracts, demo continuity, and backup verification.
+24. [Operations checkpoint v4.035](./OPERATIONS-CHECKPOINT-v4.035.md) — 100 safe increments across fingerprint coverage, governance-bound packet integrity, timestamp validation, demo continuity, and backup verification.
 
 ## Recommended next move
 
-Continue from the v3.935 seams with production partner work only after source approval, privacy review, jurisdiction review, restore verification, and explicit launch authorization. Keep product checkout, medical diagnosis, image analysis, live booking, and sponsored ranking disabled until their safety and partner gates are satisfied.
+Continue from the v4.035 seams with production partner work only after source approval, privacy review, jurisdiction review, restore verification, and explicit launch authorization. Keep product checkout, medical diagnosis, image analysis, live booking, and sponsored ranking disabled until their safety and partner gates are satisfied.
 
 ## Current architectural position
 

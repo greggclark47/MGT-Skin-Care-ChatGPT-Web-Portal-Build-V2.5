@@ -48,10 +48,10 @@ export function installBilling(app:express.Express,db:Store,stripe:Stripe|undefi
   const user=account(req);ready();const selection=selectedPlan(req.body.plan,req.body.audience),audience='consumer',cycle=selectedCycle(req.body.cycle);check(priceId(selection,cycle),400,'plan_missing','This plan is not configured yet.');check(req.body.recurring_consent===true,400,'consent_required','Confirm the recurring subscription.');
   const company=await db.tx(r=>r.get('settings','company'));check(company?.policies_published&&company.legal_name&&company.support_email&&env.SUBSCRIPTION_TERMS_APPROVED==='true',503,'terms_pending','Subscription details and terms must be finalized first.');
   const price=await stripe!.prices.retrieve(priceId(selection,cycle)!);validatePrice(price,cycle);
-  await db.tx(async r=>{const key=req.actor+':'+audience;await r.lock('billing:'+key);if(!await r.get('billing_attempts',key))await r.put('billing_attempts',key,{id:randomUUID()});});
+  await db.tx(async r=>{const key=req.actor+':'+audience;await r.lock('billing:'+hash(key));if(!await r.get('billing_attempts',key))await r.put('billing_attempts',key,{id:randomUUID()});});
   // Persist one customer and one checkout attempt per actor under the store lock.
   const result=await db.tx(async r=>{
-   const key=req.actor+':'+audience;await r.lock('billing:'+key);let record=await r.get('subscriptions',key)||{};
+   const key=req.actor+':'+audience;await r.lock('billing:'+hash(key));let record=await r.get('subscriptions',key)||{};
    if(!record.customer_id){const customer=await stripe!.customers.create({email:user.email,metadata:{actor:key,kind:'mgt_subscription',audience}},{idempotencyKey:'mgt_customer_'+key});record.customer_id=customer.id;await r.put('subscriptions',key,record);}
    const existing=await stripe!.subscriptions.list({customer:record.customer_id,status:'all',limit:100});
    check(!existing.has_more&&!existing.data.some(s=>!['canceled','incomplete_expired'].includes(s.status)),409,'subscription_exists','Manage your existing subscription in billing.');
@@ -64,7 +64,7 @@ export function installBilling(app:express.Express,db:Store,stripe:Stripe|undefi
  }));
  app.post('/api/hub/billing/discard-checkout',wrap(async(req,res)=>{
   account(req);ready();const selection=selectedPlan(req.body.plan,req.body.audience),audience='consumer';
-  await db.tx(async r=>{const key=req.actor+':'+audience;await r.lock('billing:'+key);const attempt=await r.get('billing_attempts',key);if(!attempt?.session_id)return;const session=await stripe!.checkout.sessions.retrieve(attempt.session_id);check(session.status!=='complete',409,'checkout_complete','Checkout has completed. Refresh billing status instead.');if(session.status==='open')await stripe!.checkout.sessions.expire(attempt.session_id);await r.put('billing_attempts',key,{id:'replacement_'+attempt.session_id});});res.json({discarded:true});
+  await db.tx(async r=>{const key=req.actor+':'+audience;await r.lock('billing:'+hash(key));const attempt=await r.get('billing_attempts',key);if(!attempt?.session_id)return;const session=await stripe!.checkout.sessions.retrieve(attempt.session_id);check(session.status!=='complete',409,'checkout_complete','Checkout has completed. Refresh billing status instead.');if(session.status==='open')await stripe!.checkout.sessions.expire(attempt.session_id);await r.put('billing_attempts',key,{id:'replacement_'+attempt.session_id});});res.json({discarded:true});
  }));
  app.post('/api/hub/billing/trial-cycle',wrap(async(req,res)=>{
   account(req);ready();const selection=selectedPlan(req.body.plan,req.body.audience),audience='consumer',cycle=selectedCycle(req.body.cycle);check(req.body.recurring_consent===true,400,'invalid_change','Choose and confirm a billing cycle.');
@@ -86,7 +86,7 @@ export function installSubscriptionWebhook(app:express.Express,db:Store,stripe:S
   let event:Stripe.Event;try{event=stripe.webhooks.constructEvent(req.body,req.headers['stripe-signature'] as string,env.STRIPE_SUBSCRIPTION_WEBHOOK_SECRET,300);}catch{throw new Fault(400,'invalid_signature','Invalid webhook signature.');}
   check(typeof event.id==='string'&&event.id.length>0&&event.id.length<=255&&typeof event.type==='string'&&event.type.length<=200,400,'invalid_event','Invalid subscription event.');
   const received_at=new Date().toISOString();
-  await db.tx(async r=>{await r.lock('subscription-receipt:'+event.id);const prior=await r.get<any>('subscription_webhook_receipts',event.id);await r.put('subscription_webhook_receipts',event.id,{id:event.id,type:event.type,status:prior?.status==='processed'?'processed':'processing',attempts:(prior?.attempts||0)+1,duplicate_count:prior?.duplicate_count||0,first_received_at:prior?.first_received_at||received_at,last_received_at:received_at,processed_at:prior?.processed_at||null,last_error_code:null});});
+  await db.tx(async r=>{await r.lock('subscription-receipt:'+hash(event.id));const prior=await r.get<any>('subscription_webhook_receipts',event.id);await r.put('subscription_webhook_receipts',event.id,{id:event.id,type:event.type,status:prior?.status==='processed'?'processed':'processing',attempts:(prior?.attempts||0)+1,duplicate_count:prior?.duplicate_count||0,first_received_at:prior?.first_received_at||received_at,last_received_at:received_at,processed_at:prior?.processed_at||null,last_error_code:null});});
   try{
    check(event.livemode===(env.STRIPE_LIVE_MODE==='true'),400,'mode_mismatch','Payment mode mismatch.');
    const allowed=['customer.subscription.created','customer.subscription.updated','customer.subscription.deleted','checkout.session.completed'];
@@ -101,7 +101,7 @@ export function installSubscriptionWebhook(app:express.Express,db:Store,stripe:S
     // Discover the account, then re-read current state while holding its billing lock.
     const discovered=await stripe!.subscriptions.retrieve(typeof id==='string'?id:id.id);
     if(discovered.metadata.kind!=='mgt_subscription')return{ignored:true};
-    const actor=discovered.metadata.actor;check(discovered.metadata.audience==='consumer'&&actor?.endsWith(':consumer'),409,'audience_mismatch','Subscription audience could not be verified.');await r.lock('billing:'+actor);
+    const actor=discovered.metadata.actor;check(discovered.metadata.audience==='consumer'&&actor?.endsWith(':consumer'),409,'audience_mismatch','Subscription audience could not be verified.');await r.lock('billing:'+hash(actor));
     const subscription=await stripe!.subscriptions.retrieve(discovered.id);
     check(subscription.metadata.actor===actor&&subscription.metadata.audience===discovered.metadata.audience&&subscription.metadata.kind==='mgt_subscription',409,'owner_mismatch','Subscription ownership could not be verified.');
     const customer=typeof subscription.customer==='string'?subscription.customer:subscription.customer.id;
@@ -113,10 +113,10 @@ export function installSubscriptionWebhook(app:express.Express,db:Store,stripe:S
     await r.put('billing_activity',event.id,{id:event.id,actor,at:new Date().toISOString(),status:subscription.status,cycle:matched?.cycle||null,plan_id:matched?.plan.id||null,cancel_at_period_end:subscription.cancel_at_period_end});
     await r.put('subscription_events',event.id,{type:event.type,at:new Date().toISOString()});return{processed:true};
    });
-   await db.tx(async r=>{await r.lock('subscription-receipt:'+event.id);const receipt=await r.get<any>('subscription_webhook_receipts',event.id);if(receipt)await r.put('subscription_webhook_receipts',event.id,{...receipt,status:outcome.ignored?'ignored':'processed',last_outcome:outcome.duplicate?'duplicate':outcome.ignored?'ignored':'processed',duplicate_count:(receipt.duplicate_count||0)+(outcome.duplicate?1:0),processed_at:outcome.processed?new Date().toISOString():receipt.processed_at,last_error_code:null});});
+   await db.tx(async r=>{await r.lock('subscription-receipt:'+hash(event.id));const receipt=await r.get<any>('subscription_webhook_receipts',event.id);if(receipt)await r.put('subscription_webhook_receipts',event.id,{...receipt,status:outcome.ignored?'ignored':'processed',last_outcome:outcome.duplicate?'duplicate':outcome.ignored?'ignored':'processed',duplicate_count:(receipt.duplicate_count||0)+(outcome.duplicate?1:0),processed_at:outcome.processed?new Date().toISOString():receipt.processed_at,last_error_code:null});});
    res.json(outcome);
   }catch(error){
-   await db.tx(async r=>{await r.lock('subscription-receipt:'+event.id);const receipt=await r.get<any>('subscription_webhook_receipts',event.id);if(receipt&&receipt.status!=='processed')await r.put('subscription_webhook_receipts',event.id,{...receipt,status:'failed',last_outcome:'failed',last_error_code:error instanceof Fault?error.code:'service_error',failed_at:new Date().toISOString()});});
+   await db.tx(async r=>{await r.lock('subscription-receipt:'+hash(event.id));const receipt=await r.get<any>('subscription_webhook_receipts',event.id);if(receipt&&receipt.status!=='processed')await r.put('subscription_webhook_receipts',event.id,{...receipt,status:'failed',last_outcome:'failed',last_error_code:error instanceof Fault?error.code:'service_error',failed_at:new Date().toISOString()});});
    throw error;
   }
  }));

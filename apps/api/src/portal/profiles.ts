@@ -1,14 +1,14 @@
 // Profile persistence v1.2: one transaction for preferences, revision, and audit.
 import {randomUUID} from 'node:crypto';
 import type {Records} from './store';
-import {check} from './security';
+import {check,hash} from './security';
 export async function readProfile(records:Records,actor:string){
  const profile=await records.get('profiles',actor)||null;
  const version=await records.get<{revision:string}>('profile_revisions',actor);
  return {profile,revision:version?.revision||profile?.revision||(profile?'legacy':null)};
 }
 export async function lockProfile(records:Records,actor:string,expected:unknown){
- await records.lock('profile:'+actor);
+ await records.lock('profile:'+hash(actor));
  const current=await readProfile(records,actor);
  check(expected===undefined||expected===null||typeof expected==='string'&&expected.length<=80,400,'invalid_revision','Use the profile reference returned by the portal.');
  check((expected??null)===current.revision,409,'profile_changed','Your profile changed in another session. Reload it before saving again.');

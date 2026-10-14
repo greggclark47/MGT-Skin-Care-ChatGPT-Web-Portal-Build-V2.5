@@ -301,6 +301,7 @@ export interface AntiAgingDecisionEvidenceReference {
 
 export interface AntiAgingDecisionPacket {
   packet_id: string;
+  packet_version: 'anti-aging-decision-packet-2';
   generated_at: string;
   plan_generated_at: string;
   session_id: string;
@@ -309,6 +310,16 @@ export interface AntiAgingDecisionPacket {
   selected_decision: null;
   decision_options: AntiAgingDecisionOption[];
   evidence_refs: AntiAgingDecisionEvidenceReference[];
+  scope: {
+    plan_total: number;
+    session_total: number;
+    offset: number;
+    limit: number;
+    has_more: boolean;
+    complete_plan: boolean;
+  };
+  fingerprint_algorithm: 'fnv1a32-utf16';
+  content_fingerprint: string;
   summary: AntiAgingReviewPlanSummary;
   accountability: 'human_owner_required';
   authorization: 'not_authorized';
@@ -606,13 +617,26 @@ export function paginateAntiAgingReviewPlan(plan: AntiAgingReviewPlan, limit = 1
   const safeOffset = Number.isInteger(offset) ? Math.max(0, Math.min(10000, offset)) : 0;
   const items = plan.items.slice(safeOffset, safeOffset + safeLimit);
   const planKey = plan.items[0]?.key || 'no-action';
-  return { session_id: `anti-aging-review:${planKey}`, generated_at: plan.generated_at, items, total: plan.total, limit: safeLimit, offset: safeOffset, has_more: safeOffset + safeLimit < plan.total, first_action: items[0]?.action || null, authorization: 'not_authorized', note: 'Bounded read-only review session. It does not approve, quarantine, publish, book care, enable commerce, or share personal data.' };
+  return { session_id: `anti-aging-review:${planKey}:${safeOffset}:${safeLimit}`, generated_at: plan.generated_at, items, total: plan.total, limit: safeLimit, offset: safeOffset, has_more: safeOffset + safeLimit < plan.total, first_action: items[0]?.action || null, authorization: 'not_authorized', note: 'Bounded read-only review session. It does not approve, quarantine, publish, book care, enable commerce, or share personal data.' };
+}
+
+function antiAgingPacketFingerprint(value: string): string {
+  let fingerprint = 0x811c9dc5;
+  for (let index = 0; index < value.length; index++) {
+    fingerprint ^= value.charCodeAt(index);
+    fingerprint = Math.imul(fingerprint, 0x01000193);
+  }
+  return (fingerprint >>> 0).toString(16).padStart(8, '0');
 }
 
 export function buildAntiAgingDecisionPacket(plan: AntiAgingReviewPlan, summary: AntiAgingReviewPlanSummary, session: AntiAgingReviewSession, generatedAt = new Date().toISOString()): AntiAgingDecisionPacket {
   const category = (action: AntiAgingReviewAction): AntiAgingDecisionEvidenceReference['category'] => action === 'quarantine_catalog' || action === 'review_catalog' ? 'catalog' : action === 'refresh_evidence' ? 'evidence' : action === 'review_search_slo' ? 'search' : action === 'review_readiness' ? 'readiness' : 'operations';
   const evidence_refs = session.items.map(item => ({ ref_id: `${session.session_id}:${item.key}`, category: category(item.action), subject: item.subject, action: item.action, priority: item.priority }));
-  return { packet_id: `anti-aging-decision:${session.session_id}`, generated_at: generatedAt, plan_generated_at: plan.generated_at, session_id: session.session_id, status: 'pending_human_review', publication_authorized: false, selected_decision: null, decision_options: ['hold', 'defer', 'request_more_evidence'], evidence_refs, summary, accountability: 'human_owner_required', authorization: 'not_authorized', note: 'Decision packet is an auditable handoff for human review. It cannot approve launch, publish catalog records, book care, enable checkout, or share personal data.' };
+  const packet_version = 'anti-aging-decision-packet-2' as const;
+  const decision_options: AntiAgingDecisionOption[] = ['hold', 'defer', 'request_more_evidence'];
+  const scope = { plan_total: plan.total, session_total: session.items.length, offset: session.offset, limit: session.limit, has_more: session.has_more, complete_plan: session.offset === 0 && !session.has_more && session.items.length === plan.total };
+  const content_fingerprint = antiAgingPacketFingerprint(JSON.stringify({ packet_version, plan_generated_at: plan.generated_at, session_id: session.session_id, decision_options, evidence_refs, scope, summary }));
+  return { packet_id: `anti-aging-decision:${session.session_id}`, packet_version, generated_at: generatedAt, plan_generated_at: plan.generated_at, session_id: session.session_id, status: 'pending_human_review', publication_authorized: false, selected_decision: null, decision_options, evidence_refs, scope, fingerprint_algorithm: 'fnv1a32-utf16', content_fingerprint, summary, accountability: 'human_owner_required', authorization: 'not_authorized', note: 'Decision packet is a page-scoped auditable handoff for human review. Its comparison fingerprint is not a cryptographic signature or authorization. It cannot approve launch, publish catalog records, book care, enable checkout, or share personal data.' };
 }
 
 export function buildAntiAgingOperationsDigest(input: AntiAgingOperationsDigestInput, generatedAt = new Date().toISOString()): AntiAgingOperationsDigest {

@@ -2,6 +2,7 @@
 const {test}=require('node:test'),assert=require('node:assert/strict');
 const {createPortal}=require('../dist/portal/server'),{LocalStore}=require('../dist/portal/store');
 const {StoreBudgetStore}=require('../dist/portal/ai');
+const {hash}=require('../dist/portal/security');
 const profile={skin_type:'dry',concerns:['hydration'],sensitivity:'none',age_band:'26_35',current_routine:'basic',desired_outcome:'glow',budget_range:'between_25_50',ingredient_avoidances:[],consent:true};
 async function fixture(t){
  const db=new LocalStore(':memory:'),calls=[],budget=new StoreBudgetStore(db);
@@ -33,7 +34,7 @@ test('guest invitations: matching plan uses owner AI budget and shared rate limi
  const f=await fixture(t),inv=await f.invite('match_owner');await f.guest('/guest-access/accept',{token:inv.token,confirm:true});await f.guest('/account/consents',{consent_type:'ai_disclosure',granted:true});await f.owner('/account/consents',{consent_type:'ai_disclosure',granted:true});
  assert.equal((await f.guest('/coach',{message:'How do I simplify a cosmetic routine?',ai_consent:true})).status,200);
  assert.deepEqual(f.calls[0],{actor:'user_owner',premium:true});assert.equal(await f.budget.spentToday('user_owner','tier3_premium'),1);assert.equal(await f.budget.spentToday('user_guest','tier3_premium'),0);
- await f.db.tx(r=>r.put('rate','ai-user:owner',{count:20,reset:Date.now()+86400000}));
+ await f.db.tx(r=>r.put('rate','ai-user:'+hash('owner'),{count:20,reset:Date.now()+86400000}));
  assert.equal((await f.guest('/coach',{message:'Routine tips?',ai_consent:true})).status,429);
  assert.equal((await f.owner('/coach',{message:'Routine tips?',ai_consent:true})).status,429);
  await f.db.tx(async r=>{const s=await r.get('subscriptions','user_owner:consumer');await r.put('subscriptions','user_owner:consumer',{...s,active:false,status:'canceled'});});

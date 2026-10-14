@@ -171,7 +171,7 @@ export function portalV1Router(db: Store, stripe: Stripe | undefined, env: NodeJ
       }
       const match = (await ownedRecords(records,req.actor)).find(item => handle(item.scope,item.key,item.record) === req.params.id);
       check(match,404,'subscription_not_found','No such subscription.');
-      await records.lock('billing:'+match.key);
+      await records.lock('billing:'+hash(match.key));
       const record = await records.get<SubscriptionRecord>(match.scope,match.key);
       check(record && handle(match.scope,match.key,record) === req.params.id,409,'subscription_changed','Refresh your subscription before making this change.');
       check(!platformManaged(record),409,'platform_managed','Manage this subscription in the store where you purchased it.');

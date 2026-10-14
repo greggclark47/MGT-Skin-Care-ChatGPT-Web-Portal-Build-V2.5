@@ -289,6 +289,32 @@ export interface AntiAgingReviewSession {
   note: string;
 }
 
+export type AntiAgingDecisionOption = 'hold' | 'defer' | 'request_more_evidence';
+
+export interface AntiAgingDecisionEvidenceReference {
+  ref_id: string;
+  category: 'catalog' | 'evidence' | 'search' | 'readiness' | 'operations';
+  subject: string;
+  action: AntiAgingReviewAction;
+  priority: AntiAgingReviewPriority;
+}
+
+export interface AntiAgingDecisionPacket {
+  packet_id: string;
+  generated_at: string;
+  plan_generated_at: string;
+  session_id: string;
+  status: 'pending_human_review';
+  publication_authorized: false;
+  selected_decision: null;
+  decision_options: AntiAgingDecisionOption[];
+  evidence_refs: AntiAgingDecisionEvidenceReference[];
+  summary: AntiAgingReviewPlanSummary;
+  accountability: 'human_owner_required';
+  authorization: 'not_authorized';
+  note: string;
+}
+
 export interface AntiAgingOperationsDigestInput {
   moderation: CatalogModerationSummary;
   queue: CatalogModerationQueueItem[];
@@ -581,6 +607,12 @@ export function paginateAntiAgingReviewPlan(plan: AntiAgingReviewPlan, limit = 1
   const items = plan.items.slice(safeOffset, safeOffset + safeLimit);
   const planKey = plan.items[0]?.key || 'no-action';
   return { session_id: `anti-aging-review:${planKey}`, generated_at: plan.generated_at, items, total: plan.total, limit: safeLimit, offset: safeOffset, has_more: safeOffset + safeLimit < plan.total, first_action: items[0]?.action || null, authorization: 'not_authorized', note: 'Bounded read-only review session. It does not approve, quarantine, publish, book care, enable commerce, or share personal data.' };
+}
+
+export function buildAntiAgingDecisionPacket(plan: AntiAgingReviewPlan, summary: AntiAgingReviewPlanSummary, session: AntiAgingReviewSession, generatedAt = new Date().toISOString()): AntiAgingDecisionPacket {
+  const category = (action: AntiAgingReviewAction): AntiAgingDecisionEvidenceReference['category'] => action === 'quarantine_catalog' || action === 'review_catalog' ? 'catalog' : action === 'refresh_evidence' ? 'evidence' : action === 'review_search_slo' ? 'search' : action === 'review_readiness' ? 'readiness' : 'operations';
+  const evidence_refs = session.items.map(item => ({ ref_id: `${session.session_id}:${item.key}`, category: category(item.action), subject: item.subject, action: item.action, priority: item.priority }));
+  return { packet_id: `anti-aging-decision:${session.session_id}`, generated_at: generatedAt, plan_generated_at: plan.generated_at, session_id: session.session_id, status: 'pending_human_review', publication_authorized: false, selected_decision: null, decision_options: ['hold', 'defer', 'request_more_evidence'], evidence_refs, summary, accountability: 'human_owner_required', authorization: 'not_authorized', note: 'Decision packet is an auditable handoff for human review. It cannot approve launch, publish catalog records, book care, enable checkout, or share personal data.' };
 }
 
 export function buildAntiAgingOperationsDigest(input: AntiAgingOperationsDigestInput, generatedAt = new Date().toISOString()): AntiAgingOperationsDigest {

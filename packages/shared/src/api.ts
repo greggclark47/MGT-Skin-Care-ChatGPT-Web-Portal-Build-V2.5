@@ -2,7 +2,7 @@ import type {
   SkinProfileInput, Routine, ProfileVector, AvoidFlags, IngredientRecord, ProductRecord,
   ProviderRecord, TreatmentRecord, ReadOnlyPage, AntiAgingResponseMeta, GroundedAntiAgingExplanation, GroundedSearchResult,
   MerchantReferral, ProgressEntry, ProgressAggregate, ProgressReminder, ProgressControlSummary, ProgressExportManifest, ProgressExportSummary, ProgressReminderPreview, AppointmentRequest, AntiAgingOperationsDigest, AntiAgingLaunchReadiness, CatalogModerationQueueItem, CatalogModerationQueuePage, CatalogModerationQueueSummary, CatalogQualityIssue, CatalogQualitySummary, LaunchEvidenceFreshness, LaunchEvidenceSummary, ProviderSearchDailySummary, ProviderSearchSloSummary,
-  AntiAgingReviewPlan, AntiAgingReviewPlanSummary, AntiAgingReviewSession,
+  AntiAgingReviewPlan, AntiAgingReviewPlanSummary, AntiAgingReviewSession, AntiAgingDecisionPacket,
 } from '@mgt/domain';
 
 // One API client shared by web and mobile (Section C.1: "no separate business logic per
@@ -163,11 +163,11 @@ export class ApiClient {
   }
 
   getAntiAgingOperationsDigest(token?: string) {
-    return this.get<{ policy: string; digest: AntiAgingOperationsDigest; queue_summary: CatalogModerationQueueSummary; evidence_freshness: LaunchEvidenceFreshness; review_plan: AntiAgingReviewPlan; review_summary: AntiAgingReviewPlanSummary; review_session: AntiAgingReviewSession }>(`/admin/anti-aging-operations`, token);
+    return this.get<{ policy: string; digest: AntiAgingOperationsDigest; queue_summary: CatalogModerationQueueSummary; evidence_freshness: LaunchEvidenceFreshness; review_plan: AntiAgingReviewPlan; review_summary: AntiAgingReviewPlanSummary; review_session: AntiAgingReviewSession; decision_packet: AntiAgingDecisionPacket }>(`/admin/anti-aging-operations`, token);
   }
 
   getAntiAgingReviewSession(query: { limit?: number; offset?: number } = {}, token?: string) {
-    return this.get<{ policy: string; review_plan: AntiAgingReviewPlan; review_summary: AntiAgingReviewPlanSummary; review_session: AntiAgingReviewSession }>(`/admin/anti-aging-operations${queryString({ review_limit: query.limit, review_offset: query.offset })}`, token);
+    return this.get<{ policy: string; review_plan: AntiAgingReviewPlan; review_summary: AntiAgingReviewPlanSummary; review_session: AntiAgingReviewSession; decision_packet: AntiAgingDecisionPacket }>(`/admin/anti-aging-operations${queryString({ review_limit: query.limit, review_offset: query.offset })}`, token);
   }
 
   referralPreview(productId: string) {

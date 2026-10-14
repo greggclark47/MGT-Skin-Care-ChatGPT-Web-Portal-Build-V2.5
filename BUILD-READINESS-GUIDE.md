@@ -218,7 +218,7 @@ Release only when:
 6. Configure commercial, notification and support services.
 7. Build the pinned container stack and execute the final staging release gate.
 
-## Web and Android ship update - v4.336
+## Web and Android ship update - v4.337
 
 The repository-side release boundary now includes Android EAS profiles, a Play App Bundle
 production profile, no-optional-permission and cleartext-disabled defaults, explicit HTTPS legal

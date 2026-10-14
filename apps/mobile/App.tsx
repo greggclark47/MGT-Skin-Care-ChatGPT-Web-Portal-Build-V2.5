@@ -11,6 +11,7 @@ const api = apiBaseUrl ? new ApiClient(apiBaseUrl) : null;
 const privacyUrl = process.env.EXPO_PUBLIC_PRIVACY_URL?.trim() ?? '';
 const termsUrl = process.env.EXPO_PUBLIC_TERMS_URL?.trim() ?? '';
 const isHttpsUrl = (value: string) => /^https:\/\//i.test(value);
+const releaseConfigurationReady = __DEV__ || Boolean(apiBaseUrl && isHttpsUrl(privacyUrl) && isHttpsUrl(termsUrl));
 
 export default function App() {
   const [view, setView] = useState<'home' | 'match' | 'done' | 'error'>('home');
@@ -39,7 +40,7 @@ export default function App() {
           <Text style={styles.body}>
             Answer a few questions and get a routine built for you — with the reason behind every product.
           </Text>
-          <Pressable testID="start" onPress={() => setView('match')} disabled={!consent} accessibilityRole="button" accessibilityState={{ disabled: !consent }} style={[styles.cta, !consent && styles.ctaDisabled]}>
+          <Pressable testID="start" onPress={() => setView('match')} disabled={!consent || !releaseConfigurationReady} accessibilityRole="button" accessibilityState={{ disabled: !consent || !releaseConfigurationReady }} style={[styles.cta, (!consent || !releaseConfigurationReady) && styles.ctaDisabled]}>
             <Text style={styles.ctaLabel}>Start my Skin Match</Text>
           </Pressable>
           <View style={styles.consentRow}>
@@ -59,7 +60,7 @@ export default function App() {
       )}
       {view === 'match' && <SkinMatchScreen onComplete={handleComplete} />}
       {view === 'done' && <Text style={styles.body}>Your routine is ready.</Text>}
-      {view === 'error' && <Text style={styles.body}>{api ? 'Something went wrong. Please try again.' : 'This production build is missing its API configuration.'}</Text>}
+      {view === 'error' && <Text style={styles.body}>{!apiBaseUrl ? 'This production build is missing its API configuration.' : !releaseConfigurationReady ? 'This production build is missing HTTPS privacy and terms links.' : 'Something went wrong. Please try again.'}</Text>}
     </SafeAreaView>
   );
 }

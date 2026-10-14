@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { SafeAreaView, Text, View, Pressable, StyleSheet, Switch, Linking } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { SkinMatchScreen } from './src/screens/SkinMatchScreen';
-import { ApiClient, color, font, space, radius } from '@mgt/shared';
+import { ACCOUNT_PORTAL_PATHS, ApiClient, color, font, space, radius } from '@mgt/shared';
 import type { SkinProfileInput } from '@mgt/domain';
 
 const configuredApiUrl = process.env.EXPO_PUBLIC_API_URL?.trim() ?? '';
@@ -54,9 +54,10 @@ export default function App() {
           </View>
           {isHttpsUrl(portalUrl) && <View style={styles.accountHub} accessibilityLabel="Account management links">
             <Text style={styles.accountHubTitle}>Manage your connected account</Text>
-            <Pressable style={styles.portalLink} onPress={() => void Linking.openURL(portalUrl.replace(/\/+$/, '') + '/account')} accessibilityRole="link"><Text style={styles.legalLink}>Profile and preferences</Text></Pressable>
-            <Pressable style={styles.portalLink} onPress={() => void Linking.openURL(portalUrl.replace(/\/+$/, '') + '/account#payment-settings')} accessibilityRole="link"><Text style={styles.legalLink}>Payment setup and subscriptions</Text></Pressable>
-            <Pressable style={styles.portalLink} onPress={() => void Linking.openURL(portalUrl.replace(/\/+$/, '') + '/account#image-library')} accessibilityRole="link"><Text style={styles.legalLink}>Upload and manage skincare photos</Text></Pressable>
+            <Pressable style={styles.portalLink} onPress={() => void Linking.openURL(portalUrl.replace(/\/+$/, '') + ACCOUNT_PORTAL_PATHS.overview)} accessibilityRole="link"><Text style={styles.legalLink}>Connected services overview</Text></Pressable>
+            <Pressable style={styles.portalLink} onPress={() => void Linking.openURL(portalUrl.replace(/\/+$/, '') + ACCOUNT_PORTAL_PATHS.profile)} accessibilityRole="link"><Text style={styles.legalLink}>Profile and preferences</Text></Pressable>
+            <Pressable style={styles.portalLink} onPress={() => void Linking.openURL(portalUrl.replace(/\/+$/, '') + ACCOUNT_PORTAL_PATHS.billing)} accessibilityRole="link"><Text style={styles.legalLink}>Payment setup and subscriptions</Text></Pressable>
+            <Pressable style={styles.portalLink} onPress={() => void Linking.openURL(portalUrl.replace(/\/+$/, '') + ACCOUNT_PORTAL_PATHS.images)} accessibilityRole="link"><Text style={styles.legalLink}>Upload and manage skincare photos</Text></Pressable>
           </View>}
           <Text style={styles.configNote}>Account, payment and image management open in the secure web portal until reviewed native Android modules are connected. Photos remain optional and are never analyzed by this build.</Text>
           {!isHttpsUrl(privacyUrl) || !isHttpsUrl(termsUrl) ? <Text style={styles.configNote}>Production builds must provide HTTPS privacy and terms links.</Text> : null}

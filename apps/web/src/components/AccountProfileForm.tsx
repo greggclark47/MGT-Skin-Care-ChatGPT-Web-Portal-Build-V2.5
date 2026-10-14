@@ -3,17 +3,11 @@
 import React,{useEffect,useMemo,useState} from 'react';
 import {hub,useHub} from '../lib/hub';
 import {LoadState,Timestamp} from './HubFrames';
+import type {AccountProfileInput,AccountServiceInterest} from '@mgt/shared';
 
-type ServiceInterest='skin_match'|'routine_care'|'anti_aging'|'beauty_style'|'retailer_discovery'|'premium_guidance';
-type FormState={
- preferred_name:string;locale:'en-US'|'es-US';timezone:string;measurement_system:'us'|'metric';
- service_interests:ServiceInterest[];
- communication_preferences:{routine_reminders:boolean;service_announcements:boolean};
- accessibility:{reduced_motion:boolean;high_contrast:boolean};
- default_image_storage:'device'|'test-drive';
-};
+type FormState=AccountProfileInput;
 
-const interests:{id:ServiceInterest;label:string;detail:string}[]=[
+const interests:{id:AccountServiceInterest;label:string;detail:string}[]=[
  {id:'skin_match',label:'Skin Match',detail:'Skin profile and product compatibility'},
  {id:'routine_care',label:'Routine care',detail:'AM/PM planning and check-ins'},
  {id:'anti_aging',label:'Anti-aging discovery',detail:'Education, progress and provider discovery'},
@@ -29,7 +23,7 @@ export function AccountProfileForm({testDriveEnabled}:{testDriveEnabled:boolean}
  const [form,setForm]=useState<FormState>(emptyProfile),[busy,setBusy]=useState(false),[message,setMessage]=useState(''),[error,setError]=useState('');
  useEffect(()=>{if(state.data){const saved=state.data.profile as FormState|null;setForm(saved?{...saved}:emptyProfile());}},[state.data]);
  const valid=useMemo(()=>form.preferred_name.trim().length>0&&form.preferred_name.trim().length<=80&&form.timezone.trim().length>0&&form.service_interests.length>0,[form]);
- function toggleInterest(id:ServiceInterest){setForm(current=>({...current,service_interests:current.service_interests.includes(id)?current.service_interests.filter(item=>item!==id):[...current.service_interests,id]}));}
+ function toggleInterest(id:AccountServiceInterest){setForm(current=>({...current,service_interests:current.service_interests.includes(id)?current.service_interests.filter(item=>item!==id):[...current.service_interests,id]}));}
  async function save(event:React.FormEvent){
   event.preventDefault();if(busy||!valid)return;setBusy(true);setError('');setMessage('');
   try{const result=await hub('/account/profile',{...form,preferred_name:form.preferred_name.trim(),timezone:form.timezone.trim(),expected_revision:state.data?.revision??null});state.setData(result);setMessage('Your account profile is saved and ready for connected services.');}

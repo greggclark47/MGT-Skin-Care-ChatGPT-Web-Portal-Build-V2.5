@@ -23,4 +23,19 @@
 .accountCenter :global(.account-billing-summary strong){font-size:1.1rem}
 .accountCenter :global(.account-billing-summary small){color:var(--muted);line-height:1.45}
 .accountCenter :global(#image-library){scroll-margin-top:110px}
-@media(max-width:700px){.accountCenter :global(.account-section-links),.accountCenter :global(.account-form-grid),.accountCenter :global(.account-interest-grid),.accountCenter :global(.account-billing-summary){grid-template-columns:1fr}.accountCenter :global(.account-preference-columns){grid-template-columns:1fr}}
+.accountCenter :global(#service-overview),.accountCenter :global(#analysis-permission),.accountCenter :global(#privacy-controls){scroll-margin-top:110px}
+.accountCenter :global(.account-overview .row){align-items:flex-start}
+.accountCenter :global(.account-overview-summary){display:flex;flex-wrap:wrap;gap:9px;margin:20px 0}
+.accountCenter :global(.account-overview-summary span){padding:8px 11px;border:1px solid var(--border);border-radius:999px;color:var(--muted);font-size:.78rem}
+.accountCenter :global(.account-overview-summary strong){color:var(--text)}
+.accountCenter :global(.account-overview-grid){display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.accountCenter :global(.account-service-card){position:relative;display:flex;min-height:145px;flex-direction:column;gap:8px;padding:17px 48px 17px 17px;border:1px solid var(--border);border-radius:12px;background:color-mix(in srgb,var(--panel) 90%,var(--violet) 10%)}
+.accountCenter :global(.account-service-card:hover){border-color:var(--purple)}
+.accountCenter :global(.account-service-card>strong){font-size:1rem}
+.accountCenter :global(.account-service-card>small){color:var(--muted);line-height:1.45}
+.accountCenter :global(.account-service-state){display:flex;align-items:center;gap:7px;color:var(--muted);font-size:.7rem;letter-spacing:.07em;text-transform:uppercase}
+.accountCenter :global(.account-service-state i){width:8px;height:8px;border-radius:50%;background:#7c879e}
+.accountCenter :global(.state-ready .account-service-state i){background:#4bbd8b}.accountCenter :global(.state-attention .account-service-state i){background:#e9a34b}.accountCenter :global(.state-setup .account-service-state i){background:#9283ff}
+.accountCenter :global(.account-service-count){position:absolute;right:16px;top:16px;display:grid;place-items:center;min-width:27px;height:27px;padding:0 7px;border-radius:999px;background:var(--violet);color:var(--text);font-size:.74rem;font-weight:700}
+.accountCenter :global(.account-overview-privacy){margin:18px 0 0;font-size:.78rem}
+@media(max-width:700px){.accountCenter :global(.account-section-links),.accountCenter :global(.account-form-grid),.accountCenter :global(.account-interest-grid),.accountCenter :global(.account-billing-summary),.accountCenter :global(.account-overview-grid){grid-template-columns:1fr}.accountCenter :global(.account-preference-columns){grid-template-columns:1fr}}

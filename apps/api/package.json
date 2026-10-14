@@ -19,6 +19,7 @@
   },
   "dependencies": {
     "@mgt/domain": "workspace:*",
+    "@mgt/shared": "workspace:*",
     "@mgt/ai-gateway": "workspace:*",
     "express": "^4.19.0",
     "stripe": "^17.4.0",

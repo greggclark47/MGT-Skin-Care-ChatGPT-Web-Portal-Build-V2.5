@@ -25,8 +25,8 @@ and disables cleartext traffic. Complete the Play Console Data safety form from
 `PLAY-DATA-SAFETY-DRAFT.md`, then obtain human review of the privacy notice, terms, claims,
 support route, target audience, account deletion path, and store listing before submission.
 
-Connected profile preferences, Premium payment setup and client photo organization are available
-through the web account center at `/account`. Android opens the profile, payment and image sections
+Connected service readiness, profile preferences, Premium payment setup and client photo organization are available
+through the web account center at `/account`. Android opens the overview, profile, payment and image sections
 with `EXPO_PUBLIC_PORTAL_URL` (HTTPS in production) until reviewed native modules are connected.
 Local image storage uses browser IndexedDB on that device. A non-production Google Drive option may
 be enabled in test environments only; it is not production photo sync. Native photo picking and

@@ -12,7 +12,7 @@ async function fixture(t){
  const server=app.listen(0,'127.0.0.1');await new Promise(resolve=>server.once('listening',resolve));
  const base='http://127.0.0.1:'+server.address().port;
  t.after(async()=>{server.closeAllConnections();await new Promise(resolve=>server.close(resolve));await db.close();});
- const client=()=>{let cookie='',csrf='';const send=async(path,body)=>{const response=await fetch(base+'/api/hub'+path,{method:body===undefined?'GET':'POST',headers:{cookie,origin:'http://portal.test',...(body===undefined?{}:{'content-type':'application/json','x-csrf-token':csrf})},body:body===undefined?undefined:JSON.stringify(body)});if(response.headers.get('set-cookie'))cookie=response.headers.get('set-cookie').split(';')[0];const data=await response.json();if(data.csrf)csrf=data.csrf;return{status:response.status,data};};return{send,login:async(email='member@example.com')=>{await send('/session');assert.equal((await send('/auth/verify',{email,code:'123456'})).status,200);await send('/session');}};};
+ const client=()=>{let cookie='',csrf='';const send=async(path,body)=>{const response=await fetch(base+'/api/hub'+path,{method:body===undefined?'GET':'POST',headers:{cookie,origin:'http://portal.test',...(body===undefined?{}:{'content-type':'application/json','x-csrf-token':csrf})},body:body===undefined?undefined:JSON.stringify(body)});if(response.headers.get('set-cookie'))cookie=response.headers.get('set-cookie').split(';')[0];const data=await response.json();if(data.csrf)csrf=data.csrf;return{status:response.status,data,headers:response.headers};};return{send,login:async(email='member@example.com')=>{await send('/session');assert.equal((await send('/auth/verify',{email,code:'123456'})).status,200);await send('/session');}};};
  return{db,client};
 }
 
@@ -43,6 +43,28 @@ test('account profile validates data minimization fields and test storage availa
   {...input,default_image_storage:'test-drive'}
  ])assert.notEqual((await member.send('/account/profile',{...invalid,expected_revision:null})).status,200);
  assert.equal((await f.db.tx(r=>r.get('account_profiles','user_member@example.com'))),undefined);
+});
+
+test('account overview requires sign-in and returns isolated metadata-only readiness',async t=>{
+ const f=await fixture(t),guest=f.client();await guest.send('/session');assert.equal((await guest.send('/account/overview')).status,401);
+ const member=f.client();await member.login();await member.send('/account/profile',{...input,expected_revision:null});
+ const actor='user_member@example.com';
+ await f.db.tx(async r=>{
+  await r.put('profiles',actor,{routine:{steps:[{product_id:'private-product-one'},{product_id:'private-product-two'}]},input:{concerns:['private-concern']}});
+  await r.put('style_profiles',actor,{input:{hair_goals:'private-style-answer'}});
+  await r.put('saved_retailers',actor,['retailer-one','retailer-two']);
+  await r.put('anti_aging_progress',actor+':entry-one',{actor,entry_id:'entry-one',private_note:'hidden-progress'});
+  await r.put('anti_aging_reminders','reminder-one',{actor,id:'reminder-one',private_schedule:'hidden-reminder'});
+  await r.put('tickets','ticket-owner',{id:'ticket-owner',actor,status:'open',subject:'private-support-subject',message:'private-support-message'});
+  await r.put('tickets','ticket-other',{id:'ticket-other',actor:'user_other@example.com',status:'open',subject:'other-private-subject',message:'other-private-message'});
+  await r.put('subscriptions',actor+':consumer',{active:true,status:'active',customer_id:'cus_private',subscription_id:'sub_private',payment_method_id:'pm_private'});
+  await r.put('consents',actor+':ai_disclosure',{actor,consent_type:'ai_disclosure',version:'2026-09-29',granted:true,captured_at:new Date().toISOString()});
+ });
+ const response=await member.send('/account/overview');assert.equal(response.status,200);assert.equal(response.headers.get('cache-control'),'private, no-store');
+ assert.equal(response.data.services.length,10);assert.deepEqual(response.data.summary,{ready:8,attention:1,setup:0,unavailable:1,total:10});
+ const byId=Object.fromEntries(response.data.services.map(service=>[service.id,service]));
+ assert.equal(byId.skin_routine.count,2);assert.equal(byId.anti_aging.count,2);assert.equal(byId.retail_discovery.count,2);assert.equal(byId.support.count,1);assert.equal(byId.billing.state,'ready');assert.equal(byId.images.state,'unavailable');
+ const serialized=JSON.stringify(response.data);for(const secret of ['private-concern','private-style-answer','private-product-one','ticket-owner','private-support','ticket-other','other-private','cus_private','sub_private','pm_private','hidden-progress','hidden-reminder'])assert.equal(serialized.includes(secret),false,secret+' was exposed');
 });
 
 test('account export includes the connected profile without payment credentials',async t=>{

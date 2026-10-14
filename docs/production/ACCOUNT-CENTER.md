@@ -1,9 +1,23 @@
 # Connected account center
 
-Build checkpoint: v4.341
+Build checkpoint: v4.342
 
 The account center is the authenticated customer workspace for shared profile preferences,
 Premium subscription handoff, optional image organization, data export, consent, and deletion.
+
+## Connected-services overview
+
+`GET /api/hub/account/overview` gives a signed-in customer one readiness view across account
+profile, skin routine, anti-aging progress, beauty/style, saved retailers, optional images,
+Premium billing, support, analysis permission, and privacy controls. The response is private and
+non-cacheable. It exposes only fixed labels, readiness states, destinations, and customer-owned
+counts. It excludes profile answers, product identifiers, support content, image/file identifiers,
+billing-provider references, and payment details. Tests cover authentication, account isolation,
+safe response headers, expected counts, and explicit sensitive-field redaction.
+
+The portal refreshes the overview after relevant account changes. Shared account profile types,
+service-status contracts, and portal paths live in `@mgt/shared` so web and Android do not maintain
+separate route or data definitions.
 
 ## Stored account preferences
 
@@ -46,6 +60,7 @@ and destination. The saved default destination never uploads a file by itself.
 
 ## Android alignment
 
-The Android surface opens the account center's profile, payment, and image sections through the
-configured HTTPS portal URL. Native account editing, billing SDK integration, and image picking are
-not claimed by this checkpoint and require separate device and store review before release.
+The Android surface opens the account center's service overview, profile, payment, and image
+sections through the configured HTTPS portal URL using shared route constants. Native account
+editing, billing SDK integration, and image picking are not claimed by this checkpoint and require
+separate device and store review before release.

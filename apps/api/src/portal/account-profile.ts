@@ -1,22 +1,7 @@
 import {randomUUID} from 'node:crypto';
 import type {Records} from './store';
 import {check,hash} from './security';
-
-export const ACCOUNT_LOCALES=['en-US','es-US'] as const;
-export const MEASUREMENT_SYSTEMS=['us','metric'] as const;
-export const ACCOUNT_SERVICE_INTERESTS=['skin_match','routine_care','anti_aging','beauty_style','retailer_discovery','premium_guidance'] as const;
-export const IMAGE_STORAGE_PREFERENCES=['device','test-drive'] as const;
-
-type AccountProfileInput={
- preferred_name:string;
- locale:typeof ACCOUNT_LOCALES[number];
- timezone:string;
- measurement_system:typeof MEASUREMENT_SYSTEMS[number];
- service_interests:typeof ACCOUNT_SERVICE_INTERESTS[number][];
- communication_preferences:{routine_reminders:boolean;service_announcements:boolean};
- accessibility:{reduced_motion:boolean;high_contrast:boolean};
- default_image_storage:typeof IMAGE_STORAGE_PREFERENCES[number];
-};
+import {ACCOUNT_LOCALES,ACCOUNT_SERVICE_INTERESTS,IMAGE_STORAGE_PREFERENCES,MEASUREMENT_SYSTEMS,type AccountProfile,type AccountProfileInput} from '@mgt/shared';
 
 function validTimezone(value:string){
  try{new Intl.DateTimeFormat('en-US',{timeZone:value}).format();return true;}catch{return false;}
@@ -50,17 +35,17 @@ export function accountProfileInput(body:any,testDriveEnabled:boolean):AccountPr
 }
 
 export async function readAccountProfile(records:Records,actor:string){
- const profile=await records.get<any>('account_profiles',actor)||null;
+ const profile=await records.get<AccountProfile>('account_profiles',actor)||null;
  return{profile,revision:profile?.revision||null};
 }
 
 export async function saveAccountProfile(records:Records,actor:string,expected:unknown,input:AccountProfileInput){
  await records.lock('account-profile:'+hash(actor));
- const current=await records.get<any>('account_profiles',actor)||null;
+ const current=await records.get<AccountProfile>('account_profiles',actor)||null;
  check(expected===null||expected===undefined||typeof expected==='string'&&expected.length<=80,400,'account_profile_revision_invalid','Use the account profile reference returned by the portal.');
  check((expected??null)===(current?.revision||null),409,'account_profile_changed','Your account profile changed in another session. Reload it before saving again.');
  const changed_at=new Date().toISOString(),revision=randomUUID();
- const profile={...input,profile_version:1,created_at:current?.created_at||changed_at,updated_at:changed_at,revision};
+ const profile:AccountProfile={...input,profile_version:1,created_at:current?.created_at||changed_at,updated_at:changed_at,revision};
  await records.put('account_profiles',actor,profile);
  const id=randomUUID();await records.put('audit',id,{id,actor,action:'account_profile.saved',target:'self',at:changed_at});
  return{profile,revision};

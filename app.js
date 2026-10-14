@@ -253,8 +253,8 @@ const demoFlows = {
   "Moderation & evidence": {
     kicker: "ANTI-AGING · EVIDENCE VIEW",
     title: "Keep control visible",
-    step: "v2.910 · Reviewed locally",
-    body: `<div class="flow-result"><span>CONTROL CENTER</span><h3>Evidence without overclaiming</h3><p>The personal surface separates downloadable records, export manifests, in-app reminder previews, and provider handoffs. The operator surface adds a read-only digest joining moderation ownership, daily search SLOs, and readiness rollups as review evidence—not launch authorization.</p><div class="flow-meta"><span>MANIFESTED EXPORT</span><span>OPERATIONS DIGEST</span><span>NO LIVE CLAIMS</span></div></div>`
+    step: "v3.010 · Reviewed locally",
+    body: `<div class="flow-result"><span>CONTROL CENTER</span><h3>Evidence without overclaiming</h3><p>The personal surface now offers one actor-scoped control summary for manifests, in-app reminder previews, deletion, and provider handoffs. The operator surface adds owner/severity queue filters and evidence freshness without granting launch authorization.</p><div class="flow-meta"><span>ACTOR-SCOPED</span><span>FRESHNESS SIGNAL</span><span>NO LIVE CLAIMS</span></div></div>`
   },
   "Data export": {
     kicker: "ACCOUNT DATA · SAMPLE FLOW",

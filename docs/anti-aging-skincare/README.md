@@ -1,6 +1,6 @@
 # Anti-aging skincare platform — Phase 1 discovery package
 
-Status: Phase 1 architecture and implementation planning complete locally. The v2.910 operations checkpoint extends v2.725 with a read-only operations digest, personal export manifests, in-app reminder previews, a refreshed demo surface, and paired GitHub/Google Drive backup evidence; live providers, booking, checkout, and production database application remain separately gated.
+Status: Phase 1 architecture and implementation planning complete locally. The v3.010 operations checkpoint extends v2.910 with a unified personal control summary, filtered moderation review, evidence freshness signals, a refreshed demo surface, and paired GitHub/Google Drive backup evidence; live providers, booking, checkout, and production database application remain separately gated.
 
 Baseline audited: MGT Skin Care v2.195 at commit `2c67a3bfee9d02d73237d2b44706f323db97e59f`.
 
@@ -21,10 +21,11 @@ Baseline audited: MGT Skin Care v2.195 at commit `2c67a3bfee9d02d73237d2b44706f3
 13. [Operations checkpoint v2.640](./OPERATIONS-CHECKPOINT-v2.640.md) — 85 cumulative safe increments across personal controls, export summaries, reminder snoozing, handoff withdrawal, demo continuity, and backup evidence.
 14. [Operations checkpoint v2.725](./OPERATIONS-CHECKPOINT-v2.725.md) — 85 safe increments across moderation queue visibility, daily search telemetry, readiness evidence, demo continuity, and backup verification.
 15. [Operations checkpoint v2.910](./OPERATIONS-CHECKPOINT-v2.910.md) — 185 safe increments across the operations digest, personal export manifests, reminder previews, demo continuity, and backup verification.
+16. [Operations checkpoint v3.010](./OPERATIONS-CHECKPOINT-v3.010.md) — 100 safe increments across unified personal controls, filtered moderation review, evidence freshness, demo continuity, and backup verification.
 
 ## Recommended next move
 
-Continue from the v2.910 seams with production partner work only after source approval, privacy review, jurisdiction review, restore verification, and explicit launch authorization. Keep product checkout, medical diagnosis, image analysis, live booking, and sponsored ranking disabled until their safety and partner gates are satisfied.
+Continue from the v3.010 seams with production partner work only after source approval, privacy review, jurisdiction review, restore verification, and explicit launch authorization. Keep product checkout, medical diagnosis, image analysis, live booking, and sponsored ranking disabled until their safety and partner gates are satisfied.
 
 ## Current architectural position
 

@@ -1,7 +1,7 @@
 import type {
   SkinProfileInput, Routine, ProfileVector, AvoidFlags, IngredientRecord, ProductRecord,
   ProviderRecord, TreatmentRecord, ReadOnlyPage, AntiAgingResponseMeta, GroundedAntiAgingExplanation, GroundedSearchResult,
-  MerchantReferral, ProgressEntry, ProgressAggregate, ProgressReminder, ProgressExportManifest, ProgressExportSummary, ProgressReminderPreview, AppointmentRequest,
+  MerchantReferral, ProgressEntry, ProgressAggregate, ProgressReminder, ProgressControlSummary, ProgressExportManifest, ProgressExportSummary, ProgressReminderPreview, AppointmentRequest,
 } from '@mgt/domain';
 
 // One API client shared by web and mobile (Section C.1: "no separate business logic per
@@ -171,6 +171,10 @@ export class ApiClient {
 
   summarizeAntiAgingProgressExport(token?: string) {
     return this.get<{ data: ProgressExportSummary; consent_scope: ['progress_tracking', 'reminders'] }>('/api/v1/progress/export/summary', token);
+  }
+
+  getAntiAgingProgressControlSummary(token?: string) {
+    return this.get<{ data: ProgressControlSummary }>('/api/v1/progress/control-summary', token);
   }
 
   saveAntiAgingProgress(input: { entry_id: string; status: string; completed_at: string; consent_version: string }, token?: string) {

@@ -87,6 +87,15 @@ export interface ProgressReminderPreview {
   note: string;
 }
 
+export interface ProgressControlSummary {
+  manifest: ProgressExportManifest;
+  reminders: ProgressReminderPreview[];
+  consent_scope: ['progress_tracking', 'reminders'];
+  data_shared: [];
+  deletion_supported: true;
+  note: string;
+}
+
 export interface AppointmentRequestInput {
   provider_id: string;
   idempotency_key: string;
@@ -137,6 +146,14 @@ export interface CatalogModerationSummary {
 export interface CatalogModerationQueueItem extends CatalogQualityIssue {
   key: string;
   owner_role: 'catalog_editor' | 'sme' | 'compliance';
+}
+
+export interface CatalogModerationQueueSummary {
+  total: number;
+  blockers: number;
+  review: number;
+  by_owner_role: Record<CatalogModerationQueueItem['owner_role'], number>;
+  status: CatalogModerationSummary['status'];
 }
 
 export interface AntiAgingLaunchInput {
@@ -192,6 +209,14 @@ export interface LaunchEvidenceSummary {
   note: string;
 }
 
+export interface LaunchEvidenceFreshness {
+  observed_at: string | null;
+  age_seconds: number | null;
+  max_age_seconds: number;
+  stale: boolean;
+  note: string;
+}
+
 export interface AntiAgingOperationsDigestInput {
   moderation: CatalogModerationSummary;
   queue: CatalogModerationQueueItem[];
@@ -205,6 +230,7 @@ export interface AntiAgingOperationsDigest {
   generated_at: string;
   moderation_queue_items: number;
   moderation_blockers: number;
+  moderation_by_owner: Record<CatalogModerationQueueItem['owner_role'], number>;
   search_days: number;
   search_status: ProviderSearchSloSummary['status'];
   readiness_status: AntiAgingLaunchReadiness['status'];
@@ -309,6 +335,17 @@ export function previewProgressReminder(reminder: ProgressReminder, now = Date.n
   };
 }
 
+export function buildProgressControlSummary(entries: ProgressEntry[], reminders: ProgressReminder[], now = Date.now()): ProgressControlSummary {
+  return {
+    manifest: buildProgressExportManifest(entries, reminders),
+    reminders: reminders.map(reminder => previewProgressReminder(reminder, now)),
+    consent_scope: ['progress_tracking', 'reminders'],
+    data_shared: [],
+    deletion_supported: true,
+    note: 'Private control summary only. Export, reminder, and deletion controls remain actor-scoped and do not create a treatment record.',
+  };
+}
+
 export function buildAppointmentRequest(input: AppointmentRequestInput, actor: string, id: string, now = new Date().toISOString()): AppointmentRequest {
   if (!isCanonicalId(input.provider_id) || input.consent !== 'provider_handoff' || !/^[a-zA-Z0-9_-]{8,120}$/.test(input.idempotency_key)) throw new Error('appointment_request_invalid');
   if (input.requested_window !== undefined && (typeof input.requested_window !== 'string' || input.requested_window.length > 120)) throw new Error('appointment_window_invalid');
@@ -362,6 +399,18 @@ export function buildCatalogModerationQueue(issues: CatalogQualityIssue[]): Cata
   return issues.map(issue => ({ ...issue, key: catalogModerationKey(issue), owner_role: issue.severity === 'blocker' ? 'compliance' : issue.issue === 'unapproved' ? 'sme' : 'catalog_editor' }));
 }
 
+export function filterCatalogModerationQueue(queue: CatalogModerationQueueItem[], filter: { owner_role?: CatalogModerationQueueItem['owner_role']; severity?: CatalogQualityIssue['severity'] } = {}): CatalogModerationQueueItem[] {
+  return queue.filter(item => (!filter.owner_role || item.owner_role === filter.owner_role) && (!filter.severity || item.severity === filter.severity));
+}
+
+export function summarizeCatalogModerationQueue(queue: CatalogModerationQueueItem[]): CatalogModerationQueueSummary {
+  const blockers = queue.filter(item => item.severity === 'blocker').length;
+  const review = queue.filter(item => item.severity === 'review').length;
+  const by_owner_role = { catalog_editor: 0, sme: 0, compliance: 0 } as Record<CatalogModerationQueueItem['owner_role'], number>;
+  for (const item of queue) by_owner_role[item.owner_role]++;
+  return { total: queue.length, blockers, review, by_owner_role, status: blockers ? 'quarantine_required' : review ? 'review_required' : 'clear' };
+}
+
 export function buildLaunchReadiness(input: AntiAgingLaunchInput): AntiAgingLaunchReadiness {
   const gates = { referral_only_commerce: !input.checkout_enabled, no_live_booking: !input.booking_enabled, no_image_analysis: !input.image_analysis_enabled,
     grounded_ai_gate: !input.live_ai_enabled, catalog_approved: input.approved_catalog_records > 0, accessibility: input.accessibility_verified,
@@ -385,11 +434,20 @@ export function summarizeLaunchGateEvidence(evidence: LaunchGateEvidence[]): Lau
   return { total: evidence.length, passed: evidence.length - blockers.length, failed: blockers.length, blockers, authorization: 'not_authorized', note: 'Evidence summarizes gates only; it is not launch authorization.' };
 }
 
+export function assessLaunchEvidenceFreshness(evidence: LaunchGateEvidence[], now = Date.now(), maxAgeSeconds = 86400): LaunchEvidenceFreshness {
+  const timestamps = evidence.map(item => Date.parse(item.observed_at)).filter(value => Number.isFinite(value));
+  const observed = timestamps.length ? Math.max(...timestamps) : NaN;
+  const age = Number.isFinite(observed) ? Math.max(0, Math.floor((now - observed) / 1000)) : null;
+  return { observed_at: Number.isFinite(observed) ? new Date(observed).toISOString() : null, age_seconds: age, max_age_seconds: maxAgeSeconds, stale: age === null || age > maxAgeSeconds, note: 'Freshness is a review signal only; stale evidence does not authorize or disable a launch.' };
+}
+
 export function buildAntiAgingOperationsDigest(input: AntiAgingOperationsDigestInput, generatedAt = new Date().toISOString()): AntiAgingOperationsDigest {
+  const queueSummary = summarizeCatalogModerationQueue(input.queue);
   return {
     generated_at: generatedAt,
     moderation_queue_items: input.queue.length,
     moderation_blockers: input.moderation.blocker_count,
+    moderation_by_owner: queueSummary.by_owner_role,
     search_days: input.daily_search.length,
     search_status: input.search.status,
     readiness_status: input.readiness.status,

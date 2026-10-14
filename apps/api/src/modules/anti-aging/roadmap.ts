@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import {
-  aggregateProgress, buildAppointmentRequest, buildMerchantReferral, buildProgressExportManifest, buildProgressReminder, isCanonicalId, isProgressReminderCadence, isProgressStatus, previewProgressReminder, progressReminderState, snoozeProgressReminder, summarizeProgressExport, validateProgressEntry, withdrawAppointmentRequest,
+  aggregateProgress, buildAppointmentRequest, buildMerchantReferral, buildProgressControlSummary, buildProgressExportManifest, buildProgressReminder, isCanonicalId, isProgressReminderCadence, isProgressStatus, previewProgressReminder, progressReminderState, snoozeProgressReminder, summarizeProgressExport, validateProgressEntry, withdrawAppointmentRequest,
   type AppointmentRequestInput, type ProgressEntry, type ProgressReminder,
 } from '@mgt/domain';
 import { check, hash, wrap } from '../../portal/security';
@@ -101,6 +101,16 @@ export function antiAgingRoadmapRouter(catalog: AntiAgingCatalog, store?: Store)
       reminders: (await records.entries<ProgressReminder>('anti_aging_reminders')).map(item => item.value).filter(item => item.actor === actor),
     }));
     res.json({ data: summarizeProgressExport(bundle.entries, bundle.reminders), consent_scope: ['progress_tracking', 'reminders'] });
+  }));
+
+  router.get('/progress/control-summary', wrap(async (req, res) => {
+    missingStore(store);
+    const actor = actorOf(req);
+    const bundle = await store.tx(async records => ({
+      entries: (await records.entries<ProgressEntry>('anti_aging_progress')).map(item => item.value).filter(item => item.actor === actor),
+      reminders: (await records.entries<ProgressReminder>('anti_aging_reminders')).map(item => item.value).filter(item => item.actor === actor),
+    }));
+    res.json({ data: buildProgressControlSummary(bundle.entries, bundle.reminders) });
   }));
 
   router.delete('/progress', wrap(async (req, res) => {

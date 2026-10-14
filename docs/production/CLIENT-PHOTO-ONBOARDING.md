@@ -47,6 +47,11 @@ do not contain the customer's original filename or profile data.
 5. Revoke the test OAuth grant and remove test images/folder after verification. Do not upload
    actual customer photos to this test path.
 
+Test Drive image metadata appears in the signed-in account data export without exposing the Drive
+file ID. Account deletion remains blocked while test Drive images exist, so the user must remove
+them from the image library first; this prevents an identity record from being erased while its
+Drive files become unreachable. This test path does not migrate guest images into an account.
+
 The code is configuration-backed but not activated: no OAuth client values, refresh token, folder
 ID, or Drive access are stored in this repository. A successful application build does not verify
 that the Google account/folder grants the API access.

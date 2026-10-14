@@ -1,0 +1,70 @@
+const {test}=require('node:test');
+const assert=require('node:assert/strict');
+const {createHash}=require('node:crypto');
+const {LocalStore}=require('../dist/portal/store');
+const {OperationalWorker,InAppNotificationDelivery}=require('../dist/portal/operations');
+const {createPortal}=require('../dist/portal/server');
+const {
+ clientImageDriveTestEnabled,listTestDriveImages,saveTestDriveImage,getTestDriveImage,
+ deleteTestDriveImage,updateTestDriveImageCategory,
+}=require('../dist/portal/client-image-drive');
+
+const enabled={NODE_ENV:'test',CLIENT_IMAGE_DRIVE_TEST_ENABLED:'true',TEST_GOOGLE_DRIVE_CLIENT_ID:'client',TEST_GOOGLE_DRIVE_CLIENT_SECRET:'secret',TEST_GOOGLE_DRIVE_REFRESH_TOKEN:'refresh'};
+const jpeg=Buffer.from([0xff,0xd8,0xff,0xe0,1,2,3,4]);
+
+test('test Drive configuration stays disabled in production and fails closed when incomplete',()=>{
+ assert.equal(clientImageDriveTestEnabled(enabled),true);
+ assert.equal(clientImageDriveTestEnabled({...enabled,NODE_ENV:'production'}),false);
+ assert.equal(clientImageDriveTestEnabled({...enabled,TEST_GOOGLE_DRIVE_REFRESH_TOKEN:''}),false);
+ assert.equal(clientImageDriveTestEnabled({...enabled,CLIENT_IMAGE_DRIVE_TEST_ENABLED:'false'}),false);
+});
+
+test('test Drive image records are actor-isolated and support lifecycle changes',async t=>{
+ const db=new LocalStore(':memory:');t.after(()=>db.close());
+ const stored=new Map(),removed=[];
+ const drive={configuredFolderId:'test-folder',upload:async(bytes,id,folder)=>{assert.equal(folder,'test-folder');stored.set('file-'+id,Buffer.from(bytes));return 'file-'+id;},content:async id=>Buffer.from(stored.get(id)),remove:async id=>{removed.push(id);stored.delete(id);},createPrivateTestFolder:async()=>{throw new Error('not expected');}};
+ const actorA='a'.repeat(64),actorB='b'.repeat(64),id='123e4567-e89b-42d3-a456-426614174000';
+ const created=await saveTestDriveImage(db,drive,actorA,jpeg,'front',`${id}|source-name.jpg`);
+ assert.equal(created.id,id);assert.equal(created.name,'source-name.jpg');assert.equal(created.contentUrl,`/api/hub/client-images/${id}/content`);
+ assert.deepEqual((await listTestDriveImages(db,actorA)).map(item=>item.id),[id]);
+ assert.deepEqual(await listTestDriveImages(db,actorB),[]);
+ assert.equal(await getTestDriveImage(db,drive,actorB,id),undefined);
+ const loaded=await getTestDriveImage(db,drive,actorA,id);assert.deepEqual(loaded.bytes,jpeg);
+ const updated=await updateTestDriveImageCategory(db,actorA,id,'progress');assert.equal(updated.category,'progress');
+ assert.equal(await updateTestDriveImageCategory(db,actorB,id,'progress'),undefined);
+ assert.equal(await deleteTestDriveImage(db,drive,actorB,id),false);assert.equal(removed.length,0);
+ assert.equal(await deleteTestDriveImage(db,drive,actorA,id),true);assert.equal(removed.length,1);
+ assert.deepEqual(await listTestDriveImages(db,actorA),[]);
+});
+
+test('failed Drive uploads remove pending ownership records',async t=>{
+ const db=new LocalStore(':memory:');t.after(()=>db.close());
+ const drive={configuredFolderId:'test-folder',upload:async()=>{throw new Error('offline');},remove:async()=>{},createPrivateTestFolder:async()=>{throw new Error('not expected');}};
+ const actor='c'.repeat(64),id='123e4567-e89b-42d3-a456-426614174001';
+ await assert.rejects(saveTestDriveImage(db,drive,actor,jpeg,'front',`${id}|photo.jpg`),/offline/);
+ assert.deepEqual(await db.tx(records=>records.list('client_image_drive')),[]);
+});
+
+test('account deletion is blocked until test Drive images are removed',async t=>{
+ const db=new LocalStore(':memory:');t.after(()=>db.close());
+ const at=Date.parse('2026-10-14T12:00:00.000Z'),actor='user_drive-owner',imageActor=createHash('sha256').update(actor).digest('hex');
+ await db.tx(async records=>{
+  await records.put('accounts','drive-owner',{id:'drive-owner',roles:[]});
+  await records.put('deletion_requests',actor,{request_id:'delete-drive-owner',actor,user_id:'drive-owner',requested_at:'2026-10-01T00:00:00.000Z',not_before:'2026-10-10T00:00:00.000Z',status:'pending'});
+  await records.put('client_image_drive',`${imageActor}:123e4567-e89b-42d3-a456-426614174002`,{id:'123e4567-e89b-42d3-a456-426614174002',actor:imageActor,fileId:'private-drive-id',category:'front',name:'photo.jpg',size:jpeg.length,createdAt:'2026-10-14T00:00:00.000Z',status:'ready'});
+ });
+ const identities=[];const worker=new OperationalWorker(db,{delivery:new InAppNotificationDelivery(),identityDeletion:{kind:'test',remove:async id=>identities.push(id)}});
+ const result=await worker.runOnce(at);assert.equal(result.deletions_completed,0);assert.equal(result.deletions_blocked,1);assert.deepEqual(identities,[]);
+ const request=await db.tx(records=>records.get('deletion_requests',actor));assert(request.blocked_reasons.includes('test_drive_images_present'));
+});
+
+test('account export includes safe test image metadata without Drive identifiers',async t=>{
+ const db=new LocalStore(':memory:');const app=await createPortal({store:db,env:{NODE_ENV:'test',DEMO_MODE:'true',PUBLIC_ORIGIN:'http://localhost:3000'},verifyOtp:async email=>({id:'image-export',email})});
+ const server=app.listen(0,'127.0.0.1');await new Promise(resolve=>server.once('listening',resolve));
+ t.after(async()=>{await new Promise(resolve=>server.close(resolve));await db.close();});
+ let cookie='',csrf='';const call=async(path,body)=>{const response=await fetch(`http://127.0.0.1:${server.address().port}/api/hub${path}`,{method:body===undefined?'GET':'POST',headers:{cookie,origin:'http://localhost:3000','content-type':'application/json','x-csrf-token':csrf},body:body===undefined?undefined:JSON.stringify(body)});if(response.headers.get('set-cookie'))cookie=response.headers.get('set-cookie').split(';')[0];const data=await response.json();if(data.csrf)csrf=data.csrf;return{status:response.status,data};};
+ await call('/session');assert.equal((await call('/auth/verify',{email:'images@example.test',code:'123456'})).status,200);await call('/session');
+ const actor='user_image-export',imageActor=createHash('sha256').update(actor).digest('hex'),id='123e4567-e89b-42d3-a456-426614174003';
+ await db.tx(records=>records.put('client_image_drive',`${imageActor}:${id}`,{id,actor:imageActor,fileId:'must-not-export',category:'progress',name:'Skincare photo.jpg',size:1234,createdAt:'2026-10-14T00:00:00.000Z',status:'ready'}));
+ const exported=await call('/account/export');assert.equal(exported.status,200);assert.deepEqual(exported.data.test_drive_images,[{id,category:'progress',name:'Skincare photo.jpg',size:1234,created_at:'2026-10-14T00:00:00.000Z'}]);assert.equal(JSON.stringify(exported.data).includes('must-not-export'),false);
+});

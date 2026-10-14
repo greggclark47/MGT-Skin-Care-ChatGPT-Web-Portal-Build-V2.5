@@ -419,6 +419,8 @@ export class OperationalWorker{
   if((await records.list<any>('subscription_pending')).some(item=>item.actor===actor))blockers.push('pending_subscription_change');
   if((await records.list<any>('orders')).some(order=>order.actor===actor&&!['canceled','refunded','fulfilled'].includes(order.status)))blockers.push('open_order');
   if((await records.entries<any>('ai_budget_reservations')).some(item=>this.belongsToUser(item.value?.budget_key,actor,userId)&&item.value?.status==='reserved'))blockers.push('pending_ai_charge');
+  const imageActor=createHash('sha256').update(actor).digest('hex');
+  if((await records.list<any>('client_image_drive')).some(item=>item.actor===imageActor))blockers.push('test_drive_images_present');
   return [...new Set(blockers)];
  }
  private belongsToUser(value:unknown,actor:string,userId:string){

@@ -13,6 +13,7 @@
     "test:readiness": "node test/readiness.cjs",
     "test:ai-budget": "node test/ai-budget.cjs",
     "test:operators": "node test/operators.cjs",
+    "test:client-images": "node --test test/client-image-drive.cjs",
     "worker": "node --env-file-if-exists=.env dist/portal/worker.js"
   },
   "dependencies": {

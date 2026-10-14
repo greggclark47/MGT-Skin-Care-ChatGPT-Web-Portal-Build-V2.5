@@ -189,9 +189,9 @@ function renderPricing() {
 
 const demoFlows = {
   "Client photo journal": {
-    kicker: "OPTIONAL CLIENT PHOTOS · SAMPLE FLOW",
+    kicker: "OPTIONAL CLIENT PHOTOS · TEST STORAGE FLOW",
     title: "A useful photo, on your terms",
-    step: "Guidance preview · No image uploaded",
+    step: "Sample only · Test Drive requires server OAuth setup",
     body: `
       <p class="flow-intro">Choose a clear front view in soft, even light. Optional side views or a close-up can help keep your own routine journal consistent. A photo is never required for Skin Match.</p>
       <div class="routine-preview">
@@ -200,7 +200,7 @@ const demoFlows = {
         <div><b>03</b><span>Area or product</span><small>Optional · label for your reference</small></div>
         <div><b>04</b><span>Manage your library</span><small>Organize or remove at any time</small></div>
       </div>
-      <div class="flow-result"><span>LOCAL PHOTO JOURNAL</span><h3>Stored in this browser profile</h3><p>The current web portal resizes and converts supported images to JPEG, removes embedded metadata, and keeps them on this device. They are not synced to an account, sent to MGT, shared with retailers, or analyzed. Android opens the portal photo journal; native capture and cloud sync still need setup.</p><div class="flow-meta"><span>OPTIONAL</span><span>NO IMAGE ANALYSIS</span><span>DEVICE ONLY</span></div></div>
+      <div class="flow-result"><span>OPTIONAL STORAGE DESTINATION</span><h3>Device by default · Drive only in test</h3><p>The portal prepares supported images as resized JPEGs and removes embedded metadata. Device storage stays local. A separately selected Google Drive copy is available only in a configured non-production test environment, uses a private folder and remains actor-scoped. Do not upload customer photos to test storage. Images are not analyzed or shared with retailers. Android native picking and production cloud storage are not enabled.</p><div class="flow-meta"><span>DEVICE DEFAULT</span><span>TEST DRIVE OPTIONAL</span><span>NO IMAGE ANALYSIS</span></div></div>
     `
   },
   "Skin Match": {

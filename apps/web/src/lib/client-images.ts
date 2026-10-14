@@ -24,9 +24,36 @@ export type ClientImage = {
   createdAt: string;
   blob: Blob;
 };
+export type TestDriveClientImage = Omit<ClientImage,'blob'|'mimeType'> & { contentUrl:string };
 
 const DB_NAME = 'mgt-client-image-library-v1-';
 const STORE_NAME = 'images';
+
+async function testDriveRequest(path:string,init:RequestInit={}):Promise<any>{
+  const sessionResponse=await fetch('/api/hub/session',{credentials:'same-origin',cache:'no-store'});
+  if(!sessionResponse.ok)throw new Error('The portal session could not be checked. Refresh and try again.');
+  const portalSession=await sessionResponse.json() as {csrf?:string;client_image_drive_test_enabled?:boolean};
+  if(portalSession.client_image_drive_test_enabled!==true)throw new Error('Test Google Drive storage is not enabled for this environment.');
+  const response=await fetch('/api/hub/client-images'+path,{...init,credentials:'same-origin',cache:'no-store',headers:{...(init.headers||{}),'x-csrf-token':portalSession.csrf||''}});
+  const data=await response.json().catch(()=>({}));
+  if(!response.ok)throw new Error(data.error?.message||'The test image request could not be completed.');
+  return data;
+}
+
+export async function listTestDriveClientImages():Promise<TestDriveClientImage[]>{return (await testDriveRequest('')).images as TestDriveClientImage[];}
+export async function uploadTestDriveClientImage(image:ClientImage):Promise<TestDriveClientImage>{
+  const data=await testDriveRequest('',{method:'POST',headers:{'content-type':'application/octet-stream','x-client-image-category':image.category,'x-client-image-name':`${image.id}|Skincare photo.jpg`},body:image.blob});
+  return data.image as TestDriveClientImage;
+}
+export async function updateTestDriveClientImageCategory(id:string,category:ClientImageCategory):Promise<TestDriveClientImage>{
+  const sessionResponse=await fetch('/api/hub/session',{credentials:'same-origin',cache:'no-store'});
+  if(!sessionResponse.ok)throw new Error('The portal session could not be checked. Refresh and try again.');
+  const portalSession=await sessionResponse.json() as {csrf?:string;client_image_drive_test_enabled?:boolean};
+  if(portalSession.client_image_drive_test_enabled!==true)throw new Error('Test Google Drive storage is not enabled for this environment.');
+  const response=await fetch('/api/hub/client-images/'+encodeURIComponent(id),{method:'PATCH',credentials:'same-origin',cache:'no-store',headers:{'content-type':'application/json','x-csrf-token':portalSession.csrf||''},body:JSON.stringify({category})});
+  const data=await response.json().catch(()=>({}));if(!response.ok)throw new Error(data.error?.message||'The image purpose could not be updated.');return data.image as TestDriveClientImage;
+}
+export async function deleteTestDriveClientImage(id:string):Promise<void>{await testDriveRequest('/'+encodeURIComponent(id),{method:'DELETE'});}
 
 function database(scope: string): Promise<IDBDatabase> {
   if (!/^[a-f0-9]{64}$/.test(scope)) return Promise.reject(new Error('The image library needs an active portal session.'));

@@ -256,6 +256,21 @@ const demoFlows = {
     step: "v3.810 · Reviewed locally",
     body: `<div class="flow-result"><span>CONTROL CENTER</span><h3>Evidence without overclaiming</h3><p>The personal surface keeps the current-actor boundary visible. The operator surface can page through bounded review sessions and assemble an auditable decision packet with evidence references and human-only hold or defer options—without granting launch authorization.</p><div class="flow-meta"><span>DECISION PACKET</span><span>HUMAN REVIEW</span><span>NO LIVE CLAIMS</span></div></div>`
   },
+  "Decision packet": {
+    kicker: "ANTI-AGING · DECISION PACKET",
+    title: "Review, don't auto-decide",
+    step: "Read-only · Human owner required",
+    body: `
+      <p class="flow-intro">This packet keeps the review trail together without turning a bounded candidate into an automatic approval, treatment decision, booking, or publication.</p>
+      <div class="routine-preview">
+        <div><b>01</b><span>Packet status</span><small>Pending human review</small></div>
+        <div><b>02</b><span>Evidence refs</span><small>Stable, session-derived IDs</small></div>
+        <div><b>03</b><span>Safe options</span><small>Hold · Defer · More evidence</small></div>
+        <div><b>04</b><span>Publication</span><small>Locked · Not authorized</small></div>
+      </div>
+      <div class="flow-result"><span>AUDITABLE HANDOFF</span><h3>Human decision remains required</h3><p>The packet can be reviewed, retained, or returned for more evidence. It cannot publish, book care, enable checkout, infer diagnosis, or share personal data.</p><div class="flow-meta"><span>READ-ONLY</span><span>OWNER REQUIRED</span><span>PUBLICATION LOCKED</span></div></div>
+    `
+  },
   "Data export": {
     kicker: "ACCOUNT DATA · SAMPLE FLOW",
     title: "Review a portable export",

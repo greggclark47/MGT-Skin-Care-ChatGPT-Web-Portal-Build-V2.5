@@ -84,3 +84,13 @@ No production environment file, real database target, secret-manager record, dep
 signing credential, Play Console application, legal approval, approved catalog, live restore proof,
 or final store listing was available during this update. The repository is prepared to accept those
 inputs, but it is not authorized to invent them or to claim that web or Android has shipped.
+
+## Reference authorities
+
+These primary sources are reference points for counsel and the accountable release owner; they do not replace jurisdiction-specific advice or platform review.
+
+- FTC, [Health Products Compliance Guidance](https://www.ftc.gov/system/files/ftc_gov/pdf/Health-Guidance-508.pdf)
+- FDA, [Cosmetics Labeling Claims](https://www.fda.gov/cosmetics/cosmetics-labeling/cosmetics-labeling-claims)
+- Google Play, [User Data policy](https://support.google.com/googleplay/android-developer/answer/10144311) and [account deletion requirements](https://support.google.com/googleplay/android-developer/answer/13327111)
+- Google Play, [Data safety section](https://support.google.com/googleplay/android-developer/answer/10787469)
+- W3C, [WCAG 2.2 Recommendation](https://www.w3.org/WAI/news/2023-10-05/wcag22rec/)

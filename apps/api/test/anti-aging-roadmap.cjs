@@ -52,6 +52,7 @@ const { OperationalWorker, InAppNotificationDelivery } = require('../dist/portal
     assert.equal(preview.data.data.items[0].next_action, 'pause');
     const controls = await call('/api/v1/progress/control-summary');
     assert.equal(controls.data.data.deletion_supported, true);
+    assert.equal(controls.data.data.actor_scope, 'current_actor');
     assert.equal(controls.data.data.manifest.reminders, 1);
     assert.equal(controls.data.data.reminders[0].delivery, 'in_app_only');
     await store.tx(async records => { const saved = await records.get('anti_aging_reminders', reminder.data.data.id); await records.put('anti_aging_reminders', saved.id, { ...saved, next_at: new Date(Date.now() - 1000).toISOString() }); });

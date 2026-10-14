@@ -1,7 +1,7 @@
 import type {
   SkinProfileInput, Routine, ProfileVector, AvoidFlags, IngredientRecord, ProductRecord,
   ProviderRecord, TreatmentRecord, ReadOnlyPage, AntiAgingResponseMeta, GroundedAntiAgingExplanation, GroundedSearchResult,
-  MerchantReferral, ProgressEntry, ProgressAggregate, ProgressReminder, ProgressControlSummary, ProgressExportManifest, ProgressExportSummary, ProgressReminderPreview, AppointmentRequest, AntiAgingOperationsDigest, AntiAgingLaunchReadiness, CatalogModerationQueueItem, CatalogModerationQueueSummary, CatalogQualityIssue, CatalogQualitySummary, LaunchEvidenceFreshness, LaunchEvidenceSummary, ProviderSearchDailySummary, ProviderSearchSloSummary,
+  MerchantReferral, ProgressEntry, ProgressAggregate, ProgressReminder, ProgressControlSummary, ProgressExportManifest, ProgressExportSummary, ProgressReminderPreview, AppointmentRequest, AntiAgingOperationsDigest, AntiAgingLaunchReadiness, CatalogModerationQueueItem, CatalogModerationQueuePage, CatalogModerationQueueSummary, CatalogQualityIssue, CatalogQualitySummary, LaunchEvidenceFreshness, LaunchEvidenceSummary, ProviderSearchDailySummary, ProviderSearchSloSummary,
 } from '@mgt/domain';
 
 // One API client shared by web and mobile (Section C.1: "no separate business logic per
@@ -150,11 +150,11 @@ export class ApiClient {
   }
 
   getAntiAgingQuality(filters: { owner_role?: 'catalog_editor' | 'sme' | 'compliance'; severity?: 'review' | 'blocker' } = {}, token?: string) {
-    return this.get<{ policy: string; filters: { owner_role: string | null; severity: string | null }; quality: CatalogQualitySummary; issues: CatalogQualityIssue[]; queue: CatalogModerationQueueItem[]; queue_summary: CatalogModerationQueueSummary }>(`/admin/anti-aging-quality${queryString(filters)}`, token);
+    return this.get<{ policy: string; filters: { owner_role: string | null; severity: string | null }; quality: CatalogQualitySummary; issues: CatalogQualityIssue[]; queue: CatalogModerationQueueItem[]; queue_page: CatalogModerationQueuePage; queue_summary: CatalogModerationQueueSummary }>(`/admin/anti-aging-quality${queryString(filters)}`, token);
   }
 
   getAntiAgingSearchReview(token?: string) {
-    return this.get<{ policy: string; slo: ProviderSearchSloSummary; daily: ProviderSearchDailySummary[]; window: { days: number; first_day: string | null; last_day: string | null; retention_days: number; truncated: boolean }; days: number }>(`/admin/anti-aging-search`, token);
+    return this.get<{ policy: string; slo: ProviderSearchSloSummary; daily: ProviderSearchDailySummary[]; window: { days: number; first_day: string | null; last_day: string | null; retention_days: number; truncated: boolean; review_required_days: number }; days: number }>(`/admin/anti-aging-search`, token);
   }
 
   getAntiAgingReadinessReview(token?: string) {

@@ -96,6 +96,7 @@ export interface ProgressControlSummary {
   reminders: ProgressReminderPreview[];
   consent_scope: ['progress_tracking', 'reminders'];
   data_shared: [];
+  actor_scope: 'current_actor';
   deletion_supported: true;
   note: string;
 }
@@ -161,6 +162,14 @@ export interface CatalogModerationQueueSummary {
   status: CatalogModerationSummary['status'];
 }
 
+export interface CatalogModerationQueuePage {
+  items: CatalogModerationQueueItem[];
+  total: number;
+  limit: number;
+  offset: number;
+  has_more: boolean;
+}
+
 export interface AntiAgingLaunchInput {
   live_ai_enabled: boolean;
   checkout_enabled: boolean;
@@ -220,6 +229,7 @@ export interface LaunchEvidenceFreshness {
   max_age_seconds: number;
   stale: boolean;
   status: 'fresh' | 'stale' | 'missing';
+  next_review: 'none_required' | 'refresh_evidence';
   note: string;
 }
 
@@ -229,6 +239,7 @@ export interface ProviderSearchWindowSummary {
   last_day: string | null;
   retention_days: number;
   truncated: boolean;
+  review_required_days: number;
 }
 
 export interface AntiAgingOperationsDigestInput {
@@ -359,6 +370,7 @@ export function buildProgressControlSummary(entries: ProgressEntry[], reminders:
     reminders: reminders.map(reminder => previewProgressReminder(reminder, now)),
     consent_scope: ['progress_tracking', 'reminders'],
     data_shared: [],
+    actor_scope: 'current_actor',
     deletion_supported: true,
     note: 'Private control summary only. Export, reminder, and deletion controls remain actor-scoped and do not create a treatment record.',
   };
@@ -429,6 +441,12 @@ export function summarizeCatalogModerationQueue(queue: CatalogModerationQueueIte
   return { total: queue.length, blockers, review, by_owner_role, filter_options: { owner_roles: ['catalog_editor', 'sme', 'compliance'], severities: ['review', 'blocker'] }, status: blockers ? 'quarantine_required' : review ? 'review_required' : 'clear' };
 }
 
+export function paginateCatalogModerationQueue(queue: CatalogModerationQueueItem[], limit = 50, offset = 0): CatalogModerationQueuePage {
+  const safeLimit = Number.isInteger(limit) ? Math.max(1, Math.min(100, limit)) : 50;
+  const safeOffset = Number.isInteger(offset) ? Math.max(0, Math.min(10000, offset)) : 0;
+  return { items: queue.slice(safeOffset, safeOffset + safeLimit), total: queue.length, limit: safeLimit, offset: safeOffset, has_more: safeOffset + safeLimit < queue.length };
+}
+
 export function buildLaunchReadiness(input: AntiAgingLaunchInput): AntiAgingLaunchReadiness {
   const gates = { referral_only_commerce: !input.checkout_enabled, no_live_booking: !input.booking_enabled, no_image_analysis: !input.image_analysis_enabled,
     grounded_ai_gate: !input.live_ai_enabled, catalog_approved: input.approved_catalog_records > 0, accessibility: input.accessibility_verified,
@@ -456,7 +474,8 @@ export function assessLaunchEvidenceFreshness(evidence: LaunchGateEvidence[], no
   const timestamps = evidence.map(item => Date.parse(item.observed_at)).filter(value => Number.isFinite(value));
   const observed = timestamps.length ? Math.max(...timestamps) : NaN;
   const age = Number.isFinite(observed) ? Math.max(0, Math.floor((now - observed) / 1000)) : null;
-  return { observed_at: Number.isFinite(observed) ? new Date(observed).toISOString() : null, age_seconds: age, max_age_seconds: maxAgeSeconds, stale: age === null || age > maxAgeSeconds, status: age === null ? 'missing' : age > maxAgeSeconds ? 'stale' : 'fresh', note: 'Freshness is a review signal only; stale evidence does not authorize or disable a launch.' };
+  const status = age === null ? 'missing' : age > maxAgeSeconds ? 'stale' : 'fresh';
+  return { observed_at: Number.isFinite(observed) ? new Date(observed).toISOString() : null, age_seconds: age, max_age_seconds: maxAgeSeconds, stale: status !== 'fresh', status, next_review: status === 'fresh' ? 'none_required' : 'refresh_evidence', note: 'Freshness is a review signal only; stale evidence does not authorize or disable a launch.' };
 }
 
 export function buildAntiAgingOperationsDigest(input: AntiAgingOperationsDigestInput, generatedAt = new Date().toISOString()): AntiAgingOperationsDigest {
@@ -504,5 +523,5 @@ export function summarizeProviderSearchWindow(daily: ProviderSearchDailySummary[
   const safeRetention = Number.isInteger(retentionDays) && retentionDays > 0 ? retentionDays : 30;
   const sorted = [...daily].sort((a, b) => a.day.localeCompare(b.day));
   const recent = sorted.slice(-safeRetention);
-  return { days: recent.length, first_day: recent[0]?.day || null, last_day: recent[recent.length - 1]?.day || null, retention_days: safeRetention, truncated: sorted.length > safeRetention };
+  return { days: recent.length, first_day: recent[0]?.day || null, last_day: recent[recent.length - 1]?.day || null, retention_days: safeRetention, truncated: sorted.length > safeRetention, review_required_days: recent.filter(item => item.status === 'review_required').length };
 }

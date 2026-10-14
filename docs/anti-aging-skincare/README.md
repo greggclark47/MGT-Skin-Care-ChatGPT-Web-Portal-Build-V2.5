@@ -1,6 +1,6 @@
 # Anti-aging skincare platform — Phase 1 discovery package
 
-Status: Phase 1 architecture and implementation planning complete locally. The v4.135 operations checkpoint begins the production backend track with a sanitized administrative readiness contract while retaining the v4.035 decision-packet integrity boundary and paired GitHub/Google Drive backup evidence; live providers, booking, checkout, and production database application remain separately gated.
+Status: Phase 1 architecture and implementation planning complete locally. The v4.235 operations checkpoint extends the production backend track with a redacted production-admission projection in the protected readiness view while retaining the v4.135 sanitized operational-readiness contract and paired GitHub/Google Drive backup evidence; live providers, booking, checkout, and production database application remain separately gated.
 
 Baseline audited: MGT Skin Care v2.195 at commit `2c67a3bfee9d02d73237d2b44706f323db97e59f`.
 
@@ -31,10 +31,11 @@ Baseline audited: MGT Skin Care v2.195 at commit `2c67a3bfee9d02d73237d2b44706f3
 23. [Operations checkpoint v3.935](./OPERATIONS-CHECKPOINT-v3.935.md) — 100 safe increments across review-plan/page binding, fail-closed packet integrity, API contracts, demo continuity, and backup verification.
 24. [Operations checkpoint v4.035](./OPERATIONS-CHECKPOINT-v4.035.md) — 100 safe increments across fingerprint coverage, governance-bound packet integrity, timestamp validation, demo continuity, and backup verification.
 25. [Operations checkpoint v4.135](./OPERATIONS-CHECKPOINT-v4.135.md) — 100 safe increments across production-boundary audit, sanitized admin readiness, backup redaction, backend regressions, demo continuity, and backup verification.
+26. [Operations checkpoint v4.235](./OPERATIONS-CHECKPOINT-v4.235.md) — 100 safe increments across redacted production-admission status, protected readiness visibility, regression coverage, demo continuity, and backup verification.
 
 ## Recommended next move
 
-Continue from the v4.135 seams with live target validation only after source approval, privacy review, jurisdiction review, restore verification, and explicit launch authorization. Keep product checkout, medical diagnosis, image analysis, live booking, and sponsored ranking disabled until their safety and partner gates are satisfied.
+Continue from the v4.235 seams with live target validation only after source approval, privacy review, jurisdiction review, restore verification, and explicit launch authorization. Keep product checkout, medical diagnosis, image analysis, live booking, and sponsored ranking disabled until their safety and partner gates are satisfied.
 
 ## Current architectural position
 

@@ -2,10 +2,20 @@ const assert = require('node:assert/strict');
 const { test } = require('node:test');
 const { spawnSync } = require('node:child_process');
 const path = require('node:path');
-const { validateRuntimeOwnership, validateProductionPortalBoundary, validateProductionDatabaseAdmission, validateProductionOperationsAdmission, validateProductionNotificationAdmission, validateProductionIdentityAdmission, validateProductionBackupAdmission, validateProductionAccessibilityAdmission, validateProductionSubscriptionAdmission, validateProductionAiAdmission, validateProductionProcessSurfaceAdmission, validateProductionImageAdmission, validateProductionSecretIsolation, validateProductionEndpointIsolation, validateProductionDisabledFeatureResidue, workerIntervalMs, workerReadinessMaxAgeMs } = require('../dist/portal/runtime-admission');
+const { productionAdmissionProjection, validateRuntimeOwnership, validateProductionPortalBoundary, validateProductionDatabaseAdmission, validateProductionOperationsAdmission, validateProductionNotificationAdmission, validateProductionIdentityAdmission, validateProductionBackupAdmission, validateProductionAccessibilityAdmission, validateProductionSubscriptionAdmission, validateProductionAiAdmission, validateProductionProcessSurfaceAdmission, validateProductionImageAdmission, validateProductionSecretIsolation, validateProductionEndpointIsolation, validateProductionDisabledFeatureResidue, workerIntervalMs, workerReadinessMaxAgeMs } = require('../dist/portal/runtime-admission');
 const { createPortal } = require('../dist/portal/server');
 const owner = 'Gregg Clark of MGT';
 const valid = { NODE_ENV:'production', DEMO_MODE:'false', PUBLIC_ORIGIN:'https://portal.example', PORTAL_DOMAIN:'portal.example', RELEASE_OWNER_NAME:owner, SUPPORT_OWNER_NAME:owner, WORKER_INTERVAL_SECONDS:'60', WORKER_READINESS_MAX_AGE_SECONDS:'300' };
+
+test('production admission projection exposes category outcomes without submitted values', () => {
+  const projection=productionAdmissionProjection({...valid,PORTAL_AUTO_MIGRATE:'false'});
+  assert.equal(projection.mode,'production');
+  assert.equal(projection.healthy,false);
+  assert(projection.issues.includes('database'));
+  assert.equal(JSON.stringify(projection).includes('portal.example'),false);
+  assert.equal(JSON.stringify(projection).includes('Gregg Clark'),false);
+  assert.deepEqual(productionAdmissionProjection({NODE_ENV:'test'}),{mode:'non_production',healthy:true,issues:[],checks:[]});
+});
 
 test('preflight and runtime accept the same owner declarations and 25 timing boundary cases', async () => {
   const { validateEnvironment } = await import('../../../infra/portal/preflight.mjs');

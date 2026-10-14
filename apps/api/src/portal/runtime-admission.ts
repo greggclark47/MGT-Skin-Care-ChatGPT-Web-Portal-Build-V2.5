@@ -215,6 +215,31 @@ export function validateProductionDisabledFeatureResidue(env:NodeJS.ProcessEnv):
  if(env.SUBSCRIPTIONS_ENABLED==='false'&&populated(['STRIPE_LIVE_MODE','STRIPE_SECRET_KEY','STRIPE_SUBSCRIPTION_WEBHOOK_SECRET','STRIPE_PREMIUM_PRODUCT_ID','STRIPE_PREMIUM_MONTHLY_PRICE_ID','STRIPE_PREMIUM_ANNUAL_PRICE_ID']))throw new Error('Production disabled feature residue is invalid.');
 }
 
+export function productionAdmissionProjection(env:NodeJS.ProcessEnv){
+ if(env.NODE_ENV!=='production')return {mode:'non_production' as const,healthy:true,issues:[] as string[],checks:[] as {id:string;healthy:boolean}[]};
+ const checks:[string,()=>void][]=[
+  ['ownership',()=>validateRuntimeOwnership(env)],
+  ['portal_boundary',()=>validateProductionPortalBoundary(env)],
+  ['worker_timing',()=>{workerReadinessMaxAgeMs(env);}],
+  ['database',()=>validateProductionDatabaseAdmission(env)],
+  ['operations',()=>validateProductionOperationsAdmission(env)],
+  ['notifications',()=>validateProductionNotificationAdmission(env)],
+  ['identity',()=>validateProductionIdentityAdmission(env)],
+  ['backup',()=>validateProductionBackupAdmission(env)],
+  ['accessibility',()=>validateProductionAccessibilityAdmission(env)],
+  ['subscriptions',()=>validateProductionSubscriptionAdmission(env)],
+  ['ai',()=>validateProductionAiAdmission(env)],
+  ['process_surface',()=>validateProductionProcessSurfaceAdmission(env)],
+  ['image',()=>validateProductionImageAdmission(env)],
+  ['secret_isolation',()=>validateProductionSecretIsolation(env)],
+  ['endpoint_isolation',()=>validateProductionEndpointIsolation(env)],
+  ['disabled_feature_residue',()=>validateProductionDisabledFeatureResidue(env)]
+ ];
+ const results=checks.map(([id,validate])=>{try{validate();return{id,healthy:true};}catch{return{id,healthy:false};}});
+ const issues=results.filter(check=>!check.healthy).map(check=>check.id);
+ return {mode:'production' as const,healthy:issues.length===0,issues,checks:results};
+}
+
 export function validateApiRuntimeAdmission(env:NodeJS.ProcessEnv):void{
  validateRuntimeOwnership(env);
  if(env.NODE_ENV==='production'){

@@ -70,7 +70,7 @@ test("static demo exposes the current release and ship-packet surface", () => {
   assert.match(html, /Ship authorization: blocked/);
   assert.match(html, /aria-label="MGT Skin Care home"/);
   assert.match(html, /class="brand-mark-image" src="mgt-mark\.svg"/);
-  assert.match(html, /<small class="build-version">v4\.135<\/small>/);
+  assert.match(html, /<small class="build-version">v4\.235<\/small>/);
   assert.match(html, /data-demo="Decision packet"/);
   assert.match(html, /aria-label="Operational health preview"/);
   assert.match(html, /Queue pressure, aging work and service targets/);

@@ -31,6 +31,7 @@ const {LocalStore}=require('../dist/portal/store');
   await signIn(compliance,'compliance@example.test');
   assert.equal((await guest('/admin/readiness')).status,401);
   const readiness=await compliance('/admin/readiness');assert.equal(readiness.status,200);assert.equal(readiness.data.checks.find(check=>check.name==='Subscription billing mode').configured,false);assert.equal(readiness.data.checks.find(check=>check.name==='Premium billing product').configured,false);assert.deepEqual(Object.keys(readiness.data.backup).sort(),['healthy','last_success_recorded','status']);assert.equal(JSON.stringify(readiness.data).includes('location_identifier'),false);assert.equal(JSON.stringify(readiness.data).includes('restore_reference'),false);assert.equal(JSON.stringify(readiness.data).includes('"checksum"'),false);assert.equal(JSON.stringify(readiness.data).includes('sha256:'),false);
+  assert.deepEqual(Object.keys(readiness.data.production_admission).sort(),['checks','healthy','issues','mode']);assert.equal(readiness.data.production_admission.mode,'non_production');assert.equal(JSON.stringify(readiness.data).includes('SUPABASE_SERVICE_ROLE_KEY'),false);
   assert.deepEqual(readiness.data.phases.map(phase=>phase.id),['data_identity','operations_recovery','ai_quality','billing_commercial','support_accessibility']);
   assert(readiness.data.phases.every(phase=>['ready','blocked'].includes(phase.status)));
   assert(readiness.data.phases.find(phase=>phase.id==='operations_recovery').blockers.includes('Operations worker heartbeat'));

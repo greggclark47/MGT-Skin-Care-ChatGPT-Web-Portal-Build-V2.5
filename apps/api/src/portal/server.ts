@@ -15,7 +15,7 @@ import {ASSISTANT_ROLES,routeAssistantRequest} from './assistant';
 import type {AiGateway} from '@mgt/ai-gateway';
 import Stripe from 'stripe';
 import {RETAILERS,SHOP_SEGMENTS,COMMERCE_MODEL} from './retailers';
-import {aiRuntimeReadiness,operationalReadiness,operationalSnapshot} from './operations';
+import {aiRuntimeReadiness,operationalReadiness,operationalSnapshot,publicOperationalReadiness} from './operations';
 import {acceptsApiContentEncoding,acceptsApiJsonBody,acceptsApiJsonCharset,acceptsBodyForMethod,apiSecurityHeaders,applyProductionExpressBoundary,applyProductionHttpLimits,applyProductionHttpTimeouts,closeProductionHttpServer,hasNoMethodOverride,hasNoPartialBody,hasNoPathOverride,hasNoRangeRequest,hasNoRequestTrailers,hasNoUnverifiedIntegrity,hasNoUrlFragment,hasNonEmptyQueryKeys,hasOriginFormRequestTarget,hasUniqueQueryKeys,hasValidQueryEncoding,headerWithinLimit,installClientErrorBoundary,isSupportedHttpMethod,queryComponentsWithinLimit,queryPairCountWithinLimit,queryStringWithinLimit,requestTargetWithinLimit} from './http-runtime';
 import {BILLING_CYCLES,PLAN_DEFINITIONS,priceIdFor} from './plans';
 import { antiAgingRouter } from '../modules/anti-aging/router';
@@ -380,7 +380,8 @@ export async function createPortal(options:PortalOptions){
    {name:'Accountable support owner',configured:supportOwner,phase:'support_accessibility',evidence:'configuration'},
    {name:'Deployed accessibility evidence',configured:accessibilityEvidence,phase:'support_accessibility',evidence:'runtime'}
   ];
-  res.json({checks,phases:readinessPhases(checks),operations:{healthy:operations.healthy,issues:operations.issues},ai_runtime:{enabled:aiRuntime.enabled,healthy:aiRuntime.healthy},backup,note:'Configuration and runtime signals are grouped by production phase. External service qualification and human approval remain separate release evidence.'});
+  const publicOperations=publicOperationalReadiness(operations);
+  res.json({checks,phases:readinessPhases(checks),operations:publicOperations,ai_runtime:{enabled:aiRuntime.enabled,healthy:aiRuntime.healthy},backup:publicOperations.backup,note:'Configuration and runtime signals are grouped by production phase. Operational locations, restore references, checksums, run records, and delivery details are intentionally excluded. External service qualification and human approval remain separate release evidence.'});
  });
  get('/admin/operations-health',async(req,res)=>{
   role(req,['superadmin','compliance']);

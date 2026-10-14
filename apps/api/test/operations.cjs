@@ -3,7 +3,7 @@ const {createHash}=require('node:crypto');
 const fs=require('node:fs/promises');
 const path=require('node:path');
 const {LocalStore}=require('../dist/portal/store.js');
-const {OperationalWorker,InAppNotificationDelivery,WebhookNotificationDelivery,WebhookOperationsAlertDelivery,aiRuntimeReadiness,operationalReadiness,operationalSnapshot,notificationDeliveryFromEnv,operationsAlertDeliveryFromEnv,operationsAlertRetryAfterSeconds,operationsAlertRetryDelaySeconds,verifyOperationsAlertSignature,verifyOperationsAlertRequest:rawVerifyOperationsAlertRequest,writeWorkerHeartbeat}=require('../dist/portal/operations.js');
+const {OperationalWorker,InAppNotificationDelivery,WebhookNotificationDelivery,WebhookOperationsAlertDelivery,aiRuntimeReadiness,operationalReadiness,publicOperationalReadiness,operationalSnapshot,notificationDeliveryFromEnv,operationsAlertDeliveryFromEnv,operationsAlertRetryAfterSeconds,operationsAlertRetryDelaySeconds,verifyOperationsAlertSignature,verifyOperationsAlertRequest:rawVerifyOperationsAlertRequest,writeWorkerHeartbeat}=require('../dist/portal/operations.js');
 const verifyOperationsAlertRequest=input=>rawVerifyOperationsAlertRequest({...input,contentDigest:input.contentDigest||'sha256='+createHash('sha256').update(input.body).digest('hex')});
 
 (async()=>{
@@ -66,6 +66,10 @@ const verifyOperationsAlertRequest=input=>rawVerifyOperationsAlertRequest({...in
   [{id:'newer',value:{completed_at:new Date(at-60000).toISOString()}},{id:'older',value:{completed_at:new Date(at-120000).toISOString()}}],
   at,300000);
  assert.equal(healthy.healthy,true);assert.equal(healthy.last_run.completed_at,new Date(at-60000).toISOString());
+ const publicHealthy=publicOperationalReadiness({...healthy,backup:{status:'healthy',last_success_at:new Date(at-60000).toISOString(),location_identifier:'encrypted-offsite',restore_reference:'https://evidence.test/restore',checksum:'sha256:'+'a'.repeat(64)}});
+ assert.deepEqual(publicHealthy,{healthy:true,issues:[],worker:{healthy:true},backup:{healthy:true,status:'healthy',last_success_recorded:true}});
+ assert.equal(JSON.stringify(publicHealthy).includes('encrypted-offsite'),false);
+ assert.equal(JSON.stringify(publicHealthy).includes('restore_reference'),false);
  assert.deepEqual(operationalReadiness({status:'unverified',last_success_at:new Date(at-3600000).toISOString()},[],at).issues,
   ['operations_worker_stale','backup_unhealthy']);
  assert.deepEqual(operationalReadiness({status:'stale',last_success_at:new Date(at-3600000).toISOString()},[],at).issues,

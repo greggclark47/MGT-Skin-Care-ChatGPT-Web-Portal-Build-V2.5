@@ -142,6 +142,17 @@ export function operationalReadiness(backup:any,runs:{value:any}[],at=Date.now()
  return {healthy:issues.length===0,issues,last_run:lastRun,backup};
 }
 
+export function publicOperationalReadiness(result:any){
+ const issues=Array.isArray(result?.issues)?result.issues.filter((item:unknown):item is string=>typeof item==='string').slice(0,10):[];
+ const backupStatus=['healthy','stale','unverified'].includes(result?.backup?.status)?result.backup.status:'unverified';
+ return {
+  healthy:result?.healthy===true&&issues.length===0,
+  issues,
+  worker:{healthy:!issues.includes('operations_worker_stale')},
+  backup:{healthy:!issues.includes('backup_unhealthy'),status:backupStatus,last_success_recorded:typeof result?.backup?.last_success_at==='string'}
+ };
+}
+
 export function operationalSnapshot(input:{notifications:any[];deletions:any[];tickets:any[];runs:any[];webhooks:any[]},at=Date.now(),supportTargetHours=24){
  supportTargetHours=Number.isFinite(supportTargetHours)&&supportTargetHours>=1&&supportTargetHours<=168?supportTargetHours:24;
  const pendingNotifications=input.notifications.filter(item=>['queued','processing'].includes(item?.status));

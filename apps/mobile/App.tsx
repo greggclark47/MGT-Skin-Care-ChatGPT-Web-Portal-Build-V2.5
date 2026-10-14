@@ -52,8 +52,13 @@ export default function App() {
             {isHttpsUrl(privacyUrl) && <Pressable onPress={() => void Linking.openURL(privacyUrl)} accessibilityRole="link"><Text style={styles.legalLink}>Privacy notice</Text></Pressable>}
             {isHttpsUrl(termsUrl) && <Pressable onPress={() => void Linking.openURL(termsUrl)} accessibilityRole="link"><Text style={styles.legalLink}>Terms</Text></Pressable>}
           </View>
-          {isHttpsUrl(portalUrl) && <Pressable style={styles.photoLink} onPress={() => void Linking.openURL(portalUrl.replace(/\/+$/, '') + '/my-skin')} accessibilityRole="link"><Text style={styles.legalLink}>Open my skincare photo journal in the MGT portal</Text></Pressable>}
-          <Text style={styles.configNote}>Photos are optional. The portal photo journal keeps images on the browser device; photo sync and in-app photo capture are not enabled yet.</Text>
+          {isHttpsUrl(portalUrl) && <View style={styles.accountHub} accessibilityLabel="Account management links">
+            <Text style={styles.accountHubTitle}>Manage your connected account</Text>
+            <Pressable style={styles.portalLink} onPress={() => void Linking.openURL(portalUrl.replace(/\/+$/, '') + '/account')} accessibilityRole="link"><Text style={styles.legalLink}>Profile and preferences</Text></Pressable>
+            <Pressable style={styles.portalLink} onPress={() => void Linking.openURL(portalUrl.replace(/\/+$/, '') + '/account#payment-settings')} accessibilityRole="link"><Text style={styles.legalLink}>Payment setup and subscriptions</Text></Pressable>
+            <Pressable style={styles.portalLink} onPress={() => void Linking.openURL(portalUrl.replace(/\/+$/, '') + '/account#image-library')} accessibilityRole="link"><Text style={styles.legalLink}>Upload and manage skincare photos</Text></Pressable>
+          </View>}
+          <Text style={styles.configNote}>Account, payment and image management open in the secure web portal until reviewed native Android modules are connected. Photos remain optional and are never analyzed by this build.</Text>
           {!isHttpsUrl(privacyUrl) || !isHttpsUrl(termsUrl) ? <Text style={styles.configNote}>Production builds must provide HTTPS privacy and terms links.</Text> : null}
           <Text style={styles.disclaimer}>
             Cosmetic guidance, not medical care. If you have a persistent or painful skin condition,
@@ -82,6 +87,8 @@ const styles = StyleSheet.create({
   consentText: { flex: 1, fontSize: font.size.sm, color: color.textMuted, lineHeight: 20 },
   legalRow: { flexDirection: 'row', gap: space.md, marginTop: space.sm },
   legalLink: { color: color.accent, textDecorationLine: 'underline', fontSize: font.size.sm },
-  photoLink: { marginTop: space.sm, alignSelf: 'flex-start' },
+  accountHub: { marginTop: space.sm, padding: space.md, gap: space.sm, borderWidth: 1, borderColor: color.border, borderRadius: radius.md },
+  accountHubTitle: { fontSize: font.size.md, color: color.text, fontWeight: '600' },
+  portalLink: { minHeight: 44, justifyContent: 'center', alignSelf: 'stretch' },
   configNote: { fontSize: font.size.xs, color: color.textFaint, marginTop: space.sm },
 });

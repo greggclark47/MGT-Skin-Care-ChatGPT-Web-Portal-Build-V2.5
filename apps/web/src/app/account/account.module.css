@@ -1,0 +1,26 @@
+.accountCenter :global(.account-section-links){display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:24px 0}
+.accountCenter :global(.account-section-links a){display:flex;flex-direction:column;gap:5px;padding:16px;border:1px solid var(--border);border-radius:12px;background:color-mix(in srgb,var(--panel) 82%,var(--violet) 18%)}
+.accountCenter :global(.account-section-links a:hover){border-color:var(--purple)}
+.accountCenter :global(.account-section-links span){font-size:.78rem;color:var(--muted);line-height:1.45}
+.accountCenter :global(.account-settings-panel){scroll-margin-top:110px}
+.accountCenter :global(.account-settings-panel h2){margin-bottom:8px}
+.accountCenter :global(.account-profile-form){display:grid;gap:24px;margin-top:22px}
+.accountCenter :global(.account-form-grid){grid-template-columns:repeat(2,minmax(0,1fr))}
+.accountCenter :global(.account-choice-group){border:1px solid var(--border);border-radius:13px;padding:18px;margin:0;min-width:0}
+.accountCenter :global(.account-choice-group legend){padding:0 8px;font-weight:650;color:var(--text)}
+.accountCenter :global(.account-interest-grid){display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:14px}
+.accountCenter :global(.account-check-card),.accountCenter :global(.account-check-row){display:flex;align-items:flex-start;gap:11px;color:var(--text);cursor:pointer}
+.accountCenter :global(.account-check-card){border:1px solid var(--border);border-radius:10px;padding:13px}
+.accountCenter :global(.account-check-card:has(input:checked)){border-color:var(--purple);background:color-mix(in srgb,var(--panel) 72%,var(--violet) 28%)}
+.accountCenter :global(.account-check-card input),.accountCenter :global(.account-check-row input){min-height:18px;width:18px;margin:2px 0 0;accent-color:var(--violet)}
+.accountCenter :global(.account-check-card span){display:flex;flex-direction:column;gap:3px}
+.accountCenter :global(.account-check-card small),.accountCenter :global(.account-choice-group>small){color:var(--muted);line-height:1.45}
+.accountCenter :global(.account-check-row){margin:13px 0}
+.accountCenter :global(.account-storage-field){max-width:520px}
+.accountCenter :global(.account-billing-summary){display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:22px 0}
+.accountCenter :global(.account-billing-summary>div){display:flex;flex-direction:column;gap:6px;padding:17px;border:1px solid var(--border);border-radius:12px}
+.accountCenter :global(.account-billing-summary span){font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.accountCenter :global(.account-billing-summary strong){font-size:1.1rem}
+.accountCenter :global(.account-billing-summary small){color:var(--muted);line-height:1.45}
+.accountCenter :global(#image-library){scroll-margin-top:110px}
+@media(max-width:700px){.accountCenter :global(.account-section-links),.accountCenter :global(.account-form-grid),.accountCenter :global(.account-interest-grid),.accountCenter :global(.account-billing-summary){grid-template-columns:1fr}.accountCenter :global(.account-preference-columns){grid-template-columns:1fr}}

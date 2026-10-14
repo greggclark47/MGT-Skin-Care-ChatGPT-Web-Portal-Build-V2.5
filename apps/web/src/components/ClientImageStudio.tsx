@@ -7,7 +7,7 @@ import {
   updateClientImageCategory, listTestDriveClientImages, uploadTestDriveClientImage, deleteTestDriveClientImage, updateTestDriveClientImageCategory,
   type ClientImage, type TestDriveClientImage, type ClientImageCategory,
 } from '../lib/client-images';
-import { useHub } from '../lib/hub';
+import { hub, useHub } from '../lib/hub';
 
 function ImageCard({ image, onCategory, onDelete }: { image: ClientImage; onCategory: (id: string, category: ClientImageCategory) => void; onDelete: (image: ClientImage) => void }) {
   const [preview, setPreview] = useState('');
@@ -44,9 +44,19 @@ export function ClientImageStudio({ compact = false }: { compact?: boolean }) {
   const [error, setError] = useState('');
   const [category, setCategory] = useState<ClientImageCategory>('front');
   const input = useRef<HTMLInputElement>(null);
+  const destinationInitialized = useRef(false);
   const session = useHub('/session');
   const scope = session.data?.client_image_scope || '';
   const testDriveEnabled = session.data?.client_image_drive_test_enabled === true;
+
+  useEffect(() => {
+    if (destinationInitialized.current || session.loading || !session.data) return;
+    destinationInitialized.current = true;
+    if (!session.data.account) return;
+    void hub('/account/profile').then(result => {
+      if (result.profile?.default_image_storage === 'test-drive' && testDriveEnabled) setDestination('test-drive');
+    }).catch(() => undefined);
+  }, [session.loading, session.data, testDriveEnabled]);
 
   const refresh = useCallback(async (imageScope: string) => {
     setLoading(true); setError('');
@@ -135,7 +145,7 @@ export function ClientImageStudio({ compact = false }: { compact?: boolean }) {
       <label className="field">Storage location<select value={destination} disabled={busy || loading} onChange={event => setDestination(event.target.value as 'device'|'test-drive')}><option value="device">This device (private browser storage)</option><option value="test-drive" disabled={!testDriveEnabled}>Google Drive (test environment only){testDriveEnabled ? '' : ' · not configured'}</option></select></label>
       <label className="field">Photo purpose<select value={category} disabled={busy} onChange={event => setCategory(event.target.value as ClientImageCategory)}>{CLIENT_IMAGE_CATEGORIES.map(item => <option key={item.id} value={item.id}>{item.label}</option>)}</select></label>
       <label className="button primary client-image-select">{busy ? 'Preparing…' : 'Take or choose photos'}<input ref={input} type="file" accept="image/jpeg,image/png,image/webp" capture="user" multiple disabled={busy || loading || session.loading || session.error !== '' || !scope || !testDriveEnabled && destination === 'test-drive' || (destination === 'test-drive' ? driveImages.length : images.length) >= CLIENT_IMAGE_LIMIT} onChange={event => void addFiles(event.currentTarget.files)} aria-label="Take or choose JPEG, PNG, or WebP photos"/></label>
-      <small>JPEG, PNG, or WebP · up to 8 MB each · max {CLIENT_IMAGE_LIMIT}. Saved copies are resized, converted to JPEG, and stripped of embedded metadata.</small>
+      <small>JPEG, PNG, or WebP · up to 8 MB each · max {CLIENT_IMAGE_LIMIT}. Saved copies are resized, converted to JPEG, and stripped of embedded metadata. Signed-in accounts open with the saved default destination.</small>
     </div>
     <p className="notice">{destination === 'test-drive' ? 'Test-only destination: chosen copies are sent to the configured private Google Drive folder through the portal. Drive test storage is not for customer or production data. Images are not analyzed or shared with retailers.' : 'Stored only in this browser profile on this device. Images are not sent to MGT, shared with retailers, synced to your account, or used for AI analysis. Android native image picking is not connected.'}</p>
     {message && <p className="notice success" role="status">{message}</p>}

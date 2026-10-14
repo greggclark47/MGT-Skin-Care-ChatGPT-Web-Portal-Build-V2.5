@@ -3,10 +3,10 @@ import React,{useEffect,useState,useRef} from 'react';
 import Link from 'next/link';
 import {usePathname} from 'next/navigation';
 import {Brand} from './Brand';
-import {useHub} from '../lib/hub';
+import {hub,useHub} from '../lib/hub';
 type Theme='light'|'dark';
 export function PortalShell({children}:{children:React.ReactNode}){
- const saved=useHub('/saved-retailers');const savedCount=saved.data?.ids.length||0;
+ const saved=useHub('/saved-retailers');const sessionState=useHub('/session');const savedCount=saved.data?.ids.length||0;
  const headerRef=useRef<HTMLElement>(null),previousPath=useRef<string|undefined>(undefined);
  const path=usePathname(); const [theme,setTheme]=useState<Theme>('dark'); const [open,setOpen]=useState(false); const [routeAnnouncement,setRouteAnnouncement]=useState('');
  const titles:Record<string,string>={'/':'Applications','/account':'My account','/skin-match':'Skin Match','/skin-match/results':'Skin Match results','/my-skin':'My skin','/routine':'My routine','/coach':'Skin Coach','/anti-aging':'Anti-aging discovery','/shop':'Shop','/saved':'Saved retailers','/replenishment':'Replenishment','/membership':'Plans and billing','/subscription':'Subscription','/orders':'Retailer purchase help','/support':'Portal Support','/learn':'Learn','/company':'Company','/trust':'Trust and AI','/ai-disclosure':'AI disclosure','/privacy':'Privacy','/terms':'Terms','/shipping':'Shipping and returns','/partners':'Partners','/studio':'Beauty and Style Studio','/studio/personal-color':'Personal color','/studio/makeup':'Makeup','/studio/haircare':'Haircare','/studio/hair-color':'Hair color','/studio/style':'Personal style','/studio/clothing':'Clothing','/admin':'Portal operations','/admin/analysis':'AI operations','/admin/knowledge':'Knowledge review','/admin/ingredient-rules':'Ingredient rules','/admin/operators':'Operator access'};
@@ -20,6 +20,14 @@ export function PortalShell({children}:{children:React.ReactNode}){
  },[]);
  useEffect(()=>{document.title=routeTitle+' · MGT Skin Care';setOpen(false);if(previousPath.current!==undefined&&previousPath.current!==path){setRouteAnnouncement(routeTitle+' page loaded');window.requestAnimationFrame(()=>document.getElementById('main')?.focus());}previousPath.current=path;},[path,routeTitle]);
  useEffect(()=>{const media=matchMedia('(min-width: 601px)');const reset=()=>{if(media.matches)setOpen(false);};media.addEventListener('change',reset);return()=>media.removeEventListener('change',reset);},[]);
+ useEffect(()=>{
+  let active=true;const root=document.documentElement;
+  const clear=()=>{delete root.dataset.accountReducedMotion;delete root.dataset.accountHighContrast;root.lang='en';};
+  const apply=()=>{if(!sessionState.data?.account){clear();return;}void hub('/account/profile').then(result=>{if(!active)return;const profile=result.profile;root.dataset.accountReducedMotion=String(profile?.accessibility?.reduced_motion===true);root.dataset.accountHighContrast=String(profile?.accessibility?.high_contrast===true);root.lang=profile?.locale==='es-US'?'es-US':'en-US';}).catch(()=>{if(active)clear();});};
+  if(!sessionState.loading)apply();
+  const changed=(event:Event)=>{if((event as CustomEvent<string>).detail==='/account/profile')apply();};window.addEventListener('hub:changed',changed);
+  return()=>{active=false;window.removeEventListener('hub:changed',changed);};
+ },[sessionState.loading,sessionState.data?.account]);
  useEffect(()=>{if(!open)return;window.requestAnimationFrame(()=>document.querySelector<HTMLElement>('#primary-navigation a')?.focus());const outside=(e:PointerEvent)=>{if(!headerRef.current?.contains(e.target as Node))setOpen(false);};const close=(e:KeyboardEvent)=>{if(e.key==='Escape'){setOpen(false);document.getElementById('menu-toggle')?.focus();}};window.addEventListener('keydown',close);document.addEventListener('pointerdown',outside);return()=>{window.removeEventListener('keydown',close);document.removeEventListener('pointerdown',outside);};},[open]);
  const toggle=()=>{const t=theme==='dark'?'light':'dark';document.documentElement.dataset.theme=t;setTheme(t);try{localStorage.setItem('mgt-theme',t);}catch{}};
  const primary=[['/','Applications'],['/shop','Shop'],['/learn','Learn'],['/company','Company']];

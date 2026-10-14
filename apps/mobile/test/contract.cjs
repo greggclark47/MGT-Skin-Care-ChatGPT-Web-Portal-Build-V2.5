@@ -33,6 +33,9 @@ test('mobile Skin Match consumes shared questionnaire and profile contracts',()=
  assert.match(entry,/completeSkinMatch\(input\)/);
  assert.match(entry,/EXPO_PUBLIC_PRIVACY_URL/);
  assert.match(entry,/EXPO_PUBLIC_TERMS_URL/);
+ assert.match(entry,/\/account#payment-settings/);
+ assert.match(entry,/\/account#image-library/);
+ assert.match(entry,/Profile and preferences/);
  assert.match(entry,/missing its API configuration/);
  assert.doesNotMatch(entry,/OPENAI_API_KEY|SUPABASE_SERVICE_ROLE_KEY|STRIPE_SECRET_KEY/);
 });

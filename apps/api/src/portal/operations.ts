@@ -432,7 +432,7 @@ export class OperationalWorker{
   for(const item of await records.entries<any>('profile_merge_pending'))if(item.value?.account_id===userId||item.value?.guest_actor===actor)await records.remove('profile_merge_pending',item.id);
   for(const item of await records.entries<any>('guest_invitations'))if(item.value.owner_actor===actor||item.value.guest_actor===actor||item.value.email===account?.email)await records.remove('guest_invitations',item.id);
   await records.remove('guest_memberships',actor);
-  for(const scope of ['profiles','profile_revisions','style_profiles','reminders','anti_aging_reminders','saved_retailers','carts','memberships'])await records.remove(scope,actor);
+  for(const scope of ['account_profiles','profiles','profile_revisions','style_profiles','reminders','anti_aging_reminders','saved_retailers','carts','memberships'])await records.remove(scope,actor);
   await records.remove('checkout_requests','premium_'+actor);
   for(const scope of ['subscriptions','billing_attempts'])await records.remove(scope,`${actor}:consumer`);
   for(const scope of ['sessions','notifications','tickets','ai_routing_log','anti_aging_ai_events','anti_aging_ai_feedback','anti_aging_progress','anti_aging_reminders','anti_aging_appointment_requests','ai_budget','ai_budget_reservations','ai_budget_reconciliations','rate','subscription_commands','subscription_pending']){

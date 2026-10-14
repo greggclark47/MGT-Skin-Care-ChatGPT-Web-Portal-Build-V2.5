@@ -70,7 +70,7 @@ test("static demo exposes the current release and ship-packet surface", () => {
   assert.match(html, /Ship authorization: blocked/);
   assert.match(html, /aria-label="MGT Skin Care home"/);
   assert.match(html, /class="brand-mark-image" src="mgt-mark\.svg"/);
-  assert.match(html, /<small class="build-version">v3\.835<\/small>/);
+  assert.match(html, /<small class="build-version">v3\.935<\/small>/);
   assert.match(html, /data-demo="Decision packet"/);
   assert.match(html, /aria-label="Operational health preview"/);
   assert.match(html, /Queue pressure, aging work and service targets/);
@@ -127,7 +127,8 @@ test("static demo keeps the ship packet interactive and clearly sample-only", ()
   assert.match(script, /"Ship authorization"/);
   assert.match(script, /Blocked · no ship authorization/);
   assert.match(script, /"Decision packet"/);
-  assert.match(script, /Comparison fingerprint/);
+  assert.match(script, /Plan \+ page binding/);
+  assert.match(script, /Integrity check/);
   assert.match(script, /Page scope/);
   assert.match(html, /sample records only/);
   assert.match(html, /publication gate/i);

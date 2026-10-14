@@ -253,7 +253,7 @@ const demoFlows = {
   "Moderation & evidence": {
     kicker: "ANTI-AGING · EVIDENCE VIEW",
     title: "Keep control visible",
-    step: "v4.335 · Reviewed locally",
+    step: "v4.336 · Reviewed locally",
     body: `<div class="flow-result"><span>CONTROL CENTER</span><h3>Evidence without overclaiming</h3><p>The personal surface keeps the current-actor boundary visible. The operator surface can page through bounded review sessions and assemble an auditable decision packet with plan and page integrity checks, explicit scope, stable references, and human-only hold or defer options—without granting launch authorization.</p><div class="flow-meta"><span>PAGE-BOUND PACKET</span><span>HUMAN REVIEW</span><span>NO LIVE CLAIMS</span></div></div>`
   },
   "Decision packet": {

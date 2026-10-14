@@ -218,6 +218,20 @@ Release only when:
 6. Configure commercial, notification and support services.
 7. Build the pinned container stack and execute the final staging release gate.
 
+## Web and Android ship update - v4.336
+
+The repository-side release boundary now includes Android EAS profiles, a Play App Bundle
+production profile, no-optional-permission and cleartext-disabled defaults, explicit HTTPS legal
+link inputs, and a fail-closed mobile API configuration. The current regulatory and external-evidence
+register is [WEB-ANDROID-PRODUCTION-READINESS.md](docs/production/WEB-ANDROID-PRODUCTION-READINESS.md),
+with the Play Data safety engineering draft at
+`apps/mobile/PLAY-DATA-SAFETY-DRAFT.md`.
+
+This does not close the external release gates. A real staging/production target, Android signing
+and Play Console setup, approved legal copy, catalog substantiation, deployed accessibility proof,
+backup restore evidence, support ownership, monitoring, and named release approval are still required.
+Apple setup remains deferred.
+
 ## Phase 1–3 local continuation checkpoint
 
 Commit `13d0d2e` advances the repository-side portions of the next three phases:

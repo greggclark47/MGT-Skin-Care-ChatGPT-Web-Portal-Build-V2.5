@@ -6,6 +6,7 @@ const {test}=require('node:test');
 const root=path.resolve(__dirname,'..');
 const read=file=>fs.readFileSync(path.join(root,file),'utf8');
 const app=JSON.parse(read('app.json')).expo;
+const eas=JSON.parse(read('eas.json'));
 const entry=read('App.tsx');
 const screen=read('src/screens/SkinMatchScreen.tsx');
 const step=read('src/components/SkinMatchStep.tsx');
@@ -17,6 +18,12 @@ test('mobile app has a reproducible Expo identity and API configuration seam',()
  assert.equal(app.orientation,'portrait');
  assert.match(entry,/process\.env\.EXPO_PUBLIC_API_URL/);
  assert.match(entry,/new ApiClient\(/);
+ assert.equal(app.android.versionCode,1);
+ assert.deepEqual(app.android.permissions,[]);
+ assert.equal(app.android.usesCleartextTraffic,false);
+ assert.equal(eas.build.production.android.buildType,'app-bundle');
+ assert.equal(eas.build.production.distribution,'store');
+ assert.equal(eas.submit.production.android.track,'internal');
 });
 
 test('mobile Skin Match consumes shared questionnaire and profile contracts',()=>{
@@ -24,6 +31,9 @@ test('mobile Skin Match consumes shared questionnaire and profile contracts',()=
  assert.match(screen,/progress\(answers\)/);
  assert.match(screen,/toProfileInput\(answers\)/);
  assert.match(entry,/completeSkinMatch\(input\)/);
+ assert.match(entry,/EXPO_PUBLIC_PRIVACY_URL/);
+ assert.match(entry,/EXPO_PUBLIC_TERMS_URL/);
+ assert.match(entry,/missing its API configuration/);
  assert.doesNotMatch(entry,/OPENAI_API_KEY|SUPABASE_SERVICE_ROLE_KEY|STRIPE_SECRET_KEY/);
 });
 

@@ -7,6 +7,11 @@
     "orientation": "portrait",
     "userInterfaceStyle": "light",
     "ios": { "supportsTablet": false, "bundleIdentifier": "com.mgt.skincare" },
-    "android": { "package": "com.mgt.skincare" }
+    "android": {
+      "package": "com.mgt.skincare",
+      "versionCode": 1,
+      "permissions": [],
+      "usesCleartextTraffic": false
+    }
   }
 }

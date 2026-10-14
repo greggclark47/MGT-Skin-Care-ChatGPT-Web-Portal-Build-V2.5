@@ -1,6 +1,6 @@
 # Anti-aging skincare platform — Phase 1 discovery package
 
-Status: Phase 1 architecture and implementation planning complete locally. The v4.335 operations checkpoint hardens the production backend track with fail-closed backup-status projection while retaining the v4.235 redacted production-admission view and paired GitHub/Google Drive backup evidence; live providers, booking, checkout, and production database application remain separately gated.
+Status: Phase 1 architecture and implementation planning complete locally. The v4.336 checkpoint adds web and Android production-boundary preparation, explicit disclosure surfaces, and a regulatory/evidence register while retaining the v4.335 fail-closed backup-status projection and paired GitHub/Google Drive backup evidence; live providers, booking, checkout, and production database application remain separately gated.
 
 Baseline audited: MGT Skin Care v2.195 at commit `2c67a3bfee9d02d73237d2b44706f323db97e59f`.
 

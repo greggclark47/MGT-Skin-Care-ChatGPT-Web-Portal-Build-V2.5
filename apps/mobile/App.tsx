@@ -10,6 +10,7 @@ const apiBaseUrl = configuredApiUrl || (__DEV__ ? 'http://localhost:3000' : '');
 const api = apiBaseUrl ? new ApiClient(apiBaseUrl) : null;
 const privacyUrl = process.env.EXPO_PUBLIC_PRIVACY_URL?.trim() ?? '';
 const termsUrl = process.env.EXPO_PUBLIC_TERMS_URL?.trim() ?? '';
+const portalUrl = process.env.EXPO_PUBLIC_PORTAL_URL?.trim() ?? '';
 const isHttpsUrl = (value: string) => /^https:\/\//i.test(value);
 const releaseConfigurationReady = __DEV__ || Boolean(apiBaseUrl && isHttpsUrl(privacyUrl) && isHttpsUrl(termsUrl));
 
@@ -51,6 +52,8 @@ export default function App() {
             {isHttpsUrl(privacyUrl) && <Pressable onPress={() => void Linking.openURL(privacyUrl)} accessibilityRole="link"><Text style={styles.legalLink}>Privacy notice</Text></Pressable>}
             {isHttpsUrl(termsUrl) && <Pressable onPress={() => void Linking.openURL(termsUrl)} accessibilityRole="link"><Text style={styles.legalLink}>Terms</Text></Pressable>}
           </View>
+          {isHttpsUrl(portalUrl) && <Pressable style={styles.photoLink} onPress={() => void Linking.openURL(portalUrl.replace(/\/+$/, '') + '/my-skin')} accessibilityRole="link"><Text style={styles.legalLink}>Open my skincare photo journal in the MGT portal</Text></Pressable>}
+          <Text style={styles.configNote}>Photos are optional. The portal photo journal keeps images on the browser device; photo sync and in-app photo capture are not enabled yet.</Text>
           {!isHttpsUrl(privacyUrl) || !isHttpsUrl(termsUrl) ? <Text style={styles.configNote}>Production builds must provide HTTPS privacy and terms links.</Text> : null}
           <Text style={styles.disclaimer}>
             Cosmetic guidance, not medical care. If you have a persistent or painful skin condition,
@@ -79,5 +82,6 @@ const styles = StyleSheet.create({
   consentText: { flex: 1, fontSize: font.size.sm, color: color.textMuted, lineHeight: 20 },
   legalRow: { flexDirection: 'row', gap: space.md, marginTop: space.sm },
   legalLink: { color: color.accent, textDecorationLine: 'underline', fontSize: font.size.sm },
+  photoLink: { marginTop: space.sm, alignSelf: 'flex-start' },
   configNote: { fontSize: font.size.xs, color: color.textFaint, marginTop: space.sm },
 });

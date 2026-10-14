@@ -188,6 +188,21 @@ function renderPricing() {
 }
 
 const demoFlows = {
+  "Client photo journal": {
+    kicker: "OPTIONAL CLIENT PHOTOS · SAMPLE FLOW",
+    title: "A useful photo, on your terms",
+    step: "Guidance preview · No image uploaded",
+    body: `
+      <p class="flow-intro">Choose a clear front view in soft, even light. Optional side views or a close-up can help keep your own routine journal consistent. A photo is never required for Skin Match.</p>
+      <div class="routine-preview">
+        <div><b>01</b><span>Front view</span><small>Eye-level · neutral light</small></div>
+        <div><b>02</b><span>Side views</span><small>Optional · same distance</small></div>
+        <div><b>03</b><span>Area or product</span><small>Optional · label for your reference</small></div>
+        <div><b>04</b><span>Manage your library</span><small>Organize or remove at any time</small></div>
+      </div>
+      <div class="flow-result"><span>LOCAL PHOTO JOURNAL</span><h3>Stored in this browser profile</h3><p>The current web portal resizes and converts supported images to JPEG, removes embedded metadata, and keeps them on this device. They are not synced to an account, sent to MGT, shared with retailers, or analyzed. Android opens the portal photo journal; native capture and cloud sync still need setup.</p><div class="flow-meta"><span>OPTIONAL</span><span>NO IMAGE ANALYSIS</span><span>DEVICE ONLY</span></div></div>
+    `
+  },
   "Skin Match": {
     kicker: "SKIN MATCH · SAMPLE FLOW",
     title: "Find a calmer starting point",
@@ -253,7 +268,7 @@ const demoFlows = {
   "Moderation & evidence": {
     kicker: "ANTI-AGING · EVIDENCE VIEW",
     title: "Keep control visible",
-    step: "v4.337 · Reviewed locally",
+    step: "v4.338 · Reviewed locally",
     body: `<div class="flow-result"><span>CONTROL CENTER</span><h3>Evidence without overclaiming</h3><p>The personal surface keeps the current-actor boundary visible. The operator surface can page through bounded review sessions and assemble an auditable decision packet with plan and page integrity checks, explicit scope, stable references, and human-only hold or defer options—without granting launch authorization.</p><div class="flow-meta"><span>PAGE-BOUND PACKET</span><span>HUMAN REVIEW</span><span>NO LIVE CLAIMS</span></div></div>`
   },
   "Decision packet": {

@@ -84,6 +84,28 @@ assert.equal(freshness.status, 'stale');
 assert.equal(freshness.next_review, 'refresh_evidence');
 assert.equal(domain.summarizeProviderSearchWindow(dailySlo, 1).truncated, true);
 assert.equal(domain.summarizeProviderSearchWindow(dailySlo, 2).review_required_days, 1);
+const reviewPlan = domain.buildAntiAgingReviewPlan({
+  queue,
+  search: domain.aggregateProviderSearchSlo([{ result_count: 0, latency_ms: 900, fallback: true, created_at: now }]),
+  readiness,
+  evidence: evidenceSummary,
+  evidence_freshness: freshness,
+}, now);
+assert.equal(reviewPlan.authorization, 'not_authorized');
+assert.equal(reviewPlan.first_action, 'quarantine_catalog');
+assert.equal(reviewPlan.blockers >= 1, true);
+assert.equal(reviewPlan.items.some(item => item.action === 'quarantine_catalog'), true);
+assert.equal(reviewPlan.items.some(item => item.action === 'refresh_evidence'), true);
+assert.equal(reviewPlan.items.some(item => item.action === 'review_search_slo'), true);
+const clearPlan = domain.buildAntiAgingReviewPlan({
+  queue: [],
+  search: domain.aggregateProviderSearchSlo([]),
+  readiness,
+  evidence: { ...evidenceSummary, failed: 0, blockers: [] },
+  evidence_freshness: { ...freshness, status: 'fresh', stale: false, next_review: 'none_required' },
+}, now);
+assert.equal(clearPlan.first_action, 'no_action');
+assert.equal(clearPlan.blockers, 0);
 const digest = domain.buildAntiAgingOperationsDigest({ moderation, queue, search: domain.aggregateProviderSearchSlo([]), daily_search: [], readiness, evidence: evidenceSummary }, now);
 assert.equal(digest.authorization, 'not_authorized');
 assert.equal(digest.moderation_queue_items, queue.length);

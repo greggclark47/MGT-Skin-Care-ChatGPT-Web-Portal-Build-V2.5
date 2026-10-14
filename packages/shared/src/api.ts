@@ -2,6 +2,7 @@ import type {
   SkinProfileInput, Routine, ProfileVector, AvoidFlags, IngredientRecord, ProductRecord,
   ProviderRecord, TreatmentRecord, ReadOnlyPage, AntiAgingResponseMeta, GroundedAntiAgingExplanation, GroundedSearchResult,
   MerchantReferral, ProgressEntry, ProgressAggregate, ProgressReminder, ProgressControlSummary, ProgressExportManifest, ProgressExportSummary, ProgressReminderPreview, AppointmentRequest, AntiAgingOperationsDigest, AntiAgingLaunchReadiness, CatalogModerationQueueItem, CatalogModerationQueuePage, CatalogModerationQueueSummary, CatalogQualityIssue, CatalogQualitySummary, LaunchEvidenceFreshness, LaunchEvidenceSummary, ProviderSearchDailySummary, ProviderSearchSloSummary,
+  AntiAgingReviewPlan,
 } from '@mgt/domain';
 
 // One API client shared by web and mobile (Section C.1: "no separate business logic per
@@ -162,7 +163,7 @@ export class ApiClient {
   }
 
   getAntiAgingOperationsDigest(token?: string) {
-    return this.get<{ policy: string; digest: AntiAgingOperationsDigest; queue_summary: CatalogModerationQueueSummary; evidence_freshness: LaunchEvidenceFreshness }>(`/admin/anti-aging-operations`, token);
+    return this.get<{ policy: string; digest: AntiAgingOperationsDigest; queue_summary: CatalogModerationQueueSummary; evidence_freshness: LaunchEvidenceFreshness; review_plan: AntiAgingReviewPlan }>(`/admin/anti-aging-operations`, token);
   }
 
   referralPreview(productId: string) {

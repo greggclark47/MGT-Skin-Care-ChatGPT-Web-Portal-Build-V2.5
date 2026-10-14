@@ -1,6 +1,6 @@
 # Anti-aging skincare platform — Phase 1 discovery package
 
-Status: Phase 1 architecture and implementation planning complete locally. The v3.210 operations checkpoint extends v3.110 with bounded moderation pagination, daily review-required search counts, explicit freshness follow-up actions, refreshed demo accessibility, and paired GitHub/Google Drive backup evidence; live providers, booking, checkout, and production database application remain separately gated.
+Status: Phase 1 architecture and implementation planning complete locally. The v3.310 operations checkpoint extends v3.210 with a deterministic, read-only review plan across catalog, evidence freshness, search SLO, and readiness seams, refreshed demo accessibility, and paired GitHub/Google Drive backup evidence; live providers, booking, checkout, and production database application remain separately gated.
 
 Baseline audited: MGT Skin Care v2.195 at commit `2c67a3bfee9d02d73237d2b44706f323db97e59f`.
 
@@ -24,10 +24,11 @@ Baseline audited: MGT Skin Care v2.195 at commit `2c67a3bfee9d02d73237d2b44706f3
 16. [Operations checkpoint v3.010](./OPERATIONS-CHECKPOINT-v3.010.md) — 100 safe increments across unified personal controls, filtered moderation review, evidence freshness, demo continuity, and backup verification.
 17. [Operations checkpoint v3.110](./OPERATIONS-CHECKPOINT-v3.110.md) — 100 safe increments across explicit personal boundaries, reminder action states, bounded search review, readiness freshness, demo continuity, and backup verification.
 18. [Operations checkpoint v3.210](./OPERATIONS-CHECKPOINT-v3.210.md) — 100 safe increments across bounded moderation pagination, search review counts, freshness follow-up, demo continuity, and backup verification.
+19. [Operations checkpoint v3.310](./OPERATIONS-CHECKPOINT-v3.310.md) — 100 safe increments across deterministic review planning, operator action ordering, readiness boundaries, demo continuity, and backup verification.
 
 ## Recommended next move
 
-Continue from the v3.210 seams with production partner work only after source approval, privacy review, jurisdiction review, restore verification, and explicit launch authorization. Keep product checkout, medical diagnosis, image analysis, live booking, and sponsored ranking disabled until their safety and partner gates are satisfied.
+Continue from the v3.310 seams with production partner work only after source approval, privacy review, jurisdiction review, restore verification, and explicit launch authorization. Keep product checkout, medical diagnosis, image analysis, live booking, and sponsored ranking disabled until their safety and partner gates are satisfied.
 
 ## Current architectural position
 

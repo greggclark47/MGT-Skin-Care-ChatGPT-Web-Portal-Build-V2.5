@@ -242,6 +242,29 @@ export interface ProviderSearchWindowSummary {
   review_required_days: number;
 }
 
+export type AntiAgingReviewPriority = 'blocker' | 'review' | 'info';
+export type AntiAgingReviewAction = 'quarantine_catalog' | 'review_catalog' | 'refresh_evidence' | 'review_search_slo' | 'review_readiness' | 'no_action';
+
+export interface AntiAgingReviewPlanItem {
+  key: string;
+  priority: AntiAgingReviewPriority;
+  action: AntiAgingReviewAction;
+  owner_role: CatalogModerationQueueItem['owner_role'] | 'operations';
+  subject: string;
+  reason: string;
+}
+
+export interface AntiAgingReviewPlan {
+  generated_at: string;
+  items: AntiAgingReviewPlanItem[];
+  total: number;
+  blockers: number;
+  review: number;
+  first_action: AntiAgingReviewPlanItem['action'] | null;
+  authorization: 'not_authorized';
+  note: string;
+}
+
 export interface AntiAgingOperationsDigestInput {
   moderation: CatalogModerationSummary;
   queue: CatalogModerationQueueItem[];
@@ -476,6 +499,48 @@ export function assessLaunchEvidenceFreshness(evidence: LaunchGateEvidence[], no
   const age = Number.isFinite(observed) ? Math.max(0, Math.floor((now - observed) / 1000)) : null;
   const status = age === null ? 'missing' : age > maxAgeSeconds ? 'stale' : 'fresh';
   return { observed_at: Number.isFinite(observed) ? new Date(observed).toISOString() : null, age_seconds: age, max_age_seconds: maxAgeSeconds, stale: status !== 'fresh', status, next_review: status === 'fresh' ? 'none_required' : 'refresh_evidence', note: 'Freshness is a review signal only; stale evidence does not authorize or disable a launch.' };
+}
+
+export function buildAntiAgingReviewPlan(input: {
+  queue: CatalogModerationQueueItem[];
+  search: ProviderSearchSloSummary;
+  readiness: AntiAgingLaunchReadiness;
+  evidence: LaunchEvidenceSummary;
+  evidence_freshness: LaunchEvidenceFreshness;
+}, generatedAt = new Date().toISOString()): AntiAgingReviewPlan {
+  const items: AntiAgingReviewPlanItem[] = input.queue.map(item => ({
+    key: `catalog:${item.key}`,
+    priority: item.severity,
+    action: item.action === 'quarantine' ? 'quarantine_catalog' : 'review_catalog',
+    owner_role: item.owner_role,
+    subject: item.key,
+    reason: item.action === 'quarantine' ? 'Source integrity is blocked; compliance review must determine whether the record remains unavailable.' : 'Catalog evidence requires accountable review before the record can be treated as ready.',
+  }));
+  if (input.evidence_freshness.next_review === 'refresh_evidence') items.push({
+    key: 'operations:evidence-freshness', priority: 'review', action: 'refresh_evidence', owner_role: 'operations', subject: input.evidence_freshness.status,
+    reason: 'Readiness evidence is missing or outside its review window; refresh the evidence before relying on it.',
+  });
+  if (input.search.status === 'review_required') items.push({
+    key: 'operations:search-slo', priority: 'review', action: 'review_search_slo', owner_role: 'operations', subject: 'provider-search-slo',
+    reason: 'Aggregate search latency or fallback behavior is outside the configured review target.',
+  });
+  for (const blocker of input.readiness.blockers) items.push({
+    key: `readiness:${blocker}`, priority: 'blocker', action: 'review_readiness', owner_role: 'operations', subject: blocker,
+    reason: 'This readiness gate is not satisfied. Review evidence and ownership; this plan does not authorize launch.',
+  });
+  const priorityRank: Record<AntiAgingReviewPriority, number> = { blocker: 0, review: 1, info: 2 };
+  items.sort((a, b) => priorityRank[a.priority] - priorityRank[b.priority] || a.key.localeCompare(b.key));
+  if (items.length === 0) items.push({ key: 'operations:no-action', priority: 'info', action: 'no_action', owner_role: 'operations', subject: 'operations', reason: 'No review action is currently indicated by the bounded inputs.' });
+  return {
+    generated_at: generatedAt,
+    items,
+    total: items.length,
+    blockers: items.filter(item => item.priority === 'blocker').length,
+    review: items.filter(item => item.priority === 'review').length,
+    first_action: items[0]?.action || null,
+    authorization: 'not_authorized',
+    note: 'Read-only review guidance. Items do not approve, quarantine, publish, book care, enable commerce, or share personal data.',
+  };
 }
 
 export function buildAntiAgingOperationsDigest(input: AntiAgingOperationsDigestInput, generatedAt = new Date().toISOString()): AntiAgingOperationsDigest {

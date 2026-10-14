@@ -253,8 +253,8 @@ const demoFlows = {
   "Moderation & evidence": {
     kicker: "ANTI-AGING · EVIDENCE VIEW",
     title: "Keep control visible",
-    step: "v3.010 · Reviewed locally",
-    body: `<div class="flow-result"><span>CONTROL CENTER</span><h3>Evidence without overclaiming</h3><p>The personal surface now offers one actor-scoped control summary for manifests, in-app reminder previews, deletion, and provider handoffs. The operator surface adds owner/severity queue filters and evidence freshness without granting launch authorization.</p><div class="flow-meta"><span>ACTOR-SCOPED</span><span>FRESHNESS SIGNAL</span><span>NO LIVE CLAIMS</span></div></div>`
+    step: "v3.110 · Reviewed locally",
+    body: `<div class="flow-result"><span>CONTROL CENTER</span><h3>Evidence without overclaiming</h3><p>The personal surface now offers one actor-scoped control summary with retention, deletion, reminder-action, and delivery boundaries. The operator surface adds bounded search-window review, owner/severity queue filters, and freshness signals without granting launch authorization.</p><div class="flow-meta"><span>BOUNDED REVIEW</span><span>FRESHNESS SIGNAL</span><span>NO LIVE CLAIMS</span></div></div>`
   },
   "Data export": {
     kicker: "ACCOUNT DATA · SAMPLE FLOW",

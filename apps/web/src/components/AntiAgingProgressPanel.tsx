@@ -6,6 +6,7 @@ type ProgressStatus = 'completed' | 'skipped' | 'irritation' | 'no_change';
 type Reminder = { id: string; cadence: 'daily' | 'weekly'; next_at: string; paused: boolean; state?: 'paused' | 'due' | 'scheduled' };
 type ProgressData = { entries: Array<{ entry_id: string; status: ProgressStatus; completed_at: string }>; aggregate: { entries: number; completed: number; completion_rate: number; note: string } };
 type ExportSummary = { entries: number; reminders: number; completed: number; paused_reminders: number; next_reminder_at: string | null; data_shared: []; note: string };
+type ControlSummary = { manifest: { retention: 'user_controlled'; deletion_supported: true; external_delivery: 'disabled' }; reminders: Array<{ delivery: 'in_app_only'; next_action: string }>; deletion_supported: true; data_shared: [] };
 
 async function json<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(path, { credentials: 'same-origin', cache: 'no-store', ...init });
@@ -18,6 +19,7 @@ export function AntiAgingProgressPanel() {
   const [data, setData] = useState<ProgressData | null>(null);
   const [reminders, setReminders] = useState<Reminder[]>([]);
   const [exportSummary, setExportSummary] = useState<ExportSummary | null>(null);
+  const [controlSummary, setControlSummary] = useState<ControlSummary | null>(null);
   const [status, setStatus] = useState<ProgressStatus>('completed');
   const [cadence, setCadence] = useState<'daily' | 'weekly'>('weekly');
   const [reminderConsent, setReminderConsent] = useState(false);
@@ -27,10 +29,11 @@ export function AntiAgingProgressPanel() {
   const refresh = async () => {
     const result = await json<{ csrf?: string }>('/api/hub/session');
     setCsrf(result.csrf || '');
-    const [progress, reminderData, summary] = await Promise.all([json<{ data: ProgressData }>('/api/v1/progress'), json<{ data: { reminders: Reminder[] } }>('/api/v1/progress/reminders'), json<{ data: ExportSummary }>('/api/v1/progress/export/summary')]);
+    const [progress, reminderData, summary, controls] = await Promise.all([json<{ data: ProgressData }>('/api/v1/progress'), json<{ data: { reminders: Reminder[] } }>('/api/v1/progress/reminders'), json<{ data: ExportSummary }>('/api/v1/progress/export/summary'), json<{ data: ControlSummary }>('/api/v1/progress/control-summary')]);
     setData(progress.data);
     setReminders(reminderData.data.reminders);
     setExportSummary(summary.data);
+    setControlSummary(controls.data);
   };
 
   const snoozeReminder = async (reminder: Reminder) => {
@@ -86,6 +89,7 @@ export function AntiAgingProgressPanel() {
     <p className="anti-aging-progress-summary"><strong>Personal controls:</strong> Your export stays actor-scoped; nothing shared. You can pause or snooze reminders at any time.</p>
     {data && <p className="anti-aging-progress-summary" role="status"><strong>{data.aggregate.completed}</strong> completed check-ins · {Math.round(data.aggregate.completion_rate * 100)}% completion rate</p>}
     {exportSummary && <p className="anti-aging-progress-summary" role="status"><strong>Current export:</strong> {exportSummary.entries} entries · {exportSummary.reminders} reminders · {exportSummary.paused_reminders} paused</p>}
+    {controlSummary && <p className="anti-aging-progress-summary" role="status"><strong>Control summary:</strong> user-controlled retention · deletion available · in-app delivery only</p>}
     {reminders.length > 0 && <div className="anti-aging-progress-reminders" aria-label="Your reminder settings"><strong>Reminder settings</strong>{reminders.map(reminder => <div key={reminder.id}><span>{reminder.cadence === 'daily' ? 'Daily' : 'Weekly'} · {reminder.state === 'due' ? 'due now' : `next ${new Date(reminder.next_at).toLocaleDateString()}`}</span><button className="button" type="button" disabled={busy || !csrf} onClick={() => void toggleReminder(reminder)}>{reminder.paused ? 'Resume' : 'Pause'}</button>{!reminder.paused && <button className="button" type="button" disabled={busy || !csrf} onClick={() => void snoozeReminder(reminder)}>Snooze 1 day</button>}</div>)}</div>}
     <div className="anti-aging-progress-controls">
       <label className="field">Today felt

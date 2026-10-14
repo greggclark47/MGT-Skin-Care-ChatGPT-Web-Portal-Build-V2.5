@@ -40,6 +40,8 @@ const { OperationalWorker, InAppNotificationDelivery } = require('../dist/portal
     assert.equal(exported.data.data.summary.entries, 1);
     assert.equal(exported.data.data.manifest.entries, 1);
     assert.deepEqual(exported.data.data.manifest.data_shared, []);
+    assert.equal(exported.data.data.manifest.retention, 'user_controlled');
+    assert.equal(exported.data.data.manifest.external_delivery, 'disabled');
     const manifest = await call('/api/v1/progress/export/manifest');
     assert.equal(manifest.data.data.export_format, 'json');
     assert.deepEqual(manifest.data.data.scopes, ['progress_tracking', 'reminders']);
@@ -47,6 +49,7 @@ const { OperationalWorker, InAppNotificationDelivery } = require('../dist/portal
     assert.equal(preview.data.data.delivery, 'in_app_only');
     assert.deepEqual(preview.data.data.data_shared, []);
     assert.equal(preview.data.data.items[0].state, 'scheduled');
+    assert.equal(preview.data.data.items[0].next_action, 'pause');
     const controls = await call('/api/v1/progress/control-summary');
     assert.equal(controls.data.data.deletion_supported, true);
     assert.equal(controls.data.data.manifest.reminders, 1);

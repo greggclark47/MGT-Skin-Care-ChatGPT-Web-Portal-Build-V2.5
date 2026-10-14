@@ -59,6 +59,9 @@ export interface ProgressExportManifest {
   entries: number;
   reminders: number;
   data_shared: [];
+  retention: 'user_controlled';
+  deletion_supported: true;
+  external_delivery: 'disabled';
   note: string;
 }
 
@@ -83,6 +86,7 @@ export interface ProgressReminderPreview {
   paused: boolean;
   state: ProgressReminderState;
   delivery: 'in_app_only';
+  next_action: 'pause' | 'resume' | 'snooze' | 'none';
   data_shared: [];
   note: string;
 }
@@ -153,6 +157,7 @@ export interface CatalogModerationQueueSummary {
   blockers: number;
   review: number;
   by_owner_role: Record<CatalogModerationQueueItem['owner_role'], number>;
+  filter_options: { owner_roles: CatalogModerationQueueItem['owner_role'][]; severities: CatalogQualityIssue['severity'][] };
   status: CatalogModerationSummary['status'];
 }
 
@@ -214,7 +219,16 @@ export interface LaunchEvidenceFreshness {
   age_seconds: number | null;
   max_age_seconds: number;
   stale: boolean;
+  status: 'fresh' | 'stale' | 'missing';
   note: string;
+}
+
+export interface ProviderSearchWindowSummary {
+  days: number;
+  first_day: string | null;
+  last_day: string | null;
+  retention_days: number;
+  truncated: boolean;
 }
 
 export interface AntiAgingOperationsDigestInput {
@@ -295,6 +309,9 @@ export function buildProgressExportManifest(entries: ProgressEntry[], reminders:
     entries: entries.length,
     reminders: reminders.length,
     data_shared: [],
+    retention: 'user_controlled',
+    deletion_supported: true,
+    external_delivery: 'disabled',
     note: 'Manifest describes the portable personal export; it contains no diagnosis, treatment conclusion, provider handoff, or external delivery permission.',
   };
 }
@@ -330,6 +347,7 @@ export function previewProgressReminder(reminder: ProgressReminder, now = Date.n
     paused: reminder.paused,
     state: progressReminderState(reminder, now),
     delivery: 'in_app_only',
+    next_action: reminder.paused ? 'resume' : 'pause',
     data_shared: [],
     note: 'Preview only. No email, SMS, partner, or provider delivery is enabled by this record.',
   };
@@ -408,7 +426,7 @@ export function summarizeCatalogModerationQueue(queue: CatalogModerationQueueIte
   const review = queue.filter(item => item.severity === 'review').length;
   const by_owner_role = { catalog_editor: 0, sme: 0, compliance: 0 } as Record<CatalogModerationQueueItem['owner_role'], number>;
   for (const item of queue) by_owner_role[item.owner_role]++;
-  return { total: queue.length, blockers, review, by_owner_role, status: blockers ? 'quarantine_required' : review ? 'review_required' : 'clear' };
+  return { total: queue.length, blockers, review, by_owner_role, filter_options: { owner_roles: ['catalog_editor', 'sme', 'compliance'], severities: ['review', 'blocker'] }, status: blockers ? 'quarantine_required' : review ? 'review_required' : 'clear' };
 }
 
 export function buildLaunchReadiness(input: AntiAgingLaunchInput): AntiAgingLaunchReadiness {
@@ -438,7 +456,7 @@ export function assessLaunchEvidenceFreshness(evidence: LaunchGateEvidence[], no
   const timestamps = evidence.map(item => Date.parse(item.observed_at)).filter(value => Number.isFinite(value));
   const observed = timestamps.length ? Math.max(...timestamps) : NaN;
   const age = Number.isFinite(observed) ? Math.max(0, Math.floor((now - observed) / 1000)) : null;
-  return { observed_at: Number.isFinite(observed) ? new Date(observed).toISOString() : null, age_seconds: age, max_age_seconds: maxAgeSeconds, stale: age === null || age > maxAgeSeconds, note: 'Freshness is a review signal only; stale evidence does not authorize or disable a launch.' };
+  return { observed_at: Number.isFinite(observed) ? new Date(observed).toISOString() : null, age_seconds: age, max_age_seconds: maxAgeSeconds, stale: age === null || age > maxAgeSeconds, status: age === null ? 'missing' : age > maxAgeSeconds ? 'stale' : 'fresh', note: 'Freshness is a review signal only; stale evidence does not authorize or disable a launch.' };
 }
 
 export function buildAntiAgingOperationsDigest(input: AntiAgingOperationsDigestInput, generatedAt = new Date().toISOString()): AntiAgingOperationsDigest {
@@ -480,4 +498,11 @@ export function aggregateProviderSearchSloByDay(events: ProviderSearchTelemetryE
     grouped.set(day, list);
   }
   return [...grouped.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([day, dayEvents]) => ({ day, ...aggregateProviderSearchSlo(dayEvents, latencyTargetMs, fallbackTarget) }));
+}
+
+export function summarizeProviderSearchWindow(daily: ProviderSearchDailySummary[], retentionDays = 30): ProviderSearchWindowSummary {
+  const safeRetention = Number.isInteger(retentionDays) && retentionDays > 0 ? retentionDays : 30;
+  const sorted = [...daily].sort((a, b) => a.day.localeCompare(b.day));
+  const recent = sorted.slice(-safeRetention);
+  return { days: recent.length, first_day: recent[0]?.day || null, last_day: recent[recent.length - 1]?.day || null, retention_days: safeRetention, truncated: sorted.length > safeRetention };
 }

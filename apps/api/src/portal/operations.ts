@@ -142,14 +142,16 @@ export function operationalReadiness(backup:any,runs:{value:any}[],at=Date.now()
  return {healthy:issues.length===0,issues,last_run:lastRun,backup};
 }
 
-export function publicOperationalReadiness(result:any){
+export function publicOperationalReadiness(result:any,at=Date.now()){
  const issues=Array.isArray(result?.issues)?result.issues.filter((item:unknown):item is string=>typeof item==='string').slice(0,10):[];
- const backupStatus=['healthy','stale','unverified'].includes(result?.backup?.status)?result.backup.status:'unverified';
+ const current=Number.isFinite(at)?at:Date.now(),backupLastSuccess=timestamp(result?.backup?.last_success_at),lastSuccessRecorded=backupLastSuccess!==undefined&&backupLastSuccess<=current;
+ const backupHealthy=result?.backup?.status==='healthy'&&!issues.includes('backup_unhealthy')&&lastSuccessRecorded;
+ const backupStatus=backupHealthy?'healthy':result?.backup?.status==='stale'?'stale':'unverified';
  return {
-  healthy:result?.healthy===true&&issues.length===0,
+  healthy:result?.healthy===true&&issues.length===0&&backupHealthy,
   issues,
   worker:{healthy:!issues.includes('operations_worker_stale')},
-  backup:{healthy:!issues.includes('backup_unhealthy'),status:backupStatus,last_success_recorded:typeof result?.backup?.last_success_at==='string'}
+  backup:{healthy:backupHealthy,status:backupStatus,last_success_recorded:lastSuccessRecorded}
  };
 }
 

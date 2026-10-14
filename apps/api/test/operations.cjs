@@ -66,10 +66,14 @@ const verifyOperationsAlertRequest=input=>rawVerifyOperationsAlertRequest({...in
   [{id:'newer',value:{completed_at:new Date(at-60000).toISOString()}},{id:'older',value:{completed_at:new Date(at-120000).toISOString()}}],
   at,300000);
  assert.equal(healthy.healthy,true);assert.equal(healthy.last_run.completed_at,new Date(at-60000).toISOString());
- const publicHealthy=publicOperationalReadiness({...healthy,backup:{status:'healthy',last_success_at:new Date(at-60000).toISOString(),location_identifier:'encrypted-offsite',restore_reference:'https://evidence.test/restore',checksum:'sha256:'+'a'.repeat(64)}});
+ const publicHealthy=publicOperationalReadiness({...healthy,backup:{status:'healthy',last_success_at:new Date(at-60000).toISOString(),location_identifier:'encrypted-offsite',restore_reference:'https://evidence.test/restore',checksum:'sha256:'+'a'.repeat(64)}},at);
  assert.deepEqual(publicHealthy,{healthy:true,issues:[],worker:{healthy:true},backup:{healthy:true,status:'healthy',last_success_recorded:true}});
  assert.equal(JSON.stringify(publicHealthy).includes('encrypted-offsite'),false);
  assert.equal(JSON.stringify(publicHealthy).includes('restore_reference'),false);
+ const publicFuture=publicOperationalReadiness({...healthy,backup:{status:'healthy',last_success_at:new Date(at+60000).toISOString()}},at);
+ assert.equal(publicFuture.healthy,false);assert.deepEqual(publicFuture.backup,{healthy:false,status:'unverified',last_success_recorded:false});
+ const publicInvalid=publicOperationalReadiness({...healthy,backup:{status:'healthy',last_success_at:'not-a-timestamp'}},at);
+ assert.equal(publicInvalid.healthy,false);assert.deepEqual(publicInvalid.backup,{healthy:false,status:'unverified',last_success_recorded:false});
  assert.deepEqual(operationalReadiness({status:'unverified',last_success_at:new Date(at-3600000).toISOString()},[],at).issues,
   ['operations_worker_stale','backup_unhealthy']);
  assert.deepEqual(operationalReadiness({status:'stale',last_success_at:new Date(at-3600000).toISOString()},[],at).issues,

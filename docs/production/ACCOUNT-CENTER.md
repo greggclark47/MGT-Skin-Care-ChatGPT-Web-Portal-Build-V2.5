@@ -1,6 +1,6 @@
 # Connected account center
 
-Build checkpoint: v4.342
+Build checkpoint: v4.343
 
 The account center is the authenticated customer workspace for shared profile preferences,
 Premium subscription handoff, optional image organization, data export, consent, and deletion.
@@ -18,6 +18,20 @@ safe response headers, expected counts, and explicit sensitive-field redaction.
 The portal refreshes the overview after relevant account changes. Shared account profile types,
 service-status contracts, and portal paths live in `@mgt/shared` so web and Android do not maintain
 separate route or data definitions.
+
+## Personalized setup path
+
+The overview turns saved service interests into a focused setup path. Skin Match and routine care
+share one routine destination; anti-aging, beauty/style, retailer discovery, and Premium guidance
+map to their corresponding portal services. Test image storage joins the selected path only when
+the customer explicitly chooses it as the default destination.
+
+Billing problems, open support requests, and an active deletion request are added to the focused
+path regardless of service preferences so important account conditions cannot be hidden. The API
+returns a bounded list of up to four next steps, ordered with attention items before ordinary setup.
+Unavailable services are visible but never presented as actions the customer can complete.
+Service interests organize this checklist only; they do not grant entitlement, start billing,
+upload files, or provide consent.
 
 ## Stored account preferences
 

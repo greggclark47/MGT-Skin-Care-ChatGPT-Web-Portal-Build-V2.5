@@ -54,7 +54,7 @@ export default function App() {
           </View>
           {isHttpsUrl(portalUrl) && <View style={styles.accountHub} accessibilityLabel="Account management links">
             <Text style={styles.accountHubTitle}>Manage your connected account</Text>
-            <Pressable style={styles.portalLink} onPress={() => void Linking.openURL(portalUrl.replace(/\/+$/, '') + ACCOUNT_PORTAL_PATHS.overview)} accessibilityRole="link"><Text style={styles.legalLink}>Connected services overview</Text></Pressable>
+            <Pressable style={styles.portalLink} onPress={() => void Linking.openURL(portalUrl.replace(/\/+$/, '') + ACCOUNT_PORTAL_PATHS.overview)} accessibilityRole="link"><Text style={styles.legalLink}>Connected setup checklist</Text></Pressable>
             <Pressable style={styles.portalLink} onPress={() => void Linking.openURL(portalUrl.replace(/\/+$/, '') + ACCOUNT_PORTAL_PATHS.profile)} accessibilityRole="link"><Text style={styles.legalLink}>Profile and preferences</Text></Pressable>
             <Pressable style={styles.portalLink} onPress={() => void Linking.openURL(portalUrl.replace(/\/+$/, '') + ACCOUNT_PORTAL_PATHS.billing)} accessibilityRole="link"><Text style={styles.legalLink}>Payment setup and subscriptions</Text></Pressable>
             <Pressable style={styles.portalLink} onPress={() => void Linking.openURL(portalUrl.replace(/\/+$/, '') + ACCOUNT_PORTAL_PATHS.images)} accessibilityRole="link"><Text style={styles.legalLink}>Upload and manage skincare photos</Text></Pressable>

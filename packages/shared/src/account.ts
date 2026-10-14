@@ -35,11 +35,21 @@ export type AccountServiceStatus={
  state:AccountServiceState;
  detail:string;
  href:string;
+ selected:boolean;
  count?:number;
+};
+export type AccountSetupStep={
+ id:AccountServiceId;
+ label:string;
+ detail:string;
+ href:string;
+ priority:'attention'|'setup';
 };
 export type AccountServiceOverview={
  generated_at:string;
  summary:{ready:number;attention:number;setup:number;unavailable:number;total:number};
+ focus:{ready:number;attention:number;setup:number;unavailable:number;total:number;percent:number;service_ids:AccountServiceId[]};
+ next_steps:AccountSetupStep[];
  services:AccountServiceStatus[];
  privacy_note:string;
 };

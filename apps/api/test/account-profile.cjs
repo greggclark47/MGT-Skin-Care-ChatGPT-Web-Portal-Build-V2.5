@@ -47,7 +47,9 @@ test('account profile validates data minimization fields and test storage availa
 
 test('account overview requires sign-in and returns isolated metadata-only readiness',async t=>{
  const f=await fixture(t),guest=f.client();await guest.send('/session');assert.equal((await guest.send('/account/overview')).status,401);
- const member=f.client();await member.login();await member.send('/account/profile',{...input,expected_revision:null});
+ const member=f.client();await member.login();
+ const empty=await member.send('/account/overview');assert.equal(empty.data.focus.total,1);assert.equal(empty.data.focus.percent,0);assert.deepEqual(empty.data.focus.service_ids,['account_profile']);assert.deepEqual(empty.data.next_steps.map(step=>step.id),['account_profile']);
+ await member.send('/account/profile',{...input,expected_revision:null});
  const actor='user_member@example.com';
  await f.db.tx(async r=>{
   await r.put('profiles',actor,{routine:{steps:[{product_id:'private-product-one'},{product_id:'private-product-two'}]},input:{concerns:['private-concern']}});
@@ -64,6 +66,7 @@ test('account overview requires sign-in and returns isolated metadata-only readi
  assert.equal(response.data.services.length,10);assert.deepEqual(response.data.summary,{ready:8,attention:1,setup:0,unavailable:1,total:10});
  const byId=Object.fromEntries(response.data.services.map(service=>[service.id,service]));
  assert.equal(byId.skin_routine.count,2);assert.equal(byId.anti_aging.count,2);assert.equal(byId.retail_discovery.count,2);assert.equal(byId.support.count,1);assert.equal(byId.billing.state,'ready');assert.equal(byId.images.state,'unavailable');
+ assert.deepEqual(response.data.focus,{ready:3,attention:1,setup:0,unavailable:0,total:4,percent:75,service_ids:['account_profile','skin_routine','anti_aging','support']});assert.deepEqual(response.data.next_steps.map(step=>step.id),['support']);assert.equal(byId.retail_discovery.selected,false);assert.equal(byId.billing.selected,false);assert.equal(byId.support.selected,true);
  const serialized=JSON.stringify(response.data);for(const secret of ['private-concern','private-style-answer','private-product-one','ticket-owner','private-support','ticket-other','other-private','cus_private','sub_private','pm_private','hidden-progress','hidden-reminder'])assert.equal(serialized.includes(secret),false,secret+' was exposed');
 });
 

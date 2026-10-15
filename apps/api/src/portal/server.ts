@@ -213,6 +213,18 @@ export async function createPortal(options:PortalOptions){
   const message=feedback==='irritation'?'This product is excluded from future matches and your sensitivity setting is now more cautious. Stop products that irritate your skin. Seek professional advice for persistent or severe symptoms.':feedback==='not_right'?'This product is excluded from future routine matches. Your updated routine is ready to review.':'Your product feedback has been saved.';
   res.json({...saved,text:message});
  });
+ post('/profile/product-feedback/remove',async(req,res)=>{
+  const productId=text(req.body.product_id,100);
+  const saved=await db.tx(async r=>{const p=await lockProfile(r,req.actor,req.body.expected_revision);check(p,404,'profile_missing','Complete your Skin Match first.');
+   const existingExclusions=Array.isArray(p.feedback_excluded_product_ids)?p.feedback_excluded_product_ids.filter((id:any)=>typeof id==='string'&&id.length>0&&id.length<=100).slice(-30):[];
+   check(existingExclusions.includes(productId),404,'product_feedback_not_found','This product is not in your saved future-match exclusions.');
+   const feedback_excluded_product_ids=existingExclusions.filter((id:string)=>id!==productId);
+   const product_feedback=Array.isArray(p.product_feedback)?p.product_feedback.filter((item:any)=>item?.product_id!==productId).slice(-20):[];
+   const next=await match(r,p.input,demo,feedback_excluded_product_ids);
+   return saveProfile(r,req.actor,{...p,...next,product_feedback,feedback_excluded_product_ids,last_product_feedback:product_feedback.at(-1)||null},'profile.product_feedback_removed');
+  });
+  res.json({...saved,text:'This product can be considered in future routine matches again. Your saved sensitivity setting has not changed.'});
+ });
  post('/routine/simplify',async(req,res)=>{res.json(await db.tx(async r=>{const p=await lockProfile(r,req.actor,req.body.expected_revision);check(p,404,'profile_missing','Complete your Skin Match first.');const routine=simplify(p.routine);const match_intelligence=p.match_intelligence?projectMatchIntelligenceToRoutine(p.match_intelligence,routine):undefined;return saveProfile(r,req.actor,{...p,routine,...(match_intelligence?{match_intelligence}:{})},'profile.simplified');}));});
  post('/profile/remove',async(req,res)=>{check(req.body.confirm===true,400,'confirmation_required','Confirm removal of your saved skincare profile.');res.json(await db.tx(async r=>{await lockProfile(r,req.actor,req.body.expected_revision);return saveProfile(r,req.actor,null,'profile.removed');}));});
  get('/cart',async(req,res)=>res.json(await db.tx(async r=>{const cart=await r.get('carts',req.actor)||emptyCart();return{cart,quote:quote(cart,await r.list<Product>('products'),!!(await r.get('memberships',req.actor))?.premium,false)};})));

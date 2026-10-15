@@ -50,4 +50,5 @@ test('feedback exclusions are deterministic, counted, and never re-enter the rou
  assert.ok(result.match_intelligence.coverage.excluded_products>=1);
  assert.ok(!result.routine.steps.some(step=>step.product_id===excludedProductId));
  assert.ok(result.match_intelligence.limitations.some(item=>/not right for you or irritating/.test(item)));
+ assert.ok(result.match_intelligence.limitations.some(item=>/review or remove/.test(item)));
 });

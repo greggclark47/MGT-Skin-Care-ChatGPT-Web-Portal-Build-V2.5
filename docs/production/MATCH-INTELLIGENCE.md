@@ -1,4 +1,4 @@
-# Match intelligence checkpoint v4.345
+# Match intelligence checkpoint v4.346
 
 Status: repository implementation and local verification only. This checkpoint is not a production deployment, medical-device determination, retailer endorsement, or regulatory approval.
 
@@ -29,6 +29,11 @@ notes, and is removed with that profile.
 - **Comfortable** records the latest response but does not loosen safety rules or promote a
   product.
 
+The web portal also lists saved exclusions and lets the person remove an individual exclusion with
+the current profile revision. Removal deletes that product's saved feedback record, rebuilds the
+routine transactionally, and allows the product to be considered again. It never automatically
+lowers the saved sensitivity setting or overrides reviewed ingredient rules.
+
 The check-in accepts feedback only for a product currently present in the person's routine,
 requires the current profile revision, and rebuilds the result transactionally. It does not infer
 diagnoses, ingredient causality, or treatment response. A later full Skin Match retake begins a
@@ -45,7 +50,7 @@ Photos are not used by the matching engine. Retailer links are discovery routes 
 - Web: My Routine shows coverage, all datapoints, method versions, product explanations, limitations, and an external-retailer discovery handoff.
 - Android: the completion view shows core coverage, eligible-product count, the first four datapoints, the AI-ranking boundary, image limitation, and a secure portal link for the full result.
 - Backend: both `/api/hub/profile` and `/api/skin-match/complete` generate the same domain contract.
-- Static demo: v4.344 previews datapoints, coverage, product evidence, retail handoff, and the AI boundary with sample records only.
+- Static demo: v4.346 previews datapoints, coverage, product evidence, customer-controlled feedback review, retail handoff, and the AI boundary with sample records only.
 
 ## Production prerequisites
 

@@ -5,7 +5,7 @@ import type { CandidateProduct, ExclusionResult, ScoreResult } from './scoring-e
 import { SCORING_ENGINE_VERSION } from './scoring-engine';
 import type { RoutineSlot } from '../types/enums';
 
-export const MATCH_INTELLIGENCE_VERSION = '1.1.0';
+export const MATCH_INTELLIGENCE_VERSION = '1.2.0';
 
 export interface MatchDataPoint {
   id: keyof SkinProfileInput;
@@ -185,7 +185,7 @@ export function buildMatchIntelligence(input: {
       'Matches use saved questionnaire answers and reviewed catalog data; they do not diagnose a condition.',
       'Photos are not analyzed by this matching version.',
       'AI-generated text does not select, rank, include, or exclude products.',
-      'Products you mark as not right for you or irritating are left out of future routine matches until you update that saved feedback.',
+      'Products you mark as not right for you or irritating are left out of future routine matches until you review or remove that saved feedback.',
       'Product formulas and availability can change; review the current label and retailer details.',
     ],
   };

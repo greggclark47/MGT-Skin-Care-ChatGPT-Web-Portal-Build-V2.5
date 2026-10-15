@@ -70,12 +70,13 @@ test("static demo exposes the current release and ship-packet surface", () => {
   assert.match(html, /Ship authorization: blocked/);
   assert.match(html, /aria-label="MGT Skin Care home"/);
   assert.match(html, /class="brand-mark-image" src="mgt-mark\.svg"/);
-  assert.match(html, /<small class="build-version">v4\.345<\/small>/);
+  assert.match(html, /<small class="build-version">v4\.346<\/small>/);
   assert.match(html, /EXPLAINABLE MATCH INTELLIGENCE/);
   assert.match(html, /4 \/ 4/);
   assert.match(html, /Deterministic score · no AI ranking/);
   assert.match(html, /Optional AI copy may explain reviewed results/);
   assert.match(html, /reversible product exclusions/);
+  assert.match(html, /review or remove a saved exclusion/);
   assert.match(html, /CONNECTED ACCOUNT CENTER/);
   assert.match(html, /CONNECTED SERVICES/);
   assert.match(html, /8 of 10 ready/);

@@ -4,7 +4,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   CLIENT_IMAGE_CATEGORIES, CLIENT_IMAGE_LIMIT, CLIENT_IMAGE_MAX_BYTES,
   deleteClientImage, listClientImages, prepareClientImage, saveClientImage,
-  updateClientImageCategory, listTestDriveClientImages, uploadTestDriveClientImage, deleteTestDriveClientImage, updateTestDriveClientImageCategory,
+  updateClientImageCategory, listTestDriveClientImages, uploadTestDriveClientImage, deleteTestDriveClientImage, updateTestDriveClientImageCategory, getTestDriveConnection,
   type ClientImage, type TestDriveClientImage, type ClientImageCategory,
 } from '../lib/client-images';
 import { hub, useHub } from '../lib/hub';
@@ -38,6 +38,8 @@ export function ClientImageStudio({ compact = false }: { compact?: boolean }) {
   const [images, setImages] = useState<ClientImage[]>([]);
   const [driveImages, setDriveImages] = useState<TestDriveClientImage[]>([]);
   const [destination, setDestination] = useState<'device'|'test-drive'>('device');
+  const [driveConnection, setDriveConnection] = useState<'idle'|'checking'|'ready'|'unavailable'>('idle');
+  const [driveMessage, setDriveMessage] = useState('');
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
@@ -48,6 +50,13 @@ export function ClientImageStudio({ compact = false }: { compact?: boolean }) {
   const session = useHub('/session');
   const scope = session.data?.client_image_scope || '';
   const testDriveEnabled = session.data?.client_image_drive_test_enabled === true;
+
+  const verifyDrive = useCallback(async () => {
+    if (!testDriveEnabled) { setDriveConnection('unavailable'); return; }
+    setDriveConnection('checking'); setDriveMessage('Checking the private test connection…');
+    try { const result = await getTestDriveConnection(); setDriveConnection(result.connection); setDriveMessage(result.message); }
+    catch { setDriveConnection('unavailable'); setDriveMessage('Google Drive could not be verified. Keep photos on this device or try the test connection again.'); }
+  }, [testDriveEnabled]);
 
   useEffect(() => {
     if (destinationInitialized.current || session.loading || !session.data) return;
@@ -75,6 +84,12 @@ export function ClientImageStudio({ compact = false }: { compact?: boolean }) {
     if (session.error) { setImages([]); setLoading(false); setError(session.error); return; }
     if (scope) { setImages([]); setDriveImages([]); void (destination === 'test-drive' && testDriveEnabled ? refreshDrive() : refresh(scope)); }
   }, [scope, session.loading, session.error, refresh, destination, testDriveEnabled, refreshDrive]);
+  useEffect(() => { if (destination === 'test-drive' && testDriveEnabled) void verifyDrive(); }, [destination, testDriveEnabled, verifyDrive]);
+
+  function chooseDestination(next:'device'|'test-drive') {
+    setDestination(next); setError(''); setMessage('');
+    if (next === 'device') { setDriveConnection('idle'); setDriveMessage(''); }
+  }
 
   async function addFiles(files: FileList | null) {
     if (!files?.length) return;
@@ -86,6 +101,7 @@ export function ClientImageStudio({ compact = false }: { compact?: boolean }) {
       const prepared = await Promise.all(Array.from(files).map(file => prepareClientImage(file, category)));
       if (destination === 'test-drive') {
         if (!testDriveEnabled) throw new Error('Test Google Drive storage is not enabled for this environment.');
+        if (driveConnection !== 'ready') throw new Error('Verify the Google Drive test connection before uploading.');
         for (const image of prepared) await uploadTestDriveClientImage(image);
         await refreshDrive();
         setMessage(`${prepared.length} ${prepared.length === 1 ? 'test copy is' : 'test copies are'} saved in the designated private Google Drive folder. Test storage only; not analyzed.`);
@@ -141,12 +157,16 @@ export function ClientImageStudio({ compact = false }: { compact?: boolean }) {
       </div>
       <p className="muted">Optional examples for your own organization: front and side views, a specific area you want to monitor, routine inspiration, or a product label to remember. Never include another person without their permission.</p>
     </details>
+    <div className="client-storage-choices" role="radiogroup" aria-label="Choose image storage location">
+      <button type="button" role="radio" aria-checked={destination==='device'} className={`client-storage-choice${destination==='device'?' selected':''}`} disabled={busy || loading} onClick={()=>chooseDestination('device')}><span><strong>This device</strong><small>Private browser storage · no upload</small></span><b>{destination==='device'?'Selected':'Choose'}</b></button>
+      <button type="button" role="radio" aria-checked={destination==='test-drive'} className={`client-storage-choice${destination==='test-drive'?' selected':''}`} disabled={busy || loading || !testDriveEnabled} onClick={()=>chooseDestination('test-drive')}><span><strong>Google Drive test storage</strong><small>{testDriveEnabled?'Private folder · test environment only':'Not configured in this environment'}</small></span><b>{destination==='test-drive'?'Selected':'Choose'}</b></button>
+    </div>
     <div className="client-image-controls">
-      <label className="field">Storage location<select value={destination} disabled={busy || loading} onChange={event => setDestination(event.target.value as 'device'|'test-drive')}><option value="device">This device (private browser storage)</option><option value="test-drive" disabled={!testDriveEnabled}>Google Drive private test folder{testDriveEnabled ? '' : ' · not configured'}</option></select></label>
       <label className="field">Photo purpose<select value={category} disabled={busy} onChange={event => setCategory(event.target.value as ClientImageCategory)}>{CLIENT_IMAGE_CATEGORIES.map(item => <option key={item.id} value={item.id}>{item.label}</option>)}</select></label>
-      <label className="button primary client-image-select">{busy ? 'Preparing…' : 'Take or choose photos'}<input ref={input} type="file" accept="image/jpeg,image/png,image/webp" capture="user" multiple disabled={busy || loading || session.loading || session.error !== '' || !scope || !testDriveEnabled && destination === 'test-drive' || (destination === 'test-drive' ? driveImages.length : images.length) >= CLIENT_IMAGE_LIMIT} onChange={event => void addFiles(event.currentTarget.files)} aria-label="Take or choose JPEG, PNG, or WebP photos"/></label>
+      <label className="button primary client-image-select">{busy ? 'Preparing…' : 'Take or choose photos'}<input ref={input} type="file" accept="image/jpeg,image/png,image/webp" capture="user" multiple disabled={busy || loading || session.loading || session.error !== '' || !scope || !testDriveEnabled && destination === 'test-drive' || destination === 'test-drive' && driveConnection !== 'ready' || (destination === 'test-drive' ? driveImages.length : images.length) >= CLIENT_IMAGE_LIMIT} onChange={event => void addFiles(event.currentTarget.files)} aria-label="Take or choose JPEG, PNG, or WebP photos"/></label>
       <small>JPEG, PNG, or WebP · up to 8 MB each · max {CLIENT_IMAGE_LIMIT}. Saved copies are resized, converted to JPEG, and stripped of embedded metadata. Signed-in accounts open with the saved default destination.</small>
     </div>
+    {destination === 'test-drive' && <div className={`client-drive-status state-${driveConnection}`} aria-live="polite"><span>{driveConnection==='checking'?'Checking connection':driveConnection==='ready'?'Drive test storage ready':driveConnection==='unavailable'?'Drive test storage unavailable':'Drive test storage'}</span><p>{driveMessage||'Choose this destination to verify the private test connection.'}</p>{driveConnection==='unavailable'&&testDriveEnabled&&<button className="text-button" type="button" disabled={busy} onClick={()=>void verifyDrive()}>Check connection again</button>}</div>}
     <p className="notice">{destination === 'test-drive' ? 'Test-only destination: chosen copies are sent to the designated private Google Drive folder through the portal. Do not use Drive test storage for customer or production data. Images are not analyzed or shared with retailers.' : 'Stored only in this browser profile on this device. Images are not sent to MGT, shared with retailers, synced to your account, or used for AI analysis. Android native image picking is not connected.'}</p>
     {message && <p className="notice success" role="status">{message}</p>}
     {error && <p className="notice error" role="alert">{error}</p>}

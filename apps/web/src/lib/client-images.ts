@@ -25,6 +25,7 @@ export type ClientImage = {
   blob: Blob;
 };
 export type TestDriveClientImage = Omit<ClientImage,'blob'|'mimeType'> & { contentUrl:string };
+export type TestDriveConnection={enabled:boolean;environment:'test'|'unavailable';folder:'configured'|'created_on_first_upload'|'unavailable';connection:'ready'|'unavailable';message:string};
 
 const DB_NAME = 'mgt-client-image-library-v1-';
 const STORE_NAME = 'images';
@@ -41,6 +42,7 @@ async function testDriveRequest(path:string,init:RequestInit={}):Promise<any>{
 }
 
 export async function listTestDriveClientImages():Promise<TestDriveClientImage[]>{return (await testDriveRequest('')).images as TestDriveClientImage[];}
+export async function getTestDriveConnection():Promise<TestDriveConnection>{return testDriveRequest('/status') as Promise<TestDriveConnection>;}
 export async function uploadTestDriveClientImage(image:ClientImage):Promise<TestDriveClientImage>{
   const data=await testDriveRequest('',{method:'POST',headers:{'content-type':'application/octet-stream','x-client-image-category':image.category,'x-client-image-name':`${image.id}|Skincare photo.jpg`},body:image.blob});
   return data.image as TestDriveClientImage;

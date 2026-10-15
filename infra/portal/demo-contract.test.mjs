@@ -70,7 +70,7 @@ test("static demo exposes the current release and ship-packet surface", () => {
   assert.match(html, /Ship authorization: blocked/);
   assert.match(html, /aria-label="MGT Skin Care home"/);
   assert.match(html, /class="brand-mark-image" src="mgt-mark\.svg"/);
-  assert.match(html, /<small class="build-version">v4\.347<\/small>/);
+  assert.match(html, /<small class="build-version">v4\.348<\/small>/);
   assert.match(html, /EXPLAINABLE MATCH INTELLIGENCE/);
   assert.match(html, /4 \/ 4/);
   assert.match(html, /Deterministic score · no AI ranking/);
@@ -89,7 +89,8 @@ test("static demo exposes the current release and ship-packet surface", () => {
   assert.match(html, /Google via Supabase/);
   assert.match(html, /data-demo="Google account sign-in"/);
   assert.match(html, /no Google Drive or photo access/);
-  assert.match(html, /private Drive test storage only when separately configured/);
+  assert.match(html, /Choose device or test storage; the connection is checked before an upload/);
+  assert.match(html, /the connection is checked before an upload/);
   assert.match(html, /data-demo="Decision packet"/);
   assert.match(html, /aria-label="Operational health preview"/);
   assert.match(html, /Queue pressure, aging work and service targets/);
@@ -148,6 +149,8 @@ test("static demo keeps the ship packet interactive and clearly sample-only", ()
   assert.match(script, /"Google account sign-in"/);
   assert.match(script, /Supabase Auth · PKCE protected · Preview only/);
   assert.match(script, /NO DRIVE SCOPE/);
+  assert.match(script, /"Image library"/);
+  assert.match(script, /VERIFY BEFORE UPLOAD/);
   assert.match(script, /"Decision packet"/);
   assert.match(script, /Plan \+ page binding/);
   assert.match(script, /Integrity check/);

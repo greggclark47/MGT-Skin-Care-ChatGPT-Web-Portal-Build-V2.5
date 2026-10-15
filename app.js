@@ -218,6 +218,21 @@ const demoFlows = {
       <div class="flow-result"><span>OPTIONAL STORAGE DESTINATION</span><h3>Device by default · Drive only in test</h3><p>The portal prepares supported images as resized JPEGs and removes embedded metadata. Device storage stays local. A separately selected Google Drive copy is available only in a configured non-production test environment, uses a private folder and remains actor-scoped. Do not upload customer photos to test storage. Images are not analyzed or shared with retailers. Android native picking and production cloud storage are not enabled.</p><div class="flow-meta"><span>DEVICE DEFAULT</span><span>TEST DRIVE OPTIONAL</span><span>NO IMAGE ANALYSIS</span></div></div>
     `
   },
+  "Image library": {
+    kicker: "IMAGE LIBRARY · STORAGE CHECK",
+    title: "Choose where a photo stays",
+    step: "Device first · Test Drive optional · Sample only",
+    body: `
+      <p class="flow-intro">The image library makes the destination visible before you choose a file. Device storage is the default. Private Google Drive storage is available only in a configured non-production test environment.</p>
+      <div class="routine-preview">
+        <div><b>01</b><span>Choose a destination</span><small>Device or private Drive test storage</small></div>
+        <div><b>02</b><span>Verify test connection</span><small>Server checks authorization before upload</small></div>
+        <div><b>03</b><span>Prepare the image</span><small>JPEG copy · embedded metadata removed</small></div>
+        <div><b>04</b><span>Manage the copy</span><small>Label, review, or remove at any time</small></div>
+      </div>
+      <div class="flow-result"><span>STORAGE BOUNDARY</span><h3>Clear destination, clear next step</h3><p>The test Drive upload remains unavailable until the server confirms its authorization. A failed check explains that no image was sent. Customer photos and production data must never use the Drive test destination.</p><div class="flow-meta"><span>VERIFY BEFORE UPLOAD</span><span>TEST ONLY</span><span>NO IMAGE ANALYSIS</span></div></div>
+    `
+  },
   "Skin Match": {
     kicker: "SKIN MATCH · SAMPLE FLOW",
     title: "Find a calmer starting point",

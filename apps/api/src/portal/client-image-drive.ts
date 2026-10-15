@@ -17,12 +17,21 @@ export function clientImageDriveTestEnabled(env:NodeJS.ProcessEnv):boolean {
  return env.NODE_ENV!=='production'&&env.CLIENT_IMAGE_DRIVE_TEST_ENABLED==='true'&&!!env.TEST_GOOGLE_DRIVE_CLIENT_ID&&!!env.TEST_GOOGLE_DRIVE_CLIENT_SECRET&&!!env.TEST_GOOGLE_DRIVE_REFRESH_TOKEN;
 }
 
+export function clientImageDriveTestStatus(env:NodeJS.ProcessEnv){
+ const enabled=clientImageDriveTestEnabled(env);
+ return {enabled,environment:enabled?'test':'unavailable',folder:enabled?(env.TEST_GOOGLE_DRIVE_FOLDER_ID?'configured':'created_on_first_upload'):'unavailable',message:enabled?'Private test storage is available to verify before an upload.':'Private Google Drive test storage has not been configured for this environment.'};
+}
+
 export class TestDriveImageStorage {
  private token?:{value:string;expiresAt:number};
  private refreshing?:Promise<string>;
  constructor(private env:NodeJS.ProcessEnv){}
  get enabled(){return clientImageDriveTestEnabled(this.env);}
  get configuredFolderId(){return this.env.TEST_GOOGLE_DRIVE_FOLDER_ID||'';}
+ async verifyConnection():Promise<boolean>{
+  if(!this.enabled)return false;
+  try{await this.accessToken();return true;}catch{return false;}
+ }
  private async accessToken():Promise<string>{
   if(!this.enabled)throw new Error('Test Google Drive image storage is not configured.');
   if(this.token&&this.token.expiresAt>Date.now()+60000)return this.token.value;

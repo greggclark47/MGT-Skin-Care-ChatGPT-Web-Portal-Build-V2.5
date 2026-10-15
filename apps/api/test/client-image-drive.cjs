@@ -5,7 +5,7 @@ const {LocalStore}=require('../dist/portal/store');
 const {OperationalWorker,InAppNotificationDelivery}=require('../dist/portal/operations');
 const {createPortal}=require('../dist/portal/server');
 const {
- clientImageDriveTestEnabled,listTestDriveImages,saveTestDriveImage,getTestDriveImage,
+ clientImageDriveTestEnabled,clientImageDriveTestStatus,listTestDriveImages,saveTestDriveImage,getTestDriveImage,
  deleteTestDriveImage,updateTestDriveImageCategory,TEST_IMAGE_FOLDER_NAME,
 }=require('../dist/portal/client-image-drive');
 
@@ -17,6 +17,8 @@ test('test Drive configuration stays disabled in production and fails closed whe
  assert.equal(clientImageDriveTestEnabled({...enabled,NODE_ENV:'production'}),false);
  assert.equal(clientImageDriveTestEnabled({...enabled,TEST_GOOGLE_DRIVE_REFRESH_TOKEN:''}),false);
  assert.equal(clientImageDriveTestEnabled({...enabled,CLIENT_IMAGE_DRIVE_TEST_ENABLED:'false'}),false);
+ assert.deepEqual(clientImageDriveTestStatus({...enabled,TEST_GOOGLE_DRIVE_FOLDER_ID:'folder-1'}),{enabled:true,environment:'test',folder:'configured',message:'Private test storage is available to verify before an upload.'});
+ assert.equal(clientImageDriveTestStatus({...enabled,TEST_GOOGLE_DRIVE_REFRESH_TOKEN:''}).enabled,false);
  assert.equal(TEST_IMAGE_FOLDER_NAME,'MGT Skin Care Client Image Test Storage');
 });
 
@@ -65,6 +67,7 @@ test('account export includes safe test image metadata without Drive identifiers
  t.after(async()=>{await new Promise(resolve=>server.close(resolve));await db.close();});
  let cookie='',csrf='';const call=async(path,body)=>{const response=await fetch(`http://127.0.0.1:${server.address().port}/api/hub${path}`,{method:body===undefined?'GET':'POST',headers:{cookie,origin:'http://localhost:3000','content-type':'application/json','x-csrf-token':csrf},body:body===undefined?undefined:JSON.stringify(body)});if(response.headers.get('set-cookie'))cookie=response.headers.get('set-cookie').split(';')[0];const data=await response.json();if(data.csrf)csrf=data.csrf;return{status:response.status,data};};
  await call('/session');assert.equal((await call('/auth/verify',{email:'images@example.test',code:'123456'})).status,200);await call('/session');
+ const status=await call('/client-images/status');assert.equal(status.status,200);assert.deepEqual(status.data,{enabled:false,environment:'unavailable',folder:'unavailable',connection:'unavailable',message:'Private Google Drive test storage has not been configured for this environment.'});
  const actor='user_image-export',imageActor=createHash('sha256').update(actor).digest('hex'),id='123e4567-e89b-42d3-a456-426614174003';
  await db.tx(records=>records.put('client_image_drive',`${imageActor}:${id}`,{id,actor:imageActor,fileId:'must-not-export',category:'progress',name:'Skincare photo.jpg',size:1234,createdAt:'2026-10-14T00:00:00.000Z',status:'ready'}));
  const exported=await call('/account/export');assert.equal(exported.status,200);assert.deepEqual(exported.data.test_drive_images,[{id,category:'progress',name:'Skincare photo.jpg',size:1234,created_at:'2026-10-14T00:00:00.000Z'}]);assert.equal(JSON.stringify(exported.data).includes('must-not-export'),false);

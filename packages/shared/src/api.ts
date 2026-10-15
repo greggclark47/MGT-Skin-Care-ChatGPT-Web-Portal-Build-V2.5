@@ -1,7 +1,7 @@
 import type {
   SkinProfileInput, Routine, ProfileVector, AvoidFlags, IngredientRecord, ProductRecord,
   ProviderRecord, TreatmentRecord, ReadOnlyPage, AntiAgingResponseMeta, GroundedAntiAgingExplanation, GroundedSearchResult,
-  MerchantReferral, ProgressEntry, ProgressAggregate, ProgressReminder, ProgressControlSummary, ProgressExportManifest, ProgressExportSummary, ProgressReminderPreview, AppointmentRequest, AntiAgingOperationsDigest, AntiAgingLaunchReadiness, CatalogModerationQueueItem, CatalogModerationQueuePage, CatalogModerationQueueSummary, CatalogQualityIssue, CatalogQualitySummary, LaunchEvidenceFreshness, LaunchEvidenceSummary, ProviderSearchDailySummary, ProviderSearchSloSummary,
+  MerchantReferral, ProgressEntry, ProgressAggregate, ProgressReminder, ProgressControlSummary, ProgressExportManifest, ProgressExportSummary, ProgressReminderPreview, AppointmentRequest, AntiAgingOperationsDigest, AntiAgingLaunchReadiness, CatalogModerationQueueItem, CatalogModerationQueuePage, CatalogModerationQueueSummary, CatalogQualityIssue, CatalogQualitySummary, LaunchEvidenceFreshness, LaunchEvidenceSummary, ProviderSearchDailySummary, ProviderSearchSloSummary, MatchIntelligence,
   AntiAgingReviewPlan, AntiAgingReviewPlanSummary, AntiAgingReviewSession, AntiAgingDecisionPacket, AntiAgingDecisionPacketIntegrity,
 } from '@mgt/domain';
 
@@ -15,6 +15,7 @@ export interface SkinMatchResult {
   avoid_flags: AvoidFlags;
   rules_version: string;
   routine: Routine;
+  match_intelligence: MatchIntelligence;
 }
 
 export interface ApiErrorShape {

@@ -10,7 +10,7 @@ export function ProductExplanationCard({ explanation, productName }: { explanati
   const { match_score, why_matched, ingredients, sensitivity_compatibility, routine_placement, cautions, blurb } = explanation;
 
   const compatibilityStyle = {
-    safe:     { label: 'Suitable for your sensitivity', bg: color.accentSubtle, fg: color.success },
+    safe:     { label: 'Within your saved sensitivity filters', bg: color.accentSubtle, fg: color.success },
     caution:  { label: 'Introduce slowly',              bg: color.cautionSubtle, fg: color.caution },
     excluded: { label: 'Not recommended for you',       bg: 'var(--danger-bg)',           fg: color.danger },
   }[sensitivity_compatibility];
@@ -81,6 +81,7 @@ export function humanizeReason(code: string): string {
     'fits:skin_type': 'Suits your skin type',
     'fits:budget': 'Within your budget range',
     'brand:preferred': 'From a brand you already like',
+    'eligible:safety_filters': 'Passed the reviewed ingredient and sensitivity filters',
   };
   return map[code] ?? code.replace(/[:_]/g, ' ');
 }

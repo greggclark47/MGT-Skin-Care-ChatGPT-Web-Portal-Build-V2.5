@@ -32,3 +32,7 @@ Local image storage uses browser IndexedDB on that device. A non-production Goog
 be enabled in test environments only; it is not production photo sync. Native photo picking and
 private production object storage must be configured before promising cross-device image management
 or production photo upload. The flow does not analyze images or provide diagnosis.
+
+Skin Match completion consumes the shared v4.344 match-intelligence contract. Android shows core
+routine coverage, eligible-candidate count, the first four matching datapoints, the deterministic
+ranking boundary, and a portal link for full evidence. Photos remain outside the matching engine.

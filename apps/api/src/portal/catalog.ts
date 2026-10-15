@@ -1,4 +1,4 @@
-import {classify,buildRoutine,scoreProduct,compileMatrix,ingredientAllowedByMatrix,SEED_INGREDIENT_RULES,type CandidateProduct,type SkinProfileInput,type RoutineSlot,type ScoreResult} from '@mgt/domain';
+import {classify,buildRoutine,buildMatchIntelligence,scoreProduct,compileMatrix,ingredientAllowedByMatrix,SEED_INGREDIENT_RULES,type CandidateProduct,type SkinProfileInput,type RoutineSlot,type ScoreResult} from '@mgt/domain';
 import {SEED_CATALOG} from '../modules/catalog/store';
 import {check} from './security';
 import type {Records,Store} from './store';
@@ -26,8 +26,9 @@ export async function match(db:Records,input:SkinProfileInput,demo:boolean){
  }
  let routine=buildRoutine(slots,ingredients);
  if(input.current_routine!=='advanced')routine={...routine,steps:routine.steps.filter(s=>!s.is_optional)};
+ const match_intelligence=buildMatchIntelligence({profile_input:input,profile_vector:c.profile_vector,routine,slot_results:slots,products:eligible,safety_matrix_version:matrix.matrix_version,excluded_products:products.length-eligible.length});
  // No unreviewed pairing advice or photos in this release. Full label directions remain authoritative.
- return {input,...c,routine,matrix_version:matrix.matrix_version,results:[...slots.values()].flat(),created_at:new Date().toISOString(),sample:demo};
+ return {input,...c,routine,match_intelligence,matrix_version:matrix.matrix_version,results:[...slots.values()].flat(),created_at:new Date().toISOString(),sample:demo};
 }
 export function quote(cart:{items:{product_id:string,quantity:number}[]},products:Product[],premium:boolean,strict=true){
  const items=cart.items.map(i=>{const p=products.find(p=>p.id===i.product_id);const available=!!p&&p.status==='active'&&p.stock>=i.quantity;if(strict)check(available,409,'product_unavailable','A product is no longer available in that quantity.');return {product_id:i.product_id,name:p?.name||'Unavailable product',quantity:i.quantity,unit_price_cents:p?.price_cents||0,merchant_id:p?.merchant_id||'',sample:p?.sample||false,approved:p?.approved||false,available};});

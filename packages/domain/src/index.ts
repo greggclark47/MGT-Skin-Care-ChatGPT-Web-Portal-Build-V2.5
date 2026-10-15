@@ -23,3 +23,4 @@ export * from './engines/style-engine';
 export * from './engines/analytics-aggregates';
 export * from './engines/anti-aging-ai';
 export * from './engines/anti-aging-roadmap';
+export * from './engines/match-intelligence';

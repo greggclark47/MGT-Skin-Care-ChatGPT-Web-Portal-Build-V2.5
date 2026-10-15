@@ -520,6 +520,21 @@ body.has-compare .toast { bottom: 105px; }
 .routine-preview div { display: grid; grid-template-columns: 42px 1fr auto; align-items: center; gap: 12px; padding: 13px; border: 1px solid var(--border); border-radius: 9px; background: var(--surface); font-size: .82rem; }
 .routine-preview b { color: var(--aqua); font: .66rem "DM Mono"; }
 .routine-preview small { color: var(--muted); }
+.match-intelligence-demo { border-top: 1px solid var(--border); }
+.match-demo-summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin: 28px 0 18px; }
+.match-demo-summary article { display: grid; gap: 4px; padding: 20px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
+.match-demo-summary strong { color: var(--purple); font-size: 1.7rem; }
+.match-demo-summary span { color: var(--muted); font-size: .78rem; }
+.match-demo-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+.match-demo-grid > article { padding: 24px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); }
+.match-demo-grid h3 { margin: 16px 0; }
+.match-demo-grid dl { margin: 0; }
+.match-demo-grid dl div { display: grid; grid-template-columns: .7fr 1.3fr; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--border); }
+.match-demo-grid dt { color: var(--muted); }
+.match-demo-grid dd { margin: 0; }
+.match-demo-grid li { margin: 8px 0; color: var(--muted); }
+.sample-match-score { display: grid; gap: 4px; padding: 15px; border: 1px solid #73589a; border-radius: 10px; background: var(--purple-bg); }
+.sample-match-score strong { color: var(--purple); }
 .coach-input { width: 100%; min-height: 102px; margin-bottom: 12px; padding: 13px; color: var(--text); border: 1px solid var(--border); border-radius: 10px; background: var(--surface); resize: vertical; font: .88rem/1.55 "DM Sans"; }
 .export-preview { overflow: auto; margin: 17px 0; padding: 16px; color: #e5e9e2; border-radius: 10px; background: #060a13; font: .7rem/1.6 "DM Mono"; white-space: pre; }
 .anti-aging-demo-section { border-top: 1px solid var(--border); }
@@ -587,6 +602,7 @@ body.has-compare .toast { bottom: 105px; }
   .shop-layout { gap: 25px; }
   .filters { display: none; }
   .retailer-row { display: block; }
+  .match-demo-summary, .match-demo-grid { grid-template-columns: 1fr; }
   .retailer-tabs { gap: 17px; }
   .catalog select { margin-top: 15px; }
   .console-tabs { overflow: auto; }

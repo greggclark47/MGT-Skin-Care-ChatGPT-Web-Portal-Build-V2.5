@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { SafeAreaView, Text, View, Pressable, StyleSheet, Switch, Linking } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { SkinMatchScreen } from './src/screens/SkinMatchScreen';
-import { ACCOUNT_PORTAL_PATHS, ApiClient, color, font, space, radius } from '@mgt/shared';
+import { ACCOUNT_PORTAL_PATHS, ApiClient, color, font, space, radius, type SkinMatchResult } from '@mgt/shared';
 import type { SkinProfileInput } from '@mgt/domain';
 
 const configuredApiUrl = process.env.EXPO_PUBLIC_API_URL?.trim() ?? '';
@@ -17,6 +17,7 @@ const releaseConfigurationReady = __DEV__ || Boolean(apiBaseUrl && isHttpsUrl(pr
 export default function App() {
   const [view, setView] = useState<'home' | 'match' | 'done' | 'error'>('home');
   const [consent, setConsent] = useState(false);
+  const [result, setResult] = useState<SkinMatchResult | null>(null);
 
   async function handleComplete(input: SkinProfileInput, durationMs: number) {
     if (!api || !apiBaseUrl) {
@@ -24,8 +25,9 @@ export default function App() {
       return;
     }
     try {
-      await api.completeSkinMatch(input);
+      const completed = await api.completeSkinMatch(input);
       // duration_ms feeds `skin_match.completed` and the <=90s KPI, measured on-device.
+      setResult(completed);
       setView('done');
     } catch {
       setView('error');
@@ -68,7 +70,15 @@ export default function App() {
         </View>
       )}
       {view === 'match' && <SkinMatchScreen onComplete={handleComplete} />}
-      {view === 'done' && <Text style={styles.body}>Your routine is ready.</Text>}
+      {view === 'done' && result && <View style={styles.result}>
+        <Text style={styles.resultTitle}>Your routine is ready.</Text>
+        <Text style={styles.body}>{result.match_intelligence.coverage.required_slots_matched} of {result.match_intelligence.coverage.required_slots_total} core steps matched from {result.match_intelligence.coverage.eligible_products_considered} eligible products.</Text>
+        <Text style={styles.method}>Explainable match · reviewed rules · AI text does not select or rank products</Text>
+        <Text style={styles.resultHeading}>Datapoints used</Text>
+        {result.match_intelligence.data_points.slice(0,4).map(point=><Text key={point.id} style={styles.dataPoint}>{point.label}: {point.value}</Text>)}
+        <Text style={styles.configNote}>Photos are not analyzed. Product and retailer details can change; review current labels and storefront information.</Text>
+        {isHttpsUrl(portalUrl)&&<Pressable style={styles.cta} onPress={()=>void Linking.openURL(portalUrl.replace(/\/+$/, '')+'/routine')} accessibilityRole="link"><Text style={styles.ctaLabel}>Review full match details</Text></Pressable>}
+      </View>}
       {view === 'error' && <Text style={styles.body}>{!apiBaseUrl ? 'This production build is missing its API configuration.' : !releaseConfigurationReady ? 'This production build is missing HTTPS privacy and terms links.' : 'Something went wrong. Please try again.'}</Text>}
     </SafeAreaView>
   );
@@ -92,4 +102,9 @@ const styles = StyleSheet.create({
   accountHubTitle: { fontSize: font.size.md, color: color.text, fontWeight: '600' },
   portalLink: { minHeight: 44, justifyContent: 'center', alignSelf: 'stretch' },
   configNote: { fontSize: font.size.xs, color: color.textFaint, marginTop: space.sm },
+  result: { padding: space.lg, gap: space.sm },
+  resultTitle: { fontSize: font.size.xl, color: color.text, fontWeight: '700', marginTop: space.xl },
+  resultHeading: { fontSize: font.size.md, color: color.text, fontWeight: '600', marginTop: space.md },
+  method: { fontSize: font.size.sm, color: color.success, lineHeight: 20 },
+  dataPoint: { fontSize: font.size.sm, color: color.textMuted, paddingVertical: space.xs },
 });

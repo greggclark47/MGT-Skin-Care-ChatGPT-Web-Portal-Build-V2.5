@@ -428,6 +428,11 @@ code { font: .72rem "DM Mono"; }
 .account-note b { color: var(--text); white-space: nowrap; }
 .account-stack { display: grid; gap: 16px; }
 .account-card { padding: 24px; border: 1px solid var(--border); border-top: 3px solid var(--purple); border-radius: 20px; background: var(--panel); box-shadow: var(--shadow); }
+.account-auth-preview { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 15px; margin: 18px 0; padding: 15px; border: 1px solid var(--border); border-radius: 14px; background: linear-gradient(135deg, var(--tint), var(--surface)); }
+.account-auth-preview > div { display: grid; gap: 4px; }
+.account-auth-preview strong { font: 600 1rem Fraunces, serif; }
+.account-auth-preview small { color: var(--muted); line-height: 1.45; }
+.account-auth-preview .secondary-button { min-height: 40px; padding: 0 13px; gap: 10px; font-size: .78rem; white-space: nowrap; }
 .account-service-preview { display: grid; gap: 11px; margin: 18px 0 2px; padding: 15px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); }
 .account-service-preview > div:first-child { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; }
 .account-service-preview > div:first-child strong { font: 600 1rem Fraunces, serif; }
@@ -610,7 +615,7 @@ body.has-compare .toast { bottom: 105px; }
   .packet-callout { align-items: flex-start; flex-direction: column; gap: 4px; }
   .evidence-review { align-items: flex-start; flex-direction: column; gap: 13px; }
   .monitoring-grid { grid-template-columns: repeat(2,1fr); }
-  .operations-health-preview, .backup-inline { grid-template-columns: 1fr; }
+  .operations-health-preview, .backup-inline, .account-auth-preview { grid-template-columns: 1fr; }
   .launch-callout { align-items: flex-start; flex-direction: column; gap: 4px; }
   .decision-callout { align-items: flex-start; flex-direction: column; gap: 4px; }
   .publish-callout { align-items: flex-start; flex-direction: column; gap: 4px; }

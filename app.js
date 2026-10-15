@@ -188,6 +188,21 @@ function renderPricing() {
 }
 
 const demoFlows = {
+  "Google account sign-in": {
+    kicker: "SECURE ACCOUNT SIGN-IN · SAMPLE FLOW",
+    title: "Use Google for identity, not storage",
+    step: "Supabase Auth · PKCE protected · Preview only",
+    body: `
+      <p class="flow-intro">The production-ready path uses Supabase Auth to start a one-time PKCE exchange with Google. It asks Google only for basic account identity and returns to MGT after the secure exchange.</p>
+      <div class="routine-preview">
+        <div><b>01</b><span>Start sign-in</span><small>One-time state and PKCE verifier</small></div>
+        <div><b>02</b><span>Confirm identity</span><small>Google identity scope only</small></div>
+        <div><b>03</b><span>Return to MGT</span><small>Server-side code exchange</small></div>
+        <div><b>04</b><span>Open account</span><small>No Drive token retained</small></div>
+      </div>
+      <div class="flow-result"><span>ACCOUNT BOUNDARY</span><h3>Google login is not Drive access</h3><p>This demo opens no provider page and creates no account. Google sign-in does not request Drive, photo, or file permissions. Private test-image storage is a separate server configuration and must never receive customer photos.</p><div class="flow-meta"><span>IDENTITY ONLY</span><span>NO DRIVE SCOPE</span><span>NO LIVE SIGN-IN</span></div></div>
+    `
+  },
   "Client photo journal": {
     kicker: "OPTIONAL CLIENT PHOTOS · TEST STORAGE FLOW",
     title: "A useful photo, on your terms",

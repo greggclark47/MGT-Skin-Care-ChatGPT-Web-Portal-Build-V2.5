@@ -30,6 +30,29 @@ do not contain the customer's original filename or profile data.
 
 ## Enable the test-only Drive destination
 
+### Supabase Google sign-in boundary
+
+The portal can use Supabase Auth as its Google OAuth boundary for account sign-in. This is a
+separate concern from the Google Drive authorization used by the test image destination: ordinary
+customer sign-in requests only `openid`, email, and profile identity scopes. It does **not** request
+access to a customer's Google Drive, and the portal does not retain Google provider tokens.
+
+1. In the designated Supabase project, enable and configure the Google provider. Add the exact
+   portal callback, `https://YOUR-PORTAL-HOST/api/hub/auth/google/callback`, to the Supabase redirect
+   allow list. Configure the same approved portal origin in Google and Supabase; do not use a broad
+   wildcard callback.
+2. In the server-only environment, set `SUPABASE_URL`, `SUPABASE_ANON_KEY`, and
+   `SUPABASE_GOOGLE_OAUTH_ENABLED=true`. The portal generates a one-time PKCE verifier and state for
+   each sign-in, exchanges the short-lived code server-side, then creates its own secure portal
+   session. OAuth state is consumed once and expires after five minutes.
+3. Verify first with a synthetic test account: start Google sign-in, complete the redirect, confirm
+   the account is linked, and test the profile-conflict choice. Do not enable Drive scopes merely to
+   enable account sign-in.
+
+Supabase Auth does not manage refresh of a Google provider token. For that reason, Google sign-in
+must not be repurposed as the app-owned Drive service credential. Keep the Drive grant below
+separate, least-privilege, server-only, and limited to the designated MGT test folder.
+
 1. Create or choose a private test folder in the test Google account and enable Google Drive API in
    its Cloud project. Do not use a shared customer or production folder.
 2. Configure an OAuth client and refresh token with the least-privilege `drive.file` scope. Use the

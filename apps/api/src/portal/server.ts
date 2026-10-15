@@ -21,6 +21,7 @@ import {BILLING_CYCLES,PLAN_DEFINITIONS,priceIdFor} from './plans';
 import { antiAgingRouter } from '../modules/anti-aging/router';
 import { SEED_ANTI_AGING_INGREDIENTS, SEED_ANTI_AGING_PRODUCTS, SEED_ANTI_AGING_TREATMENTS, SEED_ANTI_AGING_PROVIDERS } from '../modules/anti-aging/catalog';
 import {TestDriveImageStorage,clientImageDriveTestEnabled,listTestDriveImages,saveTestDriveImage,getTestDriveImage,deleteTestDriveImage,updateTestDriveImageCategory} from './client-image-drive';
+import {createSupabaseGoogleAuthorizeUrl,exchangeSupabaseGoogleCode,supabaseGoogleOAuthEnabled,type SupabaseOAuthIdentity} from './supabase-google-oauth';
 import {accountProfileInput,readAccountProfile,saveAccountProfile} from './account-profile';
 import {buildAccountServiceOverview} from './account-overview';
 type StripeClient=Stripe;
@@ -173,7 +174,7 @@ export async function createPortal(options:PortalOptions){
   await db.tx(async r=>{await rate(r,'retailer-outbound:'+hash(req.actor),60,3600000);await referralMetric(r,'retailer_outbound',`${id}:${segment}`);});
   res.json({recorded:true});
  });
- get('/session',async(req,res)=>{const state=await db.tx(async r=>({membership:await portalEntitlement(r,req.actor),deletion_request:req.account?publicDeletionRequest(await r.get('deletion_requests',req.actor)):null}));res.json({csrf:req.csrf,client_image_scope:hash(req.actor),client_image_drive_test_enabled:clientImageDriveTestEnabled(env),account:req.account||null,demo,auth_configured:!!(env.SUPABASE_URL&&env.SUPABASE_ANON_KEY),payments_configured:false,subscription_billing_configured:subscriptionBillingConfigured(stripe,env),commerce:COMMERCE_MODEL,ai_configured:coach.configured,...state});});
+ get('/session',async(req,res)=>{const state=await db.tx(async r=>({membership:await portalEntitlement(r,req.actor),deletion_request:req.account?publicDeletionRequest(await r.get('deletion_requests',req.actor)):null}));res.json({csrf:req.csrf,client_image_scope:hash(req.actor),client_image_drive_test_enabled:clientImageDriveTestEnabled(env),account:req.account||null,demo,auth_configured:!!(env.SUPABASE_URL&&env.SUPABASE_ANON_KEY),google_oauth_configured:supabaseGoogleOAuthEnabled(env),payments_configured:false,subscription_billing_configured:subscriptionBillingConfigured(stripe,env),commerce:COMMERCE_MODEL,ai_configured:coach.configured,...state});});
  get('/account/profile',async(req,res)=>{account(req);res.set('Cache-Control','private, no-store').json(await db.tx(r=>readAccountProfile(r,req.actor)));});
  post('/account/profile',async(req,res)=>{account(req);const input=accountProfileInput(req.body,clientImageDriveTestEnabled(env));res.set('Cache-Control','private, no-store').json(await db.tx(r=>saveAccountProfile(r,req.actor,req.body.expected_revision,input)));});
  get('/account/overview',async(req,res)=>{account(req);const overview=await db.tx(r=>buildAccountServiceOverview(r,req.actor,{billingConfigured:subscriptionBillingConfigured(stripe,env),testDriveEnabled:clientImageDriveTestEnabled(env),aiDisclosureVersion:AI_DISCLOSURE_VERSION}));res.set('Cache-Control','private, no-store').json(overview);});
@@ -247,12 +248,8 @@ export async function createPortal(options:PortalOptions){
  })));
  const authConfigured=()=>check(env.SUPABASE_URL&&env.SUPABASE_ANON_KEY,503,'auth_unconfigured','Sign-in is awaiting launch configuration.');
  const supa=async(path:string,body:any)=>{authConfigured();const r=await fetch(env.SUPABASE_URL+'/auth/v1/'+path,{method:'POST',headers:{apikey:env.SUPABASE_ANON_KEY!,'content-type':'application/json'},body:JSON.stringify(body),signal:AbortSignal.timeout(10000)});check(r.ok,400,'auth_failed','The sign-in request could not be completed. Please check the code or try again.');return r.json() as Promise<any>;};
- post('/auth/email',async(req,res)=>{const email=text(req.body.email,254).toLowerCase();check(/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email),400,'email_invalid','Enter a valid email address.');await db.tx(async r=>{await rate(r,'email:'+hash(email),3,3600000);await rate(r,'email-session:'+hash(req.actor),3,3600000);});await supa('otp',{email,create_user:true});res.json({sent:true});});
- post('/auth/verify',async(req,res)=>{
-  const email=text(req.body.email,254).toLowerCase(),otp=text(req.body.code,12);check(/^\d{6,8}$/.test(otp),400,'code_invalid','Enter the code from your email.');
-  await db.tx(async r=>{await rate(r,'verify:'+hash(email),8,900000);await rate(r,'verify-session:'+hash(req.actor),8,900000);});
-  const verified=options.verifyOtp?await options.verifyOtp(email,otp):(await supa('verify',{email,token:otp,type:'email'})).user;
-  check(verified?.id&&verified.email===email,401,'identity_invalid','Identity could not be verified.');
+ const completeVerifiedIdentity=async(req:HubRequest,res:Response,verified:SupabaseOAuthIdentity):Promise<boolean>=>{
+  const email=verified.email.toLowerCase();check(/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email),401,'identity_invalid','Identity could not be verified.');
   const secret=token(),sid=hash(secret);const merge=await db.tx(async r=>{
    await r.lock('identity:'+hash(verified.id));
    let user=await r.get('accounts',verified.id);if(!user){user={id:verified.id,email,roles:[],created_at:now()};await r.put('accounts',user.id,user);}
@@ -260,25 +257,42 @@ export async function createPortal(options:PortalOptions){
    for(const owner of [...new Set([req.actor,actor])].sort())await r.lock('profile:'+hash(owner));
    if(req.actor.startsWith('guest_')){
     const conflicts=[] as string[];
-    for(const scope of PROFILE_MERGE_SCOPES){
-    const guest=await r.get(scope,req.actor),existing=await r.get(scope,actor);
-    if(guest&&existing&&JSON.stringify(guest)!==JSON.stringify(existing))conflicts.push(scope);
-    }
-    if(conflicts.length){
-     const pending:PendingProfileMerge={id:randomUUID(),guest_actor:req.actor,account_id:user.id,email:user.email,created_at:now(),expires_at:new Date(Date.now()+15*60*1000).toISOString()};
-     await r.put('profile_merge_pending',req.actor,{...pending,conflicts});
-     return {conflict:true};
-    }
+    for(const scope of PROFILE_MERGE_SCOPES){const guest=await r.get(scope,req.actor),existing=await r.get(scope,actor);if(guest&&existing&&JSON.stringify(guest)!==JSON.stringify(existing))conflicts.push(scope);}
+    if(conflicts.length){const pending:PendingProfileMerge={id:randomUUID(),guest_actor:req.actor,account_id:user.id,email:user.email,created_at:now(),expires_at:new Date(Date.now()+15*60*1000).toISOString()};await r.put('profile_merge_pending',req.actor,{...pending,conflicts});return true;}
    }
    for(const scope of PROFILE_MERGE_SCOPES){const old=await r.get(scope,req.actor);if(old&&!(await r.get(scope,actor))){await r.put(scope,actor,old);}if(req.actor.startsWith('guest_'))await r.remove(scope,req.actor);}
    const linked=await r.get('profiles',actor);if(linked?.revision)await r.put('profile_revisions',actor,{revision:linked.revision});
    if(req.actor.startsWith('guest_'))await r.remove('profile_revisions',req.actor);
    if(req.actor.startsWith('guest_')){for(const ticket of (await r.list('tickets')).filter((t:any)=>t.actor===req.actor)){await r.put('tickets',ticket.id,{...ticket,actor,email:user.email});}}
-   await r.remove('sessions',req.sid);await r.put('sessions',sid,{id:sid,actor,userId:user.id,csrf:token(),expires:Date.now()+86400000});
-   return {conflict:false};
+   await r.remove('sessions',req.sid);await r.put('sessions',sid,{id:sid,actor,userId:user.id,csrf:token(),expires:Date.now()+86400000});return false;
   });
-  if(merge.conflict)throw new Fault(409,'profile_merge_conflict','Guest and account data differ. Both were kept; choose which profile to keep before continuing.');
-  res.cookie(prod?'__Host-mgt':'mgt',secret,{httpOnly:true,secure:prod,sameSite:'lax',path:'/',maxAge:86400000});res.json({signed_in:true});
+  if(!merge)res.cookie(prod?'__Host-mgt':'mgt',secret,{httpOnly:true,secure:prod,sameSite:'lax',path:'/',maxAge:86400000});
+  return merge;
+ };
+ post('/auth/email',async(req,res)=>{const email=text(req.body.email,254).toLowerCase();check(/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email),400,'email_invalid','Enter a valid email address.');await db.tx(async r=>{await rate(r,'email:'+hash(email),3,3600000);await rate(r,'email-session:'+hash(req.actor),3,3600000);});await supa('otp',{email,create_user:true});res.json({sent:true});});
+ post('/auth/verify',async(req,res)=>{
+  const email=text(req.body.email,254).toLowerCase(),otp=text(req.body.code,12);check(/^\d{6,8}$/.test(otp),400,'code_invalid','Enter the code from your email.');
+  await db.tx(async r=>{await rate(r,'verify:'+hash(email),8,900000);await rate(r,'verify-session:'+hash(req.actor),8,900000);});
+  const verified=options.verifyOtp?await options.verifyOtp(email,otp):(await supa('verify',{email,token:otp,type:'email'})).user;
+  check(verified?.id&&verified.email===email,401,'identity_invalid','Identity could not be verified.');
+  if(await completeVerifiedIdentity(req,res,{id:verified.id,email:verified.email}))throw new Fault(409,'profile_merge_conflict','Guest and account data differ. Both were kept; choose which profile to keep before continuing.');
+  res.json({signed_in:true});
+ });
+ get('/auth/google',async(req,res)=>{
+  check(supabaseGoogleOAuthEnabled(env),503,'google_oauth_unconfigured','Google sign-in is awaiting launch configuration.');
+  await db.tx(async r=>{await rate(r,'google-oauth:'+hash(req.actor),8,900000);});
+  const state=token(),codeVerifier=token(),expiresAt=Date.now()+5*60*1000;
+  await db.tx(async r=>{for(const entry of await r.list<any>('supabase_google_oauth_flows'))if(entry.expires_at<=Date.now())await r.remove('supabase_google_oauth_flows',entry.id);await r.put('supabase_google_oauth_flows',state,{id:state,actor:req.actor,code_verifier:codeVerifier,expires_at:expiresAt});});
+  const callback=`${origin}/api/hub/auth/google/callback`;
+  res.set('Cache-Control','no-store').redirect(302,createSupabaseGoogleAuthorizeUrl(env,callback,state,codeVerifier));
+ });
+ get('/auth/google/callback',async(req,res)=>{
+  const state=typeof req.query.state==='string'?req.query.state:'',code=typeof req.query.code==='string'?req.query.code:'';
+  const flow=await db.tx(async r=>{if(!/^[a-f0-9]{64}$/i.test(state))return undefined;await r.lock('supabase-google-oauth:'+state);const found=await r.get<any>('supabase_google_oauth_flows',state);if(found)await r.remove('supabase_google_oauth_flows',state);return found;});
+  check(flow&&flow.actor===req.actor&&flow.expires_at>Date.now(),400,'google_oauth_callback_invalid','Google sign-in could not be completed. Start again from My Account.');
+  let verified:SupabaseOAuthIdentity;try{verified=await exchangeSupabaseGoogleCode(env,code,flow.code_verifier);}catch{res.set('Cache-Control','no-store').redirect(303,`${origin}/account?oauth=failed`);return;}
+  const merge=await completeVerifiedIdentity(req,res,verified);
+  res.set('Cache-Control','no-store').redirect(303,`${origin}/account?oauth=${merge?'merge':'connected'}`);
  });
  post('/auth/merge',async(req,res)=>{
   const choice=text(req.body.choice,20);check(choice==='guest'||choice==='account',400,'merge_choice_invalid','Choose the browser profile or the account profile.');

@@ -8,7 +8,7 @@ const profile={skin_type:'dry',concerns:['anti_aging','hydration'],sensitivity:'
 async function fixture(t){
  const db=new LocalStore(':memory:');
  await initializeCatalog(db,true);t.after(async()=>{await db.close();});
- return{run:(input)=>db.tx(records=>match(records,input,true))};
+ return{run:(input,feedbackExclusions=[])=>db.tx(records=>match(records,input,true,feedbackExclusions))};
 }
 
 test('profile match returns explainable versioned intelligence without AI ranking',async t=>{
@@ -41,4 +41,13 @@ test('declared avoidances are exposed as datapoints but excluded products never 
  const {run}=await fixture(t);const result=await run({...profile,ingredient_avoidances:['retinol']});const intelligence=result.match_intelligence;
  assert.ok(intelligence.data_points.some(point=>point.id==='ingredient_avoidances'&&point.value==='Retinol'));
  assert.ok(intelligence.product_matches.every(item=>!item.ingredients.some(ingredient=>ingredient.name==='Retinol')));
+});
+
+test('feedback exclusions are deterministic, counted, and never re-enter the routine',async t=>{
+ const {run}=await fixture(t);const initial=await run(profile);const excludedProductId=initial.routine.steps[0].product_id;
+ const result=await run(profile,[excludedProductId]);
+ assert.ok(result.match_intelligence.coverage.feedback_excluded_products===1);
+ assert.ok(result.match_intelligence.coverage.excluded_products>=1);
+ assert.ok(!result.routine.steps.some(step=>step.product_id===excludedProductId));
+ assert.ok(result.match_intelligence.limitations.some(item=>/not right for you or irritating/.test(item)));
 });

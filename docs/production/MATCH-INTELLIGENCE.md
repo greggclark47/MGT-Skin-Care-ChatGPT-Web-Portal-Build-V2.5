@@ -1,4 +1,4 @@
-# Match intelligence checkpoint v4.344
+# Match intelligence checkpoint v4.345
 
 Status: repository implementation and local verification only. This checkpoint is not a production deployment, medical-device determination, retailer endorsement, or regulatory approval.
 
@@ -14,6 +14,25 @@ The response records:
 - scoring, routine, match-intelligence, and safety-matrix versions;
 - a retailer-directory handoff derived from routine slots; and
 - explicit limitations and the current image-analysis boundary.
+
+## Product feedback loop
+
+Each included routine product can be marked **Comfortable**, **Not right**, or **Irritated** in
+the web portal. The record is purpose-limited to the saved profile, contains no free-text health
+notes, and is removed with that profile.
+
+- **Not right** and **Irritated** place only that product ID on the profile's reversible exclusion
+  list, so it is omitted from later deterministic routine matches.
+- **Irritated** also changes the saved sensitivity selection to `high` before rebuilding the
+  routine, and the interface tells the person to stop products that irritate them and seek
+  professional advice for persistent or severe symptoms.
+- **Comfortable** records the latest response but does not loosen safety rules or promote a
+  product.
+
+The check-in accepts feedback only for a product currently present in the person's routine,
+requires the current profile revision, and rebuilds the result transactionally. It does not infer
+diagnoses, ingredient causality, or treatment response. A later full Skin Match retake begins a
+fresh profile result rather than silently carrying former product exclusions forward.
 
 ## Decision boundary
 

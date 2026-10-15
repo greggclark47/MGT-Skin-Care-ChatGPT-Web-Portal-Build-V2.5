@@ -116,6 +116,9 @@ console.log('\n== 6. Explanation contract renders deterministically, AI copy is 
   check('caution styling used, not danger red', withoutAi.includes(color.caution) && !withoutAi.includes(color.danger));
   check('placement shown', withoutAi.includes('treatment') && withoutAi.includes('every other day'));
 
+  const feedbackControls = renderToStaticMarkup(<ProductExplanationCard explanation={base} productName="Balance Serum" onFeedback={() => {}} busyFeedback="not_right" />);
+  check('product feedback is explicit and prevents concurrent saves', feedbackControls.includes('How did this product feel for you?') && feedbackControls.includes('Irritated') && (feedbackControls.match(/disabled=""/g) || []).length === 3 && feedbackControls.includes('Saving…'));
+
   const withAi = renderToStaticMarkup(<ProductExplanationCard explanation={{ ...base, blurb: 'Gentle enough for most evenings.' }} productName="Balance Serum" />);
   check('AI copy rendered when present', withAi.includes('Gentle enough for most evenings.'));
   check('AI copy explicitly labelled', withAi.includes('AI-written summary'));

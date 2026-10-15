@@ -5,7 +5,7 @@ import type { CandidateProduct, ExclusionResult, ScoreResult } from './scoring-e
 import { SCORING_ENGINE_VERSION } from './scoring-engine';
 import type { RoutineSlot } from '../types/enums';
 
-export const MATCH_INTELLIGENCE_VERSION = '1.0.0';
+export const MATCH_INTELLIGENCE_VERSION = '1.1.0';
 
 export interface MatchDataPoint {
   id: keyof SkinProfileInput;
@@ -20,6 +20,7 @@ export interface MatchCoverage {
   optional_slots_matched: number;
   eligible_products_considered: number;
   excluded_products: number;
+  feedback_excluded_products: number;
   confidence: 'strong' | 'balanced' | 'limited';
 }
 
@@ -143,6 +144,7 @@ export function buildMatchIntelligence(input: {
   products: CandidateProduct[];
   safety_matrix_version: string;
   excluded_products?: number;
+  feedback_excluded_product_ids?: string[];
 }): MatchIntelligence {
   const products = new Map(input.products.map((product) => [product.id, product]));
   const productMatches = input.routine.steps
@@ -152,6 +154,7 @@ export function buildMatchIntelligence(input: {
   const allResults = [...input.slot_results.values()].flat();
   const eligible = allResults.filter((result) => !result.excluded).length;
   const excluded = Math.max(allResults.length - eligible, input.excluded_products ?? 0);
+  const feedbackExcludedProducts = new Set(input.feedback_excluded_product_ids ?? []).size;
   const confidence: MatchCoverage['confidence'] = requiredMatched === REQUIRED_SLOTS.length && productMatches.length >= 4
     ? 'strong' : requiredMatched >= 3 ? 'balanced' : 'limited';
   return {
@@ -168,6 +171,7 @@ export function buildMatchIntelligence(input: {
       optional_slots_matched: input.routine.steps.filter((step) => step.is_optional).length,
       eligible_products_considered: eligible,
       excluded_products: excluded,
+      feedback_excluded_products: feedbackExcludedProducts,
       confidence,
     },
     product_matches: productMatches,
@@ -181,6 +185,7 @@ export function buildMatchIntelligence(input: {
       'Matches use saved questionnaire answers and reviewed catalog data; they do not diagnose a condition.',
       'Photos are not analyzed by this matching version.',
       'AI-generated text does not select, rank, include, or exclude products.',
+      'Products you mark as not right for you or irritating are left out of future routine matches until you update that saved feedback.',
       'Product formulas and availability can change; review the current label and retailer details.',
     ],
   };

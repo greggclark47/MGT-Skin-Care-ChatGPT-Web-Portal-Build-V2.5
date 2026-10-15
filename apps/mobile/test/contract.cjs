@@ -34,6 +34,7 @@ test('mobile Skin Match consumes shared questionnaire and profile contracts',()=
  assert.match(entry,/match_intelligence\.coverage\.required_slots_matched/);
  assert.match(entry,/match_intelligence\.data_points\.slice\(0,4\)/);
  assert.match(entry,/AI text does not select or rank products/);
+ assert.match(entry,/reversible future-match exclusions are managed in the secure web portal/);
  assert.match(entry,/Review full match details/);
  assert.match(entry,/EXPO_PUBLIC_PRIVACY_URL/);
  assert.match(entry,/EXPO_PUBLIC_TERMS_URL/);

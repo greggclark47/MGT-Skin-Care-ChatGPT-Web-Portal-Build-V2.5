@@ -194,7 +194,24 @@ export async function createPortal(options:PortalOptions){
   check(['comfortable','irritation','no_change'].includes(req.body.feedback),400,'invalid_feedback','Choose a feedback option.');
   const saved=await db.tx(async r=>{const p=await lockProfile(r,req.actor,req.body.expected_revision);check(p,404,'profile_missing','Complete your Skin Match first.');
    if(req.body.feedback==='irritation')p.input.sensitivity='high';
-   const next=await match(r,p.input,demo);return saveProfile(r,req.actor,{...p,...next,last_feedback:req.body.feedback,feedback_at:now()},'profile.feedback');});res.json({...saved,text:req.body.feedback==='irritation'?'Stop products that irritate your skin. Seek professional advice for persistent or severe symptoms. Your preferences are now more cautious.':'Your feedback has been saved.'});
+   const feedbackExclusions=Array.isArray(p.feedback_excluded_product_ids)?p.feedback_excluded_product_ids.filter((id:any)=>typeof id==='string'&&id.length>0&&id.length<=100).slice(-30):[];
+   const next=await match(r,p.input,demo,feedbackExclusions);return saveProfile(r,req.actor,{...p,...next,last_feedback:req.body.feedback,feedback_at:now()},'profile.feedback');});res.json({...saved,text:req.body.feedback==='irritation'?'Stop products that irritate your skin. Seek professional advice for persistent or severe symptoms. Your preferences are now more cautious.':'Your feedback has been saved.'});
+ });
+ post('/profile/product-feedback',async(req,res)=>{
+  const productId=text(req.body.product_id,100),feedback=req.body.feedback;
+  check(['comfortable','not_right','irritation'].includes(feedback),400,'invalid_product_feedback','Choose a supported product feedback option.');
+  const saved=await db.tx(async r=>{const p=await lockProfile(r,req.actor,req.body.expected_revision);check(p,404,'profile_missing','Complete your Skin Match first.');
+   check(p.routine?.steps?.some((step:any)=>step.product_id===productId),400,'product_not_in_routine','Choose a product currently in your routine.');
+   const existingFeedback=Array.isArray(p.product_feedback)?p.product_feedback.filter((item:any)=>item&&typeof item.product_id==='string'&&['comfortable','not_right','irritation'].includes(item.feedback)&&typeof item.at==='string').slice(-19):[];
+   const product_feedback=[...existingFeedback.filter((item:any)=>item.product_id!==productId),{product_id:productId,feedback,at:now()}];
+   const existingExclusions=Array.isArray(p.feedback_excluded_product_ids)?p.feedback_excluded_product_ids.filter((id:any)=>typeof id==='string'&&id.length>0&&id.length<=100).slice(-29):[];
+   const feedback_excluded_product_ids=feedback==='comfortable'?existingExclusions.filter((id:string)=>id!==productId):[...new Set([...existingExclusions,productId])];
+   if(feedback==='irritation')p.input.sensitivity='high';
+   const next=await match(r,p.input,demo,feedback_excluded_product_ids);
+   return saveProfile(r,req.actor,{...p,...next,product_feedback,feedback_excluded_product_ids,last_product_feedback:{product_id:productId,feedback,at:now()}},'profile.product_feedback');
+  });
+  const message=feedback==='irritation'?'This product is excluded from future matches and your sensitivity setting is now more cautious. Stop products that irritate your skin. Seek professional advice for persistent or severe symptoms.':feedback==='not_right'?'This product is excluded from future routine matches. Your updated routine is ready to review.':'Your product feedback has been saved.';
+  res.json({...saved,text:message});
  });
  post('/routine/simplify',async(req,res)=>{res.json(await db.tx(async r=>{const p=await lockProfile(r,req.actor,req.body.expected_revision);check(p,404,'profile_missing','Complete your Skin Match first.');const routine=simplify(p.routine);const match_intelligence=p.match_intelligence?projectMatchIntelligenceToRoutine(p.match_intelligence,routine):undefined;return saveProfile(r,req.actor,{...p,routine,...(match_intelligence?{match_intelligence}:{})},'profile.simplified');}));});
  post('/profile/remove',async(req,res)=>{check(req.body.confirm===true,400,'confirmation_required','Confirm removal of your saved skincare profile.');res.json(await db.tx(async r=>{await lockProfile(r,req.actor,req.body.expected_revision);return saveProfile(r,req.actor,null,'profile.removed');}));});

@@ -33,6 +33,8 @@ be enabled in test environments only; it is not production photo sync. Native ph
 private production object storage must be configured before promising cross-device image management
 or production photo upload. The flow does not analyze images or provide diagnosis.
 
-Skin Match completion consumes the shared v4.344 match-intelligence contract. Android shows core
+Skin Match completion consumes the shared v4.345 match-intelligence contract. Android shows core
 routine coverage, eligible-candidate count, the first four matching datapoints, the deterministic
-ranking boundary, and a portal link for full evidence. Photos remain outside the matching engine.
+ranking boundary, and a portal link for full evidence. Product feedback and reversible future-match
+exclusions stay in the secure web portal until a reviewed native account module is connected. Photos
+remain outside the matching engine.

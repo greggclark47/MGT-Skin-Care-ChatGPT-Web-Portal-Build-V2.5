@@ -76,6 +76,7 @@ export default function App() {
         <Text style={styles.method}>Explainable match · reviewed rules · AI text does not select or rank products</Text>
         <Text style={styles.resultHeading}>Datapoints used</Text>
         {result.match_intelligence.data_points.slice(0,4).map(point=><Text key={point.id} style={styles.dataPoint}>{point.label}: {point.value}</Text>)}
+        <Text style={styles.configNote}>Product feedback and its reversible future-match exclusions are managed in the secure web portal. AI and photos do not make those changes.</Text>
         <Text style={styles.configNote}>Photos are not analyzed. Product and retailer details can change; review current labels and storefront information.</Text>
         {isHttpsUrl(portalUrl)&&<Pressable style={styles.cta} onPress={()=>void Linking.openURL(portalUrl.replace(/\/+$/, '')+'/routine')} accessibilityRole="link"><Text style={styles.ctaLabel}>Review full match details</Text></Pressable>}
       </View>}

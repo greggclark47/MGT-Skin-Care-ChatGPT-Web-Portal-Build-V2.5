@@ -1,6 +1,6 @@
 # Connected account center
 
-Build checkpoint: v4.344
+Build checkpoint: v4.345
 
 The account center is the authenticated customer workspace for shared profile preferences,
 Premium subscription handoff, optional image organization, data export, consent, and deletion.
@@ -33,7 +33,7 @@ Unavailable services are visible but never presented as actions the customer can
 Service interests organize this checklist only; they do not grant entitlement, start billing,
 upload files, or provide consent.
 
-The saved skincare profile also carries the v4.344 match-intelligence response. The routine view
+The saved skincare profile also carries the v4.345 match-intelligence response. The routine view
 can show which datapoints shaped the result, deterministic product evidence, catalog coverage,
 safety-matrix version, limitations, and the retailer-discovery boundary. See
 `MATCH-INTELLIGENCE.md`.

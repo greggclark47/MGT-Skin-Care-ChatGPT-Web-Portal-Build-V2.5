@@ -6,7 +6,7 @@ const {OperationalWorker,InAppNotificationDelivery}=require('../dist/portal/oper
 const {createPortal}=require('../dist/portal/server');
 const {
  clientImageDriveTestEnabled,listTestDriveImages,saveTestDriveImage,getTestDriveImage,
- deleteTestDriveImage,updateTestDriveImageCategory,
+ deleteTestDriveImage,updateTestDriveImageCategory,TEST_IMAGE_FOLDER_NAME,
 }=require('../dist/portal/client-image-drive');
 
 const enabled={NODE_ENV:'test',CLIENT_IMAGE_DRIVE_TEST_ENABLED:'true',TEST_GOOGLE_DRIVE_CLIENT_ID:'client',TEST_GOOGLE_DRIVE_CLIENT_SECRET:'secret',TEST_GOOGLE_DRIVE_REFRESH_TOKEN:'refresh'};
@@ -17,6 +17,7 @@ test('test Drive configuration stays disabled in production and fails closed whe
  assert.equal(clientImageDriveTestEnabled({...enabled,NODE_ENV:'production'}),false);
  assert.equal(clientImageDriveTestEnabled({...enabled,TEST_GOOGLE_DRIVE_REFRESH_TOKEN:''}),false);
  assert.equal(clientImageDriveTestEnabled({...enabled,CLIENT_IMAGE_DRIVE_TEST_ENABLED:'false'}),false);
+ assert.equal(TEST_IMAGE_FOLDER_NAME,'MGT Skin Care Client Image Test Storage');
 });
 
 test('test Drive image records are actor-isolated and support lifecycle changes',async t=>{

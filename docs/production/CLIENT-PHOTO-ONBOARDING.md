@@ -12,7 +12,7 @@ The default library keeps up to 12 images (40 MB total) in browser IndexedDB on 
 under an opaque per-portal-session storage scope. Customers can view, categorize, and remove images.
 No image is required to complete a Skin Match. An explicitly selected Google Drive destination is
 available only when the non-production API has its test integration configured; this sends the
-prepared JPEG to a configured private test folder and keeps per-actor ownership metadata in the
+prepared JPEG to a designated private test folder and keeps per-actor ownership metadata in the
 portal store. Test Drive limits are 12 images and 40 MB per actor. The Drive OAuth refresh token
 stays server-side, media is proxied through the authenticated portal, and generated Drive filenames
 do not contain the customer's original filename or profile data.
@@ -32,16 +32,18 @@ do not contain the customer's original filename or profile data.
 
 1. Create or choose a private test folder in the test Google account and enable Google Drive API in
    its Cloud project. Do not use a shared customer or production folder.
-2. Configure an OAuth client and refresh token with the least-privilege `drive.file` scope. If a
-   folder ID is not supplied, the portal creates a private “MGT Skin Care Test Images” folder in
-   that OAuth user's Drive on the first upload. An optional `TEST_GOOGLE_DRIVE_FOLDER_ID` can point
-   at a folder already accessible to this app. Never place the client secret or refresh token in
-   web/mobile variables, source control, logs, or the demo HTML.
+2. Configure an OAuth client and refresh token with the least-privilege `drive.file` scope. Use the
+   designated private **MGT Skin Care Client Image Test Storage** folder by setting
+   `TEST_GOOGLE_DRIVE_FOLDER_ID` to its folder identifier in the isolated test environment. If a
+   folder ID is not supplied, the portal creates a private folder with that same name in the OAuth
+   user's Drive on the first upload. Never place the client secret or refresh token in web/mobile
+   variables, source control, logs, or the demo HTML.
 3. Set `CLIENT_IMAGE_DRIVE_TEST_ENABLED=true`, `TEST_GOOGLE_DRIVE_CLIENT_ID`,
    `TEST_GOOGLE_DRIVE_CLIENT_SECRET`, and `TEST_GOOGLE_DRIVE_REFRESH_TOKEN` only in the isolated
-   non-production API environment; optionally set `TEST_GOOGLE_DRIVE_FOLDER_ID`. The API
+   non-production API environment; set `TEST_GOOGLE_DRIVE_FOLDER_ID` to the designated folder.
+   The API
    reports the option available only when all values exist and `NODE_ENV` is not `production`.
-4. Restart the API. In My Skin, choose “Google Drive (test environment only)” explicitly before
+4. Restart the API. In My Skin, choose “Google Drive private test folder” explicitly before
    taking/uploading an image. Verify list, preview, purpose change, and removal using synthetic
    test images. A failed upload should not leave a usable library entry.
 5. Revoke the test OAuth grant and remove test images/folder after verification. Do not upload
@@ -55,6 +57,20 @@ Drive files become unreachable. This test path does not migrate guest images int
 The code is configuration-backed but not activated: no OAuth client values, refresh token, folder
 ID, or Drive access are stored in this repository. A successful application build does not verify
 that the Google account/folder grants the API access.
+
+## Designated-folder controls
+
+The designated folder is private by default and should remain accessible only to the MGT test
+Google account and the least-privilege test OAuth client. Do not enable link sharing, retailer
+access, external AI access, or customer access. Use synthetic, consent-free test images only.
+
+Set `TEST_GOOGLE_DRIVE_FOLDER_ID` in the server-side test environment, never in the web/mobile
+application, a committed `.env` file, source archive, or support ticket. The folder identifier is
+an environment reference; the OAuth client secret and refresh token remain secrets. The portal
+keeps an actor-scoped record for each successfully uploaded test image, proxies image content only
+through an authenticated portal route, and removes the Drive file before its portal record. Verify
+create, list, preview, category change, deletion, export, account-deletion blocking, and a manual
+Drive restore/recovery exercise before accepting any new storage workflow.
 
 ## Production boundary and next implementation
 

@@ -6,6 +6,7 @@ const DRIVE_UPLOAD = 'https://www.googleapis.com/upload/drive/v3/files';
 const IMAGE_LIMIT = 12;
 const IMAGE_BYTES_LIMIT = 5 * 1024 * 1024;
 const LIBRARY_BYTES_LIMIT = 40 * 1024 * 1024;
+export const TEST_IMAGE_FOLDER_NAME = 'MGT Skin Care Client Image Test Storage';
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const CATEGORIES = new Set(['front','left','right','concern','routine','progress','product','other']);
 
@@ -51,7 +52,7 @@ export class TestDriveImageStorage {
   const data=await response.json() as {id?:string};if(typeof data.id!=='string'||data.id.length>256)throw new Error('Google Drive did not confirm the saved image.');return data.id;
  }
  async createPrivateTestFolder():Promise<string>{
-  const response=await this.request(`${DRIVE_API}/files?fields=id`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({name:'MGT Skin Care Test Images',mimeType:'application/vnd.google-apps.folder'})});
+  const response=await this.request(`${DRIVE_API}/files?fields=id`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({name:TEST_IMAGE_FOLDER_NAME,mimeType:'application/vnd.google-apps.folder'})});
   const data=await response.json() as {id?:string};if(typeof data.id!=='string'||data.id.length>256)throw new Error('Google Drive could not create the private test folder.');return data.id;
  }
  async content(fileId:string):Promise<Buffer>{const response=await this.request(`${DRIVE_API}/files/${encodeURIComponent(fileId)}?alt=media`,{method:'GET'});if(!response.body)throw new Error('Google Drive returned no image content.');const reader=response.body.getReader(),parts:Buffer[]=[];let length=0;try{while(true){const item=await reader.read();if(item.done)break;length+=item.value.byteLength;if(length>IMAGE_BYTES_LIMIT)throw new Error('The stored test image is too large.');parts.push(Buffer.from(item.value));}}finally{await reader.cancel().catch(()=>undefined);}return Buffer.concat(parts,length);}

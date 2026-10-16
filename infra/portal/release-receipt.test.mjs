@@ -18,7 +18,7 @@ function manifest() {
     branch: "codex/test",
     generated_at: "2026-01-01T00:00:00.000Z",
     status: "ready_for_export",
-    destinations: { github: { status: "pending_push", repository: ["https://github.com/example/repo.git"], branch: "codex/test", commit: COMMIT }, google_drive: { status: "pending_upload" } },
+    destinations: { github: { status: "pending_push", repository: ["https://github.com/example/repo.git"], branch: "codex/test", commit: COMMIT }, google_drive: { status: "pending_upload", file_name: `MGT-Skin-Care-v2-${COMMIT.slice(0, 12)}-export.zip` } },
     entries: [{ id: "archive", reference: "work/exports/package.zip", kind: "archive", checksum: ARCHIVE, bytes: 42 }],
     errors: [],
   };
@@ -28,8 +28,8 @@ function manifest() {
 
 function receipts() {
   return {
-    github: { status: "confirmed", repository: "https://github.com/example/repo.git", branch: "codex/test", commit: COMMIT, observed_at: "2026-01-01T01:00:00.000Z" },
-    drive: { status: "confirmed", file_id: "1AbcDEF", web_url: "https://drive.google.com/file/d/1AbcDEF/view", bundle_checksum: "", archive_checksum: ARCHIVE, bytes: 42, observed_at: "2026-01-01T01:05:00.000Z" }
+    github: { status: "confirmed", repository: "https://github.com/example/repo.git", repository_id: 1001, branch: "codex/test", commit: COMMIT, observed_at: "2026-01-01T01:00:00.000Z", asset: { id: 2001, name: "package.zip", release_tag: "mgt-0123456789ab", web_url: "https://github.com/example/repo/releases/download/mgt-0123456789ab/package.zip", checksum: ARCHIVE, bytes: 42 } },
+    drive: { status: "confirmed", file_id: "1AbcDEF", folder_id: "1FolderABC", file_name: `MGT-Skin-Care-v2-${COMMIT.slice(0, 12)}-export.zip`, web_url: "https://drive.google.com/file/d/1AbcDEF/view", bundle_checksum: "", archive_checksum: ARCHIVE, bytes: 42, observed_at: "2026-01-01T01:05:00.000Z" }
   };
 }
 
@@ -66,6 +66,29 @@ test("rejects fabricated completion without observed Drive URL and id", () => {
   assert.match(review.errors.join("; "), /file_id|HTTPS web_url/);
 });
 
+test("requires complete remote artifact readback before closeout", () => {
+  const complete = receipts();
+  complete.drive.bundle_checksum = manifest().bundle_checksum;
+
+  const missingAsset = structuredClone(complete);
+  delete missingAsset.github.asset;
+  let review = buildReleaseReceiptReview({ manifest: manifest(), githubReceipt: missingAsset.github, googleDriveReceipt: missingAsset.drive, now: "2026-01-02T00:00:00.000Z" });
+  assert.equal(review.status, "blocked");
+  assert.match(review.errors.join("; "), /observed asset metadata/);
+
+  const relabelledAsset = structuredClone(complete);
+  relabelledAsset.github.asset.name = "renamed-package.zip";
+  review = buildReleaseReceiptReview({ manifest: manifest(), githubReceipt: relabelledAsset.github, googleDriveReceipt: relabelledAsset.drive, now: "2026-01-02T00:00:00.000Z" });
+  assert.equal(review.status, "blocked");
+  assert.match(review.errors.join("; "), /asset name must match/);
+
+  const missingFolder = structuredClone(complete);
+  delete missingFolder.drive.folder_id;
+  review = buildReleaseReceiptReview({ manifest: manifest(), githubReceipt: missingFolder.github, googleDriveReceipt: missingFolder.drive, now: "2026-01-02T00:00:00.000Z" });
+  assert.equal(review.status, "blocked");
+  assert.match(review.errors.join("; "), /parent folder_id/);
+});
+
 test("requires a matching receipt for every configured GitHub repository", () => {
   const value = manifest();
   value.destinations.github.repository.push("https://github.com/example/second.git");
@@ -77,7 +100,21 @@ test("requires a matching receipt for every configured GitHub repository", () =>
   assert.match(review.errors.join("; "), /missing configured repository/);
   data.github = {
     status: "confirmed",
-    repositories: value.destinations.github.repository.map((repository) => ({ repository, branch: "codex/test", commit: COMMIT, observed_at: "2026-01-01T01:00:00.000Z" }))
+    repositories: value.destinations.github.repository.map((repository, index) => ({
+      repository,
+      repository_id: 1001 + index,
+      branch: "codex/test",
+      commit: COMMIT,
+      observed_at: "2026-01-01T01:00:00.000Z",
+      asset: {
+        id: 2001 + index,
+        name: "package.zip",
+        release_tag: "mgt-0123456789ab",
+        web_url: `https://github.com/example/repo/releases/download/mgt-0123456789ab/package.zip`,
+        checksum: ARCHIVE,
+        bytes: 42
+      }
+    }))
   };
   review = buildReleaseReceiptReview({ manifest: value, githubReceipt: data.github, googleDriveReceipt: data.drive, now: "2026-01-02T00:00:00.000Z" });
   assert.equal(review.status, "export_complete");

@@ -35,6 +35,42 @@ function archiveEntry(manifest) {
   return (Array.isArray(manifest?.entries) ? manifest.entries : []).find((entry) => entry?.kind === "archive") || null;
 }
 
+function archiveName(manifest) {
+  const archive = archiveEntry(manifest);
+  return archive ? text(archive.reference).replaceAll("\\", "/").split("/").pop() : "";
+}
+
+function defaultDriveFileName(manifest) {
+  return text(manifest?.destinations?.google_drive?.file_name) || `MGT-Skin-Care-v2-${text(manifest?.candidate_commit).slice(0, 12)}-export.zip`;
+}
+
+function validGithubAssetUrl(value) {
+  if (typeof value !== "string" || value.length > 2048 || value !== value.trim()) return false;
+  try {
+    const parsed = new URL(value);
+    return parsed.protocol === "https:" && ["github.com", "api.github.com"].includes(parsed.hostname) && !parsed.username && !parsed.password && !parsed.search && !parsed.hash && !PLACEHOLDER.test(value);
+  } catch { return false; }
+}
+
+function githubArtifactErrors(manifest, observation) {
+  const archive = archiveEntry(manifest);
+  if (!archive) return [];
+  const errors = [];
+  const asset = observation?.asset;
+  if (!Number.isSafeInteger(observation?.repository_id) || observation.repository_id < 1) errors.push("github receipt repository_id must be an observed positive integer");
+  if (!asset || typeof asset !== "object" || Array.isArray(asset)) {
+    errors.push("github receipt must include observed asset metadata");
+    return errors;
+  }
+  if (!Number.isSafeInteger(asset.id) || asset.id < 1) errors.push("github receipt asset id must be an observed positive integer");
+  if (text(asset.name) !== archiveName(manifest)) errors.push("github receipt asset name must match the export archive name");
+  if (asset.bytes !== archive.bytes) errors.push("github receipt asset bytes must match the export archive");
+  if (text(asset.checksum) !== text(archive.checksum)) errors.push("github receipt asset checksum must match the export archive");
+  if (!validGithubAssetUrl(asset.web_url)) errors.push("github receipt asset web_url must be an observed HTTPS GitHub URL");
+  if (!text(asset.release_tag) || text(asset.release_tag).length > 200 || PLACEHOLDER.test(text(asset.release_tag))) errors.push("github receipt asset release_tag must be observed and non-placeholder");
+  return errors;
+}
+
 function githubReceiptErrors(manifest, receipt, now) {
   const errors = [];
   if (!receipt) return errors;
@@ -47,6 +83,7 @@ function githubReceiptErrors(manifest, receipt, now) {
     if (!SHA.test(text(observation?.commit)) || text(observation?.commit) !== text(manifest?.candidate_commit)) errors.push("github receipt commit must match the export candidate");
     if (!validPastIso(observation?.observed_at, now)) errors.push("github receipt observed_at must be a past UTC ISO timestamp");
     if (repositories.length && !repositories.includes(text(observation?.repository))) errors.push("github receipt repository must match an observed export remote");
+    errors.push(...githubArtifactErrors(manifest, observation));
   }
   const observedRepositories = observations.map((observation) => text(observation?.repository)).filter(Boolean);
   if (new Set(observedRepositories).size !== observedRepositories.length) errors.push("github receipt repositories must be unique");
@@ -62,6 +99,10 @@ function driveReceiptErrors(manifest, receipt, now) {
   if (!text(receipt.file_id) || PLACEHOLDER.test(text(receipt.file_id))) errors.push("google_drive receipt must include an observed file_id");
   if (!/^https:\/\//.test(text(receipt.web_url))) errors.push("google_drive receipt must include an HTTPS web_url");
   if (!matchesDriveFileIdentity(receipt.file_id, receipt.web_url)) errors.push("google_drive receipt file_id must match its HTTPS web_url on drive.google.com");
+  if (!text(receipt.folder_id) || PLACEHOLDER.test(text(receipt.folder_id)) || !/^[A-Za-z0-9_-]{5,256}$/.test(text(receipt.folder_id))) errors.push("google_drive receipt must include an observed parent folder_id");
+  const expectedFolder = text(manifest?.destinations?.google_drive?.folder_id);
+  if (expectedFolder && text(receipt.folder_id) !== expectedFolder) errors.push("google_drive receipt folder_id must match the export destination");
+  if (text(receipt.file_name) !== defaultDriveFileName(manifest)) errors.push("google_drive receipt file_name must match the export destination name");
   if (!validPastIso(receipt.observed_at, now)) errors.push("google_drive receipt observed_at must be a past ISO timestamp");
   if (!CHECKSUM.test(text(receipt.bundle_checksum)) || text(receipt.bundle_checksum) !== text(manifest?.bundle_checksum)) errors.push("google_drive receipt bundle_checksum must match the export manifest");
   if (archive && text(receipt.archive_checksum) !== text(archive.checksum)) errors.push("google_drive receipt archive_checksum must match the export archive");

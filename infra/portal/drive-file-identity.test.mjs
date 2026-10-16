@@ -11,10 +11,10 @@ function fixture() {
   const manifest = { version: "1.0", candidate_commit: "a".repeat(40), branch: "codex/test",
     generated_at: "2026-01-01T00:00:00.000Z", status: "ready_for_export", errors: [],
     entries: [{ id: "archive", reference: "work/exports/archive.zip", kind: "archive", checksum: "sha256:" + "b".repeat(64), bytes: 42 }],
-    destinations: { github: { status: "pending_push", repository: ["https://github.com/mgt/test.git"], branch: "codex/test", commit: "a".repeat(40) }, google_drive: { status: "pending_upload" } } };
+    destinations: { github: { status: "pending_push", repository: ["https://github.com/mgt/test.git"], branch: "codex/test", commit: "a".repeat(40) }, google_drive: { status: "pending_upload", file_name: "MGT-Skin-Care-v2-aaaaaaaaaaaa-export.zip" } } };
   manifest.bundle_checksum = releaseExportChecksum(manifest);
-  const github = { status: "confirmed", repository: "https://github.com/mgt/test.git", branch: "codex/test", commit: manifest.candidate_commit, observed_at: "2026-01-01T01:00:00.000Z" };
-  const drive = { status: "confirmed", file_id: ID, web_url: URL, bundle_checksum: manifest.bundle_checksum,
+  const github = { status: "confirmed", repository: "https://github.com/mgt/test.git", repository_id: 1001, branch: "codex/test", commit: manifest.candidate_commit, observed_at: "2026-01-01T01:00:00.000Z", asset: { id: 2001, name: "archive.zip", release_tag: "mgt-aaaaaaaaaaaa", web_url: "https://github.com/mgt/test/releases/download/mgt-aaaaaaaaaaaa/archive.zip", checksum: manifest.entries[0].checksum, bytes: 42 } };
+  const drive = { status: "confirmed", file_id: ID, folder_id: "1FolderABC", file_name: "MGT-Skin-Care-v2-aaaaaaaaaaaa-export.zip", web_url: URL, bundle_checksum: manifest.bundle_checksum,
     archive_checksum: manifest.entries[0].checksum, bytes: 42, observed_at: "2026-01-01T01:05:00.000Z" };
   return { manifest, github, drive };
 }

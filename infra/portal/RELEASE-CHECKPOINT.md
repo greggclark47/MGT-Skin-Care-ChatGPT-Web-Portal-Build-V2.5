@@ -1,5 +1,7 @@
 # AI release controls checkpoint
 
+2026-10-16 operations lease admission: production preflight now requires the operations-alert lease to outlive its configured delivery timeout by a five-second safety margin, preventing a slow alert attempt from being completed after a stale worker can reclaim the lease. Focused and full local verification cover this rule; no live alert destination was contacted.
+
 2026-10-16 recovery-drill evidence contract: `recovery-drill-review.mjs` now validates measured RTO/RPO against accepted targets, distinct backup/restore targets, restored migration continuity, checksum-bound rollback and failed-restore evidence, credential-safe records, and an explicit Gregg decision. It does not execute or claim a live restore.
 
 2026-10-16 Drive receipt generation binding: the final receipt review now requires the exact Drive export ID and candidate/archive `appProperties` in addition to folder, filename, bytes, checksums, and file identity. Missing or relabelled generation metadata remains blocked.

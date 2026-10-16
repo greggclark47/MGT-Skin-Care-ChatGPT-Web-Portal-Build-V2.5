@@ -47,6 +47,8 @@ This register is an engineering release aid, not legal advice, a regulatory cert
 - A recovery-drill review contract now validates candidate continuity, distinct isolated restore
   targets, measured RTO/RPO, restored migration version, rollback and failed-restore evidence,
   and the accountable decision without executing a live restore.
+- Production preflight now requires the operations-alert lease to exceed its delivery timeout by
+  a five-second safety margin, preventing stale-worker completion of a slow alert attempt.
 - Anti-aging readiness switches and operational retention are now explicit, bounded production inputs;
   they report gates only and do not activate checkout, booking or image analysis.
 

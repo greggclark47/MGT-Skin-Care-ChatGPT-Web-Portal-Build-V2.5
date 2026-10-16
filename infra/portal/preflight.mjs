@@ -246,6 +246,9 @@ export function validateEnvironment(env) {
     ["OPERATIONS_FOLLOW_UP_RETENTION_DAYS",30,3650]
   ]) if (env[key] !== undefined && env[key] !== "" && (typeof env[key] !== "string" || !/^\d+$/.test(env[key]) || !wholeNumber(env[key], minimum, maximum))) errors.push(`${key} must be a whole number between ${minimum} and ${maximum}.`);
   if (wholeNumber(env.OPERATIONS_ALERT_RETRY_COOLDOWN_SECONDS || "300",10,3600) && wholeNumber(env.OPERATIONS_ALERT_MAX_RETRY_DELAY_SECONDS || "3600",10,86400) && Number(env.OPERATIONS_ALERT_MAX_RETRY_DELAY_SECONDS || 3600) < Number(env.OPERATIONS_ALERT_RETRY_COOLDOWN_SECONDS || 300)) errors.push("OPERATIONS_ALERT_MAX_RETRY_DELAY_SECONDS must be at least OPERATIONS_ALERT_RETRY_COOLDOWN_SECONDS.");
+  const alertTimeoutMs = Number(env.OPERATIONS_ALERT_TIMEOUT_MS || 10000);
+  const alertLeaseSeconds = Number(env.OPERATIONS_ALERT_LEASE_SECONDS || 60);
+  if (wholeNumber(alertTimeoutMs, 1000, 30000) && wholeNumber(alertLeaseSeconds, 10, 600) && alertLeaseSeconds * 1000 < alertTimeoutMs + 5000) errors.push("OPERATIONS_ALERT_LEASE_SECONDS must exceed OPERATIONS_ALERT_TIMEOUT_MS by at least five seconds.");
 
   if (!["true", "false"].includes(env.SUBSCRIPTIONS_ENABLED)) errors.push("SUBSCRIPTIONS_ENABLED must be exactly true or false.");
   if (env.SUBSCRIPTIONS_ENABLED === "true") {

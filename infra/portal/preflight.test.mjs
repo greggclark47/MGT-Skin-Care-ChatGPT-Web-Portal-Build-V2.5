@@ -413,6 +413,23 @@ test("rejects a notification retry cap below the initial cooldown", () => {
   assert.ok(result.errors.some((error) => error.includes("at least NOTIFICATION_RETRY_COOLDOWN_SECONDS")));
 });
 
+test("requires the operations alert lease to outlive its delivery timeout", () => {
+  const result = validateEnvironment({
+    ...production,
+    OPERATIONS_ALERT_TIMEOUT_MS: "30000",
+    OPERATIONS_ALERT_LEASE_SECONDS: "30"
+  });
+  assert.equal(result.ok, false);
+  assert.ok(result.errors.some((error) => error.includes("OPERATIONS_ALERT_LEASE_SECONDS must exceed OPERATIONS_ALERT_TIMEOUT_MS")));
+
+  const safe = validateEnvironment({
+    ...production,
+    OPERATIONS_ALERT_TIMEOUT_MS: "30000",
+    OPERATIONS_ALERT_LEASE_SECONDS: "36"
+  });
+  assert.equal(safe.ok, true);
+});
+
 test("requires named support ownership and deployed accessibility evidence", () => {
   const result = validateEnvironment({
     ...production,

@@ -1,5 +1,6 @@
 const assert = require('node:assert/strict');
 const { installDatabasePoolErrorBoundary, PgStore, portalPoolConfig, startupMigrations, validateProductionDatabaseUrl } = require('../dist/portal/store');
+const { portalMigrationIds, verifyPortalMigrations } = require('../dist/portal/migrations');
 
 const production = { NODE_ENV: 'production' };
 const baseline = new URL('postgresql://db.internal/mgt');
@@ -46,4 +47,9 @@ for (const value of [undefined,'','true','False']) assert.throws(
   /explicit no-auto-migration declaration/
 );
 assert.equal(startupMigrations({NODE_ENV:'test',PORTAL_AUTO_MIGRATE:'true'}),true);
+const expectedMigrations=portalMigrationIds();
+const poolWithLedger=ids=>({query:async()=>({rows:ids.map(id=>({id}))})});
+assert.doesNotReject(()=>verifyPortalMigrations(poolWithLedger(expectedMigrations)));
+for(const ids of [expectedMigrations.slice(0,-1),[...expectedMigrations,'9999_unknown.sql'],[...expectedMigrations].reverse(),expectedMigrations.map((id,index)=>index===0?'0001_changed.sql':id)])
+ assert.rejects(()=>verifyPortalMigrations(poolWithLedger(ids)),/migration lineage/);
 console.log('Production database target and TLS admission checks passed.');

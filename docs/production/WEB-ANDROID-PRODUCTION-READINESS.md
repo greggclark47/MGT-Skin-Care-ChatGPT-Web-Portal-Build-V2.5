@@ -18,6 +18,8 @@ This register is an engineering release aid, not legal advice, a regulatory cert
   sanitized health categories.
 - The production compose contract declares its runtime mode explicitly, keeps disabled AI endpoint
   settings empty, and uses the configured worker readiness window for container health.
+- Production PostgreSQL startup now performs a read-only exact migration-ledger reconciliation;
+  missing, reordered, changed, or unexpected portal migrations stop the API/worker before traffic.
 
 ## Release scope
 

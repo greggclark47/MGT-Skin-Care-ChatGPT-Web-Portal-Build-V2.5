@@ -1,7 +1,7 @@
 import { Pool, type PoolConfig } from 'pg';
 import fs from 'node:fs';
 import path from 'node:path';
-import { applyPortalMigrations } from './migrations';
+import { applyPortalMigrations, verifyPortalMigrations } from './migrations';
 export type Stored<T=any>={id:string;value:T};
 export interface Records {
  get<T=any>(scope:string,id:string):Promise<T|undefined>;
@@ -75,13 +75,14 @@ export function installDatabasePoolErrorBoundary(pool:PoolErrorSource,log:(recor
  });
 }
 export class PgStore implements Store{
- kind='postgres';private pool:Pool;private closing?:Promise<void>;
- constructor(url:string,env:NodeJS.ProcessEnv=process.env){validateProductionDatabaseUrl(url,env);this.pool=new Pool(portalPoolConfig(url));installDatabasePoolErrorBoundary(this.pool);}
+ kind='postgres';private pool:Pool;private closing?:Promise<void>;private env:NodeJS.ProcessEnv;
+ constructor(url:string,env:NodeJS.ProcessEnv=process.env){this.env=env;validateProductionDatabaseUrl(url,env);this.pool=new Pool(portalPoolConfig(url));installDatabasePoolErrorBoundary(this.pool);}
  async init(migrate=false){
   try{
    if(migrate)await applyPortalMigrations(this.pool);
    // Connecting an imported database must not implicitly choose a migration lineage.
    await this.pool.query('SELECT scope,id,body FROM hub_records LIMIT 0');
+   if(this.env.NODE_ENV==='production'&&!migrate)await verifyPortalMigrations(this.pool);
    return this;
   }catch(error){await this.pool.end();throw error;}
  }

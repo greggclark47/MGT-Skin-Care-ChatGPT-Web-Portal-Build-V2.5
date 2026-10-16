@@ -3,12 +3,25 @@ import path from 'node:path';
 import type { Pool } from 'pg';
 
 const migrationsDirectory=()=>process.env.PORTAL_MIGRATIONS_DIR||path.resolve(__dirname,'../../../../infra/portal/migrations');
+export function portalMigrationIds(directory=migrationsDirectory()):string[]{
+ if(!fs.existsSync(directory))throw new Error('Production portal migration lineage is invalid.');
+ return fs.readdirSync(directory).filter(file=>/^\d+_.+\.sql$/.test(file)).sort();
+}
+
+/** Verifies the target ledger without changing the database. Production migrations are manual. */
+export async function verifyPortalMigrations(pool:Pick<Pool,'query'>,directory=migrationsDirectory()):Promise<void>{
+ const expected=portalMigrationIds(directory);
+ let rows:any[];
+ try{rows=(await pool.query('SELECT id FROM portal_schema_migrations ORDER BY id')).rows||[];}catch{throw new Error('Production portal migration lineage is invalid.');}
+ const applied=rows.map(row=>typeof row?.id==='string'?row.id:'');
+ if(applied.length!==expected.length||applied.some((id,index)=>id!==expected[index]))throw new Error('Production portal migration lineage is invalid.');
+}
 
 /** Applies immutable, checked-in portal migrations before serving traffic. */
 export async function applyPortalMigrations(pool:Pool){
  const directory=migrationsDirectory();
  if(!fs.existsSync(directory))throw new Error(`Portal migration directory is missing: ${directory}`);
- const files=fs.readdirSync(directory).filter(file=>/^\d+_.+\.sql$/.test(file)).sort();
+ const files=portalMigrationIds(directory);
  const client=await pool.connect();
  try{
   // API and worker can start together. This startup-only lock prevents both from applying the same migration.

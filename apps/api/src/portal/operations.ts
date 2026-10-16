@@ -83,6 +83,20 @@ export function backupEvidenceAdmission(existing:any,incoming:{completed_at:stri
  }
  return 'accepted' as const;
 }
+export type BackupAttestationEvidence={completed_at:string;restore_verified_at:string;location_identifier:string;restore_reference:string;checksum:string};
+export type BackupAttestationRequest={body:string;headers:Record<string,string>};
+export function createBackupAttestationRequest(input:{evidence:BackupAttestationEvidence;deliveryId:string;attempt:number;keyId:string;secret:string;timestamp?:string}):BackupAttestationRequest{
+ if(!input||typeof input!=='object'||!input.evidence||typeof input.keyId!=='string'||!/^[A-Za-z0-9_-]{1,64}$/.test(input.keyId)||typeof input.deliveryId!=='string'||!/^[A-Za-z0-9_-]{8,128}$/.test(input.deliveryId)||!Number.isSafeInteger(input.attempt)||input.attempt<1||input.attempt>999999||typeof input.secret!=='string'||input.secret.length===0||input.secret.length>4096)throw new Error('Backup attestation signing inputs are invalid.');
+ const evidence=input.evidence;
+ if(typeof evidence.completed_at!=='string'||typeof evidence.restore_verified_at!=='string'||typeof evidence.location_identifier!=='string'||typeof evidence.restore_reference!=='string'||typeof evidence.checksum!=='string'||evidence.location_identifier.length>200||evidence.restore_reference.length>1000||evidence.checksum.length>80||Number.isNaN(Date.parse(evidence.completed_at))||Number.isNaN(Date.parse(evidence.restore_verified_at))||!/^https:\/\//.test(evidence.restore_reference)||!/^sha256:[a-f0-9]{64}$/.test(evidence.checksum))throw new Error('Backup attestation evidence is invalid.');
+ const timestamp=input.timestamp??new Date().toISOString();
+ if(typeof timestamp!=='string'||timestamp.length>128||Number.isNaN(Date.parse(timestamp)))throw new Error('Backup attestation timestamp is invalid.');
+ const body=JSON.stringify({event:'mgt.backup.verified',backup:{...evidence,delivery_id:input.deliveryId,attempt:input.attempt}});
+ if(Buffer.byteLength(body,'utf8')>65536)throw new Error('Backup attestation payload exceeds the safe delivery limit.');
+ const contentDigest='sha256='+createHash('sha256').update(body).digest('hex');
+ const signature='sha256='+createHmac('sha256',input.secret).update(`${timestamp}.${body}`).digest('hex');
+ return {body,headers:{'content-type':'application/json','x-mgt-event':'mgt.backup.verified','x-mgt-signature-version':'v1','x-mgt-key-id':input.keyId,'x-mgt-delivery-id':input.deliveryId,'x-mgt-attempt':String(input.attempt),'x-mgt-timestamp':timestamp,'x-mgt-content-sha256':contentDigest,'x-mgt-signature':signature}};
+}
 export function verifyBackupAttestationRequest(input:{event:string;signatureVersion:string;keyId:string;deliveryId:string;attempt:string;timestamp:string;contentDigest:string;signature:string;body:string;secret:string;at?:number;maxAgeSeconds?:number}){
  if(!input||typeof input!=='object'||input.event!=='mgt.backup.verified'||input.signatureVersion!=='v1'||typeof input.keyId!=='string'||typeof input.deliveryId!=='string'||typeof input.attempt!=='string'||!/^[A-Za-z0-9_-]{1,64}$/.test(input.keyId)||!/^[A-Za-z0-9_-]{8,128}$/.test(input.deliveryId)||!/^[1-9]\d{0,5}$/.test(input.attempt))return false;
  if(!/^sha256=[a-f0-9]{64}$/.test(input.contentDigest)||!timingSafeEqual(Buffer.from(input.contentDigest),Buffer.from('sha256='+createHash('sha256').update(input.body).digest('hex'))))return false;

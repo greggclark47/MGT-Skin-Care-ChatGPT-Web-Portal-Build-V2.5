@@ -20,6 +20,9 @@ This register is an engineering release aid, not legal advice, a regulatory cert
   evidence, timestamp-equal conflicting receipts are rejected, and exact retries are idempotent.
 - An optional signed backup-attestation endpoint is available for an approved machine backup
   service; it is disabled by default, replay-safe, and retention-pruned until explicitly configured.
+- The API now exposes a deterministic, side-effect-free backup-attestation request builder that
+  produces the exact body, digest, and HMAC headers for an approved publisher; it performs no
+  network call and does not enable publication by itself.
 - The production compose contract declares its runtime mode explicitly, keeps disabled AI endpoint
   settings empty, and uses the configured worker readiness window for container health.
 - The API service, worker service, and API image healthcheck share the same worker interval and

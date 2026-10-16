@@ -15,6 +15,7 @@ const base = {
   SUPABASE_URL: "https://project.supabase.co",
   SUPABASE_ANON_KEY: "anon-production-value",
   SUPABASE_SERVICE_ROLE_KEY: "service-production-value",
+  SUPABASE_GOOGLE_OAUTH_ENABLED: "false",
   OLLAMA_ENABLED: "true",
   OLLAMA_BASE_URL: "http://ollama:11434",
   OPENCLAW_ENABLED: "false",

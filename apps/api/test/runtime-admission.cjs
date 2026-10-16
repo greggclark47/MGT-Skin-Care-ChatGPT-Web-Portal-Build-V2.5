@@ -145,7 +145,7 @@ const notification = {
   OPERATIONS_NOTIFICATION_RETENTION_DAYS:'90'
 };
 const identity = {
-  SUPABASE_URL:'https://identity.mgtskincare.test', SUPABASE_ANON_KEY:'anon', SUPABASE_SERVICE_ROLE_KEY:'service'
+  SUPABASE_URL:'https://identity.mgtskincare.test', SUPABASE_ANON_KEY:'anon', SUPABASE_SERVICE_ROLE_KEY:'service', SUPABASE_GOOGLE_OAUTH_ENABLED:'false'
 };
 const backup = {BACKUP_MAX_AGE_HOURS:'26',BACKUP_RESTORE_MAX_AGE_DAYS:'90'};
 const accessibility = {ACCESSIBILITY_VALIDATION_REPORT_URL:'https://evidence.mgtskincare.test/accessibility',ACCESSIBILITY_VALIDATED_AT:'2026-01-01T00:00:00.000Z'};
@@ -218,7 +218,7 @@ test('production identity admission matches preflight endpoint and credential-re
     {SUPABASE_URL:'https://identity.mgtskincare.test/auth'},{SUPABASE_URL:'https://identity.mgtskincare.test?tenant=other'},{SUPABASE_URL:'https://identity.mgtskincare.test#shadow'},
     {SUPABASE_ANON_KEY:undefined},{SUPABASE_ANON_KEY:''},{SUPABASE_ANON_KEY:'change-me'},{SUPABASE_ANON_KEY:' anon'},{SUPABASE_ANON_KEY:'anon\nkey'},
     {SUPABASE_SERVICE_ROLE_KEY:undefined},{SUPABASE_SERVICE_ROLE_KEY:''},{SUPABASE_SERVICE_ROLE_KEY:'change-me'},{SUPABASE_SERVICE_ROLE_KEY:'service '},{SUPABASE_SERVICE_ROLE_KEY:'service\tkey'},
-    {SUPABASE_SERVICE_ROLE_KEY:'anon'}
+    {SUPABASE_SERVICE_ROLE_KEY:'anon'},{SUPABASE_GOOGLE_OAUTH_ENABLED:undefined},{SUPABASE_GOOGLE_OAUTH_ENABLED:''},{SUPABASE_GOOGLE_OAUTH_ENABLED:'TRUE'},{SUPABASE_GOOGLE_OAUTH_ENABLED:'1'}
   ];
   const identityKeys=new Set(Object.keys(identity));
   for(const overrides of cases){
@@ -347,11 +347,13 @@ test('production disabled-feature residue matches preflight boundaries', async (
     {NOTIFICATION_DELIVERY:'in_app',NOTIFICATION_WEBHOOK_TOKEN:'dormant-token'},
     {OLLAMA_ENABLED:'false',OLLAMA_BASE_URL:'http://ollama:11434'},
     {OPENCLAW_ENABLED:'false',OPENCLAW_API_MODE:'ollama'},
+    {CLIENT_IMAGE_DRIVE_TEST_ENABLED:'true'},
+    {TEST_GOOGLE_DRIVE_CLIENT_ID:'test-client-reference'},
     {SUBSCRIPTIONS_ENABLED:'false',STRIPE_SECRET_KEY:'sk_live_dormant'}
   ]){
     const env={...disabled,...overrides};
     assert.throws(()=>validateProductionDisabledFeatureResidue(env),error=>error.message==='Production disabled feature residue is invalid.');
-    assert.ok(validateEnvironment(env).errors.some(error=>/^(Disabled customer|Disabled Ollama|Disabled OpenClaw|Disabled subscriptions)/.test(error)));
+    assert.ok(validateEnvironment(env).errors.some(error=>/^(Disabled customer|Disabled Ollama|Disabled OpenClaw|Production test Google Drive|Disabled subscriptions)/.test(error)));
   }
 });
 

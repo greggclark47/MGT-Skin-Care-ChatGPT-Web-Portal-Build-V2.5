@@ -16,7 +16,7 @@ const ENV = {
   DATABASE_URL: "postgresql://u:p@db.mgt-skin-care.test:5432/postgres?sslmode=verify-full", PORTAL_AUTO_MIGRATE: "false",
   PORTAL_DOMAIN: "portal.mgt-skin-care.test", NODE_IMAGE: "node@sha256:" + "a".repeat(64), API_IMAGE: "ghcr.io/mgt/api@sha256:" + "d".repeat(64),
   WEB_IMAGE: "ghcr.io/mgt/web@sha256:" + "e".repeat(64), OLLAMA_IMAGE: "ollama/ollama@sha256:" + "b".repeat(64), CADDY_IMAGE: "caddy@sha256:" + "c".repeat(64),
-  SUPABASE_URL: "https://project.supabase.co", SUPABASE_ANON_KEY: "anon", SUPABASE_SERVICE_ROLE_KEY: "service",
+  SUPABASE_URL: "https://project.supabase.co", SUPABASE_ANON_KEY: "anon", SUPABASE_SERVICE_ROLE_KEY: "service", SUPABASE_GOOGLE_OAUTH_ENABLED: "false",
   OLLAMA_ENABLED: "true", OLLAMA_BASE_URL: "https://ollama.mgt-skin-care.test", OPENCLAW_ENABLED: "false",
   WORKER_INTERVAL_SECONDS: "60", WORKER_READINESS_MAX_AGE_SECONDS: "300", BACKUP_MAX_AGE_HOURS: "26", BACKUP_RESTORE_MAX_AGE_DAYS: "90",
   NOTIFICATION_DELIVERY: "in_app", RELEASE_OWNER_NAME: DEFAULT_ACCOUNTABLE_OWNER, SUPPORT_OWNER_NAME: DEFAULT_ACCOUNTABLE_OWNER,

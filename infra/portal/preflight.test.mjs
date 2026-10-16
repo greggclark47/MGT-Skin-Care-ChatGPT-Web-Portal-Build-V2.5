@@ -12,6 +12,7 @@ const production = {
   SUPABASE_URL: "https://project.supabase.co",
   SUPABASE_ANON_KEY: "anon-production-value",
   SUPABASE_SERVICE_ROLE_KEY: "service-production-value",
+  SUPABASE_GOOGLE_OAUTH_ENABLED: "false",
   OLLAMA_ENABLED: "true",
   OLLAMA_BASE_URL: "http://ollama:11434",
   OPENCLAW_ENABLED: "false",
@@ -71,6 +72,27 @@ test("keeps automated backup attestation disabled until its signed integration i
   const residue = validateEnvironment({ ...production, BACKUP_ATTESTATION_SECRET: "disabled-residue" });
   assert.equal(residue.ok, false);
   assert.ok(residue.errors.some((error) => error.includes("Disabled backup attestation")));
+});
+
+test("keeps test Google Drive image storage out of production and validates Google identity mode", () => {
+  assert.equal(validateEnvironment(production).ok, true);
+  assert.equal(validateEnvironment({ ...production, SUPABASE_GOOGLE_OAUTH_ENABLED: "true" }).ok, true);
+  for (const value of [undefined, "", "TRUE", "1", "enabled"]) {
+    const result = validateEnvironment({ ...production, SUPABASE_GOOGLE_OAUTH_ENABLED: value });
+    assert.equal(result.ok, false);
+    assert.ok(result.errors.some((error) => error.startsWith("SUPABASE_GOOGLE_OAUTH_ENABLED")));
+  }
+  for (const changed of [
+    { CLIENT_IMAGE_DRIVE_TEST_ENABLED: "true" },
+    { TEST_GOOGLE_DRIVE_CLIENT_ID: "test-client-reference" },
+    { TEST_GOOGLE_DRIVE_CLIENT_SECRET: "test-secret-reference" },
+    { TEST_GOOGLE_DRIVE_REFRESH_TOKEN: "test-refresh-reference" },
+    { TEST_GOOGLE_DRIVE_FOLDER_ID: "test-folder-id" },
+  ]) {
+    const result = validateEnvironment({ ...production, ...changed });
+    assert.equal(result.ok, false);
+    assert.ok(result.errors.some((error) => error.startsWith("Production test Google Drive")));
+  }
 });
 
 test("requires the exact lowercase production demo-mode declaration", () => {

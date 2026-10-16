@@ -28,6 +28,8 @@ This register is an engineering release aid, not legal advice, a regulatory cert
   missing, reordered, changed, or unexpected portal migrations stop the API/worker before traffic.
 - The same startup gate verifies RLS is enabled on the server-side portal tables and that the
   reviewed database role has the required RLS authority; it does not mutate the target database.
+- Production admission now rejects test-only Google Drive image-storage flags, credentials and folder
+  references, while validating the Supabase Google identity-mode declaration before startup.
 
 ## Release scope
 

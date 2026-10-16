@@ -150,6 +150,8 @@ export function validateEnvironment(env) {
   if (anonKey && !validSecretReference(env.SUPABASE_ANON_KEY)) errors.push("SUPABASE_ANON_KEY must be a bounded injected reference without whitespace or control characters.");
   if (serviceRole && !validSecretReference(env.SUPABASE_SERVICE_ROLE_KEY)) errors.push("SUPABASE_SERVICE_ROLE_KEY must be a bounded injected reference without whitespace or control characters.");
   if (serviceRole && serviceRole === env.SUPABASE_ANON_KEY) errors.push("SUPABASE_SERVICE_ROLE_KEY must differ from SUPABASE_ANON_KEY.");
+  const googleOAuthEnabled = env.SUPABASE_GOOGLE_OAUTH_ENABLED;
+  if (!["true", "false"].includes(googleOAuthEnabled)) errors.push("SUPABASE_GOOGLE_OAUTH_ENABLED must be explicitly true or false.");
 
   if (!["true", "false"].includes(env.OLLAMA_ENABLED)) errors.push("OLLAMA_ENABLED must be exactly true or false.");
   if (env.OLLAMA_ENABLED === "true" && !validAiServiceUrl(env.OLLAMA_BASE_URL)) errors.push("OLLAMA_BASE_URL must use HTTPS or a canonical single-label private HTTP service without credentials, query, or fragment.");
@@ -288,6 +290,7 @@ export function validateEnvironment(env) {
   if (env.NOTIFICATION_DELIVERY === "in_app" && populated(["NOTIFICATION_WEBHOOK_URL", "NOTIFICATION_WEBHOOK_TOKEN", "NOTIFICATION_WEBHOOK_KEY_ID", "NOTIFICATION_WEBHOOK_TIMEOUT_MS"])) errors.push("Disabled customer webhook delivery must not retain webhook configuration.");
   if (env.OLLAMA_ENABLED === "false" && populated(["OLLAMA_BASE_URL"])) errors.push("Disabled Ollama must not retain an endpoint.");
   if (env.OPENCLAW_ENABLED === "false" && populated(["OPENCLAW_BASE_URL", "OPENCLAW_API_MODE", "OPENCLAW_API_KEY"])) errors.push("Disabled OpenClaw must not retain endpoint, mode, or credential configuration.");
+  if (env.NODE_ENV === "production" && (env.CLIENT_IMAGE_DRIVE_TEST_ENABLED === "true" || populated(["TEST_GOOGLE_DRIVE_CLIENT_ID", "TEST_GOOGLE_DRIVE_CLIENT_SECRET", "TEST_GOOGLE_DRIVE_REFRESH_TOKEN", "TEST_GOOGLE_DRIVE_FOLDER_ID"]))) errors.push("Production test Google Drive image storage must remain disabled and must not retain test credentials or folder configuration.");
   if (backupAttestationEnabled === "false" && populated(["BACKUP_ATTESTATION_SECRET", "BACKUP_ATTESTATION_KEY_ID", "BACKUP_ATTESTATION_MAX_AGE_SECONDS"])) errors.push("Disabled backup attestation must not retain signing configuration.");
   if (env.SUBSCRIPTIONS_ENABLED === "false" && populated(["STRIPE_LIVE_MODE", "STRIPE_SECRET_KEY", "STRIPE_SUBSCRIPTION_WEBHOOK_SECRET", "STRIPE_PREMIUM_PRODUCT_ID", "STRIPE_PREMIUM_MONTHLY_PRICE_ID", "STRIPE_PREMIUM_ANNUAL_PRICE_ID"])) errors.push("Disabled subscriptions must not retain Stripe configuration.");
 

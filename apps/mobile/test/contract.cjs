@@ -42,8 +42,10 @@ test('mobile Skin Match consumes shared questionnaire and profile contracts',()=
  assert.match(entry,/ACCOUNT_PORTAL_PATHS\.overview/);
  assert.match(entry,/ACCOUNT_PORTAL_PATHS\.billing/);
  assert.match(entry,/ACCOUNT_PORTAL_PATHS\.images/);
+ assert.match(entry,/ACCOUNT_PORTAL_PATHS\.regimen/);
  assert.match(entry,/Connected setup checklist/);
  assert.match(entry,/Profile and preferences/);
+ assert.match(entry,/two-week regimen cycle/);
  assert.match(entry,/missing its API configuration/);
  assert.doesNotMatch(entry,/OPENAI_API_KEY|SUPABASE_SERVICE_ROLE_KEY|STRIPE_SECRET_KEY/);
 });

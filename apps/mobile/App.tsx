@@ -60,6 +60,7 @@ export default function App() {
             <Pressable style={styles.portalLink} onPress={() => void Linking.openURL(portalUrl.replace(/\/+$/, '') + ACCOUNT_PORTAL_PATHS.profile)} accessibilityRole="link"><Text style={styles.legalLink}>Profile and preferences</Text></Pressable>
             <Pressable style={styles.portalLink} onPress={() => void Linking.openURL(portalUrl.replace(/\/+$/, '') + ACCOUNT_PORTAL_PATHS.billing)} accessibilityRole="link"><Text style={styles.legalLink}>Payment setup and subscriptions</Text></Pressable>
             <Pressable style={styles.portalLink} onPress={() => void Linking.openURL(portalUrl.replace(/\/+$/, '') + ACCOUNT_PORTAL_PATHS.images)} accessibilityRole="link"><Text style={styles.legalLink}>Upload and manage skincare photos</Text></Pressable>
+            <Pressable style={styles.portalLink} onPress={() => void Linking.openURL(portalUrl.replace(/\/+$/, '') + ACCOUNT_PORTAL_PATHS.regimen)} accessibilityRole="link"><Text style={styles.legalLink}>Review my two-week regimen cycle</Text></Pressable>
           </View>}
           <Text style={styles.configNote}>Account, payment and image management open in the secure web portal until reviewed native Android modules are connected. Photos remain optional and are never analyzed by this build.</Text>
           {!isHttpsUrl(privacyUrl) || !isHttpsUrl(termsUrl) ? <Text style={styles.configNote}>Production builds must provide HTTPS privacy and terms links.</Text> : null}

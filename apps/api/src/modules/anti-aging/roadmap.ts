@@ -1,9 +1,9 @@
 import { Router } from 'express';
 import {
-  aggregateProgress, buildAppointmentRequest, buildMerchantReferral, buildProgressControlSummary, buildProgressExportManifest, buildProgressReminder, isCanonicalId, isProgressReminderCadence, isProgressStatus, previewProgressReminder, progressReminderState, snoozeProgressReminder, summarizeProgressExport, validateProgressEntry, withdrawAppointmentRequest,
-  type AppointmentRequestInput, type ProgressEntry, type ProgressReminder,
+  aggregateProgress, buildAppointmentRequest, buildMerchantReferral, buildProgressControlSummary, buildProgressExportManifest, buildProgressReminder, createRegimenCycle, createRegimenCycleCheckIn, isCanonicalId, isProgressReminderCadence, isProgressStatus, isRegimenCycleCheckInStatus, isRegimenCycleFocus, previewProgressReminder, progressReminderState, snoozeProgressReminder, summarizeProgressExport, summarizeRegimenCycle, validateProgressEntry, withdrawAppointmentRequest,
+  type AppointmentRequestInput, type ProgressEntry, type ProgressReminder, type RegimenCycle, type RegimenCycleCheckIn, type RegimenCycleSummary,
 } from '@mgt/domain';
-import { check, hash, wrap } from '../../portal/security';
+import { account, check, hash, wrap } from '../../portal/security';
 import type { Store } from '../../portal/store';
 import type { AntiAgingCatalog } from './catalog';
 
@@ -16,8 +16,48 @@ function missingStore(store: Store | undefined): asserts store is Store {
   check(store, 503, 'state_unavailable', 'This preview is not configured to save records yet.');
 }
 
+function publicRegimenSummary(summary: RegimenCycleSummary) {
+  const { actor: _actor, consent_version: _consentVersion, ...cycle } = summary.cycle;
+  return { ...summary, cycle };
+}
+
+function publicRegimenCheckIn(checkIn: RegimenCycleCheckIn) {
+  const { actor: _actor, ...entry } = checkIn;
+  return entry;
+}
+
 export function antiAgingRoadmapRouter(catalog: AntiAgingCatalog, store?: Store): Router {
   const router = Router();
+
+  const cycleActor = (req: { actor?: unknown; account?: { id?: unknown } }) => {
+    const signedIn=account(req as any);
+    check(typeof signedIn.id==='string'&&signedIn.id.length>0,401,'authentication_required','Sign in to synchronize your regimen cycle.');
+    return signedIn.id;
+  };
+  const cyclesFor = async (actor:string) => store!.tx(async records => (await records.list<RegimenCycle>('regimen_cycles')).filter(item=>item.actor===actor));
+  const checkInsFor = async (actor:string) => store!.tx(async records => (await records.list<RegimenCycleCheckIn>('regimen_cycle_check_ins')).filter(item=>item.actor===actor));
+
+  router.get('/regimen-cycles', wrap(async(req,res)=>{
+    missingStore(store);const actor=cycleActor(req);const cycles=(await cyclesFor(actor)).sort((a,b)=>b.starts_at.localeCompare(a.starts_at));const entries=await checkInsFor(actor);
+    const summaries=cycles.slice(0,12).map(cycle=>publicRegimenSummary(summarizeRegimenCycle(cycle,entries)));
+    res.json({data:{items:summaries,current:summaries.find(item=>item.rotation_state==='in_progress')||null,retention:'user_controlled',sync_scope:'signed_in_account',data_shared:[]}});
+  }));
+
+  router.post('/regimen-cycles', wrap(async(req,res)=>{
+    missingStore(store);const actor=cycleActor(req);check(req.body?.consent==='regimen_cycle_tracking',400,'consent_required','A two-week regimen cycle requires purpose-specific consent.');check(isRegimenCycleFocus(req.body?.focus)&&typeof req.body?.consent_version==='string'&&/^[a-z0-9._-]{1,80}$/i.test(req.body.consent_version),400,'invalid_regimen_cycle','Choose a supported cycle focus and consent version.');
+    const saved=await store.tx(async records=>{await records.lock('regimen-cycle:'+hash(actor));const existing=(await records.list<RegimenCycle>('regimen_cycles')).filter(item=>item.actor===actor).map(cycle=>summarizeRegimenCycle(cycle,[],Date.now())).find(item=>item.rotation_state==='in_progress');check(!existing,409,'regimen_cycle_active','Finish or review the current two-week cycle before starting another.');const id='cycle_'+hash(actor+':'+new Date().toISOString()).slice(0,48);const cycle=createRegimenCycle({focus:req.body.focus,consent_version:req.body.consent_version},actor,id);await records.put('regimen_cycles',id,cycle);return cycle;});
+    res.status(201).json({data:publicRegimenSummary(summarizeRegimenCycle(saved,[])),sync_scope:'signed_in_account'});
+  }));
+
+  router.post('/regimen-cycles/:id/check-ins', wrap(async(req,res)=>{
+    missingStore(store);const actor=cycleActor(req);const cycleId=typeof req.params.id==='string'?req.params.id:'';check(isCanonicalId(cycleId)&&isRegimenCycleCheckInStatus(req.body?.status)&&typeof req.body?.completed_at==='string'&&Number.isFinite(Date.parse(req.body.completed_at)),400,'invalid_regimen_check_in','Choose a supported check-in and timestamp.');
+    const saved=await store.tx(async records=>{await records.lock('regimen-cycle:'+hash(actor+':'+cycleId));const cycle=await records.get<RegimenCycle>('regimen_cycles',cycleId);check(cycle?.actor===actor,404,'regimen_cycle_not_found','That regimen cycle is not available.');const day=new Date(Date.parse(req.body.completed_at)).toISOString().slice(0,10);const id='cycle_checkin_'+hash(actor+':'+cycleId+':'+day).slice(0,48);const entry=createRegimenCycleCheckIn({cycle_id:cycleId,status:req.body.status,completed_at:req.body.completed_at},cycle,actor,id);const existing=await records.get<RegimenCycleCheckIn>('regimen_cycle_check_ins',id);if(existing)return existing;await records.put('regimen_cycle_check_ins',id,entry);return entry;});
+    res.status(202).json({data:publicRegimenCheckIn(saved),note:'A check-in records your experience only. It does not alter a routine or create a treatment record.'});
+  }));
+
+  router.get('/regimen-cycles/:id/summary', wrap(async(req,res)=>{
+    missingStore(store);const actor=cycleActor(req);const cycleId=typeof req.params.id==='string'?req.params.id:'';check(isCanonicalId(cycleId),400,'invalid_regimen_cycle','Use a valid regimen cycle reference.');const cycle=await store.tx(records=>records.get<RegimenCycle>('regimen_cycles',cycleId));check(cycle?.actor===actor,404,'regimen_cycle_not_found','That regimen cycle is not available.');res.json({data:publicRegimenSummary(summarizeRegimenCycle(cycle,await checkInsFor(actor))),sync_scope:'signed_in_account'});
+  }));
 
   router.get('/referrals/preview', (req, res) => {
     const id = typeof req.query.product_id === 'string' ? req.query.product_id : '';

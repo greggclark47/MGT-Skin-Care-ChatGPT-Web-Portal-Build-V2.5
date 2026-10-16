@@ -59,5 +59,6 @@ export const ACCOUNT_PORTAL_PATHS={
  profile:'/account#profile-settings',
  billing:'/account#payment-settings',
  images:'/account#image-library',
+  regimen:'/routine#regimen-cycle',
  privacy:'/account#privacy-controls',
 } as const;

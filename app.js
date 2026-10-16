@@ -233,6 +233,21 @@ const demoFlows = {
       <div class="flow-result"><span>STORAGE BOUNDARY</span><h3>Clear destination, clear next step</h3><p>The test Drive upload remains unavailable until the server confirms its authorization. A failed check explains that no image was sent. Customer photos and production data must never use the Drive test destination.</p><div class="flow-meta"><span>VERIFY BEFORE UPLOAD</span><span>TEST ONLY</span><span>NO IMAGE ANALYSIS</span></div></div>
     `
   },
+  "Bi-weekly regimen cycle": {
+    kicker: "CONNECTED REGIMEN CYCLE · SAMPLE FLOW",
+    title: "Keep one change easy to notice",
+    step: "14 days · Signed account sync · Review before any change",
+    body: `
+      <p class="flow-intro">Choose one routine focus for fourteen days, then save optional experience check-ins. The account record follows the signed-in person between the portal and Android handoff.</p>
+      <div class="routine-preview">
+        <div><b>01</b><span>Choose one focus</span><small>Steady routine, one change, or progress review</small></div>
+        <div><b>02</b><span>Keep it consistent</span><small>One selected focus for 14 days</small></div>
+        <div><b>03</b><span>Save an optional check-in</span><small>Comfortable, no change, or needs review</small></div>
+        <div><b>04</b><span>Review before changing</span><small>No automatic product or routine update</small></div>
+      </div>
+      <div class="flow-result"><span>CONTROL BOUNDARY</span><h3>Guidance can explain, never decide</h3><p>Any approved AI explanation can describe the cycle summary only. It cannot diagnose, infer treatment response, select products, or apply a regimen rotation. Starting a cycle requires purpose-specific consent and is private to the signed-in account.</p><div class="flow-meta"><span>14 DAYS</span><span>ACCOUNT-SYNCED</span><span>NO AUTO-CHANGE</span></div></div>
+    `
+  },
   "Skin Match": {
     kicker: "SKIN MATCH · SAMPLE FLOW",
     title: "Find a calmer starting point",

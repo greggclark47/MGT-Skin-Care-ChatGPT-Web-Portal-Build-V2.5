@@ -51,7 +51,7 @@ test("builds resumable upload and reconciliation requests without exposing crede
 test("accepts only an exact Drive metadata and byte readback", () => {
   const value = manifest();
   const receipt = validateDriveArchiveReadback({ manifest: value, folderId: FOLDER, metadata: metadata(value), content: CONTENT, observedAt: "2026-01-01T01:00:00.000Z" });
-  assert.deepEqual(receipt, { status: "confirmed", file_id: "1DriveFile", folder_id: FOLDER, file_name: value.destinations.google_drive.file_name, web_url: "https://drive.google.com/file/d/1DriveFile/view", bundle_checksum: value.bundle_checksum, archive_checksum: ARCHIVE_CHECKSUM, bytes: CONTENT.length, observed_at: "2026-01-01T01:00:00.000Z" });
+  assert.deepEqual(receipt, { status: "confirmed", export_id: `mgt-release-${COMMIT}`, app_properties: { mgtExportId: `mgt-release-${COMMIT}`, mgtCandidateCommit: COMMIT, mgtBundleChecksum: value.bundle_checksum, mgtArchiveChecksum: ARCHIVE_CHECKSUM }, file_id: "1DriveFile", folder_id: FOLDER, file_name: value.destinations.google_drive.file_name, web_url: "https://drive.google.com/file/d/1DriveFile/view", bundle_checksum: value.bundle_checksum, archive_checksum: ARCHIVE_CHECKSUM, bytes: CONTENT.length, observed_at: "2026-01-01T01:00:00.000Z" });
   for (const [label, mutate, expected] of [
     ["wrong parent", item => { item.parents = ["1OtherFolder"]; }, /parent folder/],
     ["wrong property", item => { item.appProperties.mgtBundleChecksum = "sha256:" + "c".repeat(64); }, /properties/],

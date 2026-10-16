@@ -44,6 +44,17 @@ function defaultDriveFileName(manifest) {
   return text(manifest?.destinations?.google_drive?.file_name) || `MGT-Skin-Care-v2-${text(manifest?.candidate_commit).slice(0, 12)}-export.zip`;
 }
 
+function driveExportProperties(manifest) {
+  const archive = archiveEntry(manifest);
+  if (!archive) return null;
+  return {
+    mgtExportId: `mgt-release-${text(manifest?.candidate_commit)}`,
+    mgtCandidateCommit: text(manifest?.candidate_commit),
+    mgtBundleChecksum: text(manifest?.bundle_checksum),
+    mgtArchiveChecksum: text(archive.checksum)
+  };
+}
+
 function validGithubAssetUrl(value) {
   if (typeof value !== "string" || value.length > 2048 || value !== value.trim()) return false;
   try {
@@ -103,6 +114,12 @@ function driveReceiptErrors(manifest, receipt, now) {
   const expectedFolder = text(manifest?.destinations?.google_drive?.folder_id);
   if (expectedFolder && text(receipt.folder_id) !== expectedFolder) errors.push("google_drive receipt folder_id must match the export destination");
   if (text(receipt.file_name) !== defaultDriveFileName(manifest)) errors.push("google_drive receipt file_name must match the export destination name");
+  const expectedProperties = driveExportProperties(manifest);
+  if (expectedProperties) {
+    if (text(receipt.export_id) !== expectedProperties.mgtExportId) errors.push("google_drive receipt export_id must match the candidate export generation");
+    if (!receipt.app_properties || typeof receipt.app_properties !== "object" || Array.isArray(receipt.app_properties)) errors.push("google_drive receipt must include observed app_properties");
+    else for (const [key, value] of Object.entries(expectedProperties)) if (receipt.app_properties[key] !== value) errors.push(`google_drive receipt app_properties.${key} must match the candidate export`);
+  }
   if (!validPastIso(receipt.observed_at, now)) errors.push("google_drive receipt observed_at must be a past ISO timestamp");
   if (!CHECKSUM.test(text(receipt.bundle_checksum)) || text(receipt.bundle_checksum) !== text(manifest?.bundle_checksum)) errors.push("google_drive receipt bundle_checksum must match the export manifest");
   if (archive && text(receipt.archive_checksum) !== text(archive.checksum)) errors.push("google_drive receipt archive_checksum must match the export archive");

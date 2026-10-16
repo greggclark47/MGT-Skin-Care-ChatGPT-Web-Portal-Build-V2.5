@@ -1,5 +1,7 @@
 # AI release controls checkpoint
 
+2026-10-16 Drive receipt generation binding: the final receipt review now requires the exact Drive export ID and candidate/archive `appProperties` in addition to folder, filename, bytes, checksums, and file identity. Missing or relabelled generation metadata remains blocked.
+
 2026-10-16 Drive archive transfer contract: the repository now builds non-secret resumable-upload metadata and export-ID reconciliation queries, then validates exact folder, filename, candidate properties, byte count, independently hashed content, and Drive file identity on readback. The contract makes no network call and leaves ambiguous matches unresolved; live Drive association remains external evidence.
 
 2026-10-16 commit-pinned export generation: release tooling can create an idempotent candidate ZIP from the exact Git commit under `work/exports/`, after the candidate commit credential scan passes. Reuse of an archive for another commit, unsafe output paths, or mismatched bytes remains blocked. No remote publication or upload was performed.

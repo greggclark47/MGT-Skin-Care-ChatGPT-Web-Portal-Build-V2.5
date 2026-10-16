@@ -119,5 +119,5 @@ export function validateDriveArchiveReadback({ manifest, folderId, metadata, con
   const checksum = `sha256:${createHash("sha256").update(Buffer.from(content)).digest("hex")}`;
   if (checksum !== text(archive.checksum)) throw new Error("Drive archive content checksum does not match the manifest archive.");
   if (typeof observedAt !== "string" || Number.isNaN(Date.parse(observedAt)) || Date.parse(observedAt) > Date.now()) throw new Error("Drive archive readback time must be a valid past timestamp.");
-  return { status: "confirmed", file_id: text(metadata.id), folder_id: parent, file_name: expected.name, web_url: metadata.webViewLink, bundle_checksum: text(manifest.bundle_checksum), archive_checksum: text(archive.checksum), bytes: archive.bytes, observed_at: observedAt };
+  return { status: "confirmed", export_id: expected.appProperties.mgtExportId, app_properties: expected.appProperties, file_id: text(metadata.id), folder_id: parent, file_name: expected.name, web_url: metadata.webViewLink, bundle_checksum: text(manifest.bundle_checksum), archive_checksum: text(archive.checksum), bytes: archive.bytes, observed_at: observedAt };
 }

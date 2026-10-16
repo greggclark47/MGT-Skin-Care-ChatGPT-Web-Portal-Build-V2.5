@@ -24,7 +24,8 @@ function manifest() {
 
 function completeReview(value) {
   const github = { status: "confirmed", repository: "https://github.com/example/repo.git", repository_id: 1001, branch: "codex/test", commit: COMMIT, observed_at: "2026-01-01T01:00:00.000Z", asset: { id: 2001, name: "package.zip", release_tag: "mgt-0123456789ab", web_url: "https://github.com/example/repo/releases/download/mgt-0123456789ab/package.zip", checksum: ARCHIVE, bytes: 42 } };
-  const drive = { status: "confirmed", file_id: "1AbcDEF", folder_id: "1FolderABC", file_name: `MGT-Skin-Care-v2-${COMMIT.slice(0, 12)}-export.zip`, web_url: "https://drive.google.com/file/d/1AbcDEF/view", bundle_checksum: value.bundle_checksum, archive_checksum: ARCHIVE, bytes: 42, observed_at: "2026-01-01T01:05:00.000Z" };
+  const appProperties = { mgtExportId: `mgt-release-${COMMIT}`, mgtCandidateCommit: COMMIT, mgtBundleChecksum: value.bundle_checksum, mgtArchiveChecksum: ARCHIVE };
+  const drive = { status: "confirmed", export_id: appProperties.mgtExportId, app_properties: appProperties, file_id: "1AbcDEF", folder_id: "1FolderABC", file_name: `MGT-Skin-Care-v2-${COMMIT.slice(0, 12)}-export.zip`, web_url: "https://drive.google.com/file/d/1AbcDEF/view", bundle_checksum: value.bundle_checksum, archive_checksum: ARCHIVE, bytes: 42, observed_at: "2026-01-01T01:05:00.000Z" };
   return buildReleaseReceiptReview({ manifest: value, githubReceipt: github, googleDriveReceipt: drive, now: "2026-01-01T01:10:00.000Z" });
 }
 

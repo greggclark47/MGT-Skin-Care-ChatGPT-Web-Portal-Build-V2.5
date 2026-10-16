@@ -27,9 +27,10 @@ function manifest() {
 }
 
 function receipts() {
+  const appProperties = { mgtExportId: `mgt-release-${COMMIT}`, mgtCandidateCommit: COMMIT, mgtBundleChecksum: "", mgtArchiveChecksum: ARCHIVE };
   return {
     github: { status: "confirmed", repository: "https://github.com/example/repo.git", repository_id: 1001, branch: "codex/test", commit: COMMIT, observed_at: "2026-01-01T01:00:00.000Z", asset: { id: 2001, name: "package.zip", release_tag: "mgt-0123456789ab", web_url: "https://github.com/example/repo/releases/download/mgt-0123456789ab/package.zip", checksum: ARCHIVE, bytes: 42 } },
-    drive: { status: "confirmed", file_id: "1AbcDEF", folder_id: "1FolderABC", file_name: `MGT-Skin-Care-v2-${COMMIT.slice(0, 12)}-export.zip`, web_url: "https://drive.google.com/file/d/1AbcDEF/view", bundle_checksum: "", archive_checksum: ARCHIVE, bytes: 42, observed_at: "2026-01-01T01:05:00.000Z" }
+    drive: { status: "confirmed", export_id: appProperties.mgtExportId, app_properties: appProperties, file_id: "1AbcDEF", folder_id: "1FolderABC", file_name: `MGT-Skin-Care-v2-${COMMIT.slice(0, 12)}-export.zip`, web_url: "https://drive.google.com/file/d/1AbcDEF/view", bundle_checksum: "", archive_checksum: ARCHIVE, bytes: 42, observed_at: "2026-01-01T01:05:00.000Z" }
   };
 }
 
@@ -42,6 +43,7 @@ test("stays awaiting receipts until both destinations confirm", () => {
 test("records export complete only with matching GitHub and Drive receipts", () => {
   const data = receipts();
   data.drive.bundle_checksum = manifest().bundle_checksum;
+  data.drive.app_properties.mgtBundleChecksum = manifest().bundle_checksum;
   const review = buildReleaseReceiptReview({ manifest: manifest(), githubReceipt: data.github, googleDriveReceipt: data.drive, now: "2026-01-02T00:00:00.000Z" });
   assert.equal(review.status, "export_complete");
   assert.equal(validateReleaseReceiptReview(review, { manifest: manifest(), now: Date.parse("2026-01-02T00:00:00.000Z") }).ok, true);
@@ -69,6 +71,7 @@ test("rejects fabricated completion without observed Drive URL and id", () => {
 test("requires complete remote artifact readback before closeout", () => {
   const complete = receipts();
   complete.drive.bundle_checksum = manifest().bundle_checksum;
+  complete.drive.app_properties.mgtBundleChecksum = manifest().bundle_checksum;
 
   const missingAsset = structuredClone(complete);
   delete missingAsset.github.asset;
@@ -87,6 +90,12 @@ test("requires complete remote artifact readback before closeout", () => {
   review = buildReleaseReceiptReview({ manifest: manifest(), githubReceipt: missingFolder.github, googleDriveReceipt: missingFolder.drive, now: "2026-01-02T00:00:00.000Z" });
   assert.equal(review.status, "blocked");
   assert.match(review.errors.join("; "), /parent folder_id/);
+
+  const missingExportId = structuredClone(complete);
+  delete missingExportId.drive.export_id;
+  review = buildReleaseReceiptReview({ manifest: manifest(), githubReceipt: missingExportId.github, googleDriveReceipt: missingExportId.drive, now: "2026-01-02T00:00:00.000Z" });
+  assert.equal(review.status, "blocked");
+  assert.match(review.errors.join("; "), /export_id/);
 });
 
 test("requires a matching receipt for every configured GitHub repository", () => {
@@ -95,6 +104,7 @@ test("requires a matching receipt for every configured GitHub repository", () =>
   value.bundle_checksum = releaseExportChecksum(value);
   const data = receipts();
   data.drive.bundle_checksum = value.bundle_checksum;
+  data.drive.app_properties.mgtBundleChecksum = value.bundle_checksum;
   let review = buildReleaseReceiptReview({ manifest: value, githubReceipt: data.github, googleDriveReceipt: data.drive, now: "2026-01-02T00:00:00.000Z" });
   assert.equal(review.status, "blocked");
   assert.match(review.errors.join("; "), /missing configured repository/);

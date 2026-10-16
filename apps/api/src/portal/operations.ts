@@ -73,6 +73,16 @@ function backupEvidenceHealthy(backup:any,at:number){
  const validTimes=completed!==undefined&&restoreVerified!==undefined&&completed<=current&&restoreVerified<=current;
  return backup?.status==='healthy'&&validWindows&&validTimes&&current-completed<=maxAgeHours*3600000&&current-restoreVerified<=restoreMaxAgeDays*86400000;
 }
+export function backupEvidenceAdmission(existing:any,incoming:{completed_at:string;restore_verified_at:string;location_identifier:string;restore_reference:string;checksum:string}){
+ const previousCompleted=timestamp(existing?.completed_at),previousRestore=timestamp(existing?.restore_verified_at),nextCompleted=timestamp(incoming?.completed_at),nextRestore=timestamp(incoming?.restore_verified_at);
+ if(previousCompleted===undefined||previousRestore===undefined||nextCompleted===undefined||nextRestore===undefined)return 'accepted' as const;
+ if(nextCompleted<previousCompleted||nextRestore<previousRestore)return 'stale' as const;
+ if(nextCompleted===previousCompleted&&nextRestore===previousRestore){
+  const same=incoming.location_identifier===existing.location_identifier&&incoming.restore_reference===existing.restore_reference&&incoming.checksum===existing.checksum;
+  return same?'duplicate' as const:'conflict' as const;
+ }
+ return 'accepted' as const;
+}
 const notificationId=(actor:string,reminder:Reminder)=>'reminder_'+createHash('sha256').update(`${actor}:${reminder.product_id}:${reminder.due_at}`).digest('hex').slice(0,40);
 const notificationFailure=(error:unknown)=>{
  if(error instanceof Error&&error.message==='Notification payload exceeds the safe delivery limit.')return {code:'delivery_payload_rejected' as const,retryable:false};

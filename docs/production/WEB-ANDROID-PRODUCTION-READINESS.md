@@ -16,6 +16,8 @@ This register is an engineering release aid, not legal advice, a regulatory cert
 - API readiness fails closed unless both backup freshness and isolated restore verification are present,
   valid, non-future, and within their configured age windows; the public projection exposes only
   sanitized health categories.
+- Backup verification admission is monotonic: older receipts cannot replace newer backup/restore
+  evidence, timestamp-equal conflicting receipts are rejected, and exact retries are idempotent.
 - The production compose contract declares its runtime mode explicitly, keeps disabled AI endpoint
   settings empty, and uses the configured worker readiness window for container health.
 - The API service, worker service, and API image healthcheck share the same worker interval and

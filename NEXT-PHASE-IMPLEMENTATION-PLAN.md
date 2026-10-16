@@ -1821,6 +1821,8 @@ This checkpoint does not create a Stripe Product or Prices, connect an account, 
 
 **Phase F985 — production ship alignment freshness:** Updated `PRODUCTION-SHIP-PLAN-ALIGNMENT.md` to reflect the current local release-control boundary through F984, including signed backup freshness parity and startup fencing. The document continues to distinguish local configuration-shape evidence from live provider, restore, ownership, approval, and go/no-go evidence; this phase does not mark production ready or authorize deployment.
 
+**Phase F986 — candidate-bound prerequisite evidence:** Production prerequisite generation now optionally binds the exact candidate commit to a passing local checkpoint and verification report. The packet records backend-build and portal-test evidence references without copying report content, rejects missing/mismatched/failed reports, and continues to keep live prerequisites and production authorization external. This phase does not deploy or mark production ready.
+
 **Exit evidence:** approved positioning and claims, consent-compliant measurement plan, attribution rules, partner terms where relevant, campaign cap and stop rule, baseline report, and a post-test decision grounded in observed data.
 
 ### Phase E — data, AI economics and service qualification (Critical for production)

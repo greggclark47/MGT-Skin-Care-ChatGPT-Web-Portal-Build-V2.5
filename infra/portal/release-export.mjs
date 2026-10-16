@@ -360,8 +360,9 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   const prerequisites = argumentValue(args, "--prerequisites");
   const backupStatus = argumentValue(args, "--backup-status");
   const candidateCommitArgument = argumentValue(args, "--candidate-commit");
+  const generatedAt = argumentValue(args, "--generated-at");
   if (!output) {
-    console.error("Usage: node infra/portal/release-export.mjs --output work/exports/release-export.json [--candidate-commit <sha>] [--references README.md,infra/portal/README.md] [--prerequisites work/production/prerequisites.json] [--backup-status work/exports/backup-status.json] [--archive work/exports/package.zip] [--create-archive work/exports/package.zip]");
+    console.error("Usage: node infra/portal/release-export.mjs --output work/exports/release-export.json [--candidate-commit <sha>] [--generated-at <ISO timestamp>] [--references README.md,infra/portal/README.md] [--prerequisites work/production/prerequisites.json] [--backup-status work/exports/backup-status.json] [--archive work/exports/package.zip] [--create-archive work/exports/package.zip]");
     process.exitCode = 1;
   } else {
     try {
@@ -371,7 +372,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
       const credentialFindings = scanGitCommit(root, candidateCommit);
       if (credentialFindings.length) throw new Error(`Candidate commit credential scan found ${credentialFindings.length} potential finding(s); inspect the commit before export.`);
       if (createArchive) createReleaseArchive({ root, candidateCommit, reference: createArchive });
-      const manifest = buildReleaseExport({ root, candidateCommit, references: references ? references.split(",") : DEFAULT_EXPORT_REFERENCES, prerequisitesReference: prerequisites, backupStatusReference: backupStatus, archiveReference: createArchive || archive });
+      const manifest = buildReleaseExport({ root, candidateCommit, references: references ? references.split(",") : DEFAULT_EXPORT_REFERENCES, prerequisitesReference: prerequisites, backupStatusReference: backupStatus, archiveReference: createArchive || archive, now: generatedAt || new Date().toISOString() });
       const destination = path.resolve(root, output);
       fs.mkdirSync(path.dirname(destination), { recursive: true });
       fs.writeFileSync(destination, `${JSON.stringify(manifest, null, 2)}\n`);

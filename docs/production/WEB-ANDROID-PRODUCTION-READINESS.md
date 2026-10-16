@@ -41,6 +41,9 @@ This register is an engineering release aid, not legal advice, a regulatory cert
 - Release export tooling can now create an idempotent candidate ZIP directly from the pinned Git
   commit under `work/exports/`; a pre-existing archive is accepted only when its bytes and digest
   reproduce that same commit.
+- The Drive archive transfer contract now prepares resumable-upload metadata, export-ID
+  reconciliation, and exact content/parent/property readback without making a network call or
+  enabling production OAuth.
 - Anti-aging readiness switches and operational retention are now explicit, bounded production inputs;
   they report gates only and do not activate checkout, booking or image analysis.
 

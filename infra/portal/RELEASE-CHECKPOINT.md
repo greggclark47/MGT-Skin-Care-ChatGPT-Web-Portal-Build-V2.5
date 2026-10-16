@@ -1,5 +1,7 @@
 # AI release controls checkpoint
 
+2026-10-16 Drive archive transfer contract: the repository now builds non-secret resumable-upload metadata and export-ID reconciliation queries, then validates exact folder, filename, candidate properties, byte count, independently hashed content, and Drive file identity on readback. The contract makes no network call and leaves ambiguous matches unresolved; live Drive association remains external evidence.
+
 2026-10-16 commit-pinned export generation: release tooling can create an idempotent candidate ZIP from the exact Git commit under `work/exports/`, after the candidate commit credential scan passes. Reuse of an archive for another commit, unsafe output paths, or mismatched bytes remains blocked. No remote publication or upload was performed.
 
 2026-10-16 remote-artifact readback hardening: confirmed receipts now require repository and release-asset identity, exact archive name/bytes/checksum/URL/tag, and Drive parent-folder identity plus exact filename. Focused and full local verification passed; live destination receipts remain external evidence.

@@ -12,6 +12,7 @@ import {check,Fault,hash,token,text,wrap,sessionMiddleware,rate,account,role,typ
 import {initializeCatalog,match,quote,type Product} from './catalog';
 import {SafeCoach,gatewayFromEnv,StoreBudgetStore,StoreRoutingLogSink,screenInput,screenInputResult,type Knowledge} from './ai';
 import {ASSISTANT_ROLES,routeAssistantRequest} from './assistant';
+import {consolidateInquiry} from '@mgt/domain';
 import type {AiGateway} from '@mgt/ai-gateway';
 import Stripe from 'stripe';
 import {RETAILERS,SHOP_SEGMENTS,COMMERCE_MODEL} from './retailers';
@@ -328,21 +329,22 @@ export async function createPortal(options:PortalOptions){
  post('/assistant',async(req,res)=>{
   const message=text(req.body.message,1800);
   await db.tx(r=>rate(r,'assistant:'+hash(req.actor),30,3600000));
-  const route=routeAssistantRequest(req.body.role,message);
+  const inquiry=consolidateInquiry(message,req.body.history);
+  const route=routeAssistantRequest(req.body.role,inquiry.routing_text);
   await db.tx(async r=>{await supportMetric(r,'guidance_requested',route.role);if(route.kind!=='reviewed_ai'&&route.next_step?.path==='/support')await supportMetric(r,'handoff_offered',route.category);});
   if(route.kind!=='reviewed_ai'){
    await db.tx(r=>supportMetric(r,'guidance_result',`${route.role}:${route.kind}:${route.category}`));
-   return res.json(route);
+   return res.json({...route,inquiry_context:{turns:inquiry.turns,repeated:inquiry.repeated,topics:inquiry.topics,summary:inquiry.summary}});
   }
   try{
-   const answer=await reviewedAnswer(req,message);
+   const answer=await reviewedAnswer(req,inquiry.routing_text);
    const result={...answer,role:route.role,category:route.category,next_step:answer.kind==='no_match'?{label:'Open Portal Support',path:'/support'}:null};
    await db.tx(async r=>{await supportMetric(r,'guidance_result',`${route.role}:${result.kind}:${route.category}`);if(result.next_step)await supportMetric(r,'handoff_offered','no_match');});
-   res.json(result);
+   res.json({...result,inquiry_context:{turns:inquiry.turns,repeated:inquiry.repeated,topics:inquiry.topics,summary:inquiry.summary}});
   }catch(error){
    if(!(error instanceof Fault)||!['knowledge_pending','ai_not_configured','ai_unavailable'].includes(error.code))throw error;
    await db.tx(async r=>{await supportMetric(r,'guidance_result',`${route.role}:handoff:reviewed_unavailable`);await supportMetric(r,'handoff_offered','reviewed_unavailable');});
-   res.json({role:route.role,kind:'handoff',category:'reviewed_unavailable',text:'A reviewed skincare answer is unavailable right now. Save a Portal Support request if you need help; this guidance has not contacted staff.',citations:[],next_step:{label:'Open Portal Support',path:'/support'}});
+   res.json({role:route.role,kind:'handoff',category:'reviewed_unavailable',text:'A reviewed skincare answer is unavailable right now. Save a Portal Support request if you need help; this guidance has not contacted staff.',citations:[],next_step:{label:'Open Portal Support',path:'/support'},inquiry_context:{turns:inquiry.turns,repeated:inquiry.repeated,topics:inquiry.topics,summary:inquiry.summary}});
   }
  });
  post('/assistant/action',async(req,res)=>{

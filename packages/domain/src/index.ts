@@ -25,3 +25,4 @@ export * from './engines/anti-aging-ai';
 export * from './engines/anti-aging-roadmap';
 export * from './engines/match-intelligence';
 export * from './engines/regimen-cycle';
+export * from './engines/inquiry-context';

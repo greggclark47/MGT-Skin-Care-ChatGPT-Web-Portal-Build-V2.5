@@ -7,7 +7,7 @@ import {SupportHistory} from '../../components/CustomerStatusPanels';
 
 type GuideRole='customer_care'|'onboarding'|'routine_guidance'|'product_referral';
 type RequestType='portal_help'|'onboarding'|'routine_guidance'|'product_retailer'|'account_privacy';
-type GuideResult={kind:string;text:string;next_step?:{label:string;path:string}|null;citations?:{knowledge_id:string;title:string;text:string;source_url:string}[]};
+type GuideResult={kind:string;text:string;next_step?:{label:string;path:string}|null;citations?:{knowledge_id:string;title:string;text:string;source_url:string}[];inquiry_context?:{turns:number;repeated:boolean;topics:string[];summary:string}};
 const roleOptions:[GuideRole,string][]=[
  ['customer_care','Portal help'],['onboarding','Getting started'],['routine_guidance','Routine guidance'],['product_referral','Products and retailers'],
 ];
@@ -20,7 +20,7 @@ export default function Support(){
  const [subject,setSubject]=useState(''),[message,setMessage]=useState(''),[feedback,setFeedback]=useState(''),[error,setError]=useState(''),[busy,setBusy]=useState(false);
  const [requestType,setRequestType]=useState<RequestType>('portal_help'),[requestSource,setRequestSource]=useState<'support_form'|'guided_handoff'>('support_form');
  const [role,setRole]=useState<GuideRole>('customer_care'),[question,setQuestion]=useState(''),[consent,setConsent]=useState(false);
- const [guide,setGuide]=useState<GuideResult|null>(null),[guideQuestion,setGuideQuestion]=useState(''),[guideError,setGuideError]=useState(''),[guideBusy,setGuideBusy]=useState(false);
+ const [guide,setGuide]=useState<GuideResult|null>(null),[guideQuestion,setGuideQuestion]=useState(''),[guideHistory,setGuideHistory]=useState<string[]>([]),[guideError,setGuideError]=useState(''),[guideBusy,setGuideBusy]=useState(false);
  const guideResultRef=useRef<HTMLDivElement>(null),guideErrorRef=useRef<HTMLParagraphElement>(null),requestFormRef=useRef<HTMLFormElement>(null),requestSubjectRef=useRef<HTMLInputElement>(null);
  const reviewed=role==='routine_guidance'||role==='product_referral';
  const reviewedReady=!!session.data?.account&&session.data?.ai_configured===true;
@@ -31,11 +31,12 @@ export default function Support(){
   e.preventDefault();if(guideBusy||!question.trim())return;
   const submittedQuestion=question.trim();
   setGuideBusy(true);setGuideError('');setGuide(null);setGuideQuestion('');
-  try{if(reviewed&&consent)await hub('/account/consents',{consent_type:'ai_disclosure',granted:true});const result=await hub('/assistant',{role,message:submittedQuestion});setGuideQuestion(submittedQuestion);setGuide(result);}
+  try{if(reviewed&&consent)await hub('/account/consents',{consent_type:'ai_disclosure',granted:true});const result=await hub('/assistant',{role,message:submittedQuestion,history:guideHistory});setGuideQuestion(submittedQuestion);setGuideHistory(history=>[...history,submittedQuestion].slice(-6));setGuide(result);}
   catch(e){setGuideError((e as Error).message);}
   finally{setGuideBusy(false);}
  }
  function recordNextStep(path:string){void hub('/assistant/action',{action:'next_step_opened',role,path}).catch(()=>{});}
+ function startFresh(){setGuide(null);setGuideQuestion('');setGuideHistory([]);setQuestion('');setGuideError('');}
  async function submit(e:React.FormEvent){
   e.preventDefault();if(busy||!subject.trim()||!message.trim())return;
   setBusy(true);setError('');setFeedback('');
@@ -51,7 +52,7 @@ export default function Support(){
 
   <section className="panel stack" aria-labelledby="guide-heading">
    <span className="eyebrow">QUICK PORTAL GUIDANCE</span><h2 id="guide-heading">Find your next step</h2>
-   <p>Get directions for using the portal. A suggestion here does not submit a support request or confirm a retailer payment.</p>
+    <p>Get directions for using the portal. Related questions are consolidated for this session only; nothing is saved as a chat transcript.</p>
    <form className="stack" onSubmit={askGuide} aria-busy={guideBusy} aria-describedby={guideError?'guide-error':undefined}>
     <label className="field">Help topic
      <select value={role} disabled={guideBusy} onChange={e=>{setRole(e.target.value as GuideRole);setGuide(null);setGuideQuestion('');setGuideError('');}}>{roleOptions.map(([value,label])=><option key={value} value={value}>{label}</option>)}</select>
@@ -67,7 +68,7 @@ export default function Support(){
     {guideError&&<p id="guide-error" ref={guideErrorRef} tabIndex={-1} className="notice error" role="alert">{guideError}</p>}
     <button className="button" type="submit" disabled={guideBusy||!question.trim()}>{guideBusy?'Finding guidance…':'Find guidance'}</button>
    </form>
-   {guide&&<div ref={guideResultRef} tabIndex={-1} className="notice" role="status" aria-live="polite" aria-atomic="true"><p>{guide.text}</p>{guide.next_step&&(guide.next_step.path==='/support'?<a className="text-link" href="#portal-request" onClick={e=>{e.preventDefault();recordNextStep('/support');requestFormRef.current?.focus();}}>{guide.next_step.label} →</a>:<Link className="text-link" href={guide.next_step.path} onClick={()=>recordNextStep(guide.next_step!.path)}>{guide.next_step.label} →</Link>)}{guide.next_step?.path==='/support'&&guideQuestion&&!message.trim()&&<p><button type="button" className="text-button" onClick={()=>{setMessage(guideQuestion);setRequestType(requestTypeForRole[role]);setRequestSource('guided_handoff');requestSubjectRef.current?.focus();}}>Use my question as request details</button><span className="muted"> Review it below before saving.</span></p>}{!!guide.citations?.length&&<div><h3>Reviewed sources</h3>{guide.citations.map(c=><blockquote key={c.knowledge_id}><p>{c.text}</p><a className="text-link" href={c.source_url} target="_blank" rel="noopener noreferrer" referrerPolicy="no-referrer">{c.title} ↗<span className="sr-only">, opens a new tab</span></a></blockquote>)}</div>}</div>}
+   {guide&&<div ref={guideResultRef} tabIndex={-1} className="notice" role="status" aria-live="polite" aria-atomic="true"><p>{guide.text}</p>{guide.inquiry_context&&<p className="muted"><strong>Consolidated context:</strong> {guide.inquiry_context.summary} <button type="button" className="text-button" onClick={startFresh}>Start a fresh inquiry</button></p>}{guide.next_step&&(guide.next_step.path==='/support'?<a className="text-link" href="#portal-request" onClick={e=>{e.preventDefault();recordNextStep('/support');requestFormRef.current?.focus();}}>{guide.next_step.label} →</a>:<Link className="text-link" href={guide.next_step.path} onClick={()=>recordNextStep(guide.next_step!.path)}>{guide.next_step.label} →</Link>)}{guide.next_step?.path==='/support'&&guideQuestion&&!message.trim()&&<p><button type="button" className="text-button" onClick={()=>{setMessage(guideQuestion);setRequestType(requestTypeForRole[role]);setRequestSource('guided_handoff');requestSubjectRef.current?.focus();}}>Use my question as request details</button><span className="muted"> Review it below before saving.</span></p>}{!!guide.citations?.length&&<div><h3>Reviewed sources</h3>{guide.citations.map(c=><blockquote key={c.knowledge_id}><p>{c.text}</p><a className="text-link" href={c.source_url} target="_blank" rel="noopener noreferrer" referrerPolicy="no-referrer">{c.title} ↗<span className="sr-only">, opens a new tab</span></a></blockquote>)}</div>}</div>}
   </section>
 
   {feedback&&<p className="notice success support-reference" role="status">{feedback}</p>}{error&&<p id="support-error" className="notice error" role="alert">{error}</p>}

@@ -45,6 +45,11 @@ test('assistant candidate policy cases stay bounded before model and payment rou
    assert.equal(modelCalls,0,item.id+' reached the model');
    assert.equal(paymentCalls,0,item.id+' reached payments');
   }
+  const consolidated=await call('/assistant',{role:'customer_care',message:'Can I make it simpler?',history:['How do I simplify my routine?']});
+  assert.equal(consolidated.status,200);
+  assert.equal(consolidated.data.inquiry_context.turns,2);
+  assert.equal(consolidated.data.inquiry_context.repeated,true);
+  assert.deepEqual(consolidated.data.inquiry_context.topics,['routine']);
   assert.equal((await call('/assistant',{role:'routine_guidance',message:'What does a moisturizer do?',ai_consent:true})).status,401);
   await db.tx(async r=>{
    const user={id:'assistant-review-user',email:'assistant-review@example.test',roles:[]};

@@ -181,6 +181,17 @@ export function validateEnvironment(env) {
   if (typeof env.BACKUP_MAX_AGE_HOURS !== "string" || !/^\d+$/.test(env.BACKUP_MAX_AGE_HOURS) || !wholeNumber(env.BACKUP_MAX_AGE_HOURS, 1, 72)) errors.push("BACKUP_MAX_AGE_HOURS must be a whole number between 1 and 72.");
   if (typeof env.BACKUP_RESTORE_MAX_AGE_DAYS !== "string" || !/^\d+$/.test(env.BACKUP_RESTORE_MAX_AGE_DAYS) || !wholeNumber(env.BACKUP_RESTORE_MAX_AGE_DAYS, 1, 365)) errors.push("BACKUP_RESTORE_MAX_AGE_DAYS must be a whole number between 1 and 365.");
 
+  const backupAttestationEnabled = env.BACKUP_ATTESTATION_ENABLED ?? "false";
+  if (!["true", "false"].includes(backupAttestationEnabled)) errors.push("BACKUP_ATTESTATION_ENABLED must be exactly true or false.");
+  if (backupAttestationEnabled === "true") {
+    const attestationSecret = requireValue("BACKUP_ATTESTATION_SECRET");
+    if (attestationSecret && !validSecretReference(attestationSecret)) errors.push("BACKUP_ATTESTATION_SECRET must be a bounded injected reference without whitespace or control characters.");
+    if (!/^[A-Za-z0-9_-]{1,64}$/.test(env.BACKUP_ATTESTATION_KEY_ID || "")) errors.push("BACKUP_ATTESTATION_KEY_ID must identify the active backup signing key using letters, numbers, underscores or hyphens.");
+    if (env.BACKUP_ATTESTATION_MAX_AGE_SECONDS !== undefined && (typeof env.BACKUP_ATTESTATION_MAX_AGE_SECONDS !== "string" || !/^\d+$/.test(env.BACKUP_ATTESTATION_MAX_AGE_SECONDS) || !wholeNumber(env.BACKUP_ATTESTATION_MAX_AGE_SECONDS, 1, 604800))) errors.push("BACKUP_ATTESTATION_MAX_AGE_SECONDS must be a whole number between 1 and 604800.");
+  }
+  const backupAttestationRetention = env.OPERATIONS_BACKUP_ATTESTATION_RETENTION_DAYS ?? "90";
+  if (typeof backupAttestationRetention !== "string" || !/^\d+$/.test(backupAttestationRetention) || !wholeNumber(backupAttestationRetention, 1, 3650)) errors.push("OPERATIONS_BACKUP_ATTESTATION_RETENTION_DAYS must be a whole number between 1 and 3650.");
+
   const delivery = String(env.NOTIFICATION_DELIVERY || "");
   if (!["in_app", "webhook"].includes(delivery)) errors.push("NOTIFICATION_DELIVERY must be in_app or webhook.");
   if (delivery === "webhook") {
@@ -260,6 +271,7 @@ export function validateEnvironment(env) {
   else if (!validSecretReference(env.OPENAI_API_KEY)) errors.push("OPENAI_API_KEY must be injected as a bounded non-placeholder reference without whitespace or control characters.");
 
   const secretKeys = ["SUPABASE_ANON_KEY", "SUPABASE_SERVICE_ROLE_KEY", "OPERATIONS_ALERT_WEBHOOK_TOKEN"];
+  if (backupAttestationEnabled === "true") secretKeys.push("BACKUP_ATTESTATION_SECRET");
   if (env.NOTIFICATION_DELIVERY === "webhook") secretKeys.push("NOTIFICATION_WEBHOOK_TOKEN");
   if (env.OPENCLAW_ENABLED === "true" && env.OPENCLAW_API_MODE === "openai-completions") secretKeys.push("OPENCLAW_API_KEY");
   if (validSecretReference(env.OPENAI_API_KEY)) secretKeys.push("OPENAI_API_KEY");
@@ -276,6 +288,7 @@ export function validateEnvironment(env) {
   if (env.NOTIFICATION_DELIVERY === "in_app" && populated(["NOTIFICATION_WEBHOOK_URL", "NOTIFICATION_WEBHOOK_TOKEN", "NOTIFICATION_WEBHOOK_KEY_ID", "NOTIFICATION_WEBHOOK_TIMEOUT_MS"])) errors.push("Disabled customer webhook delivery must not retain webhook configuration.");
   if (env.OLLAMA_ENABLED === "false" && populated(["OLLAMA_BASE_URL"])) errors.push("Disabled Ollama must not retain an endpoint.");
   if (env.OPENCLAW_ENABLED === "false" && populated(["OPENCLAW_BASE_URL", "OPENCLAW_API_MODE", "OPENCLAW_API_KEY"])) errors.push("Disabled OpenClaw must not retain endpoint, mode, or credential configuration.");
+  if (backupAttestationEnabled === "false" && populated(["BACKUP_ATTESTATION_SECRET", "BACKUP_ATTESTATION_KEY_ID", "BACKUP_ATTESTATION_MAX_AGE_SECONDS"])) errors.push("Disabled backup attestation must not retain signing configuration.");
   if (env.SUBSCRIPTIONS_ENABLED === "false" && populated(["STRIPE_LIVE_MODE", "STRIPE_SECRET_KEY", "STRIPE_SUBSCRIPTION_WEBHOOK_SECRET", "STRIPE_PREMIUM_PRODUCT_ID", "STRIPE_PREMIUM_MONTHLY_PRICE_ID", "STRIPE_PREMIUM_ANNUAL_PRICE_ID"])) errors.push("Disabled subscriptions must not retain Stripe configuration.");
 
   return { ok: errors.length === 0, errors, warnings };

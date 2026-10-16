@@ -55,6 +55,24 @@ test("accepts the proposed external database configuration without proving live 
   assert.ok(result.warnings.some((warning) => warning.includes("OpenAI")));
 });
 
+test("keeps automated backup attestation disabled until its signed integration is configured", () => {
+  assert.equal(validateEnvironment(production).ok, true);
+  const enabled = { ...production, BACKUP_ATTESTATION_ENABLED: "true", BACKUP_ATTESTATION_SECRET: "backup-attestation-reference", BACKUP_ATTESTATION_KEY_ID: "primary", BACKUP_ATTESTATION_MAX_AGE_SECONDS: "300" };
+  assert.equal(validateEnvironment(enabled).ok, true);
+  for (const changed of [
+    { BACKUP_ATTESTATION_SECRET: "" },
+    { BACKUP_ATTESTATION_KEY_ID: "not valid" },
+    { BACKUP_ATTESTATION_MAX_AGE_SECONDS: "0" }
+  ]) {
+    const result = validateEnvironment({ ...enabled, ...changed });
+    assert.equal(result.ok, false);
+    assert.ok(result.errors.some((error) => error.includes("BACKUP_ATTESTATION")));
+  }
+  const residue = validateEnvironment({ ...production, BACKUP_ATTESTATION_SECRET: "disabled-residue" });
+  assert.equal(residue.ok, false);
+  assert.ok(residue.errors.some((error) => error.includes("Disabled backup attestation")));
+});
+
 test("requires the exact lowercase production demo-mode declaration", () => {
   assert.equal(validateEnvironment(production).ok, true);
   for (const value of [undefined, "", "False", "FALSE", "true", "0", false]) {

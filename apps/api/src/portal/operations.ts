@@ -83,6 +83,12 @@ export function backupEvidenceAdmission(existing:any,incoming:{completed_at:stri
  }
  return 'accepted' as const;
 }
+export function verifyBackupAttestationRequest(input:{event:string;signatureVersion:string;keyId:string;deliveryId:string;attempt:string;timestamp:string;contentDigest:string;signature:string;body:string;secret:string;at?:number;maxAgeSeconds?:number}){
+ if(!input||typeof input!=='object'||input.event!=='mgt.backup.verified'||input.signatureVersion!=='v1'||typeof input.keyId!=='string'||typeof input.deliveryId!=='string'||typeof input.attempt!=='string'||!/^[A-Za-z0-9_-]{1,64}$/.test(input.keyId)||!/^[A-Za-z0-9_-]{8,128}$/.test(input.deliveryId)||!/^[1-9]\d{0,5}$/.test(input.attempt))return false;
+ if(!/^sha256=[a-f0-9]{64}$/.test(input.contentDigest)||!timingSafeEqual(Buffer.from(input.contentDigest),Buffer.from('sha256='+createHash('sha256').update(input.body).digest('hex'))))return false;
+ if(!verifyOperationsAlertSignature({timestamp:input.timestamp,signature:input.signature,body:input.body,secret:input.secret,at:input.at,maxAgeSeconds:input.maxAgeSeconds}))return false;
+ try{const parsed=JSON.parse(input.body);return parsed?.event==='mgt.backup.verified'&&parsed?.backup?.delivery_id===input.deliveryId&&String(parsed?.backup?.attempt)===input.attempt;}catch{return false;}
+}
 const notificationId=(actor:string,reminder:Reminder)=>'reminder_'+createHash('sha256').update(`${actor}:${reminder.product_id}:${reminder.due_at}`).digest('hex').slice(0,40);
 const notificationFailure=(error:unknown)=>{
  if(error instanceof Error&&error.message==='Notification payload exceeds the safe delivery limit.')return {code:'delivery_payload_rejected' as const,retryable:false};
@@ -337,7 +343,8 @@ export class OperationalWorker{
    ['referral_metrics',int(this.env.OPERATIONS_AGGREGATE_METRIC_RETENTION_DAYS,180,30,3650),(v:any)=>timestamp(v?.updated_at||v?.date)],
    ['deletion_completions',int(this.env.OPERATIONS_DELETION_PROOF_RETENTION_DAYS,730,30,3650),(v:any)=>timestamp(v?.completed_at)],
    ['operation_runs',int(this.env.OPERATIONS_RUN_RETENTION_DAYS,90,1,3650),(v:any)=>timestamp(v?.completed_at||v?.started_at)],
-   ['operations_alert_events',int(this.env.OPERATIONS_ALERT_EVENT_RETENTION_DAYS,90,1,3650),(v:any)=>timestamp(v?.attempted_at)]
+   ['operations_alert_events',int(this.env.OPERATIONS_ALERT_EVENT_RETENTION_DAYS,90,1,3650),(v:any)=>timestamp(v?.attempted_at)],
+   ['backup_attestations',int(this.env.OPERATIONS_BACKUP_ATTESTATION_RETENTION_DAYS,90,1,3650),(v:any)=>timestamp(v?.received_at)]
   ] as const;
   let removed=0;
   for(const [scope,days,date] of policies){for(const entry of await records.entries(scope)){const then=date(entry.value);if(then!==undefined&&then<at-days*86400000){await records.remove(scope,entry.id);removed++;}}}

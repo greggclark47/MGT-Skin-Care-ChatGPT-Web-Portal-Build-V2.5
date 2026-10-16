@@ -1,0 +1,22 @@
+{
+  "version": "1.0",
+  "candidate_commit": "6ed0b09678e85262c15f8bab7aae7dc3cc0d5807",
+  "bundle_checksum": "sha256:7f6e092578792f957e0ba3935dc8d65254a914190b528fbebec378bc1a117249",
+  "launch_observation_review_checksum": "sha256:893c0f06dbbcace4f4a2fef671d67e14eaec6c82cf8138a19639667ce1d823a1",
+  "generated_at": "2026-10-06T16:48:13.440Z",
+  "status": "pending_launch_observation",
+  "entries": [],
+  "errors": [
+    "fifteen_minute_check record is required",
+    "one_hour_check record is required",
+    "twenty_four_hour_check record is required",
+    "seven_day_check record is required",
+    "error_rate_review record is required",
+    "latency_review record is required",
+    "support_delivery_review record is required",
+    "backup_state_review record is required",
+    "incident_review record is required",
+    "final_closure_hold record is required"
+  ],
+  "post_launch_monitoring_checksum": "sha256:6b08333d31544368c2a6c21cf3b5642a334a70c00014c63dac8267a5af6d625f"
+}

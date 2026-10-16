@@ -1,5 +1,5 @@
 import { AiGateway } from './router';
-import { OllamaAdapter, OpenAiAdapter, OpenClawAdapter } from './adapters/http-adapters';
+import { OllamaAdapter, OpenAiAdapter, OpenClawAdapter, type OpenClawApiMode } from './adapters/http-adapters';
 import type { ProviderAdapter, RoutingLogSink } from './index';
 import type { ProviderName } from './types';
 import type { BudgetCaps, BudgetStore } from './budget';
@@ -23,9 +23,12 @@ export function adaptersFromEnv(env: NodeJS.ProcessEnv): Partial<Record<Provider
   if (env.OLLAMA_ENABLED !== 'false') adapters.ollama = new OllamaAdapter(ollama);
 
   if (env.OPENCLAW_ENABLED === 'true') {
+    const apiMode: OpenClawApiMode = env.OPENCLAW_API_MODE === 'openai-completions' ? 'openai-completions' : 'ollama';
     adapters.openclaw = new OpenClawAdapter(
-      baseUrl(env.OPENCLAW_BASE_URL, `${ollama}/v1`),
+      baseUrl(env.OPENCLAW_BASE_URL, ollama),
       env.OPENCLAW_API_KEY || 'ollama',
+      undefined,
+      apiMode,
     );
   }
 

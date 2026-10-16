@@ -54,13 +54,19 @@ export class AnalyticsClient {
   }
 
   track(name: string, properties: Record<string, unknown> = {}): { accepted: boolean; reason?: string } {
+    if (!name || typeof name !== 'string') return { accepted: false, reason: 'invalid_event_name' };
+    if (!properties || typeof properties !== 'object' || Array.isArray(properties)) {
+      return { accepted: false, reason: 'invalid_properties' };
+    }
     const definition = getEventDefinition(name);
     // An undefined event is rejected rather than passed through: an unclassified event is an
     // undocumented data stream, which is exactly what §11 forbids.
     if (!definition) return { accepted: false, reason: `unknown_event:${name}` };
 
     for (const required of definition.required_properties) {
-      if (!(required in properties)) return { accepted: false, reason: `missing_property:${required}` };
+      if (!(required in properties) || properties[required] === undefined || properties[required] === null) {
+        return { accepted: false, reason: `missing_property:${required}` };
+      }
     }
 
     this.queue.push({

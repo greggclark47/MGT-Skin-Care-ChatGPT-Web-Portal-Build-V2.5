@@ -1,0 +1,32 @@
+{
+  "version": "1.0",
+  "candidate_commit": "6ed0b09678e85262c15f8bab7aae7dc3cc0d5807",
+  "bundle_checksum": "sha256:7f6e092578792f957e0ba3935dc8d65254a914190b528fbebec378bc1a117249",
+  "receipt_verification_checksum": "sha256:261919d7353ce8a91c92c03ed05dd6ace17607409a7701d1ea5c5806fcc83a53",
+  "generated_at": "2026-10-06T16:48:12.861Z",
+  "status": "pending_receipt_verification",
+  "entries": [],
+  "errors": [
+    "release_identity record is required",
+    "production_target record is required",
+    "candidate_commit record is required",
+    "bundle_checksum record is required",
+    "receipt_checksum record is required",
+    "deployment_evidence record is required",
+    "health_evidence record is required",
+    "readiness_evidence record is required",
+    "accessibility_evidence record is required",
+    "database_evidence record is required",
+    "backup_evidence record is required",
+    "support_evidence record is required",
+    "monitoring_evidence record is required",
+    "rollback_evidence record is required",
+    "incident_evidence record is required",
+    "billing_evidence record is required",
+    "ai_runtime_evidence record is required",
+    "customer_impact_evidence record is required",
+    "archive_evidence record is required",
+    "final_verifier_attestation record is required"
+  ],
+  "final_release_verification_checksum": "sha256:105d86717bcb3950dad5d485eef5d7ab6ba58a09462a710d970ec501af88ad87"
+}

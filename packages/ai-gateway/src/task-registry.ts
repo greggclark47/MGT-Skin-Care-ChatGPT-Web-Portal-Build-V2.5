@@ -75,6 +75,20 @@ export const TASK_REGISTRY: Record<TaskType, TaskConfig> = {
       properties: {analysis: {type: 'string'}, risks: {type: 'array'}, recommendations: {type: 'array'}}},
   },
 
+  anti_aging_explanation: tier1('anti_aging_explanation', 'v1.0.0', true, {
+    type: 'object', required: ['kind', 'summary', 'limitations', 'safety_notes', 'citations', 'professional_assessment_required', 'confidence'],
+    properties: { kind: { type: 'string' }, summary: { type: 'string' }, limitations: { type: 'array' }, safety_notes: { type: 'array' }, citations: { type: 'array' }, professional_assessment_required: { type: 'boolean' }, confidence: { type: 'string' } },
+  }),
+  anti_aging_search: tier1('anti_aging_search', 'v1.0.0', true, {
+    type: 'object', required: ['results', 'uncertainty'], properties: { results: { type: 'array' }, uncertainty: { type: 'string' } },
+  }),
+  anti_aging_comparison: tier1('anti_aging_comparison', 'v1.0.0', true, {
+    type: 'object', required: ['items', 'scope'], properties: { items: { type: 'array' }, scope: { type: 'string' } },
+  }),
+  anti_aging_provider_summary: tier1('anti_aging_provider_summary', 'v1.0.0', true, {
+    type: 'object', required: ['summary', 'limitations', 'citation'], properties: { summary: { type: 'string' }, limitations: { type: 'array' }, citation: { type: 'object' } },
+  }),
+
   embed: {
     task_type: 'embed', primary: OLLAMA_EMBED,
     fallbacks: [], budget_class: 'embedding', requires_entitlement: false,

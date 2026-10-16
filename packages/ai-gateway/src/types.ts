@@ -20,6 +20,10 @@ export type TaskType =
   | 'premium_consultation'
   | 'routine_optimization_deep'
   | 'operator_analysis'
+  | 'anti_aging_explanation'
+  | 'anti_aging_search'
+  | 'anti_aging_comparison'
+  | 'anti_aging_provider_summary'
   | 'embed';
 
 export type BudgetClass = 'tier1_copy' | 'tier2_vision' | 'tier3_premium' | 'embedding';

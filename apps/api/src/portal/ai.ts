@@ -103,12 +103,18 @@ export function gatewayFromEnv(env:NodeJS.ProcessEnv,store:Store,logSink:Routing
  return buildGateway(env,logSink,new StoreBudgetStore(store)).gateway;
 }
 
-export function screenInput(message:string):string|null{
- if(/trouble breathing|cannot breathe|can't breathe|swollen (tongue|throat)|throat swelling/i.test(message))return 'This may need urgent medical help. Contact local emergency services now. This portal cannot assess or treat symptoms.';
- if(/diagnos|prescri|eczema|rosacea|cancer|infect|pregnan|breastfeed|bleeding|blister|burning|severe pain|allergic|allergy|rash/i.test(message))return 'A qualified clinician or pharmacist should help with that question. I can explain cosmetic routines, but cannot diagnose symptoms, assess allergies, or advise on treatments or pregnancy safety.';
- if(/ignore.{0,30}(instruction|rule)|system prompt|developer message|api.?key|jailbreak/i.test(message))return 'I can help with the skincare topics in the reviewed library. Please ask a cosmetic skincare question.';
+export type InputScreening={text:string;escalate:boolean;escalation_type:'emergency'|'clinical'|null;further_coach_disabled:boolean};
+
+export function screenInputResult(message:string):InputScreening|null{
+ // Urgent symptom wording follows NHS anaphylaxis guidance; the portal does not diagnose.
+ // https://www.nhs.uk/conditions/anaphylaxis/
+ if(/trouble breathing|difficulty breathing|shortness of breath|cannot breathe|can't breathe|wheezing|gasping for air|difficulty swallowing|struggling to swallow|throat feels tight|swollen (lips?|mouth|tongue|throat)|(?:lips?|mouth|throat|tongue) (?:are |is )?(?:suddenly )?(?:swollen|swelling)/i.test(message))return{text:'This may need urgent medical help. Contact local emergency services now. This portal cannot assess or treat symptoms.',escalate:true,escalation_type:'emergency',further_coach_disabled:true};
+ if(/diagnos|prescri|eczema|rosacea|cancer|infect|pregnan|breastfeed|bleeding|blister|burning|severe pain|allergic|allergy|rash|\b(?:hives|stinging|swelling|skin reaction|adverse reaction)\b|peeling after|irritation after|reaction after/i.test(message))return{text:'A qualified clinician or pharmacist should help with that question. I can explain cosmetic routines, but cannot diagnose symptoms, assess allergies, or advise on treatments or pregnancy safety.',escalate:true,escalation_type:'clinical',further_coach_disabled:true};
+ if(/ignore.{0,30}(instruction|rule)|system prompt|developer message|api.?key|jailbreak|hidden instructions|reveal.{0,30}instructions|override.{0,30}rules/i.test(message))return{text:'I can help with the skincare topics in the reviewed library. Please ask a cosmetic skincare question.',escalate:false,escalation_type:null,further_coach_disabled:false};
  return null;
 }
+
+export function screenInput(message:string):string|null{return screenInputResult(message)?.text||null;}
 
 export function validateSelections(raw:string,articles:Knowledge[]){
  let j:any;try{j=JSON.parse(raw);}catch{throw new Error('invalid_json');}
@@ -132,7 +138,7 @@ export class SafeCoach{
  constructor(private providers:Provider[]=[],private gateway?:AiGateway){}
  get configured(){return this.gateway?this.gateway.configured:this.providers.length>0;}
  async answer(message:string,articles:Knowledge[],userId:string|null=null,hasPremiumEntitlement=false){
-  const refusal=screenInput(message);if(refusal)return{kind:'guidance',text:refusal,citations:[]};
+  const screening=screenInputResult(message);if(screening)return{kind:'guidance',...screening,citations:[]};
   check(articles.length>0,503,'knowledge_pending','The reviewed knowledge library is not published yet.');
   articles=selectKnowledge(message,articles);
   const noMatch={kind:'no_match',text:'I couldn’t find a directly relevant answer in the reviewed library. Try naming an ingredient or a specific routine step, or explore the library.',citations:[]};
@@ -148,7 +154,7 @@ export class SafeCoach{
    const result=await this.gateway.execute({task_type:'coach_answer',user_id:userId,system_prompt:system,user_prompt:prompt,retrieved_knowledge_ids:articles.map(a=>a.id),has_premium_entitlement:hasPremiumEntitlement,output_validator:exactValidation});
    if(!result.ok)throw new Fault(503,'ai_unavailable','A verified answer is unavailable right now. Please try again later or contact support.');
    const citations=validateSelections(result.text||'',articles);
-   const value=citations.length?{kind:'reviewed_excerpts',text:'From the reviewed skincare library:',citations,provider:result.provider,model:result.model}:{...noMatch,provider:result.provider,model:result.model};
+   const value=citations.length?{kind:'reviewed_excerpts',text:'From the reviewed skincare library:',citations}:{...noMatch};
    this.cache.set(cacheKey,{expires:Date.now()+300000,value});return value;
   }
 
@@ -160,7 +166,7 @@ export class SafeCoach{
     const raw=await p.call(system,prompt,AbortSignal.timeout(Math.min(12000,remaining)));
     const citations=validateSelections(raw,articles);this.failures.delete(p.name);
     if(!citations.length)return noMatch;
-    const value={kind:'reviewed_excerpts',text:'From the reviewed skincare library:',citations,provider:p.name,model:p.model};
+    const value={kind:'reviewed_excerpts',text:'From the reviewed skincare library:',citations};
     this.cache.set(cacheKey,{expires:Date.now()+300000,value});return value;
    }catch{const n=(f?.n||0)+1;this.failures.set(p.name,{n,until:n>=3?Date.now()+60000:0});}
   }

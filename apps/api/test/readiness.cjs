@@ -5,20 +5,31 @@ const {LocalStore}=require('../dist/portal/store');
 (async()=>{
  const store=new LocalStore(':memory:');
  store.kind='postgres';
- const app=await createPortal({store,env:{NODE_ENV:'production',DEMO_MODE:'false',PUBLIC_ORIGIN:'https://portal.example',WORKER_READINESS_MAX_AGE_SECONDS:'300',OLLAMA_ENABLED:'false'}});
+ for(const origin of ['https://portal.example/path','https://portal.example?token=hidden','https://operator@portal.example','https://other.example']){
+  await assert.rejects(createPortal({store,env:{NODE_ENV:'production',DEMO_MODE:'false',PUBLIC_ORIGIN:origin,PORTAL_DOMAIN:'portal.example',OLLAMA_ENABLED:'false',RELEASE_OWNER_NAME:'Gregg Clark of MGT',SUPPORT_OWNER_NAME:'Gregg Clark of MGT',WORKER_INTERVAL_SECONDS:'60',WORKER_READINESS_MAX_AGE_SECONDS:'300'}}),error=>error.message==='Production portal boundary is invalid.');
+ }
+ const app=await createPortal({store,env:{NODE_ENV:'production',DEMO_MODE:'false',PUBLIC_ORIGIN:'https://portal.example',PORTAL_DOMAIN:'portal.example',WORKER_READINESS_MAX_AGE_SECONDS:'300',OLLAMA_ENABLED:'false',RELEASE_OWNER_NAME:'Gregg Clark of MGT',SUPPORT_OWNER_NAME:'Gregg Clark of MGT',WORKER_INTERVAL_SECONDS:'60'}});
  const server=app.listen(0,'127.0.0.1');await new Promise(resolve=>server.once('listening',resolve));
  const url='http://127.0.0.1:'+server.address().port;
  try{
   let response=await fetch(url+'/readyz');assert.equal(response.status,503);let body=await response.json();
   assert.deepEqual(body.operations.issues,['operations_worker_stale','backup_unhealthy']);
+  assert.deepEqual(Object.keys(body.operations).sort(),['healthy','issues']);
+  assert.equal('storage' in body,false);
+  assert.equal(JSON.stringify(body).includes('location_identifier'),false);
+  assert.equal(JSON.stringify(body).includes('last_run'),false);
   assert.equal((await fetch(url+'/healthz')).status,200);
   const current=Date.now();
   await store.tx(async records=>{
-   await records.put('operations','backup_health',{status:'healthy',last_success_at:new Date(current-60000).toISOString()});
+   await records.put('operations','backup_health',{status:'healthy',last_success_at:new Date(current-60000).toISOString(),restore_verified_at:new Date(current-120000).toISOString(),max_age_hours:26,restore_max_age_days:90});
    await records.put('operation_runs','latest',{completed_at:new Date(current-30000).toISOString()});
   });
   response=await fetch(url+'/readyz');assert.equal(response.status,200);body=await response.json();
   assert.equal(body.operations.healthy,true);
+  assert.deepEqual(body.operations,{healthy:true,issues:[]});
+  const adminReadiness=await fetch(url+'/api/hub/admin/readiness');
+  assert.notEqual(adminReadiness.status,200);
+  assert.deepEqual(body.operations.issues,[]);
   await store.tx(records=>records.put('operation_runs','latest',{completed_at:new Date(current-600000).toISOString()}));
   response=await fetch(url+'/readyz');assert.equal(response.status,503);
   assert((await response.json()).operations.issues.includes('operations_worker_stale'));

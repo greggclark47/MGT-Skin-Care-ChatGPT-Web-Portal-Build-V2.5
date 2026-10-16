@@ -67,6 +67,21 @@ test("blocks an env-file directory instead of attempting to parse it", () => {
     assert.match(result.local.configuration.errors.join("; "), /regular file/);
   } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });
+test("rejects malformed and duplicate env-file assignments and points operators back to configuration", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "mgt-prerequisite-env-parse-"));
+  try {
+    const envFile = path.join(root, "production.env");
+    fs.writeFileSync(envFile, "# approved values\nNODE_ENV=production\nNOT_AN_ASSIGNMENT\nNODE_ENV=duplicate\n");
+    const result = buildProductionPrerequisites({ root, env: BASE, envFile, candidateCommit: "0123456789abcdef0123456789abcdef01234567" });
+    assert.equal(result.status, "blocked_on_configuration");
+    assert.equal(result.local.configuration.status, "blocked");
+    assert.equal(result.local.configuration.env_file_status, "invalid");
+    assert.deepEqual(result.local.configuration.error_codes, ["ENV_FILE_INVALID"]);
+    assert.equal(result.next_action, "Resolve the recorded production configuration blockers and rerun the preflight.");
+    assert.equal(JSON.stringify(result).includes("NOT_AN_ASSIGNMENT"), false);
+    assert.equal(JSON.stringify(result).includes("NODE_ENV=duplicate"), false);
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
 test("binds passing checkpoint and verification reports to the candidate without copying report content", () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "mgt-local-evidence-"));
   try {

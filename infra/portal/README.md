@@ -321,3 +321,5 @@ F994 prerequisite packets add bounded `local.configuration.error_codes` alongsid
 
 F995 treats an explicitly supplied environment path as valid only when it resolves to a regular file. Missing and non-file paths are recorded with separate bounded states (`missing` or `invalid`) and block the packet before parsing, so a directory or inaccessible path cannot be mistaken for usable production configuration.
 
+F996 makes supplied env-file parsing fail closed on malformed or duplicate assignments. Invalid lines are not copied into evidence, duplicate keys are not silently overridden, and the packet next action remains configuration remediation whenever any configuration error exists.
+

@@ -307,3 +307,7 @@ Prerequisite packets now include checksum-bound, machine-readable configuration 
 
 An explicitly supplied production environment path must now resolve to a regular file. Missing and non-file paths receive distinct bounded states and error codes, remain blocked even when ambient process variables are valid, and are never parsed as configuration. The production hold and external evidence requirements remain unchanged.
 
+# F996 strict environment-file parsing checkpoint
+
+Production prerequisite parsing now rejects malformed and duplicate assignments in an explicitly supplied env file without serializing the offending line or value. Such packets remain configuration-blocked and direct operators to resolve configuration before collecting external evidence. No live deployment behavior changed.
+

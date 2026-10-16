@@ -31,7 +31,7 @@ function text(value) { return String(value || "").trim(); }
 function configurationErrorCode(error) {
   const message = text(error);
   if (message === "configured production env file must exist before preflight.") return "ENV_FILE_MISSING";
-  if (message === "configured production env file must be a regular file before preflight.") return "ENV_FILE_INVALID";
+  if (message === "configured production env file must be a regular file before preflight." || message.startsWith("configured production env file contains an invalid assignment") || message.startsWith("configured production env file contains a duplicate assignment")) return "ENV_FILE_INVALID";
   if (/^Disabled .+ must not retain /.test(message)) return "DISABLED_FEATURE_RESIDUE";
   if (/^Production (?:image references|secret references|control and delivery endpoints) must remain distinct/.test(message)) return "DUPLICATE_CONFIGURATION_REFERENCE";
   if (/^[A-Z][A-Z0-9_]* must be /.test(message)) return "PRODUCTION_FIELD_INVALID";
@@ -53,13 +53,24 @@ function envFileStatus(filePath) {
   }
 }
 function parseEnvFile(filePath, status = envFileStatus(filePath)) {
-  if (status !== "present") return {};
+  if (status !== "present") return { values: {}, errors: [] };
   const values = {};
-  for (const line of fs.readFileSync(filePath, "utf8").split(/\r?\n/)) {
+  const errors = [];
+  for (const line of fs.readFileSync(filePath, "utf8").replace(/^\uFEFF/, "").split(/\r?\n/)) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#")) continue;
     const match = line.match(/^\s*([A-Z][A-Z0-9_]*)\s*=\s*(.*?)\s*$/);
-    if (match && !match[2].startsWith("#")) values[match[1]] = match[2].replace(/^['"]|['"]$/g, "");
+    if (!match) {
+      errors.push("configured production env file contains an invalid assignment.");
+      continue;
+    }
+    if (Object.hasOwn(values, match[1])) {
+      errors.push("configured production env file contains a duplicate assignment.");
+      continue;
+    }
+    values[match[1]] = match[2].replace(/^['"]|['"]$/g, "");
   }
-  return values;
+  return { values, errors: [...new Set(errors)] };
 }
 function externalRequirements() { return EXTERNAL_REQUIREMENTS.map(([id, requirement]) => ({ id, requirement, status: "pending_external_evidence" })); }
 function localReference(root, reference) {
@@ -144,12 +155,13 @@ export function validateProductionPrerequisites(document) {
 export function buildProductionPrerequisites({ root = process.cwd(), env = process.env, candidateCommit = "", envFile = "", checkpointFile = "", verificationFile = "", now = new Date().toISOString() } = {}) {
   const envFileProvided = Boolean(text(envFile));
   const suppliedEnvFileStatus = envFileStatus(envFile);
-  const merged = { ...parseEnvFile(envFile, suppliedEnvFileStatus), ...env };
+  const parsedEnvFile = parseEnvFile(envFile, suppliedEnvFileStatus);
+  const merged = { ...parsedEnvFile.values, ...env };
   const preflight = validateEnvironment(merged);
-  const configurationErrors = [...preflight.errors];
+  const configurationErrors = [...preflight.errors, ...parsedEnvFile.errors];
   if (suppliedEnvFileStatus === "missing") configurationErrors.unshift("configured production env file must exist before preflight.");
   if (suppliedEnvFileStatus === "invalid") configurationErrors.unshift("configured production env file must be a regular file before preflight.");
-  const config = { status: configurationErrors.length ? "blocked" : "ready_for_live_validation", source: envFileProvided ? "env_file_and_process_environment" : "process_environment", env_file_status: suppliedEnvFileStatus, errors: configurationErrors, error_codes: configurationErrorCodes(configurationErrors), warnings: preflight.warnings };
+  const config = { status: configurationErrors.length ? "blocked" : "ready_for_live_validation", source: envFileProvided ? "env_file_and_process_environment" : "process_environment", env_file_status: parsedEnvFile.errors.length ? "invalid" : suppliedEnvFileStatus, errors: configurationErrors, error_codes: configurationErrorCodes(configurationErrors), warnings: preflight.warnings };
   const evidence = buildLocalEvidence({ root, candidateCommit, checkpointFile, verificationFile });
   const document = {
     version: VERSION,
@@ -158,7 +170,7 @@ export function buildProductionPrerequisites({ root = process.cwd(), env = proce
     local: { backend_build: evidence.status === "verified" ? "verified_by_checkpoint" : "not_evaluated", portal_tests: evidence.status === "verified" ? "verified_by_verification" : "not_evaluated", evidence, configuration: config },
     external: externalRequirements(),
     status: !configurationErrors.length && evidence.status !== "blocked" ? "blocked_on_external_prerequisites" : "blocked_on_configuration",
-    next_action: !preflight.ok ? "Populate a production environment outside source control and rerun the preflight." : evidence.status === "blocked" ? "Supply matching candidate-bound checkpoint and verification reports, then regenerate the prerequisite packet." : "Collect the named live evidence and approvals, then run the production gate."
+    next_action: configurationErrors.length ? "Resolve the recorded production configuration blockers and rerun the preflight." : evidence.status === "blocked" ? "Supply matching candidate-bound checkpoint and verification reports, then regenerate the prerequisite packet." : "Collect the named live evidence and approvals, then run the production gate."
   };
   return { ...document, prerequisites_checksum: productionPrerequisitesChecksum(document) };
 }

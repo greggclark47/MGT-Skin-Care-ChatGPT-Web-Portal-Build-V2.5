@@ -1903,3 +1903,5 @@ Until these decisions and dependencies are evidenced, the plan remains planning 
 
 **Phase F995 — regular environment-file admission:** Require an explicitly supplied production environment path to resolve to a regular file, classify missing versus non-file paths, and fail closed before parsing directories or other invalid targets.
 
+**Phase F996 — strict environment-file parsing:** Reject malformed or duplicate assignments in supplied production env files without retaining their content, and derive the operator next action from actual configuration errors before any external-evidence collection step.
+

@@ -1,7 +1,7 @@
 import { Pool, type PoolConfig } from 'pg';
 import fs from 'node:fs';
 import path from 'node:path';
-import { applyPortalMigrations, verifyPortalMigrations } from './migrations';
+import { applyPortalMigrations, verifyPortalDatabaseSecurity, verifyPortalMigrations } from './migrations';
 export type Stored<T=any>={id:string;value:T};
 export interface Records {
  get<T=any>(scope:string,id:string):Promise<T|undefined>;
@@ -82,7 +82,7 @@ export class PgStore implements Store{
    if(migrate)await applyPortalMigrations(this.pool);
    // Connecting an imported database must not implicitly choose a migration lineage.
    await this.pool.query('SELECT scope,id,body FROM hub_records LIMIT 0');
-   if(this.env.NODE_ENV==='production'&&!migrate)await verifyPortalMigrations(this.pool);
+   if(this.env.NODE_ENV==='production'&&!migrate){await verifyPortalMigrations(this.pool);await verifyPortalDatabaseSecurity(this.pool);}
    return this;
   }catch(error){await this.pool.end();throw error;}
  }

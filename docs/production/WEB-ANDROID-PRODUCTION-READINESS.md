@@ -20,6 +20,8 @@ This register is an engineering release aid, not legal advice, a regulatory cert
   settings empty, and uses the configured worker readiness window for container health.
 - Production PostgreSQL startup now performs a read-only exact migration-ledger reconciliation;
   missing, reordered, changed, or unexpected portal migrations stop the API/worker before traffic.
+- The same startup gate verifies RLS is enabled on the server-side portal tables and that the
+  reviewed database role has the required RLS authority; it does not mutate the target database.
 
 ## Release scope
 

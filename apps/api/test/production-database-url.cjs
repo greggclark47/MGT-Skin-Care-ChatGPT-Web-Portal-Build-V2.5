@@ -1,6 +1,6 @@
 const assert = require('node:assert/strict');
 const { installDatabasePoolErrorBoundary, PgStore, portalPoolConfig, startupMigrations, validateProductionDatabaseUrl } = require('../dist/portal/store');
-const { portalMigrationIds, verifyPortalMigrations } = require('../dist/portal/migrations');
+const { portalMigrationIds, verifyPortalDatabaseSecurity, verifyPortalMigrations } = require('../dist/portal/migrations');
 
 const production = { NODE_ENV: 'production' };
 const baseline = new URL('postgresql://db.internal/mgt');
@@ -52,4 +52,14 @@ const poolWithLedger=ids=>({query:async()=>({rows:ids.map(id=>({id}))})});
 assert.doesNotReject(()=>verifyPortalMigrations(poolWithLedger(expectedMigrations)));
 for(const ids of [expectedMigrations.slice(0,-1),[...expectedMigrations,'9999_unknown.sql'],[...expectedMigrations].reverse(),expectedMigrations.map((id,index)=>index===0?'0001_changed.sql':id)])
  assert.rejects(()=>verifyPortalMigrations(poolWithLedger(ids)),/migration lineage/);
+const securityPool={query:async statement=>statement.includes('relrowsecurity')
+ ? {rows:[{relname:'hub_records',relrowsecurity:true},{relname:'portal_schema_migrations',relrowsecurity:true}]}
+ : {rows:[{can_bypass_rls:true}]}};
+assert.doesNotReject(()=>verifyPortalDatabaseSecurity(securityPool));
+for(const rows of [
+ [{relname:'hub_records',relrowsecurity:false},{relname:'portal_schema_migrations',relrowsecurity:true}],
+ [{relname:'hub_records',relrowsecurity:true}],
+ [{relname:'hub_records',relrowsecurity:true},{relname:'portal_schema_migrations',relrowsecurity:true},{relname:'other',relrowsecurity:true}]
+]) assert.rejects(()=>verifyPortalDatabaseSecurity({query:async statement=>statement.includes('relrowsecurity')?{rows}:{rows:[{can_bypass_rls:true}]}}),/database security/);
+assert.rejects(()=>verifyPortalDatabaseSecurity({query:async statement=>statement.includes('relrowsecurity')?{rows:[{relname:'hub_records',relrowsecurity:true},{relname:'portal_schema_migrations',relrowsecurity:true}]}:{rows:[{can_bypass_rls:false}]}}),/database security/);
 console.log('Production database target and TLS admission checks passed.');

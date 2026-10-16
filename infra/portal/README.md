@@ -323,3 +323,5 @@ F995 treats an explicitly supplied environment path as valid only when it resolv
 
 F996 makes supplied env-file parsing fail closed on malformed or duplicate assignments. Invalid lines are not copied into evidence, duplicate keys are not silently overridden, and the packet next action remains configuration remediation whenever any configuration error exists.
 
+F997 makes production-environment readiness validate the upstream prerequisite-review envelope when it claims `ready_for_prerequisite_review`. Version, canonical checksum, complete record set, owner, timestamps, status, references, bytes, and error state must be structurally valid before the downstream environment review can become ready.
+

@@ -1905,3 +1905,5 @@ Until these decisions and dependencies are evidenced, the plan remains planning 
 
 **Phase F996 — strict environment-file parsing:** Reject malformed or duplicate assignments in supplied production env files without retaining their content, and derive the operator next action from actual configuration errors before any external-evidence collection step.
 
+**Phase F997 — upstream prerequisite-envelope admission:** Revalidate the structural prerequisite-review envelope before allowing the production-environment review to become ready, preventing a forged status/checksum pair from bypassing the prerequisite record boundary.
+

@@ -3,6 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { inspectReleaseArtifact } from "./release-export.mjs";
+import { validateProductionPrerequisiteReviewShape } from "./production-prerequisite-review.mjs";
 import { utcTimestamp } from "./approval-window.mjs";
 import { accountableOwnerError, isAccountableOwner } from "./ownership.mjs";
 
@@ -15,15 +16,15 @@ function canonicalize(value) { if (Array.isArray(value)) return `[${value.map(ca
 export function productionEnvironmentReviewChecksum(document) { const { production_environment_review_checksum: _ignored, ...unsigned } = document || {}; return `sha256:${createHash("sha256").update(canonicalize(unsigned)).digest("hex")}`; }
 function validPastIso(value, now) { const parsed = utcTimestamp(value); return Number.isFinite(parsed) && parsed <= new Date(now).getTime(); }
 function inspectRecord({ root, id, record, now }) { if (!record || typeof record !== "object") throw new Error(`${id} record is required`); const inspected = inspectReleaseArtifact({ root, reference: record.reference }); if (record.checksum && text(record.checksum) !== inspected.checksum) throw new Error(`${id} checksum does not match its local artifact`); if (record.bytes != null && record.bytes !== inspected.bytes) throw new Error(`${id} byte count does not match its local artifact`); if (text(record.status) !== "pass") throw new Error(`${id} record status must be pass`); if (!isAccountableOwner(record.owner)) throw new Error(accountableOwnerError(`${id}.owner`)); if (!validPastIso(record.reviewed_at, now)) throw new Error(`${id} reviewed_at must be a past UTC ISO timestamp`); return { id, ...inspected, owner: record.owner, reviewed_at: record.reviewed_at, status: "pass" }; }
-export function buildProductionEnvironmentReview({ root = process.cwd(), prerequisiteReview, records = {}, now = new Date().toISOString() } = {}) { const baseErrors = []; if (!prerequisiteReview || typeof prerequisiteReview !== "object") baseErrors.push("prerequisite review is required"); else { if (!SHA.test(text(prerequisiteReview.candidate_commit))) baseErrors.push("prerequisite review candidate_commit must be a commit SHA"); if (!CHECKSUM.test(text(prerequisiteReview.prerequisite_review_checksum))) baseErrors.push("prerequisite review checksum is required"); if (prerequisiteReview.status === "blocked") baseErrors.push("prerequisite review is blocked"); }
+export function buildProductionEnvironmentReview({ root = process.cwd(), prerequisiteReview, records = {}, now = new Date().toISOString() } = {}) { const baseErrors = []; if (!prerequisiteReview || typeof prerequisiteReview !== "object") baseErrors.push("prerequisite review is required"); else { if (!SHA.test(text(prerequisiteReview.candidate_commit))) baseErrors.push("prerequisite review candidate_commit must be a commit SHA"); if (!CHECKSUM.test(text(prerequisiteReview.prerequisite_review_checksum))) baseErrors.push("prerequisite review checksum is required"); if (prerequisiteReview.status === "blocked") baseErrors.push("prerequisite review is blocked"); if (prerequisiteReview.status === "ready_for_prerequisite_review") { const upstream = validateProductionPrerequisiteReviewShape(prerequisiteReview, { now }); baseErrors.push(...upstream.errors.map((error) => `prerequisite review ${error}`)); } }
   const recordErrors = []; const entries = []; for (const id of PRODUCTION_ENVIRONMENT_RECORD_IDS) { try { entries.push(inspectRecord({ root, id, record: records[id], now })); } catch (error) { recordErrors.push(error.message); } }
   const errors = [...baseErrors, ...recordErrors]; const status = baseErrors.length ? "blocked" : prerequisiteReview?.status !== "ready_for_prerequisite_review" ? "pending_prerequisite_review" : recordErrors.length ? "pending_environment_records" : "ready_for_production_environment"; const document = { version: VERSION, candidate_commit: text(prerequisiteReview?.candidate_commit), prerequisite_review_checksum: text(prerequisiteReview?.prerequisite_review_checksum), generated_at: new Date(now).toISOString(), status, entries, errors }; return { ...document, production_environment_review_checksum: productionEnvironmentReviewChecksum(document) }; }
-export function validateProductionEnvironmentReview(document, { prerequisiteReview, now = Date.now() } = {}) {
+export function validateProductionEnvironmentReviewStructure(document, { now = Date.now() } = {}) {
   const errors = [];
   if (!document || typeof document !== "object" || Array.isArray(document)) return { ok: false, errors: ["must be an object"] };
   if (document.version !== VERSION) errors.push(`version must be ${VERSION}`);
-  if (!SHA.test(text(document.candidate_commit)) || text(document.candidate_commit) !== text(prerequisiteReview?.candidate_commit)) errors.push("candidate_commit must match prerequisite review");
-  if (!CHECKSUM.test(text(document.prerequisite_review_checksum)) || text(document.prerequisite_review_checksum) !== text(prerequisiteReview?.prerequisite_review_checksum)) errors.push("prerequisite_review_checksum must match prerequisite review");
+  if (!SHA.test(text(document.candidate_commit))) errors.push("candidate_commit must be a commit SHA");
+  if (!CHECKSUM.test(text(document.prerequisite_review_checksum))) errors.push("prerequisite_review_checksum is required");
   if (!validPastIso(document.generated_at, now)) errors.push("generated_at must be a past UTC ISO timestamp");
   if (!CHECKSUM.test(text(document.production_environment_review_checksum)) || text(document.production_environment_review_checksum) !== productionEnvironmentReviewChecksum(document)) errors.push("production_environment_review_checksum must match canonical review");
   if (!["blocked", "pending_prerequisite_review", "pending_environment_records", "ready_for_production_environment"].includes(document.status)) errors.push("status must be known");
@@ -44,8 +45,17 @@ export function validateProductionEnvironmentReview(document, { prerequisiteRevi
     if (!CHECKSUM.test(text(entry.checksum))) errors.push(`${entry.id} checksum is required`);
     if (!Number.isSafeInteger(entry.bytes) || entry.bytes < 1) errors.push(`${entry.id} byte count must be positive`);
   }
-  if (ready && prerequisiteReview?.status !== "ready_for_prerequisite_review") errors.push("ready_for_production_environment requires ready_for_prerequisite_review");
   if (ready && (!Array.isArray(document.errors) || document.errors.length)) errors.push("ready environment review cannot contain errors");
+  return { ok: errors.length === 0, errors: [...new Set(errors)] };
+}
+export function validateProductionEnvironmentReview(document, { prerequisiteReview, now = Date.now() } = {}) {
+  const errors = [];
+  if (prerequisiteReview?.status === "ready_for_prerequisite_review") { const upstream = validateProductionPrerequisiteReviewShape(prerequisiteReview, { now }); errors.push(...upstream.errors.map((error) => `prerequisite review ${error}`)); }
+  errors.push(...validateProductionEnvironmentReviewStructure(document, { now }).errors);
+  if (!document || typeof document !== "object" || Array.isArray(document)) return { ok: false, errors: [...new Set(errors)] };
+  if (!SHA.test(text(document.candidate_commit)) || text(document.candidate_commit) !== text(prerequisiteReview?.candidate_commit)) errors.push("candidate_commit must match prerequisite review");
+  if (!CHECKSUM.test(text(document.prerequisite_review_checksum)) || text(document.prerequisite_review_checksum) !== text(prerequisiteReview?.prerequisite_review_checksum)) errors.push("prerequisite_review_checksum must match prerequisite review");
+  if (document.status === "ready_for_production_environment" && prerequisiteReview?.status !== "ready_for_prerequisite_review") errors.push("ready_for_production_environment requires ready_for_prerequisite_review");
   return { ok: errors.length === 0, errors: [...new Set(errors)] };
 }
 export function verifyProductionEnvironmentReview({ root = process.cwd(), document } = {}) { const errors = []; const verified = []; for (const entry of Array.isArray(document?.entries) ? document.entries : []) { try { const inspected = inspectReleaseArtifact({ root, reference: entry.reference }); if (inspected.checksum !== text(entry.checksum)) errors.push(`${entry.id} checksum does not match local artifact`); if (inspected.bytes !== entry.bytes) errors.push(`${entry.id} byte count does not match local artifact`); if (inspected.checksum === text(entry.checksum) && inspected.bytes === entry.bytes) verified.push(entry.id); } catch (error) { errors.push(`${entry?.id || "entry"} could not be verified: ${error.message}`); } } return { ok: errors.length === 0, errors: [...new Set(errors)], verified }; }

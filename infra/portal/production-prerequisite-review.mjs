@@ -60,6 +60,11 @@ function validateReviewStructure(document, now) {
   return errors;
 }
 
+export function validateProductionPrerequisiteReviewShape(document, { now = Date.now() } = {}) {
+  const errors = validateReviewStructure(document, now);
+  return { ok: errors.length === 0, errors: [...new Set(errors)] };
+}
+
 export function validateProductionPrerequisiteReview(document, { prerequisites, now = Date.now() } = {}) {
   const errors = [...validateReviewStructure(document, now), ...validateProductionPrerequisites(prerequisites).errors];
   if (text(document?.candidate_commit) !== text(prerequisites?.candidate_commit)) errors.push("candidate_commit must match prerequisites");

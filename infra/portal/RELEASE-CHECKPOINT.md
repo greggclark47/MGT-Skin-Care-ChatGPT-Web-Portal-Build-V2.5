@@ -311,3 +311,7 @@ An explicitly supplied production environment path must now resolve to a regular
 
 Production prerequisite parsing now rejects malformed and duplicate assignments in an explicitly supplied env file without serializing the offending line or value. Such packets remain configuration-blocked and direct operators to resolve configuration before collecting external evidence. No live deployment behavior changed.
 
+# F997 upstream prerequisite-envelope checkpoint
+
+Production environment readiness now revalidates the structural envelope of a prerequisite review that claims readiness. A status string and checksum-shaped value cannot promote a forged or incomplete upstream review; the exact record set, owner, timestamps, artifact fields, errors, and canonical checksum must pass before downstream readiness is admitted.
+

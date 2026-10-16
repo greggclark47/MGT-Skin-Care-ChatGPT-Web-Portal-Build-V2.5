@@ -3,7 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { inspectReleaseArtifact } from "./release-export.mjs";
-import { validateProductionEnvironmentReview } from "./production-environment-review.mjs";
+import { validateProductionEnvironmentReviewStructure } from "./production-environment-review.mjs";
 import { utcTimestamp } from "./approval-window.mjs";
 import { accountableOwnerError, isAccountableOwner } from "./ownership.mjs";
 
@@ -31,8 +31,7 @@ function validPastIso(value, now) { const parsed = utcTimestamp(value); return N
 function inspectRecord({ root, id, record, now }) { if (!record || typeof record !== "object") throw new Error(`${id} record is required`); const inspected = inspectReleaseArtifact({ root, reference: record.reference }); if (record.checksum && text(record.checksum) !== inspected.checksum) throw new Error(`${id} checksum does not match its local artifact`); if (record.bytes != null && record.bytes !== inspected.bytes) throw new Error(`${id} byte count does not match its local artifact`); if (text(record.status) !== "pass") throw new Error(`${id} record status must be pass`); if (!isAccountableOwner(record.owner)) throw new Error(accountableOwnerError(`${id}.owner`)); if (!validPastIso(record.reviewed_at, now)) throw new Error(`${id} reviewed_at must be a past UTC ISO timestamp`); return { id, ...inspected, owner: record.owner, reviewed_at: record.reviewed_at, status: "pass" }; }
 function readyEnvironmentErrors(environmentReview, now) {
   if (environmentReview?.status !== "ready_for_production_environment") return [];
-  const prerequisiteReview = { candidate_commit: environmentReview.candidate_commit, prerequisite_review_checksum: environmentReview.prerequisite_review_checksum, status: "ready_for_prerequisite_review" };
-  return validateProductionEnvironmentReview(environmentReview, { prerequisiteReview, now: Date.parse(now) }).errors.map((error) => `environment_review.${error}`);
+  return validateProductionEnvironmentReviewStructure(environmentReview, { now: Date.parse(now) }).errors.map((error) => `environment_review.${error}`);
 }
 export function buildProductionEvidenceMatrixReview({ root = process.cwd(), environmentReview, records = {}, now = new Date().toISOString() } = {}) { const baseErrors = []; if (!environmentReview || typeof environmentReview !== "object") baseErrors.push("environment review is required"); else { if (!SHA.test(text(environmentReview.candidate_commit))) baseErrors.push("environment review candidate_commit must be a commit SHA"); if (!CHECKSUM.test(text(environmentReview.production_environment_review_checksum))) baseErrors.push("environment review checksum is required"); if (environmentReview.status === "blocked") baseErrors.push("environment review is blocked"); baseErrors.push(...readyEnvironmentErrors(environmentReview, now)); }
   const recordErrors = []; const entries = []; for (const id of PRODUCTION_EVIDENCE_RECORD_IDS) { try { entries.push(inspectRecord({ root, id, record: records[id], now })); } catch (error) { recordErrors.push(error.message); } }

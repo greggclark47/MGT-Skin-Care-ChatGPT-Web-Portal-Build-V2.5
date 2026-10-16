@@ -1,5 +1,7 @@
 # AI release controls checkpoint
 
+2026-10-16 strict operations policy admission: production preflight now requires the complete notification, alert, follow-up, retention, and anti-aging operations policy tuple to be explicitly declared; missing values cannot fall back to runtime defaults. Focused production-intake coverage passes; this validates configuration shape only, not live service behavior.
+
 2026-10-16 strict evidence JSON: the release receipt, closeout, finalization, launch, and execution CLI readers now reject duplicate JSON object keys before checksum-bound evidence is admitted. Syntax remains strict and no evidence body is echoed in errors; focused coverage passes.
 
 2026-10-16 operations lease admission: production preflight now requires the operations-alert lease to outlive its configured delivery timeout by a five-second safety margin, preventing a slow alert attempt from being completed after a stale worker can reclaim the lease. Focused and full local verification cover this rule; no live alert destination was contacted.

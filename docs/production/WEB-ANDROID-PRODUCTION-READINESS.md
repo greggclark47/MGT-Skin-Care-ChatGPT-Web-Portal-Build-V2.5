@@ -51,6 +51,9 @@ This register is an engineering release aid, not legal advice, a regulatory cert
   a five-second safety margin, preventing stale-worker completion of a slow alert attempt.
 - Release evidence CLI readers now reject duplicate JSON object keys before receipt, closeout,
   launch, or execution evidence enters the checksum-bound review chain.
+- Production preflight now requires the complete operations and retention policy tuple explicitly;
+  production cannot silently inherit worker defaults for notifications, alerts, follow-ups, or
+  operational data retention.
 - Anti-aging readiness switches and operational retention are now explicit, bounded production inputs;
   they report gates only and do not activate checkout, booking or image analysis.
 

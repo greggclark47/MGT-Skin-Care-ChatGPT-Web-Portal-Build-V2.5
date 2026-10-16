@@ -233,6 +233,17 @@ export function validateEnvironment(env) {
   const alertToken = requireValue("OPERATIONS_ALERT_WEBHOOK_TOKEN");
   if (alertToken && !validSecretReference(env.OPERATIONS_ALERT_WEBHOOK_TOKEN)) errors.push("OPERATIONS_ALERT_WEBHOOK_TOKEN must be a bounded injected reference without whitespace or control characters.");
   if (!/^[A-Za-z0-9_-]{1,64}$/.test(env.OPERATIONS_ALERT_KEY_ID || "")) errors.push("OPERATIONS_ALERT_KEY_ID must identify the active signing key using letters, numbers, underscores or hyphens.");
+  const requiredProductionOperations = [
+    "NOTIFICATION_RETRY_COOLDOWN_SECONDS", "NOTIFICATION_MAX_RETRY_DELAY_SECONDS", "NOTIFICATION_MAX_ATTEMPTS",
+    "OPERATIONS_ALERT_TIMEOUT_MS", "OPERATIONS_ALERT_LEASE_SECONDS", "OPERATIONS_ALERT_RETRY_COOLDOWN_SECONDS",
+    "OPERATIONS_ALERT_MAX_RETRY_DELAY_SECONDS", "OPERATIONS_ALERT_MAX_ATTEMPTS", "OPERATIONS_ALERT_EVENT_RETENTION_DAYS",
+    "OPERATIONS_FOLLOW_UP_OVERDUE_GRACE_SECONDS", "OPERATIONS_FOLLOW_UP_RETRY_DELAY_SECONDS",
+    "OPERATIONS_FOLLOW_UP_MAX_ATTEMPTS", "OPERATIONS_FOLLOW_UP_RETENTION_DAYS", "OPERATIONS_AI_LOG_RETENTION_DAYS",
+    "OPERATIONS_NOTIFICATION_RETENTION_DAYS", "OPERATIONS_BILLING_RETENTION_DAYS", "OPERATIONS_WEBHOOK_RECEIPT_RETENTION_DAYS",
+    "OPERATIONS_AGGREGATE_METRIC_RETENTION_DAYS", "OPERATIONS_DELETION_PROOF_RETENTION_DAYS", "OPERATIONS_RUN_RETENTION_DAYS",
+    "OPERATIONS_BACKUP_ATTESTATION_RETENTION_DAYS", "OPERATIONS_ANTI_AGING_RETENTION_DAYS"
+  ];
+  if (env.NODE_ENV === "production") for (const key of requiredProductionOperations) if (typeof env[key] !== "string" || env[key] === "") errors.push(`${key} must be explicitly configured in production; runtime defaults are not admitted.`);
   for (const [key,minimum,maximum] of [
     ["OPERATIONS_ALERT_TIMEOUT_MS",1000,30000],
     ["OPERATIONS_ALERT_RETRY_COOLDOWN_SECONDS",10,3600],

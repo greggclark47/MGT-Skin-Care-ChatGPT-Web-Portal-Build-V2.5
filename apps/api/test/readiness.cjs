@@ -21,7 +21,7 @@ const {LocalStore}=require('../dist/portal/store');
   assert.equal((await fetch(url+'/healthz')).status,200);
   const current=Date.now();
   await store.tx(async records=>{
-   await records.put('operations','backup_health',{status:'healthy',last_success_at:new Date(current-60000).toISOString()});
+   await records.put('operations','backup_health',{status:'healthy',last_success_at:new Date(current-60000).toISOString(),restore_verified_at:new Date(current-120000).toISOString(),max_age_hours:26,restore_max_age_days:90});
    await records.put('operation_runs','latest',{completed_at:new Date(current-30000).toISOString()});
   });
   response=await fetch(url+'/readyz');assert.equal(response.status,200);body=await response.json();

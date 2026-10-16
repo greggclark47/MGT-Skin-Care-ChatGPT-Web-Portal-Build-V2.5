@@ -65,21 +65,25 @@ const verifyOperationsAlertRequest=input=>rawVerifyOperationsAlertRequest({...in
  });
  const next=await worker.runOnce(at+60000);assert.equal(next.created,0);assert.equal(next.delivered,0);assert.equal(next.deletions_completed,0);assert.equal(next.deletions_blocked,1);
  const healthy=operationalReadiness(
-  {status:'healthy',last_success_at:new Date(at-3600000).toISOString()},
+ {status:'healthy',last_success_at:new Date(at-3600000).toISOString(),restore_verified_at:new Date(at-2*3600000).toISOString(),max_age_hours:26,restore_max_age_days:90},
   [{id:'newer',value:{completed_at:new Date(at-60000).toISOString()}},{id:'older',value:{completed_at:new Date(at-120000).toISOString()}}],
   at,300000);
  assert.equal(healthy.healthy,true);assert.equal(healthy.last_run.completed_at,new Date(at-60000).toISOString());
- const publicHealthy=publicOperationalReadiness({...healthy,backup:{status:'healthy',last_success_at:new Date(at-60000).toISOString(),location_identifier:'encrypted-offsite',restore_reference:'https://evidence.test/restore',checksum:'sha256:'+'a'.repeat(64)}},at);
+ const publicHealthy=publicOperationalReadiness({...healthy,backup:{status:'healthy',last_success_at:new Date(at-60000).toISOString(),restore_verified_at:new Date(at-120000).toISOString(),max_age_hours:26,restore_max_age_days:90,location_identifier:'encrypted-offsite',restore_reference:'https://evidence.test/restore',checksum:'sha256:'+'a'.repeat(64)}},at);
  assert.deepEqual(publicHealthy,{healthy:true,issues:[],worker:{healthy:true},backup:{healthy:true,status:'healthy',last_success_recorded:true}});
  assert.equal(JSON.stringify(publicHealthy).includes('encrypted-offsite'),false);
  assert.equal(JSON.stringify(publicHealthy).includes('restore_reference'),false);
- const publicFuture=publicOperationalReadiness({...healthy,backup:{status:'healthy',last_success_at:new Date(at+60000).toISOString()}},at);
- assert.equal(publicFuture.healthy,false);assert.deepEqual(publicFuture.backup,{healthy:false,status:'unverified',last_success_recorded:false});
- const publicInvalid=publicOperationalReadiness({...healthy,backup:{status:'healthy',last_success_at:'not-a-timestamp'}},at);
- assert.equal(publicInvalid.healthy,false);assert.deepEqual(publicInvalid.backup,{healthy:false,status:'unverified',last_success_recorded:false});
+ const publicFuture=publicOperationalReadiness({...healthy,backup:{status:'healthy',last_success_at:new Date(at-60000).toISOString(),restore_verified_at:new Date(at+60000).toISOString(),max_age_hours:26,restore_max_age_days:90}},at);
+ assert.equal(publicFuture.healthy,false);assert.deepEqual(publicFuture.backup,{healthy:false,status:'unverified',last_success_recorded:true});
+ const publicInvalid=publicOperationalReadiness({...healthy,backup:{status:'healthy',last_success_at:new Date(at-60000).toISOString(),restore_verified_at:'not-a-timestamp',max_age_hours:26,restore_max_age_days:90}},at);
+ assert.equal(publicInvalid.healthy,false);assert.deepEqual(publicInvalid.backup,{healthy:false,status:'unverified',last_success_recorded:true});
+ const publicStaleRestore=publicOperationalReadiness({...healthy,backup:{status:'healthy',last_success_at:new Date(at-60000).toISOString(),restore_verified_at:new Date(at-91*86400000).toISOString(),max_age_hours:26,restore_max_age_days:90}},at);
+ assert.equal(publicStaleRestore.healthy,false);assert.deepEqual(publicStaleRestore.backup,{healthy:false,status:'unverified',last_success_recorded:true});
  assert.deepEqual(operationalReadiness({status:'unverified',last_success_at:new Date(at-3600000).toISOString()},[],at).issues,
   ['operations_worker_stale','backup_unhealthy']);
  assert.deepEqual(operationalReadiness({status:'stale',last_success_at:new Date(at-3600000).toISOString()},[],at).issues,
+  ['operations_worker_stale','backup_unhealthy']);
+ assert.deepEqual(operationalReadiness({status:'healthy',last_success_at:new Date(at-60000).toISOString(),restore_verified_at:new Date(at-91*86400000).toISOString(),max_age_hours:26,restore_max_age_days:90},[],at).issues,
   ['operations_worker_stale','backup_unhealthy']);
  assert.equal(operationalReadiness({status:'healthy',last_success_at:new Date(at+60000).toISOString()},
   [{id:'future',value:{completed_at:new Date(at+60000).toISOString()}}],at).healthy,false);

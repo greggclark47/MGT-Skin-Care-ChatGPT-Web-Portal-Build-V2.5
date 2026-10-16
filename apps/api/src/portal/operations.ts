@@ -65,6 +65,14 @@ export class SupabaseIdentityDeletion implements IdentityDeletion{
 const iso=(ms=Date.now())=>new Date(ms).toISOString();
 const timestamp=(value:any)=>typeof value==='string'&&!Number.isNaN(Date.parse(value))?Date.parse(value):undefined;
 const int=(value:string|undefined,fallback:number,min:number,max:number)=>{const parsed=Number(value);return Number.isInteger(parsed)&&parsed>=min&&parsed<=max?parsed:fallback;};
+function backupEvidenceHealthy(backup:any,at:number){
+ const current=Number.isFinite(at)?at:Date.now();
+ const completed=timestamp(backup?.last_success_at),restoreVerified=timestamp(backup?.restore_verified_at);
+ const maxAgeHours=Number(backup?.max_age_hours),restoreMaxAgeDays=Number(backup?.restore_max_age_days);
+ const validWindows=Number.isFinite(maxAgeHours)&&maxAgeHours>=1&&maxAgeHours<=720&&Number.isFinite(restoreMaxAgeDays)&&restoreMaxAgeDays>=1&&restoreMaxAgeDays<=365;
+ const validTimes=completed!==undefined&&restoreVerified!==undefined&&completed<=current&&restoreVerified<=current;
+ return backup?.status==='healthy'&&validWindows&&validTimes&&current-completed<=maxAgeHours*3600000&&current-restoreVerified<=restoreMaxAgeDays*86400000;
+}
 const notificationId=(actor:string,reminder:Reminder)=>'reminder_'+createHash('sha256').update(`${actor}:${reminder.product_id}:${reminder.due_at}`).digest('hex').slice(0,40);
 const notificationFailure=(error:unknown)=>{
  if(error instanceof Error&&error.message==='Notification payload exceeds the safe delivery limit.')return {code:'delivery_payload_rejected' as const,retryable:false};
@@ -136,8 +144,7 @@ export function operationalReadiness(backup:any,runs:{value:any}[],at=Date.now()
   .sort((a,b)=>Date.parse(b.completed_at)-Date.parse(a.completed_at))[0]||null;
  const lastCompleted=timestamp(lastRun?.completed_at);
  const workerHealthy=lastCompleted!==undefined&&lastCompleted<=at&&at-lastCompleted<=workerMaxAgeMs;
- const backupHealthy=backup?.status==='healthy'&&timestamp(backup?.last_success_at)!==undefined
-  && timestamp(backup.last_success_at)!<=at;
+ const backupHealthy=backupEvidenceHealthy(backup,at);
  const issues=[!workerHealthy?'operations_worker_stale':null,!backupHealthy?'backup_unhealthy':null].filter(Boolean);
  return {healthy:issues.length===0,issues,last_run:lastRun,backup};
 }
@@ -145,7 +152,7 @@ export function operationalReadiness(backup:any,runs:{value:any}[],at=Date.now()
 export function publicOperationalReadiness(result:any,at=Date.now()){
  const issues=Array.isArray(result?.issues)?result.issues.filter((item:unknown):item is string=>typeof item==='string').slice(0,10):[];
  const current=Number.isFinite(at)?at:Date.now(),backupLastSuccess=timestamp(result?.backup?.last_success_at),lastSuccessRecorded=backupLastSuccess!==undefined&&backupLastSuccess<=current;
- const backupHealthy=result?.backup?.status==='healthy'&&!issues.includes('backup_unhealthy')&&lastSuccessRecorded;
+ const backupHealthy=backupEvidenceHealthy(result?.backup,current)&&!issues.includes('backup_unhealthy')&&lastSuccessRecorded;
  const backupStatus=backupHealthy?'healthy':result?.backup?.status==='stale'?'stale':'unverified';
  return {
   healthy:result?.healthy===true&&issues.length===0&&backupHealthy,

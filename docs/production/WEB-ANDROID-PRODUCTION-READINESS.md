@@ -13,6 +13,9 @@ This register is an engineering release aid, not legal advice, a regulatory cert
 - Web footer and route map include Privacy, Terms, and the AI disclosure boundary.
 - Google Play Data safety draft for the current mobile surface.
 - A release register that separates local evidence from human, vendor, account, and deployment evidence.
+- API readiness fails closed unless both backup freshness and isolated restore verification are present,
+  valid, non-future, and within their configured age windows; the public projection exposes only
+  sanitized health categories.
 
 ## Release scope
 

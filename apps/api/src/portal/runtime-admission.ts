@@ -100,19 +100,26 @@ export function validateProductionOperationsAdmission(env:NodeJS.ProcessEnv):voi
   &&productionInteger(env.SUPPORT_RESPONSE_TARGET_HOURS,1,168)
   &&env.OPERATIONS_ALERT_DELIVERY==='webhook'&&productionHttpsUrl(env.OPERATIONS_ALERT_WEBHOOK_URL)
   &&configuredReference(env.OPERATIONS_ALERT_WEBHOOK_TOKEN);
- const validOptional=productionInteger(env.OPERATIONS_ALERT_TIMEOUT_MS,1000,30000,true)
-  &&productionInteger(env.OPERATIONS_ALERT_RETRY_COOLDOWN_SECONDS,10,3600,true)
-  &&productionInteger(env.OPERATIONS_ALERT_EVENT_RETENTION_DAYS,1,3650,true)
-  &&productionInteger(env.OPERATIONS_ALERT_LEASE_SECONDS,10,600,true)
-  &&productionInteger(env.OPERATIONS_ALERT_MAX_RETRY_DELAY_SECONDS,10,86400,true)
-  &&productionInteger(env.OPERATIONS_ALERT_MAX_ATTEMPTS,1,20,true)
-  &&productionInteger(env.OPERATIONS_FOLLOW_UP_OVERDUE_GRACE_SECONDS,60,86400,true)
-  &&productionInteger(env.OPERATIONS_FOLLOW_UP_RETRY_DELAY_SECONDS,10,86400,true)
-  &&productionInteger(env.OPERATIONS_FOLLOW_UP_MAX_ATTEMPTS,1,20,true)
-  &&productionInteger(env.OPERATIONS_FOLLOW_UP_RETENTION_DAYS,30,3650,true)
+ const validPolicy=productionInteger(env.OPERATIONS_ALERT_TIMEOUT_MS,1000,30000)
+  &&productionInteger(env.OPERATIONS_ALERT_RETRY_COOLDOWN_SECONDS,10,3600)
+  &&productionInteger(env.OPERATIONS_ALERT_EVENT_RETENTION_DAYS,1,3650)
+  &&productionInteger(env.OPERATIONS_ALERT_LEASE_SECONDS,10,600)
+  &&productionInteger(env.OPERATIONS_ALERT_MAX_RETRY_DELAY_SECONDS,10,86400)
+  &&productionInteger(env.OPERATIONS_ALERT_MAX_ATTEMPTS,1,20)
+  &&productionInteger(env.OPERATIONS_FOLLOW_UP_OVERDUE_GRACE_SECONDS,60,86400)
+  &&productionInteger(env.OPERATIONS_FOLLOW_UP_RETRY_DELAY_SECONDS,10,86400)
+  &&productionInteger(env.OPERATIONS_FOLLOW_UP_MAX_ATTEMPTS,1,20)
+  &&productionInteger(env.OPERATIONS_FOLLOW_UP_RETENTION_DAYS,30,3650)
+  &&productionInteger(env.OPERATIONS_AI_LOG_RETENTION_DAYS,1,3650)
+  &&productionInteger(env.OPERATIONS_BILLING_RETENTION_DAYS,30,3650)
+  &&productionInteger(env.OPERATIONS_WEBHOOK_RECEIPT_RETENTION_DAYS,7,3650)
+  &&productionInteger(env.OPERATIONS_AGGREGATE_METRIC_RETENTION_DAYS,30,3650)
+  &&productionInteger(env.OPERATIONS_DELETION_PROOF_RETENTION_DAYS,30,3650)
+  &&productionInteger(env.OPERATIONS_RUN_RETENTION_DAYS,1,3650)
   &&/^[A-Za-z0-9_-]{1,64}$/.test(env.OPERATIONS_ALERT_KEY_ID||'');
- const retryBase=Number(env.OPERATIONS_ALERT_RETRY_COOLDOWN_SECONDS||300),retryMax=Number(env.OPERATIONS_ALERT_MAX_RETRY_DELAY_SECONDS||3600);
- if(!validCore||!validOptional||retryMax<retryBase)throw new Error('Production operations admission is invalid.');
+ const retryBase=Number(env.OPERATIONS_ALERT_RETRY_COOLDOWN_SECONDS),retryMax=Number(env.OPERATIONS_ALERT_MAX_RETRY_DELAY_SECONDS);
+ const alertTimeoutMs=Number(env.OPERATIONS_ALERT_TIMEOUT_MS),alertLeaseSeconds=Number(env.OPERATIONS_ALERT_LEASE_SECONDS);
+ if(!validCore||!validPolicy||retryMax<retryBase||alertLeaseSeconds*1000<alertTimeoutMs+5000)throw new Error('Production operations admission is invalid.');
 }
 
 export function validateProductionNotificationAdmission(env:NodeJS.ProcessEnv):void{
@@ -125,10 +132,10 @@ export function validateProductionNotificationAdmission(env:NodeJS.ProcessEnv):v
   if(!/^[A-Za-z0-9_-]{1,64}$/.test(env.NOTIFICATION_WEBHOOK_KEY_ID||''))throw new Error('Production notification admission is invalid.');
   if(env.NOTIFICATION_WEBHOOK_TIMEOUT_MS!==undefined&&!productionInteger(env.NOTIFICATION_WEBHOOK_TIMEOUT_MS,1000,30000))throw new Error('Production notification admission is invalid.');
  }
- const retryBase=env.NOTIFICATION_RETRY_COOLDOWN_SECONDS??'300',retryMax=env.NOTIFICATION_MAX_RETRY_DELAY_SECONDS??'3600';
+ const retryBase=env.NOTIFICATION_RETRY_COOLDOWN_SECONDS,retryMax=env.NOTIFICATION_MAX_RETRY_DELAY_SECONDS;
  const validPolicy=productionInteger(retryBase,10,3600)&&productionInteger(retryMax,10,86400)
-  &&productionInteger(env.NOTIFICATION_MAX_ATTEMPTS??'3',1,20)
-  &&productionInteger(env.OPERATIONS_NOTIFICATION_RETENTION_DAYS??'90',1,3650)
+  &&productionInteger(env.NOTIFICATION_MAX_ATTEMPTS,1,20)
+  &&productionInteger(env.OPERATIONS_NOTIFICATION_RETENTION_DAYS,1,3650)
   &&Number(retryMax)>=Number(retryBase);
  if(!validPolicy)throw new Error('Production notification admission is invalid.');
 }
@@ -155,7 +162,7 @@ export function validateProductionBackupAttestationAdmission(env:NodeJS.ProcessE
   if(!productionInteger(env.BACKUP_ATTESTATION_MAX_AGE_SECONDS,1,604800,true))throw new Error('Production backup attestation admission is invalid.');
  }
  if(env.BACKUP_ATTESTATION_ENABLED==='false'&&['BACKUP_ATTESTATION_SECRET','BACKUP_ATTESTATION_KEY_ID','BACKUP_ATTESTATION_MAX_AGE_SECONDS'].some(key=>env[key]!==undefined&&env[key]!==''))throw new Error('Production backup attestation admission is invalid.');
- if(!productionInteger(env.OPERATIONS_BACKUP_ATTESTATION_RETENTION_DAYS??'90',1,3650))throw new Error('Production backup attestation admission is invalid.');
+ if(!productionInteger(env.OPERATIONS_BACKUP_ATTESTATION_RETENTION_DAYS,1,3650))throw new Error('Production backup attestation admission is invalid.');
 }
 
 export function validateProductionAntiAgingAdmission(env:NodeJS.ProcessEnv):void{
@@ -163,7 +170,7 @@ export function validateProductionAntiAgingAdmission(env:NodeJS.ProcessEnv):void
  for(const key of ['ANTI_AGING_LIVE_AI','ANTI_AGING_CHECKOUT_ENABLED','ANTI_AGING_BOOKING_ENABLED','ANTI_AGING_IMAGE_ANALYSIS_ENABLED','ANTI_AGING_ACCESSIBILITY_VERIFIED','ANTI_AGING_RESTORE_VERIFIED','ANTI_AGING_PRIVACY_REVIEWED']){
   if(env[key]!=='true'&&env[key]!=='false')throw new Error('Production anti-aging admission is invalid.');
  }
- if(!productionInteger(env.OPERATIONS_ANTI_AGING_RETENTION_DAYS??'365',30,3650))throw new Error('Production anti-aging admission is invalid.');
+ if(!productionInteger(env.OPERATIONS_ANTI_AGING_RETENTION_DAYS,30,3650))throw new Error('Production anti-aging admission is invalid.');
 }
 
 export function validateProductionAccessibilityAdmission(env:NodeJS.ProcessEnv):void{

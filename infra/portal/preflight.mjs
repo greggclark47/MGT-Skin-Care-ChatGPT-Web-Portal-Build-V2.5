@@ -256,6 +256,14 @@ export function validateEnvironment(env) {
     ["OPERATIONS_FOLLOW_UP_MAX_ATTEMPTS",1,20],
     ["OPERATIONS_FOLLOW_UP_RETENTION_DAYS",30,3650]
   ]) if (env[key] !== undefined && env[key] !== "" && (typeof env[key] !== "string" || !/^\d+$/.test(env[key]) || !wholeNumber(env[key], minimum, maximum))) errors.push(`${key} must be a whole number between ${minimum} and ${maximum}.`);
+  for (const [key,minimum,maximum] of [
+    ["OPERATIONS_AI_LOG_RETENTION_DAYS",1,3650],
+    ["OPERATIONS_BILLING_RETENTION_DAYS",30,3650],
+    ["OPERATIONS_WEBHOOK_RECEIPT_RETENTION_DAYS",7,3650],
+    ["OPERATIONS_AGGREGATE_METRIC_RETENTION_DAYS",30,3650],
+    ["OPERATIONS_DELETION_PROOF_RETENTION_DAYS",30,3650],
+    ["OPERATIONS_RUN_RETENTION_DAYS",1,3650]
+  ]) if (env[key] !== undefined && env[key] !== "" && (typeof env[key] !== "string" || !/^\d+$/.test(env[key]) || !wholeNumber(env[key], minimum, maximum))) errors.push(`${key} must be a whole number between ${minimum} and ${maximum}.`);
   if (wholeNumber(env.OPERATIONS_ALERT_RETRY_COOLDOWN_SECONDS || "300",10,3600) && wholeNumber(env.OPERATIONS_ALERT_MAX_RETRY_DELAY_SECONDS || "3600",10,86400) && Number(env.OPERATIONS_ALERT_MAX_RETRY_DELAY_SECONDS || 3600) < Number(env.OPERATIONS_ALERT_RETRY_COOLDOWN_SECONDS || 300)) errors.push("OPERATIONS_ALERT_MAX_RETRY_DELAY_SECONDS must be at least OPERATIONS_ALERT_RETRY_COOLDOWN_SECONDS.");
   const alertTimeoutMs = Number(env.OPERATIONS_ALERT_TIMEOUT_MS || 10000);
   const alertLeaseSeconds = Number(env.OPERATIONS_ALERT_LEASE_SECONDS || 60);

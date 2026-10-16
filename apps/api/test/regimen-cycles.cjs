@@ -52,6 +52,17 @@ const { LocalStore } = require('../dist/portal/store');
     assert.equal(summary.status, 200);
     assert.equal(summary.data.data.comfortable, 1);
     assert.equal(summary.data.data.deterministic_guidance.next_step, 'keep_current_routine');
+    const exported = await call('/api/v1/regimen-cycles/export');
+    assert.equal(exported.status, 200);
+    assert.equal(exported.data.data.cycles.length, 1);
+    assert.equal(exported.data.data.check_ins.length, 1);
+    assert.deepEqual(exported.data.data.manifest, { export_format: 'json', retention: 'user_controlled', deletion_supported: true, external_delivery: 'disabled', data_shared: [] });
+    assert.equal(JSON.stringify(exported.data).includes('regimen-account'), false);
+    assert.equal((await call('/api/v1/regimen-cycles', 'DELETE', { confirm: false })).status, 400);
+    const removed = await call('/api/v1/regimen-cycles', 'DELETE', { confirm: true });
+    assert.equal(removed.status, 200);
+    assert.deepEqual(removed.data.data, { cycles: 1, check_ins: 1, consent_revoked: true, retention: 'user_controlled', data_shared: [] });
+    assert.equal((await call('/api/v1/regimen-cycles')).data.data.items.length, 0);
   } finally {
     server.closeAllConnections();
     await new Promise((resolve, reject) => server.close(error => error ? reject(error) : resolve()));

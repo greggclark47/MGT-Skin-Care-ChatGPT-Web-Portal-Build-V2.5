@@ -1,7 +1,7 @@
 import type {
   SkinProfileInput, Routine, ProfileVector, AvoidFlags, IngredientRecord, ProductRecord,
   ProviderRecord, TreatmentRecord, ReadOnlyPage, AntiAgingResponseMeta, GroundedAntiAgingExplanation, GroundedSearchResult,
-  MerchantReferral, ProgressEntry, ProgressAggregate, ProgressReminder, ProgressControlSummary, ProgressExportManifest, ProgressExportSummary, ProgressReminderPreview, AppointmentRequest, AntiAgingOperationsDigest, AntiAgingLaunchReadiness, CatalogModerationQueueItem, CatalogModerationQueuePage, CatalogModerationQueueSummary, CatalogQualityIssue, CatalogQualitySummary, LaunchEvidenceFreshness, LaunchEvidenceSummary, ProviderSearchDailySummary, ProviderSearchSloSummary, MatchIntelligence,
+  MerchantReferral, ProgressEntry, ProgressAggregate, ProgressReminder, ProgressControlSummary, ProgressExportManifest, ProgressExportSummary, ProgressReminderPreview, AppointmentRequest, AntiAgingOperationsDigest, AntiAgingLaunchReadiness, CatalogModerationQueueItem, CatalogModerationQueuePage, CatalogModerationQueueSummary, CatalogQualityIssue, CatalogQualitySummary, LaunchEvidenceFreshness, LaunchEvidenceSummary, ProviderSearchDailySummary, ProviderSearchSloSummary, MatchIntelligence, RegimenCycleFocus, RegimenCycleCheckInStatus,
   AntiAgingReviewPlan, AntiAgingReviewPlanSummary, AntiAgingReviewSession, AntiAgingDecisionPacket, AntiAgingDecisionPacketIntegrity,
 } from '@mgt/domain';
 
@@ -205,6 +205,26 @@ export class ApiClient {
 
   deleteAntiAgingProgress(token?: string) {
     return this.delete<{ data: { deleted: number; consent_revoked: true } }>('/api/v1/progress', { confirm: true }, token);
+  }
+
+  listRegimenCycles(token?: string) {
+    return this.get<{ data: { items: unknown[]; current: unknown | null; retention: 'user_controlled'; sync_scope: 'signed_in_account'; data_shared: [] } }>('/api/v1/regimen-cycles', token);
+  }
+
+  startRegimenCycle(input: { focus: RegimenCycleFocus; consent_version: string }, token?: string) {
+    return this.post<{ data: unknown; sync_scope: 'signed_in_account' }>('/api/v1/regimen-cycles', { ...input, consent: 'regimen_cycle_tracking' }, token);
+  }
+
+  saveRegimenCycleCheckIn(id: string, input: { status: RegimenCycleCheckInStatus; completed_at: string }, token?: string) {
+    return this.post<{ data: unknown; note: string }>(`/api/v1/regimen-cycles/${encodeURIComponent(id)}/check-ins`, input, token);
+  }
+
+  exportRegimenCycles(token?: string) {
+    return this.get<{ data: { cycles: unknown[]; check_ins: unknown[]; manifest: { export_format: 'json'; retention: 'user_controlled'; deletion_supported: true; external_delivery: 'disabled'; data_shared: [] }; exported_at: string; note: string } }>('/api/v1/regimen-cycles/export', token);
+  }
+
+  deleteRegimenCycles(token?: string) {
+    return this.delete<{ data: { cycles: number; check_ins: number; consent_revoked: true; retention: 'user_controlled'; data_shared: [] } }>('/api/v1/regimen-cycles', { confirm: true }, token);
   }
 
   listAntiAgingReminders(token?: string) {

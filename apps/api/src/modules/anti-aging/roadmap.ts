@@ -59,6 +59,18 @@ export function antiAgingRoadmapRouter(catalog: AntiAgingCatalog, store?: Store)
     missingStore(store);const actor=cycleActor(req);const cycleId=typeof req.params.id==='string'?req.params.id:'';check(isCanonicalId(cycleId),400,'invalid_regimen_cycle','Use a valid regimen cycle reference.');const cycle=await store.tx(records=>records.get<RegimenCycle>('regimen_cycles',cycleId));check(cycle?.actor===actor,404,'regimen_cycle_not_found','That regimen cycle is not available.');res.json({data:publicRegimenSummary(summarizeRegimenCycle(cycle,await checkInsFor(actor))),sync_scope:'signed_in_account'});
   }));
 
+  router.get('/regimen-cycles/export', wrap(async(req,res)=>{
+    missingStore(store);const actor=cycleActor(req);const cycles=(await cyclesFor(actor)).sort((a,b)=>b.starts_at.localeCompare(a.starts_at));const entries=await checkInsFor(actor);
+    const summaries=cycles.map(cycle=>publicRegimenSummary(summarizeRegimenCycle(cycle,entries)));
+    res.set({'Content-Disposition':'attachment; filename="mgt-skin-care-regimen-cycles.json"','Cache-Control':'private, no-store'}).json({data:{cycles:summaries,check_ins:entries.map(publicRegimenCheckIn),manifest:{export_format:'json',retention:'user_controlled',deletion_supported:true,external_delivery:'disabled',data_shared:[]},exported_at:new Date().toISOString(),note:'Portable personal cycle record; it is not a diagnosis or treatment record.'}});
+  }));
+
+  router.delete('/regimen-cycles', wrap(async(req,res)=>{
+    missingStore(store);const actor=cycleActor(req);check(req.body?.confirm===true,400,'confirmation_required','Confirm removal of regimen cycles and check-ins.');
+    const removed=await store.tx(async records=>{await records.lock('regimen-cycle:'+hash(actor));let cycles=0,checkIns=0;for(const cycle of await records.list<RegimenCycle>('regimen_cycles'))if(cycle.actor===actor){await records.remove('regimen_cycles',cycle.id);cycles++;}for(const entry of await records.list<RegimenCycleCheckIn>('regimen_cycle_check_ins'))if(entry.actor===actor){await records.remove('regimen_cycle_check_ins',entry.id);checkIns++;}return{cycles,check_ins:checkIns};});
+    res.json({data:{...removed,consent_revoked:true,retention:'user_controlled',data_shared:[]}});
+  }));
+
   router.get('/referrals/preview', (req, res) => {
     const id = typeof req.query.product_id === 'string' ? req.query.product_id : '';
     if (!isCanonicalId(id)) return res.status(400).json({ error: { code: 'invalid_product', message: 'Choose a valid sample product.' } });

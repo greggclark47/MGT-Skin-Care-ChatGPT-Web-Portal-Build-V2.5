@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { spawnSync } from "node:child_process";
 import { buildProductionPrerequisites, validateProductionPrerequisites } from "./production-prerequisites.mjs";
 
 const BASE = { NODE_ENV: "production", DEMO_MODE: "false", PUBLIC_ORIGIN: "https://portal.mgt-skin-care.test", DATABASE_URL: "postgresql://u:p@db.mgt-skin-care.test:5432/postgres?sslmode=verify-full", PORTAL_AUTO_MIGRATE: "false", PORTAL_DOMAIN: "portal.mgt-skin-care.test", NODE_IMAGE: "node@sha256:" + "a".repeat(64), API_IMAGE: "ghcr.io/mgt/api@sha256:" + "d".repeat(64), WEB_IMAGE: "ghcr.io/mgt/web@sha256:" + "e".repeat(64), OLLAMA_IMAGE: "ollama/ollama@sha256:" + "b".repeat(64), CADDY_IMAGE: "caddy@sha256:" + "c".repeat(64), SUPABASE_URL: "https://project.supabase.co", SUPABASE_ANON_KEY: "anon", SUPABASE_SERVICE_ROLE_KEY: "service", SUPABASE_GOOGLE_OAUTH_ENABLED: "false", OLLAMA_ENABLED: "true", OLLAMA_BASE_URL: "https://ollama.mgt-skin-care.test", OPENCLAW_ENABLED: "false", WORKER_INTERVAL_SECONDS: "60", WORKER_READINESS_MAX_AGE_SECONDS: "300", BACKUP_MAX_AGE_HOURS: "26", BACKUP_RESTORE_MAX_AGE_DAYS: "90", BACKUP_ATTESTATION_ENABLED: "false", ANTI_AGING_LIVE_AI: "false", ANTI_AGING_CHECKOUT_ENABLED: "false", ANTI_AGING_BOOKING_ENABLED: "false", ANTI_AGING_IMAGE_ANALYSIS_ENABLED: "false", ANTI_AGING_ACCESSIBILITY_VERIFIED: "false", ANTI_AGING_RESTORE_VERIFIED: "false", ANTI_AGING_PRIVACY_REVIEWED: "false", OPERATIONS_ANTI_AGING_RETENTION_DAYS: "365", NOTIFICATION_DELIVERY: "in_app", NOTIFICATION_RETRY_COOLDOWN_SECONDS: "300", NOTIFICATION_MAX_RETRY_DELAY_SECONDS: "3600", NOTIFICATION_MAX_ATTEMPTS: "3", OPERATIONS_ALERT_DELIVERY: "webhook", OPERATIONS_ALERT_WEBHOOK_URL: "https://alerts.mgt-skin-care.test/events", OPERATIONS_ALERT_WEBHOOK_TOKEN: "configured-alert-token", OPERATIONS_ALERT_KEY_ID: "primary", OPERATIONS_ALERT_TIMEOUT_MS: "10000", OPERATIONS_ALERT_LEASE_SECONDS: "60", OPERATIONS_ALERT_RETRY_COOLDOWN_SECONDS: "300", OPERATIONS_ALERT_MAX_RETRY_DELAY_SECONDS: "3600", OPERATIONS_ALERT_MAX_ATTEMPTS: "5", OPERATIONS_ALERT_EVENT_RETENTION_DAYS: "90", OPERATIONS_FOLLOW_UP_OVERDUE_GRACE_SECONDS: "300", OPERATIONS_FOLLOW_UP_RETRY_DELAY_SECONDS: "300", OPERATIONS_FOLLOW_UP_MAX_ATTEMPTS: "5", OPERATIONS_FOLLOW_UP_RETENTION_DAYS: "365", OPERATIONS_AI_LOG_RETENTION_DAYS: "30", OPERATIONS_NOTIFICATION_RETENTION_DAYS: "90", OPERATIONS_BILLING_RETENTION_DAYS: "730", OPERATIONS_WEBHOOK_RECEIPT_RETENTION_DAYS: "90", OPERATIONS_AGGREGATE_METRIC_RETENTION_DAYS: "180", OPERATIONS_DELETION_PROOF_RETENTION_DAYS: "730", OPERATIONS_RUN_RETENTION_DAYS: "90", OPERATIONS_BACKUP_ATTESTATION_RETENTION_DAYS: "90", RELEASE_OWNER_NAME: "Gregg Clark of MGT", SUPPORT_OWNER_NAME: "Gregg Clark of MGT", SUPPORT_OWNER_EMAIL: "support@mgt-skin-care.test", ACCESSIBILITY_VALIDATION_REPORT_URL: "https://evidence.mgt-skin-care.test/accessibility", ACCESSIBILITY_VALIDATED_AT: "2026-01-01T00:00:00.000Z", MONITORING_DASHBOARD_URL: "https://monitoring.mgt-skin-care.test/dashboard", INCIDENT_RUNBOOK_URL: "https://operations.mgt-skin-care.test/runbook", ALERT_OWNER_EMAIL: "alerts@mgt-skin-care.test", SUPPORT_RESPONSE_TARGET_HOURS: "24", SUBSCRIPTIONS_ENABLED: "false" };
@@ -21,6 +22,17 @@ test("supports a reproducible past timestamp and rejects future prerequisite pac
   const future = buildProductionPrerequisites({ env: BASE, candidateCommit: commit, now: "2999-01-01T00:00:00.000Z" });
   assert.equal(validateProductionPrerequisites(future).ok, false);
   assert.match(validateProductionPrerequisites(future).errors.join("; "), /generated_at must be a past ISO timestamp/);
+});
+test("CLI refuses to write a future-dated prerequisite packet", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "mgt-prerequisite-cli-"));
+  try {
+    const output = path.join(root, "prerequisites.json");
+    const script = path.resolve("infra/portal/production-prerequisites.mjs");
+    const result = spawnSync(process.execPath, [script, "--candidate-commit", "0123456789abcdef0123456789abcdef01234567", "--output", output, "--generated-at", "2999-01-01T00:00:00.000Z"], { cwd: process.cwd(), encoding: "utf8", windowsHide: true });
+    assert.notEqual(result.status, 0);
+    assert.match(`${result.stdout}\n${result.stderr}`, /generated_at must be a past ISO timestamp/);
+    assert.equal(fs.existsSync(output), false);
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });
 test("binds passing checkpoint and verification reports to the candidate without copying report content", () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "mgt-local-evidence-"));

@@ -293,3 +293,5 @@ Release operators can now pass `--generated-at <ISO timestamp>` to `infra/portal
 
 Production prerequisite operators can now pass `--generated-at <ISO timestamp>` to `infra/portal/production-prerequisites.mjs`. Prerequisite packets require a valid past timestamp, allowing a candidate-bound packet checksum to be reproduced during release handoff while rejecting future-dated evidence. The option changes no production state and does not satisfy live configuration, provider, restore, ownership, or approval requirements.
 
+The CLI also refuses to write a packet when the supplied timestamp is malformed or future-dated, so the fail-closed rule applies before an artifact reaches the release archive.
+

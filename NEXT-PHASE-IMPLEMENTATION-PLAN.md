@@ -1895,3 +1895,5 @@ Until these decisions and dependencies are evidenced, the plan remains planning 
 
 **Phase F991 — deterministic prerequisite timestamps:** Add the same documented timestamp input and past-time validation to production prerequisite packets, keeping candidate-bound prerequisite checksums reproducible during release handoff without weakening the production hold.
 
+**Phase F992 — prerequisite CLI fail-closed timestamp:** Make the prerequisite CLI reject malformed or future-dated timestamps before writing an artifact, with a regression proving no invalid packet is emitted.
+

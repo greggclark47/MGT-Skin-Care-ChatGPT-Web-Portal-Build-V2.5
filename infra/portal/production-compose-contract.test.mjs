@@ -20,7 +20,8 @@ test("production runtime exposes only the TLS edge", () => {
 test("production runtime keeps migrations manual and local AI opt-in", () => {
   assert.equal((compose.match(/PORTAL_AUTO_MIGRATE: "false"/g) || []).length, 2);
   assert.match(compose, /ollama:\s*\n\s+image:[\s\S]*?profiles: \["local-ai"\]/);
-  assert.match(compose, /OLLAMA_ENABLED: \$\{OLLAMA_ENABLED:-false\}/);
+  assert.match(compose, /OLLAMA_ENABLED: \$\{OLLAMA_ENABLED:\?Set the reviewed Ollama enablement\}/);
+  assert.match(compose, /OPENCLAW_ENABLED: \$\{OPENCLAW_ENABLED:\?Set the reviewed OpenClaw enablement\}/);
   assert.match(compose, /OLLAMA_BASE_URL: \$\{OLLAMA_BASE_URL:-\}/);
   assert.match(compose, /OPENCLAW_BASE_URL: \$\{OPENCLAW_BASE_URL:-\}/);
   assert.match(compose, /OPENCLAW_API_MODE: \$\{OPENCLAW_API_MODE:-\}/);
@@ -32,8 +33,12 @@ test("production runtime keeps migrations manual and local AI opt-in", () => {
 test("production application processes declare their mode and share the configured worker readiness window", () => {
   assert.equal((compose.match(/NODE_ENV: production/g) || []).length, 3);
   assert.equal((compose.match(/DEMO_MODE: "false"/g) || []).length, 2);
-  assert.match(compose, /WORKER_READINESS_MAX_AGE_SECONDS: \$\{WORKER_READINESS_MAX_AGE_SECONDS:-300\}/);
-  assert.match(compose, /Number\(process\.env\.WORKER_READINESS_MAX_AGE_SECONDS\)\*1000/);
+  assert.equal((compose.match(/WORKER_INTERVAL_SECONDS: \$\{WORKER_INTERVAL_SECONDS:\?Set the reviewed worker interval\}/g) || []).length, 2);
+  assert.equal((compose.match(/WORKER_READINESS_MAX_AGE_SECONDS: \$\{WORKER_READINESS_MAX_AGE_SECONDS:\?Set the reviewed worker readiness age\}/g) || []).length, 2);
+  assert.doesNotMatch(compose, /WORKER_(INTERVAL_SECONDS|READINESS_MAX_AGE_SECONDS): \$\{[^}]+:-/);
+  assert.doesNotMatch(compose, /(?:OLLAMA|OPENCLAW)_ENABLED: \$\{[^}]+:-/);
+  assert.match(compose, /Number\(a\)\*1000/);
+  assert.doesNotMatch(compose, /WORKER_HEALTH_FILE\|\|/);
 });
 
 test("production runtime applies reduced privileges, health gates, and bounded resources", () => {

@@ -29,11 +29,11 @@ services:
       PROCESS_ROLE: api
       DATABASE_URL: ${DATABASE_URL:?Set the reviewed production database connection}
       PORTAL_AUTO_MIGRATE: "false"
-      WORKER_INTERVAL_SECONDS: ${WORKER_INTERVAL_SECONDS:-60}
-      WORKER_READINESS_MAX_AGE_SECONDS: ${WORKER_READINESS_MAX_AGE_SECONDS:-300}
-      OLLAMA_ENABLED: ${OLLAMA_ENABLED:-false}
+      WORKER_INTERVAL_SECONDS: ${WORKER_INTERVAL_SECONDS:?Set the reviewed worker interval}
+      WORKER_READINESS_MAX_AGE_SECONDS: ${WORKER_READINESS_MAX_AGE_SECONDS:?Set the reviewed worker readiness age}
+      OLLAMA_ENABLED: ${OLLAMA_ENABLED:?Set the reviewed Ollama enablement}
       OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-}
-      OPENCLAW_ENABLED: ${OPENCLAW_ENABLED:-false}
+      OPENCLAW_ENABLED: ${OPENCLAW_ENABLED:?Set the reviewed OpenClaw enablement}
       OPENCLAW_BASE_URL: ${OPENCLAW_BASE_URL:-}
       OPENCLAW_API_MODE: ${OPENCLAW_API_MODE:-}
     expose:
@@ -61,14 +61,14 @@ services:
       PROCESS_ROLE: worker
       DATABASE_URL: ${DATABASE_URL:?Set the reviewed production database connection}
       PORTAL_AUTO_MIGRATE: "false"
-      WORKER_INTERVAL_SECONDS: ${WORKER_INTERVAL_SECONDS:-60}
-      WORKER_READINESS_MAX_AGE_SECONDS: ${WORKER_READINESS_MAX_AGE_SECONDS:-300}
+      WORKER_INTERVAL_SECONDS: ${WORKER_INTERVAL_SECONDS:?Set the reviewed worker interval}
+      WORKER_READINESS_MAX_AGE_SECONDS: ${WORKER_READINESS_MAX_AGE_SECONDS:?Set the reviewed worker readiness age}
       WORKER_HEALTH_FILE: /tmp/mgt-worker-health.json
     tmpfs:
       - /tmp:rw,noexec,nosuid,size=64m
     stop_grace_period: 60s
     healthcheck:
-      test: ["CMD", "node", "-e", "const fs=require('fs'),f=process.env.WORKER_HEALTH_FILE||'/tmp/mgt-worker-health.json',m=Number(process.env.WORKER_READINESS_MAX_AGE_SECONDS)*1000;fs.stat(f,(e,s)=>process.exit(!e&&Number.isFinite(m)&&m>0&&Date.now()-s.mtimeMs<m?0:1));"]
+      test: ["CMD", "node", "-e", "const fs=require('fs'),f=process.env.WORKER_HEALTH_FILE,a=process.env.WORKER_READINESS_MAX_AGE_SECONDS,valid=typeof f==='string'&&f.length>0&&typeof a==='string'&&/^\\d+$/.test(a)&&Number.isSafeInteger(Number(a))&&Number(a)>0;fs.stat(f||'',(e,s)=>process.exit(valid&&!e&&Date.now()-s.mtimeMs<Number(a)*1000?0:1));"]
       interval: 30s
       timeout: 5s
       retries: 5

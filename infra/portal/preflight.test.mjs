@@ -90,6 +90,7 @@ test("keeps automated backup attestation disabled until its signed integration i
   for (const changed of [
     { BACKUP_ATTESTATION_SECRET: "" },
     { BACKUP_ATTESTATION_KEY_ID: "not valid" },
+    { BACKUP_ATTESTATION_MAX_AGE_SECONDS: undefined },
     { BACKUP_ATTESTATION_MAX_AGE_SECONDS: "0" }
   ]) {
     const result = validateEnvironment({ ...enabled, ...changed });

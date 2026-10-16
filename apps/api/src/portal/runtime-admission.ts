@@ -159,7 +159,7 @@ export function validateProductionBackupAttestationAdmission(env:NodeJS.ProcessE
  if(env.BACKUP_ATTESTATION_ENABLED!=='true'&&env.BACKUP_ATTESTATION_ENABLED!=='false')throw new Error('Production backup attestation admission is invalid.');
  if(env.BACKUP_ATTESTATION_ENABLED==='true'){
   if(!configuredReference(env.BACKUP_ATTESTATION_SECRET)||!/^[A-Za-z0-9_-]{1,64}$/.test(env.BACKUP_ATTESTATION_KEY_ID||''))throw new Error('Production backup attestation admission is invalid.');
-  if(!productionInteger(env.BACKUP_ATTESTATION_MAX_AGE_SECONDS,1,604800,true))throw new Error('Production backup attestation admission is invalid.');
+  if(!productionInteger(env.BACKUP_ATTESTATION_MAX_AGE_SECONDS,1,604800))throw new Error('Production backup attestation admission is invalid.');
  }
  if(env.BACKUP_ATTESTATION_ENABLED==='false'&&['BACKUP_ATTESTATION_SECRET','BACKUP_ATTESTATION_KEY_ID','BACKUP_ATTESTATION_MAX_AGE_SECONDS'].some(key=>env[key]!==undefined&&env[key]!==''))throw new Error('Production backup attestation admission is invalid.');
  if(!productionInteger(env.OPERATIONS_BACKUP_ATTESTATION_RETENTION_DAYS,1,3650))throw new Error('Production backup attestation admission is invalid.');

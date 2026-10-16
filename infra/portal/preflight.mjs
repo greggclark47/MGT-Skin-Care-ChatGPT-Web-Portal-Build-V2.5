@@ -189,9 +189,9 @@ export function validateEnvironment(env) {
     const attestationSecret = requireValue("BACKUP_ATTESTATION_SECRET");
     if (attestationSecret && !validSecretReference(attestationSecret)) errors.push("BACKUP_ATTESTATION_SECRET must be a bounded injected reference without whitespace or control characters.");
     if (!/^[A-Za-z0-9_-]{1,64}$/.test(env.BACKUP_ATTESTATION_KEY_ID || "")) errors.push("BACKUP_ATTESTATION_KEY_ID must identify the active backup signing key using letters, numbers, underscores or hyphens.");
-    if (env.BACKUP_ATTESTATION_MAX_AGE_SECONDS !== undefined && (typeof env.BACKUP_ATTESTATION_MAX_AGE_SECONDS !== "string" || !/^\d+$/.test(env.BACKUP_ATTESTATION_MAX_AGE_SECONDS) || !wholeNumber(env.BACKUP_ATTESTATION_MAX_AGE_SECONDS, 1, 604800))) errors.push("BACKUP_ATTESTATION_MAX_AGE_SECONDS must be a whole number between 1 and 604800.");
+    if (typeof env.BACKUP_ATTESTATION_MAX_AGE_SECONDS !== "string" || !/^\d+$/.test(env.BACKUP_ATTESTATION_MAX_AGE_SECONDS) || !wholeNumber(env.BACKUP_ATTESTATION_MAX_AGE_SECONDS, 1, 604800)) errors.push("BACKUP_ATTESTATION_MAX_AGE_SECONDS must be explicitly configured as a whole number between 1 and 604800 when backup attestation is enabled.");
   }
-  const backupAttestationRetention = env.OPERATIONS_BACKUP_ATTESTATION_RETENTION_DAYS ?? "90";
+  const backupAttestationRetention = env.OPERATIONS_BACKUP_ATTESTATION_RETENTION_DAYS;
   if (typeof backupAttestationRetention !== "string" || !/^\d+$/.test(backupAttestationRetention) || !wholeNumber(backupAttestationRetention, 1, 3650)) errors.push("OPERATIONS_BACKUP_ATTESTATION_RETENTION_DAYS must be a whole number between 1 and 3650.");
 
   const delivery = String(env.NOTIFICATION_DELIVERY || "");
@@ -203,10 +203,10 @@ export function validateEnvironment(env) {
     if (!/^[A-Za-z0-9_-]{1,64}$/.test(env.NOTIFICATION_WEBHOOK_KEY_ID || "")) errors.push("NOTIFICATION_WEBHOOK_KEY_ID must identify the active signing key using letters, numbers, underscores or hyphens.");
     if (env.NOTIFICATION_WEBHOOK_TIMEOUT_MS !== undefined && (typeof env.NOTIFICATION_WEBHOOK_TIMEOUT_MS !== "string" || !/^\d+$/.test(env.NOTIFICATION_WEBHOOK_TIMEOUT_MS) || !wholeNumber(env.NOTIFICATION_WEBHOOK_TIMEOUT_MS, 1000, 30000))) errors.push("NOTIFICATION_WEBHOOK_TIMEOUT_MS must be a whole number between 1000 and 30000.");
   }
-  const notificationRetryBase = env.NOTIFICATION_RETRY_COOLDOWN_SECONDS ?? "300";
-  const notificationRetryMax = env.NOTIFICATION_MAX_RETRY_DELAY_SECONDS ?? "3600";
-  const notificationMaxAttempts = env.NOTIFICATION_MAX_ATTEMPTS ?? "3";
-  const notificationRetention = env.OPERATIONS_NOTIFICATION_RETENTION_DAYS ?? "90";
+  const notificationRetryBase = env.NOTIFICATION_RETRY_COOLDOWN_SECONDS;
+  const notificationRetryMax = env.NOTIFICATION_MAX_RETRY_DELAY_SECONDS;
+  const notificationMaxAttempts = env.NOTIFICATION_MAX_ATTEMPTS;
+  const notificationRetention = env.OPERATIONS_NOTIFICATION_RETENTION_DAYS;
   if (typeof notificationRetryBase !== "string" || !/^\d+$/.test(notificationRetryBase) || !wholeNumber(notificationRetryBase, 10, 3600)) errors.push("NOTIFICATION_RETRY_COOLDOWN_SECONDS must be a whole number between 10 and 3600.");
   if (typeof notificationRetryMax !== "string" || !/^\d+$/.test(notificationRetryMax) || !wholeNumber(notificationRetryMax, 10, 86400)) errors.push("NOTIFICATION_MAX_RETRY_DELAY_SECONDS must be a whole number between 10 and 86400.");
   if (typeof notificationMaxAttempts !== "string" || !/^\d+$/.test(notificationMaxAttempts) || !wholeNumber(notificationMaxAttempts, 1, 20)) errors.push("NOTIFICATION_MAX_ATTEMPTS must be a whole number between 1 and 20.");
@@ -264,9 +264,9 @@ export function validateEnvironment(env) {
     ["OPERATIONS_DELETION_PROOF_RETENTION_DAYS",30,3650],
     ["OPERATIONS_RUN_RETENTION_DAYS",1,3650]
   ]) if (env[key] !== undefined && env[key] !== "" && (typeof env[key] !== "string" || !/^\d+$/.test(env[key]) || !wholeNumber(env[key], minimum, maximum))) errors.push(`${key} must be a whole number between ${minimum} and ${maximum}.`);
-  if (wholeNumber(env.OPERATIONS_ALERT_RETRY_COOLDOWN_SECONDS || "300",10,3600) && wholeNumber(env.OPERATIONS_ALERT_MAX_RETRY_DELAY_SECONDS || "3600",10,86400) && Number(env.OPERATIONS_ALERT_MAX_RETRY_DELAY_SECONDS || 3600) < Number(env.OPERATIONS_ALERT_RETRY_COOLDOWN_SECONDS || 300)) errors.push("OPERATIONS_ALERT_MAX_RETRY_DELAY_SECONDS must be at least OPERATIONS_ALERT_RETRY_COOLDOWN_SECONDS.");
-  const alertTimeoutMs = Number(env.OPERATIONS_ALERT_TIMEOUT_MS || 10000);
-  const alertLeaseSeconds = Number(env.OPERATIONS_ALERT_LEASE_SECONDS || 60);
+  if (wholeNumber(env.OPERATIONS_ALERT_RETRY_COOLDOWN_SECONDS,10,3600) && wholeNumber(env.OPERATIONS_ALERT_MAX_RETRY_DELAY_SECONDS,10,86400) && Number(env.OPERATIONS_ALERT_MAX_RETRY_DELAY_SECONDS) < Number(env.OPERATIONS_ALERT_RETRY_COOLDOWN_SECONDS)) errors.push("OPERATIONS_ALERT_MAX_RETRY_DELAY_SECONDS must be at least OPERATIONS_ALERT_RETRY_COOLDOWN_SECONDS.");
+  const alertTimeoutMs = Number(env.OPERATIONS_ALERT_TIMEOUT_MS);
+  const alertLeaseSeconds = Number(env.OPERATIONS_ALERT_LEASE_SECONDS);
   if (wholeNumber(alertTimeoutMs, 1000, 30000) && wholeNumber(alertLeaseSeconds, 10, 600) && alertLeaseSeconds * 1000 < alertTimeoutMs + 5000) errors.push("OPERATIONS_ALERT_LEASE_SECONDS must exceed OPERATIONS_ALERT_TIMEOUT_MS by at least five seconds.");
 
   if (!["true", "false"].includes(env.SUBSCRIPTIONS_ENABLED)) errors.push("SUBSCRIPTIONS_ENABLED must be exactly true or false.");
@@ -301,7 +301,7 @@ export function validateEnvironment(env) {
   for (const key of ["ANTI_AGING_LIVE_AI", "ANTI_AGING_CHECKOUT_ENABLED", "ANTI_AGING_BOOKING_ENABLED", "ANTI_AGING_IMAGE_ANALYSIS_ENABLED", "ANTI_AGING_ACCESSIBILITY_VERIFIED", "ANTI_AGING_RESTORE_VERIFIED", "ANTI_AGING_PRIVACY_REVIEWED"]) {
     if (!["true", "false"].includes(env[key])) errors.push(`${key} must be explicitly true or false.`);
   }
-  const antiAgingRetention = env.OPERATIONS_ANTI_AGING_RETENTION_DAYS ?? "365";
+  const antiAgingRetention = env.OPERATIONS_ANTI_AGING_RETENTION_DAYS;
   if (typeof antiAgingRetention !== "string" || !/^\d+$/.test(antiAgingRetention) || !wholeNumber(antiAgingRetention, 30, 3650)) errors.push("OPERATIONS_ANTI_AGING_RETENTION_DAYS must be a whole number between 30 and 3650.");
 
   const secretKeys = ["SUPABASE_ANON_KEY", "SUPABASE_SERVICE_ROLE_KEY", "OPERATIONS_ALERT_WEBHOOK_TOKEN"];

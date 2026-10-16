@@ -11,6 +11,13 @@ const BASE = { NODE_ENV: "production", DEMO_MODE: "false", PUBLIC_ORIGIN: "https
 Object.assign(BASE, { HOST: "0.0.0.0", PORT: "8787", WORKER_HEALTH_FILE: "/tmp/mgt-worker-health.json", OPERATIONS_ALERT_KEY_ID: "primary" });
 
 test("reports configuration blockers without serializing values", () => { const result = buildProductionPrerequisites({ env: {}, candidateCommit: "abc" }); assert.equal(result.status, "blocked_on_configuration"); assert.equal(JSON.stringify(result).includes("DATABASE_URL"), true); assert.equal(JSON.stringify(result).includes("postgresql://"), false); });
+test("classifies configuration blockers with a bounded vocabulary", () => {
+  const result = buildProductionPrerequisites({ env: {}, candidateCommit: "abc" });
+  assert.ok(result.local.configuration.error_codes.includes("PRODUCTION_FIELD_INVALID"));
+  assert.ok(result.local.configuration.error_codes.includes("PRODUCTION_CONFIGURATION_CONSTRAINT"));
+  assert.ok(result.local.configuration.error_codes.every((code) => /^[A-Z_]+$/.test(code)));
+  assert.ok(result.local.configuration.error_codes.every((code) => ["ENV_FILE_MISSING", "DISABLED_FEATURE_RESIDUE", "DUPLICATE_CONFIGURATION_REFERENCE", "PRODUCTION_FIELD_INVALID", "PRODUCTION_CONFIGURATION_CONSTRAINT"].includes(code)));
+});
 test("keeps a valid lean profile blocked on external evidence", () => { const result = buildProductionPrerequisites({ env: BASE, candidateCommit: "0123456789abcdef0123456789abcdef01234567" }); assert.equal(result.local.configuration.status, "ready_for_live_validation"); assert.equal(result.status, "blocked_on_external_prerequisites"); assert.equal(result.external.length, 10); assert.ok(result.external.every((item) => item.status === "pending_external_evidence")); });
 test("does not expose secret-like input", () => { const result = buildProductionPrerequisites({ env: { ...BASE, SUPABASE_SERVICE_ROLE_KEY: "super-secret-value" }, candidateCommit: "0123456789abcdef0123456789abcdef01234567" }); assert.equal(JSON.stringify(result).includes("super-secret-value"), false); });
 test("binds the exact candidate when supplied", () => { const commit = "0123456789abcdef0123456789abcdef01234567"; assert.equal(buildProductionPrerequisites({ env: BASE, candidateCommit: commit }).candidate_commit, commit); });
@@ -42,6 +49,7 @@ test("blocks a missing env file even when ambient values are otherwise valid", (
     assert.equal(result.local.configuration.status, "blocked");
     assert.equal(result.local.configuration.source, "env_file_and_process_environment");
     assert.equal(result.local.configuration.env_file_status, "missing");
+    assert.deepEqual(result.local.configuration.error_codes, ["ENV_FILE_MISSING"]);
     assert.match(result.local.configuration.errors.join("; "), /configured production env file must exist/);
   } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });

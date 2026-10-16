@@ -317,3 +317,5 @@ The F915–F949 review remains `pending_production_execution_receipt` until the 
 
 The remaining build is aligned to [`PRODUCTION-SHIP-PLAN-ALIGNMENT.md`](../../PRODUCTION-SHIP-PLAN-ALIGNMENT.md), which incorporates the linked Production Ship Todo Plan across scope/economics, ownership, hosting, secrets, database, backups, catalog, accessibility, support, billing, AI, notifications, staging, production evidence, launch decisions, supervised execution, observation, and closure. The alignment document is a checklist and evidence map; it does not replace live verification or production approval.
 
+F994 prerequisite packets add bounded `local.configuration.error_codes` alongside the existing human-readable errors. Codes are limited to environment-file absence, disabled-feature residue, duplicate configuration references, invalid production fields, and general production configuration constraints. The codes contain no paths, values, or secrets and are checksum-bound; validation rejects missing, unknown, reordered, or tampered classifications. This improves operator handoff without changing the external-evidence or production-approval hold.
+

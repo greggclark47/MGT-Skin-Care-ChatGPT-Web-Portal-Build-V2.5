@@ -18,8 +18,26 @@ const EXTERNAL_REQUIREMENTS = Object.freeze([
   ["github_receipt", "Observed GitHub destination receipt for the candidate"],
   ["drive_receipt", "Observed Google Drive destination receipt for the candidate"]
 ]);
+const CONFIGURATION_ERROR_CODES = Object.freeze([
+  "ENV_FILE_MISSING",
+  "DISABLED_FEATURE_RESIDUE",
+  "DUPLICATE_CONFIGURATION_REFERENCE",
+  "PRODUCTION_FIELD_INVALID",
+  "PRODUCTION_CONFIGURATION_CONSTRAINT"
+]);
 
 function text(value) { return String(value || "").trim(); }
+function configurationErrorCode(error) {
+  const message = text(error);
+  if (message === "configured production env file must exist before preflight.") return "ENV_FILE_MISSING";
+  if (/^Disabled .+ must not retain /.test(message)) return "DISABLED_FEATURE_RESIDUE";
+  if (/^Production (?:image references|secret references|control and delivery endpoints) must remain distinct/.test(message)) return "DUPLICATE_CONFIGURATION_REFERENCE";
+  if (/^[A-Z][A-Z0-9_]* must be /.test(message)) return "PRODUCTION_FIELD_INVALID";
+  return "PRODUCTION_CONFIGURATION_CONSTRAINT";
+}
+function configurationErrorCodes(errors) {
+  return [...new Set((Array.isArray(errors) ? errors : []).map(configurationErrorCode))].sort();
+}
 function validPastIso(value, now = Date.now()) {
   const parsed = Date.parse(text(value));
   return Number.isFinite(parsed) && parsed <= new Date(now).getTime();
@@ -88,6 +106,8 @@ export function validateProductionPrerequisites(document) {
   if (document.status !== "blocked_on_external_prerequisites") errors.push("prerequisites must be explicitly blocked on external prerequisites");
   const config = document.local?.configuration;
   if (config?.status !== "ready_for_live_validation" || !Array.isArray(config.errors) || config.errors.length) errors.push("local configuration must be ready without errors before external prerequisite review");
+  if (!Array.isArray(config?.error_codes) || JSON.stringify(config.error_codes) !== JSON.stringify(configurationErrorCodes(config?.errors))) errors.push("local configuration error_codes must be a bounded classification of configuration errors");
+  if (config?.error_codes?.some((code) => !CONFIGURATION_ERROR_CODES.includes(code))) errors.push("local configuration error_codes must use the bounded error-code vocabulary");
   if (!['process_environment', 'env_file_and_process_environment'].includes(config?.source)) errors.push("local configuration source must be bounded");
   if (!['not_supplied', 'present', 'missing'].includes(config?.env_file_status)) errors.push("local configuration env_file_status must be bounded");
   if (config?.env_file_status === 'missing' && config?.status !== 'blocked') errors.push("missing env file must keep local configuration blocked");
@@ -118,7 +138,7 @@ export function buildProductionPrerequisites({ root = process.cwd(), env = proce
   const preflight = validateEnvironment(merged);
   const configurationErrors = [...preflight.errors];
   if (!envFilePresent) configurationErrors.unshift("configured production env file must exist before preflight.");
-  const config = { status: configurationErrors.length ? "blocked" : "ready_for_live_validation", source: envFileProvided ? "env_file_and_process_environment" : "process_environment", env_file_status: envFileProvided ? (envFilePresent ? "present" : "missing") : "not_supplied", errors: configurationErrors, warnings: preflight.warnings };
+  const config = { status: configurationErrors.length ? "blocked" : "ready_for_live_validation", source: envFileProvided ? "env_file_and_process_environment" : "process_environment", env_file_status: envFileProvided ? (envFilePresent ? "present" : "missing") : "not_supplied", errors: configurationErrors, error_codes: configurationErrorCodes(configurationErrors), warnings: preflight.warnings };
   const evidence = buildLocalEvidence({ root, candidateCommit, checkpointFile, verificationFile });
   const document = {
     version: VERSION,

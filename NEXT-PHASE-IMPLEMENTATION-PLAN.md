@@ -1899,3 +1899,5 @@ Until these decisions and dependencies are evidenced, the plan remains planning 
 
 **Phase F993 — configuration-source admission:** Record bounded configuration-source metadata and reject an explicitly supplied but missing environment file, preventing ambient process values from masking absent production configuration.
 
+**Phase F994 — bounded configuration diagnostics:** Add checksum-bound machine-readable configuration error classifications to prerequisite packets, with strict validation of the fixed vocabulary and regression coverage for missing, unknown, reordered, and tampered classifications. Keep raw errors for human diagnosis while excluding paths, values, and secrets from the new operational field.
+

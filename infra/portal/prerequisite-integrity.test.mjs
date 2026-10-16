@@ -12,7 +12,7 @@ function fixture() {
   // Synthetic configuration readiness, never evidence of a deployed service.
   const document = buildProductionPrerequisites({ env: {}, candidateCommit: 'a'.repeat(40) });
   document.generated_at = now;
-  document.local.configuration = { status: 'ready_for_live_validation', source: 'process_environment', env_file_status: 'not_supplied', errors: [], warnings: ['External observations still required'] };
+  document.local.configuration = { status: 'ready_for_live_validation', source: 'process_environment', env_file_status: 'not_supplied', errors: [], error_codes: [], warnings: ['External observations still required'] };
   document.status = 'blocked_on_external_prerequisites';
   document.prerequisites_checksum = productionPrerequisitesChecksum(document);
   return document;
@@ -34,6 +34,7 @@ mutations.push(
   { name: 'configuration status', change: d => { d.local.configuration.status = 'blocked'; } },
   { name: 'configuration errors added', change: d => { d.local.configuration.errors.push('Observed failure'); } },
   { name: 'configuration errors removed', change: d => { delete d.local.configuration.errors; } },
+  { name: 'configuration error codes changed', change: d => { d.local.configuration.error_codes = ['PRODUCTION_FIELD_INVALID']; } },
   { name: 'configuration warning changed', change: d => { d.local.configuration.warnings[0] = 'Changed warning'; } },
   { name: 'configuration warnings removed', change: d => { delete d.local.configuration.warnings; } },
   { name: 'configuration removed', change: d => { delete d.local.configuration; } },
@@ -42,7 +43,7 @@ mutations.push(
   { name: 'nested owner added', change: d => { d.local.configuration.owner = 'Unrecorded replacement'; } },
   { name: 'external records reordered', change: d => { d.external.reverse(); } }
 );
-assert.equal(mutations.length, 100);
+assert.equal(mutations.length, 101);
 for (const { name, change } of mutations) {
   test(`prerequisite integrity detects ${name}`, () => {
     const original = fixture();

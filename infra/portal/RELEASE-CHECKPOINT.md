@@ -299,3 +299,7 @@ The CLI also refuses to write a packet when the supplied timestamp is malformed 
 
 Prerequisite packets now record only bounded configuration-source metadata (`process_environment` or `env_file_and_process_environment`, plus `not_supplied`, `present`, or `missing`). An explicitly supplied but missing environment file blocks local configuration even when ambient process variables are valid. No path or secret value is serialized, and the production hold remains unchanged.
 
+# F994 bounded configuration diagnostics checkpoint
+
+Prerequisite packets now include checksum-bound, machine-readable configuration error classifications alongside human-readable diagnostics. The bounded vocabulary distinguishes missing environment files, disabled-feature residue, duplicate configuration references, invalid production fields, and other production configuration constraints. Validation rejects missing, unknown, reordered, or tampered classifications. This improves operational handoff while leaving all live evidence, approval, and production deployment requirements blocked.
+

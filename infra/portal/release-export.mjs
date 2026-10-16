@@ -77,6 +77,28 @@ export function inspectReleaseArtifact({ root = process.cwd(), reference } = {})
   };
 }
 
+export function createReleaseArchive({ root = process.cwd(), candidateCommit = "", reference = "" } = {}) {
+  const commit = text(candidateCommit) || gitValue(root, ["rev-parse", "HEAD"]);
+  if (!SHA.test(commit)) throw new Error("candidate_commit must be a 40-character commit SHA.");
+  const archiveReference = text(reference);
+  if (!/^work\/exports\/[A-Za-z0-9._/-]+\.zip$/.test(archiveReference) || archiveReference.includes("..")) {
+    throw new Error("Archive output must be a safe work/exports/*.zip reference without traversal.");
+  }
+  const expectedChecksum = gitArchiveChecksum(root, commit);
+  const destination = resolveReleaseReference({ root, reference: archiveReference });
+  if (fs.existsSync(destination)) {
+    const existing = inspectReleaseArtifact({ root, reference: archiveReference });
+    if (existing.checksum !== expectedChecksum) throw new Error(`${archiveReference} already exists and does not reproduce candidate commit ${commit}.`);
+    return { ...existing, candidate_commit: commit, created: false };
+  }
+  fs.mkdirSync(path.dirname(destination), { recursive: true });
+  const result = spawnSync("git", ["archive", "--format=zip", `--output=${destination}`, commit], { cwd: root, encoding: "utf8", windowsHide: true });
+  if (result.status !== 0 || !fs.existsSync(destination)) throw new Error("Unable to create the candidate archive from Git.");
+  const created = inspectReleaseArtifact({ root, reference: archiveReference });
+  if (created.checksum !== expectedChecksum) throw new Error(`${archiveReference} does not reproduce candidate commit ${commit}.`);
+  return { ...created, candidate_commit: commit, created: true };
+}
+
 function gitValue(root, args) {
   const result = spawnSync("git", args, { cwd: root, encoding: "utf8", windowsHide: true });
   return result.status === 0 ? text(result.stdout) : "";
@@ -212,18 +234,21 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   const args = process.argv.slice(2);
   const output = argumentValue(args, "--output");
   const archive = argumentValue(args, "--archive");
+  const createArchive = argumentValue(args, "--create-archive");
   const references = argumentValue(args, "--references");
   const candidateCommitArgument = argumentValue(args, "--candidate-commit");
   if (!output) {
-    console.error("Usage: node infra/portal/release-export.mjs --output work/exports/release-export.json [--candidate-commit <sha>] [--references README.md,infra/portal/README.md] [--archive work/exports/package.zip]");
+    console.error("Usage: node infra/portal/release-export.mjs --output work/exports/release-export.json [--candidate-commit <sha>] [--references README.md,infra/portal/README.md] [--archive work/exports/package.zip] [--create-archive work/exports/package.zip]");
     process.exitCode = 1;
   } else {
     try {
       const root = path.resolve(fileURLToPath(new URL("../..", import.meta.url)));
       const candidateCommit = candidateCommitArgument || gitValue(root, ["rev-parse", "HEAD"]);
+      if (archive && createArchive) throw new Error("Use either --archive or --create-archive, not both.");
+      if (createArchive) createReleaseArchive({ root, candidateCommit, reference: createArchive });
       const credentialFindings = scanGitCommit(root, candidateCommit);
       if (credentialFindings.length) throw new Error(`Candidate commit credential scan found ${credentialFindings.length} potential finding(s); inspect the commit before export.`);
-      const manifest = buildReleaseExport({ root, candidateCommit, references: references ? references.split(",") : DEFAULT_EXPORT_REFERENCES, archiveReference: archive });
+      const manifest = buildReleaseExport({ root, candidateCommit, references: references ? references.split(",") : DEFAULT_EXPORT_REFERENCES, archiveReference: createArchive || archive });
       const destination = path.resolve(root, output);
       fs.mkdirSync(path.dirname(destination), { recursive: true });
       fs.writeFileSync(destination, `${JSON.stringify(manifest, null, 2)}\n`);

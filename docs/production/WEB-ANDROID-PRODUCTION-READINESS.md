@@ -38,6 +38,9 @@ This register is an engineering release aid, not legal advice, a regulatory cert
 - Durable follow-up tasks now have generation-fenced claims, future-time refusal, bounded retries,
   overdue blocking, retention, and aggregate operations-health reporting; no task executor is
   enabled implicitly.
+- Release export tooling can now create an idempotent candidate ZIP directly from the pinned Git
+  commit under `work/exports/`; a pre-existing archive is accepted only when its bytes and digest
+  reproduce that same commit.
 - Anti-aging readiness switches and operational retention are now explicit, bounded production inputs;
   they report gates only and do not activate checkout, booking or image analysis.
 

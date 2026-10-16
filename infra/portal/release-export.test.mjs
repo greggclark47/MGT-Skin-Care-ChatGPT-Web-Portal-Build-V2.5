@@ -6,6 +6,7 @@ import path from "node:path";
 import { spawnSync } from "node:child_process";
 import {
   buildReleaseExport,
+  createReleaseArchive,
   releaseExportChecksum,
   validateReleaseExport,
   verifyReleaseExport
@@ -85,4 +86,34 @@ test("accepts only an archive reproduced from the exact candidate commit", () =>
   const changed = buildReleaseExport({ root, candidateCommit: commit, references: ["README.md"], archiveReference: reference, now: "2026-01-01T00:00:00.000Z" });
   assert.equal(changed.status, "blocked");
   assert.match(changed.errors.join("; "), /exactly reproduce/);
+});
+
+test("creates an idempotent candidate archive and rejects reuse for another commit", () => {
+  const root = fixture();
+  for (const args of [
+    ["init", "-q"],
+    ["add", "."],
+    ["-c", "user.name=MGT Test", "-c", "user.email=test@invalid.local", "commit", "-qm", "fixture"]
+  ]) assert.equal(spawnSync("git", args, { cwd: root, windowsHide: true }).status, 0);
+  const commit = spawnSync("git", ["rev-parse", "HEAD"], { cwd: root, encoding: "utf8", windowsHide: true }).stdout.trim();
+  const reference = "work/exports/generated-candidate.zip";
+
+  const first = createReleaseArchive({ root, candidateCommit: commit, reference });
+  assert.equal(first.created, true);
+  assert.equal(first.candidate_commit, commit);
+  assert.equal(first.reference, reference);
+  assert.equal(createReleaseArchive({ root, candidateCommit: commit, reference }).created, false);
+
+  fs.appendFileSync(path.join(root, "README.md"), "next candidate\n");
+  assert.equal(spawnSync("git", ["add", "."], { cwd: root, windowsHide: true }).status, 0);
+  assert.equal(spawnSync("git", ["-c", "user.name=MGT Test", "-c", "user.email=test@invalid.local", "commit", "-qm", "second"], { cwd: root, windowsHide: true }).status, 0);
+  const nextCommit = spawnSync("git", ["rev-parse", "HEAD"], { cwd: root, encoding: "utf8", windowsHide: true }).stdout.trim();
+  assert.notEqual(nextCommit, commit);
+  assert.throws(() => createReleaseArchive({ root, candidateCommit: nextCommit, reference }), /already exists and does not reproduce/);
+});
+
+test("keeps archive creation inside the sanitized export directory", () => {
+  const root = fixture();
+  assert.throws(() => createReleaseArchive({ root, candidateCommit: COMMIT, reference: "infra/portal/archive.zip" }), /safe work\/exports/);
+  assert.throws(() => createReleaseArchive({ root, candidateCommit: COMMIT, reference: "work/exports/../archive.zip" }), /safe work\/exports/);
 });

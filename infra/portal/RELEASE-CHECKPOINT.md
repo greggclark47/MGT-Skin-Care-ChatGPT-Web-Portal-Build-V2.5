@@ -1,5 +1,7 @@
 # AI release controls checkpoint
 
+2026-10-16 signed approval envelope: `signed-approval.mjs` now verifies candidate-bound Ed25519 approval envelopes with bounded role, key identity, signer subject reference, strict UTC window, payload checksum, and signature checks. It does not authenticate the human, create keys, consume authority, or authorize deployment.
+
 2026-10-16 strict operations policy admission: production preflight now requires the complete notification, alert, follow-up, retention, and anti-aging operations policy tuple to be explicitly declared; missing values cannot fall back to runtime defaults. Focused production-intake coverage passes; this validates configuration shape only, not live service behavior.
 
 2026-10-16 strict evidence JSON: the release receipt, closeout, finalization, launch, and execution CLI readers now reject duplicate JSON object keys before checksum-bound evidence is admitted. Syntax remains strict and no evidence body is echoed in errors; focused coverage passes.

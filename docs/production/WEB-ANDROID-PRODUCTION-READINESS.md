@@ -54,6 +54,9 @@ This register is an engineering release aid, not legal advice, a regulatory cert
 - Production preflight now requires the complete operations and retention policy tuple explicitly;
   production cannot silently inherit worker defaults for notifications, alerts, follow-ups, or
   operational data retention.
+- A non-mutating Ed25519 approval-envelope verifier now binds candidate, artifact, role, key,
+  signer-subject reference, validity window, payload checksum, and signature before approval
+  evidence can be reviewed; human identity and production authorization remain external gates.
 - Anti-aging readiness switches and operational retention are now explicit, bounded production inputs;
   they report gates only and do not activate checkout, booking or image analysis.
 

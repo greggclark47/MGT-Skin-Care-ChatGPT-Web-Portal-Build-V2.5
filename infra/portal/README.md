@@ -139,6 +139,8 @@ The worker does not create database dumps itself: automatic unencrypted database
 
 The non-mutating `recovery-drill-review.mjs` contract adds the evidence layer around that attestation: an operator must record the exact candidate, distinct backup and isolated-restore targets, measured RTO/RPO against accepted targets, restored migration version, rollback plan, failed-restore procedure, and an explicit Gregg decision. Each supporting record is locally re-hashed and credential-scanned. The review can be `blocked` or `ready_for_recovery_review`; it cannot execute a backup, restore, rollback, or production operation.
 
+The non-mutating `signed-approval.mjs` contract verifies candidate-bound Ed25519 approval envelopes. It binds role, candidate commit, artifact checksum, signer subject reference, key ID, strict UTC validity window, payload checksum, and signature. It never creates signing credentials, authenticates the human subject, consumes authority, deploys, or turns a local signature test into a production approval.
+
 Run `pnpm --filter @mgt/api test:operations` and `pnpm --filter @mgt/api test:readiness` for worker and readiness regression checks. Checkout-request reconciliation, live webhook delivery validation, live identity-deletion validation, a live notification provider and a real restore drill still require environment-specific implementation and validation. No claim of complete production readiness is made.
 
 Validation: API compilation, web build, existing referral suite and new billing suite. Remaining: real Stripe sandbox lifecycle, production PostgreSQL, container startup, browser interactions and deployment.

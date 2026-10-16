@@ -11,6 +11,7 @@ import {
   validateReleaseExport,
   verifyReleaseExport
 } from "./release-export.mjs";
+import { productionPrerequisitesChecksum } from "./production-prerequisites.mjs";
 
 const COMMIT = "0123456789abcdef0123456789abcdef01234567";
 
@@ -56,6 +57,29 @@ test("allows documented non-secret provider flags", () => {
   fs.writeFileSync(path.join(root, "infra", "portal", "flags.md"), "STRIPE_LIVE_MODE=false\nSUPABASE_URL=https://project.invalid\n");
   const manifest = buildReleaseExport({ root, candidateCommit: COMMIT, references: ["infra/portal/flags.md"], now: "2026-01-01T00:00:00.000Z" });
   assert.equal(manifest.status, "ready_for_export");
+});
+
+test("binds candidate-specific production prerequisite evidence", () => {
+  const root = fixture();
+  fs.mkdirSync(path.join(root, "work", "production"), { recursive: true });
+  const packet = {
+    version: "1.0",
+    candidate_commit: COMMIT,
+    generated_at: "2026-01-01T00:00:00.000Z",
+    local: { evidence: { status: "verified" } },
+    status: "blocked_on_configuration"
+  };
+  packet.prerequisites_checksum = productionPrerequisitesChecksum(packet);
+  fs.writeFileSync(path.join(root, "work", "production", "prerequisites.json"), `${JSON.stringify(packet)}\n`);
+  const manifest = buildReleaseExport({ root, candidateCommit: COMMIT, references: ["README.md"], prerequisitesReference: "work/production/prerequisites.json", now: "2026-01-02T00:00:00.000Z" });
+  assert.equal(manifest.status, "ready_for_export");
+  assert.equal(manifest.prerequisites.status, "blocked_on_configuration");
+  assert.equal(verifyReleaseExport({ root, manifest }).ok, true);
+  packet.candidate_commit = "abcdefabcdefabcdefabcdefabcdefabcdefabcd";
+  fs.writeFileSync(path.join(root, "work", "production", "prerequisites.json"), `${JSON.stringify(packet)}\n`);
+  const changed = buildReleaseExport({ root, candidateCommit: COMMIT, references: ["README.md"], prerequisitesReference: "work/production/prerequisites.json", now: "2026-01-02T00:00:00.000Z" });
+  assert.equal(changed.status, "blocked");
+  assert.match(changed.errors.join("; "), /exact candidate commit/);
 });
 
 test("requires observed Drive metadata before marking upload complete", () => {

@@ -1823,6 +1823,8 @@ This checkpoint does not create a Stripe Product or Prices, connect an account, 
 
 **Phase F986 — candidate-bound prerequisite evidence:** Production prerequisite generation now optionally binds the exact candidate commit to a passing local checkpoint and verification report. The packet records backend-build and portal-test evidence references without copying report content, rejects missing/mismatched/failed reports, and continues to keep live prerequisites and production authorization external. This phase does not deploy or mark production ready.
 
+**Phase F987 — prerequisite-bound release export:** Release export generation now optionally binds the candidate-specific production prerequisite packet by checksum, bounded status, and exact candidate commit. Verification re-reads the packet and rejects changed, malformed, or detached evidence while keeping the packet outside the commit archive. This phase does not supply production configuration, live provider evidence, or release approval.
+
 **Exit evidence:** approved positioning and claims, consent-compliant measurement plan, attribution rules, partner terms where relevant, campaign cap and stop rule, baseline report, and a post-test decision grounded in observed data.
 
 ### Phase E — data, AI economics and service qualification (Critical for production)

@@ -5,6 +5,7 @@ import os from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { productionPrerequisitesChecksum } from "./production-prerequisites.mjs";
 import { scanGitCommit } from "./tracked-secret-scan.mjs";
 
 const SHA = /^[a-f0-9]{40}$/i;
@@ -77,6 +78,28 @@ export function inspectReleaseArtifact({ root = process.cwd(), reference } = {})
   };
 }
 
+function inspectPrerequisitePacket({ root, reference, candidateCommit }) {
+  const artifact = inspectReleaseArtifact({ root, reference });
+  if (path.extname(artifact.reference).toLowerCase() !== ".json") throw new Error("production prerequisite evidence must be a JSON file.");
+  let document;
+  try {
+    document = JSON.parse(fs.readFileSync(resolveReleaseReference({ root, reference }), "utf8"));
+  } catch {
+    throw new Error("production prerequisite evidence must be valid JSON.");
+  }
+  if (document?.version !== "1.0") throw new Error("production prerequisite evidence must use version 1.0.");
+  if (text(document?.candidate_commit) !== text(candidateCommit)) throw new Error("production prerequisite evidence must bind the exact candidate commit.");
+  if (!["blocked_on_configuration", "blocked_on_external_prerequisites"].includes(document?.status)) throw new Error("production prerequisite evidence must remain blocked until live prerequisites are supplied.");
+  if (text(document?.prerequisites_checksum) !== productionPrerequisitesChecksum(document)) throw new Error("production prerequisite evidence checksum is invalid.");
+  if (!document?.local?.evidence || !["not_evaluated", "verified", "blocked"].includes(document.local.evidence.status)) throw new Error("production prerequisite evidence must include a bounded local evidence status.");
+  return {
+    ...artifact,
+    status: document.status,
+    evidence_status: document.local.evidence.status,
+    candidate_commit: text(document.candidate_commit)
+  };
+}
+
 export function createReleaseArchive({ root = process.cwd(), candidateCommit = "", reference = "" } = {}) {
   const commit = text(candidateCommit) || gitValue(root, ["rev-parse", "HEAD"]);
   if (!SHA.test(commit)) throw new Error("candidate_commit must be a 40-character commit SHA.");
@@ -139,7 +162,7 @@ function destinationTemplate({ root, candidateCommit, branch } = {}) {
   };
 }
 
-export function buildReleaseExport({ root = process.cwd(), candidateCommit = "", branch = "", references = DEFAULT_EXPORT_REFERENCES, archiveReference = "", now = new Date().toISOString() } = {}) {
+export function buildReleaseExport({ root = process.cwd(), candidateCommit = "", branch = "", references = DEFAULT_EXPORT_REFERENCES, archiveReference = "", prerequisitesReference = "", now = new Date().toISOString() } = {}) {
   const commit = text(candidateCommit) || gitValue(root, ["rev-parse", "HEAD"]);
   if (!SHA.test(commit)) throw new Error("candidate_commit must be a 40-character commit SHA.");
   const chosen = [...new Set([...references, archiveReference].map(text).filter(Boolean))];
@@ -151,6 +174,14 @@ export function buildReleaseExport({ root = process.cwd(), candidateCommit = "",
       entries.push({ id: reference.replace(/[^A-Za-z0-9]+/g, "_").replace(/^_|_$/g, "").toLowerCase(), ...inspectReleaseArtifact({ root, reference }) });
     } catch (error) {
       errors.push(`${reference}: ${error.message}`);
+    }
+  }
+  let prerequisites = null;
+  if (prerequisitesReference) {
+    try {
+      prerequisites = inspectPrerequisitePacket({ root, reference: prerequisitesReference, candidateCommit: commit });
+    } catch (error) {
+      errors.push(`${prerequisitesReference}: ${error.message}`);
     }
   }
   if (archiveReference) {
@@ -169,6 +200,7 @@ export function buildReleaseExport({ root = process.cwd(), candidateCommit = "",
     status: errors.length ? "blocked" : "ready_for_export",
     destinations: destinationTemplate({ root, candidateCommit: commit, branch }),
     entries,
+    prerequisites,
     errors
   };
   return { ...manifest, bundle_checksum: releaseExportChecksum(manifest) };
@@ -182,6 +214,14 @@ export function validateReleaseExport(manifest, { now = Date.now() } = {}) {
   if (!Number.isFinite(Date.parse(text(manifest.generated_at))) || Date.parse(text(manifest.generated_at)) > new Date(now).getTime()) errors.push("generated_at must be a past ISO timestamp");
   if (!["ready_for_export", "blocked", "exported"].includes(manifest.status)) errors.push("status must be a known export state");
   if (!CHECKSUM.test(text(manifest.bundle_checksum)) || text(manifest.bundle_checksum) !== releaseExportChecksum(manifest)) errors.push("bundle_checksum must match the canonical export manifest");
+  const prerequisites = manifest.prerequisites;
+  if (prerequisites !== null && prerequisites !== undefined) {
+    if (!validReference(prerequisites.reference)) errors.push("prerequisites.reference must be a safe local path");
+    if (!CHECKSUM.test(text(prerequisites.checksum))) errors.push("prerequisites.checksum must be a sha256 checksum");
+    if (!SHA.test(text(prerequisites.candidate_commit)) || text(prerequisites.candidate_commit) !== text(manifest.candidate_commit)) errors.push("prerequisites.candidate_commit must bind the candidate commit");
+    if (!["blocked_on_configuration", "blocked_on_external_prerequisites"].includes(prerequisites.status)) errors.push("prerequisites.status must remain blocked until live prerequisites are supplied");
+    if (!["not_evaluated", "verified", "blocked"].includes(prerequisites.evidence_status)) errors.push("prerequisites.evidence_status must be bounded");
+  }
   const entries = Array.isArray(manifest.entries) ? manifest.entries : [];
   const ids = new Set();
   for (const entry of entries) {
@@ -213,6 +253,15 @@ export function verifyReleaseExport({ root = process.cwd(), manifest } = {}) {
       errors.push(`${entry?.id || "entry"} could not be verified: ${error.message}`);
     }
   }
+  if (manifest?.prerequisites) {
+    try {
+      const inspected = inspectPrerequisitePacket({ root, reference: manifest.prerequisites.reference, candidateCommit: manifest.candidate_commit });
+      if (inspected.checksum !== text(manifest.prerequisites.checksum)) errors.push("prerequisites checksum does not match its local artifact");
+      if (inspected.status !== manifest.prerequisites.status || inspected.evidence_status !== manifest.prerequisites.evidence_status) errors.push("prerequisites status does not match its local artifact");
+    } catch (error) {
+      errors.push(`prerequisites could not be verified: ${error.message}`);
+    }
+  }
   for (const entry of Array.isArray(manifest?.entries) ? manifest.entries.filter((candidate) => candidate?.kind === "archive") : []) {
     try {
       if (text(entry.checksum) !== gitArchiveChecksum(root, text(manifest?.candidate_commit))) errors.push(`${entry.id} archive does not reproduce the candidate commit`);
@@ -236,9 +285,10 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   const archive = argumentValue(args, "--archive");
   const createArchive = argumentValue(args, "--create-archive");
   const references = argumentValue(args, "--references");
+  const prerequisites = argumentValue(args, "--prerequisites");
   const candidateCommitArgument = argumentValue(args, "--candidate-commit");
   if (!output) {
-    console.error("Usage: node infra/portal/release-export.mjs --output work/exports/release-export.json [--candidate-commit <sha>] [--references README.md,infra/portal/README.md] [--archive work/exports/package.zip] [--create-archive work/exports/package.zip]");
+    console.error("Usage: node infra/portal/release-export.mjs --output work/exports/release-export.json [--candidate-commit <sha>] [--references README.md,infra/portal/README.md] [--prerequisites work/production/prerequisites.json] [--archive work/exports/package.zip] [--create-archive work/exports/package.zip]");
     process.exitCode = 1;
   } else {
     try {
@@ -248,7 +298,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
       const credentialFindings = scanGitCommit(root, candidateCommit);
       if (credentialFindings.length) throw new Error(`Candidate commit credential scan found ${credentialFindings.length} potential finding(s); inspect the commit before export.`);
       if (createArchive) createReleaseArchive({ root, candidateCommit, reference: createArchive });
-      const manifest = buildReleaseExport({ root, candidateCommit, references: references ? references.split(",") : DEFAULT_EXPORT_REFERENCES, archiveReference: createArchive || archive });
+      const manifest = buildReleaseExport({ root, candidateCommit, references: references ? references.split(",") : DEFAULT_EXPORT_REFERENCES, prerequisitesReference: prerequisites, archiveReference: createArchive || archive });
       const destination = path.resolve(root, output);
       fs.mkdirSync(path.dirname(destination), { recursive: true });
       fs.writeFileSync(destination, `${JSON.stringify(manifest, null, 2)}\n`);

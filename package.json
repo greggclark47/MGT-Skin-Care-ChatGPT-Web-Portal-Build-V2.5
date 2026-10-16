@@ -77,6 +77,7 @@
     "test:production-evidence": "node --test infra/portal/production-evidence.test.mjs",
     "test:release-export": "node --test infra/portal/release-export.test.mjs",
     "test:recovery-drill": "node --test infra/portal/recovery-drill-review.test.mjs",
+    "test:strict-json": "node --test infra/portal/strict-json.test.mjs",
     "test:release-receipt": "node --test infra/portal/release-receipt.test.mjs",
     "test:release-closeout": "node --test infra/portal/release-closeout.test.mjs",
     "test:release-finalization": "node --test infra/portal/release-finalization.test.mjs",

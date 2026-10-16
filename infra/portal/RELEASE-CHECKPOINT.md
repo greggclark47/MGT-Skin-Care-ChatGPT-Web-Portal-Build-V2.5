@@ -1,5 +1,7 @@
 # AI release controls checkpoint
 
+2026-10-16 strict evidence JSON: the release receipt, closeout, finalization, launch, and execution CLI readers now reject duplicate JSON object keys before checksum-bound evidence is admitted. Syntax remains strict and no evidence body is echoed in errors; focused coverage passes.
+
 2026-10-16 operations lease admission: production preflight now requires the operations-alert lease to outlive its configured delivery timeout by a five-second safety margin, preventing a slow alert attempt from being completed after a stale worker can reclaim the lease. Focused and full local verification cover this rule; no live alert destination was contacted.
 
 2026-10-16 recovery-drill evidence contract: `recovery-drill-review.mjs` now validates measured RTO/RPO against accepted targets, distinct backup/restore targets, restored migration continuity, checksum-bound rollback and failed-restore evidence, credential-safe records, and an explicit Gregg decision. It does not execute or claim a live restore.

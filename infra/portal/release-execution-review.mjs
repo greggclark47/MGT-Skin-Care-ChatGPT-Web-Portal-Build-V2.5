@@ -6,6 +6,7 @@ import { inspectReleaseArtifact, validateReleaseExport } from "./release-export.
 import { validateReleaseCloseout } from "./release-closeout.mjs";
 import { validateReleaseFinalization } from "./release-finalization.mjs";
 import { validateReleaseLaunchReview } from "./release-launch-review.mjs";
+import { readStrictJsonFile } from "./strict-json.mjs";
 
 const SHA = /^[a-f0-9]{40}$/i;
 const CHECKSUM = /^sha256:[a-f0-9]{64}$/i;
@@ -114,12 +115,12 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   } else {
     try {
       const root = path.resolve(fileURLToPath(new URL("../..", import.meta.url)));
-      const manifest = JSON.parse(fs.readFileSync(path.resolve(root, manifestReference), "utf8"));
-      const closeout = JSON.parse(fs.readFileSync(path.resolve(root, closeoutReference), "utf8"));
-      const review = reviewReference ? JSON.parse(fs.readFileSync(path.resolve(root, reviewReference), "utf8")) : null;
-      const finalization = JSON.parse(fs.readFileSync(path.resolve(root, finalizationReference), "utf8"));
-      const launchReview = JSON.parse(fs.readFileSync(path.resolve(root, launchReference), "utf8"));
-      const records = recordsReference ? JSON.parse(fs.readFileSync(path.resolve(root, recordsReference), "utf8")) : {};
+      const manifest = readStrictJsonFile(path.resolve(root, manifestReference));
+      const closeout = readStrictJsonFile(path.resolve(root, closeoutReference));
+      const review = reviewReference ? readStrictJsonFile(path.resolve(root, reviewReference)) : null;
+      const finalization = readStrictJsonFile(path.resolve(root, finalizationReference));
+      const launchReview = readStrictJsonFile(path.resolve(root, launchReference));
+      const records = recordsReference ? readStrictJsonFile(path.resolve(root, recordsReference)) : {};
       const document = buildReleaseExecutionReview({ root, manifest, closeout, review, finalization, launchReview, records });
       const destination = path.resolve(root, output);
       fs.mkdirSync(path.dirname(destination), { recursive: true });

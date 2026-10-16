@@ -5,6 +5,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { validateReleaseExport } from "./release-export.mjs";
+import { readStrictJsonFile } from "./strict-json.mjs";
 
 const SHA = /^[a-f0-9]{40}$/i;
 const CHECKSUM = /^sha256:[a-f0-9]{64}$/i;
@@ -200,9 +201,9 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   } else {
     try {
       const root = path.resolve(fileURLToPath(new URL("../..", import.meta.url)));
-      const manifest = JSON.parse(fs.readFileSync(path.resolve(root, manifestReference), "utf8"));
-      const githubReceipt = githubReference ? JSON.parse(fs.readFileSync(path.resolve(root, githubReference), "utf8")) : null;
-      const googleDriveReceipt = driveReference ? JSON.parse(fs.readFileSync(path.resolve(root, driveReference), "utf8")) : null;
+      const manifest = readStrictJsonFile(path.resolve(root, manifestReference));
+      const githubReceipt = githubReference ? readStrictJsonFile(path.resolve(root, githubReference)) : null;
+      const googleDriveReceipt = driveReference ? readStrictJsonFile(path.resolve(root, driveReference)) : null;
       const review = buildReleaseReceiptReview({ manifest, githubReceipt, googleDriveReceipt });
       const destination = path.resolve(root, output);
       fs.mkdirSync(path.dirname(destination), { recursive: true });

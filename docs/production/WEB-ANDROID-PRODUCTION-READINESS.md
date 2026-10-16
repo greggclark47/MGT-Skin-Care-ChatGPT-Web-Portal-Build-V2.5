@@ -49,6 +49,8 @@ This register is an engineering release aid, not legal advice, a regulatory cert
   and the accountable decision without executing a live restore.
 - Production preflight now requires the operations-alert lease to exceed its delivery timeout by
   a five-second safety margin, preventing stale-worker completion of a slow alert attempt.
+- Release evidence CLI readers now reject duplicate JSON object keys before receipt, closeout,
+  launch, or execution evidence enters the checksum-bound review chain.
 - Anti-aging readiness switches and operational retention are now explicit, bounded production inputs;
   they report gates only and do not activate checkout, booking or image analysis.
 

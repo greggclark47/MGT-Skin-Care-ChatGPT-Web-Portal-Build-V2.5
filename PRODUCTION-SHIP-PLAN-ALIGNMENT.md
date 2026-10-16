@@ -108,4 +108,4 @@ Stop and keep production gated for missing ownership, unresolved scope or budget
 
 ## Current release boundary
 
-The project currently has local release-control coverage through F814. The remaining production blockers are live environment configuration, real staging/production evidence, named ownership, optional-feature decisions, external destination receipts, and an approved go/no-go decision. No local phase may change those states to pass without the referenced real-world evidence.
+The project currently has local release-control coverage through F984, including strict signed-backup freshness admission and API/worker startup fencing. The remaining production blockers are live environment configuration, real staging/production evidence, named ownership, optional-feature decisions, external destination receipts, and an approved go/no-go decision. No local phase may change those states to pass without the referenced real-world evidence.

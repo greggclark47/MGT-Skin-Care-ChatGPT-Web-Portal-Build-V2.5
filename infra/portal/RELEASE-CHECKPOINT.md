@@ -1,5 +1,7 @@
 # AI release controls checkpoint
 
+2026-10-16 production ship alignment freshness: the current ship map now tracks local release-control coverage through F984, including signed backup freshness parity and API/worker startup fencing. The production boundary remains NOT READY until live environment configuration, staging/production evidence, named ownership, optional-feature decisions, external destination receipts, and approved go/no-go authority are present. No deployment was performed.
+
 2026-10-16 signed backup freshness parity: enabled backup attestation now requires an explicit `BACKUP_ATTESTATION_MAX_AGE_SECONDS` value in preflight and runtime admission, and the request verifier no longer supplies a hidden production fallback. API and worker startup probes reject the incomplete declaration before database initialization; focused runtime coverage passes. This remains configuration-shape evidence only and does not establish a live backup service or restore drill.
 
 2026-10-16 signed approval envelope: `signed-approval.mjs` now verifies candidate-bound Ed25519 approval envelopes with bounded role, key identity, signer subject reference, strict UTC window, payload checksum, and signature checks. It does not authenticate the human, create keys, consume authority, or authorize deployment.

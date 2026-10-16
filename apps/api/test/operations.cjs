@@ -28,6 +28,8 @@ const verifyOperationsAlertRequest=input=>rawVerifyOperationsAlertRequest({...in
   await records.put('profiles','user_erase_me',{input:{skin_type:'dry'}});
   await records.put('sessions','erase_session',{actor:'user_erase_me',userId:'erase_me',expires:at+86400000});
   await records.put('tickets','erase_ticket',{id:'erase_ticket',actor:'user_erase_me',email:'erase@example.test',status:'open'});
+  await records.put('regimen_cycles','erase_cycle',{id:'erase_cycle',actor:'erase_me',consent_version:'private-consent'});
+  await records.put('regimen_cycle_check_ins','erase_cycle_checkin',{id:'erase_cycle_checkin',actor:'erase_me',cycle_id:'erase_cycle'});
   await records.put('orders','erase_order',{id:'erase_order',actor:'user_erase_me',email:'erase@example.test',status:'fulfilled'});
   await records.put('audit','erase_audit',{id:'erase_audit',actor:'user_erase_me',action:'profile.saved',target:'self',at:'2026-09-01T00:00:00.000Z'});
   await records.put('deletion_requests','user_erase_me',{request_id:'request_erase',actor:'user_erase_me',user_id:'erase_me',requested_at:'2026-08-01T00:00:00.000Z',not_before:'2026-09-01T00:00:00.000Z',status:'pending'});
@@ -56,6 +58,7 @@ const verifyOperationsAlertRequest=input=>rawVerifyOperationsAlertRequest({...in
   const reminders=await records.get('reminders','user_1');assert.ok(reminders[0].notification_id);
   const notifications=await records.entries('notifications');assert.equal(notifications.length,1);assert.equal(notifications[0].value.status,'delivered');
   assert.equal(await records.get('accounts','erase_me'),undefined);assert.equal(await records.get('profiles','user_erase_me'),undefined);assert.equal(await records.get('sessions','erase_session'),undefined);assert.equal(await records.get('tickets','erase_ticket'),undefined);
+  assert.equal(await records.get('regimen_cycles','erase_cycle'),undefined);assert.equal(await records.get('regimen_cycle_check_ins','erase_cycle_checkin'),undefined);
   assert.equal((await records.get('orders','erase_order')).email,null);assert.match((await records.get('orders','erase_order')).actor,/^deleted_/);
   assert.match((await records.get('audit','erase_audit')).actor,/^deleted_/);assert.ok(await records.get('deletion_completions','request_erase'));
   assert((await records.get('deletion_requests','user_blocked')).blocked_reasons.includes('active_consumer_subscription'));

@@ -73,13 +73,16 @@ test('account overview requires sign-in and returns isolated metadata-only readi
 test('account export includes the connected profile without payment credentials',async t=>{
  const f=await fixture(t),member=f.client();await member.login();
  await member.send('/account/profile',{...input,expected_revision:null});
+ await f.db.tx(async r=>{await r.put('regimen_cycles','cycle_export',{id:'cycle_export',actor:'member@example.com',focus:'steady_routine',consent_version:'regimen-cycle-1',starts_at:'2026-10-16T00:00:00.000Z'});await r.put('regimen_cycle_check_ins','checkin_export',{id:'checkin_export',actor:'member@example.com',cycle_id:'cycle_export',status:'comfortable',completed_at:'2026-10-17T00:00:00.000Z'});});
  const exported=await member.send('/account/export');assert.equal(exported.status,200);assert.equal(exported.data.account_profile.preferred_name,'Alex');
- const serialized=JSON.stringify(exported.data);assert.doesNotMatch(serialized,/card_number|security_code|client_secret|payment_method_id/);
+ assert.deepEqual(exported.data.regimen_cycles,[{id:'cycle_export',focus:'steady_routine',starts_at:'2026-10-16T00:00:00.000Z'}]);assert.deepEqual(exported.data.regimen_cycle_check_ins,[{id:'checkin_export',cycle_id:'cycle_export',status:'comfortable',completed_at:'2026-10-17T00:00:00.000Z'}]);
+ const serialized=JSON.stringify(exported.data);assert.doesNotMatch(serialized,/card_number|security_code|client_secret|payment_method_id|consent_version/);assert.equal(serialized.includes('"actor"'),false);
 });
 
 test('account deletion erases the connected profile',async t=>{
  const f=await fixture(t),member=f.client();await member.login();await member.send('/account/profile',{...input,expected_revision:null});
+ await f.db.tx(async r=>{await r.put('regimen_cycles','cycle_delete',{id:'cycle_delete',actor:'member@example.com'});await r.put('regimen_cycle_check_ins','checkin_delete',{id:'checkin_delete',actor:'member@example.com',cycle_id:'cycle_delete'});});
  const at=Date.now();await f.db.tx(r=>r.put('deletion_requests','user_member@example.com',{request_id:'delete-profile',actor:'user_member@example.com',user_id:'member@example.com',requested_at:new Date(at-1000).toISOString(),not_before:new Date(at-1).toISOString(),status:'pending',attempts:0}));
  const worker=new OperationalWorker(f.db,{env:{NODE_ENV:'test'},identityDeletion:{kind:'test',remove:async()=>{}}});
- const result=await worker.runOnce(at);assert.equal(result.deletions_completed,1);assert.equal(await f.db.tx(r=>r.get('account_profiles','user_member@example.com')),undefined);
+ const result=await worker.runOnce(at);assert.equal(result.deletions_completed,1);assert.equal(await f.db.tx(r=>r.get('account_profiles','user_member@example.com')),undefined);assert.equal(await f.db.tx(r=>r.get('regimen_cycles','cycle_delete')),undefined);assert.equal(await f.db.tx(r=>r.get('regimen_cycle_check_ins','checkin_delete')),undefined);
 });

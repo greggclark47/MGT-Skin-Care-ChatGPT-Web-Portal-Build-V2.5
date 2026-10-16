@@ -435,10 +435,10 @@ export class OperationalWorker{
   for(const scope of ['account_profiles','profiles','profile_revisions','style_profiles','reminders','anti_aging_reminders','saved_retailers','carts','memberships'])await records.remove(scope,actor);
   await records.remove('checkout_requests','premium_'+actor);
   for(const scope of ['subscriptions','billing_attempts'])await records.remove(scope,`${actor}:consumer`);
-  for(const scope of ['sessions','notifications','tickets','ai_routing_log','anti_aging_ai_events','anti_aging_ai_feedback','anti_aging_progress','anti_aging_reminders','anti_aging_appointment_requests','ai_budget','ai_budget_reservations','ai_budget_reconciliations','rate','subscription_commands','subscription_pending']){
+  for(const scope of ['sessions','notifications','tickets','ai_routing_log','anti_aging_ai_events','anti_aging_ai_feedback','anti_aging_progress','anti_aging_reminders','anti_aging_appointment_requests','regimen_cycles','regimen_cycle_check_ins','ai_budget','ai_budget_reservations','ai_budget_reconciliations','rate','subscription_commands','subscription_pending']){
    for(const item of await records.entries<any>(scope)){
     const value=item.value;
-    const owned=value?.actor===actor||value?.userId===userId||value?.user_id===actor||value?.user_id===userId||this.belongsToUser(item.id,actor,userId)||this.belongsToUser(value?.budget_key,actor,userId);
+    const owned=value?.actor===actor||value?.actor===userId||value?.userId===userId||value?.user_id===actor||value?.user_id===userId||this.belongsToUser(item.id,actor,userId)||this.belongsToUser(value?.budget_key,actor,userId);
     if(owned)await records.remove(scope,item.id);
    }
   }

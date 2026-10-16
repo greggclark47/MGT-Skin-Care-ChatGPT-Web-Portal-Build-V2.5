@@ -1,5 +1,7 @@
 # AI release controls checkpoint
 
+2026-10-16 backup-status-bound release export: release export generation can now attach and re-verify a non-secret backup receipt covering GitHub candidate SHAs, the designated Drive folder, archive/bundle checksums, and the explicit production hold. It does not create remote receipts, accept a production-ready state, or authorize deployment.
+
 2026-10-16 prerequisite-bound release export: release export generation can now attach the candidate-specific production prerequisite packet and re-verify its checksum, bounded blocked status, and exact candidate commit. The packet remains outside the Git archive and does not provide production configuration, live provider evidence, or release approval.
 
 2026-10-16 candidate-bound prerequisite evidence: production prerequisite generation can now bind passing local checkpoint and verification reports to the exact candidate commit without copying report contents or secrets. Missing, mismatched, or failed reports remain blocked; live configuration, external service evidence, ownership, and go/no-go approval remain required.

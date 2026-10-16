@@ -100,6 +100,35 @@ function inspectPrerequisitePacket({ root, reference, candidateCommit }) {
   };
 }
 
+function inspectBackupStatus({ root, reference, candidateCommit }) {
+  const artifact = inspectReleaseArtifact({ root, reference });
+  if (path.extname(artifact.reference).toLowerCase() !== ".json") throw new Error("backup status evidence must be a JSON file.");
+  let document;
+  try {
+    document = JSON.parse(fs.readFileSync(resolveReleaseReference({ root, reference }), "utf8"));
+  } catch {
+    throw new Error("backup status evidence must be valid JSON.");
+  }
+  if (text(document?.candidate_commit) !== text(candidateCommit)) throw new Error("backup status evidence must bind the exact candidate commit.");
+  if (document?.github?.status !== "verified" || !Array.isArray(document.github.repositories) || !document.github.repositories.length) throw new Error("backup status evidence must report verified GitHub destinations.");
+  for (const repository of document.github.repositories) {
+    if (!/^https:\/\/github\.com\/[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+\/?$/.test(text(repository?.url))) throw new Error("backup status evidence contains an invalid GitHub repository URL.");
+    if (text(repository?.sha) !== text(candidateCommit)) throw new Error("backup status evidence must bind every GitHub repository to the candidate commit.");
+  }
+  if (document?.google_drive?.status !== "verified" || !/^[A-Za-z0-9_-]{10,}$/.test(text(document.google_drive.folder_id)) || !/^https:\/\/drive\.google\.com\/drive\/folders\/[A-Za-z0-9_-]+$/.test(text(document.google_drive.folder_url))) throw new Error("backup status evidence must report a verified designated Google Drive folder.");
+  if (!CHECKSUM.test(text(document?.archive?.sha256)) || !CHECKSUM.test(text(document?.archive?.bundle_sha256))) throw new Error("backup status evidence must include archive and bundle checksums.");
+  if (document?.production_status !== "NOT_READY") throw new Error("backup status evidence must preserve the production hold.");
+  return {
+    ...artifact,
+    github_repositories: document.github.repositories.length,
+    google_drive_folder_id: text(document.google_drive.folder_id),
+    archive_checksum: text(document.archive.sha256),
+    bundle_checksum: text(document.archive.bundle_sha256),
+    production_status: document.production_status,
+    candidate_commit: text(document.candidate_commit)
+  };
+}
+
 export function createReleaseArchive({ root = process.cwd(), candidateCommit = "", reference = "" } = {}) {
   const commit = text(candidateCommit) || gitValue(root, ["rev-parse", "HEAD"]);
   if (!SHA.test(commit)) throw new Error("candidate_commit must be a 40-character commit SHA.");
@@ -162,7 +191,7 @@ function destinationTemplate({ root, candidateCommit, branch } = {}) {
   };
 }
 
-export function buildReleaseExport({ root = process.cwd(), candidateCommit = "", branch = "", references = DEFAULT_EXPORT_REFERENCES, archiveReference = "", prerequisitesReference = "", now = new Date().toISOString() } = {}) {
+export function buildReleaseExport({ root = process.cwd(), candidateCommit = "", branch = "", references = DEFAULT_EXPORT_REFERENCES, archiveReference = "", prerequisitesReference = "", backupStatusReference = "", now = new Date().toISOString() } = {}) {
   const commit = text(candidateCommit) || gitValue(root, ["rev-parse", "HEAD"]);
   if (!SHA.test(commit)) throw new Error("candidate_commit must be a 40-character commit SHA.");
   const chosen = [...new Set([...references, archiveReference].map(text).filter(Boolean))];
@@ -184,6 +213,14 @@ export function buildReleaseExport({ root = process.cwd(), candidateCommit = "",
       errors.push(`${prerequisitesReference}: ${error.message}`);
     }
   }
+  let backup_status = null;
+  if (backupStatusReference) {
+    try {
+      backup_status = inspectBackupStatus({ root, reference: backupStatusReference, candidateCommit: commit });
+    } catch (error) {
+      errors.push(`${backupStatusReference}: ${error.message}`);
+    }
+  }
   if (archiveReference) {
     const archive = entries.find((entry) => entry.reference === archiveReference);
     try {
@@ -201,6 +238,7 @@ export function buildReleaseExport({ root = process.cwd(), candidateCommit = "",
     destinations: destinationTemplate({ root, candidateCommit: commit, branch }),
     entries,
     prerequisites,
+    backup_status,
     errors
   };
   return { ...manifest, bundle_checksum: releaseExportChecksum(manifest) };
@@ -221,6 +259,16 @@ export function validateReleaseExport(manifest, { now = Date.now() } = {}) {
     if (!SHA.test(text(prerequisites.candidate_commit)) || text(prerequisites.candidate_commit) !== text(manifest.candidate_commit)) errors.push("prerequisites.candidate_commit must bind the candidate commit");
     if (!["blocked_on_configuration", "blocked_on_external_prerequisites"].includes(prerequisites.status)) errors.push("prerequisites.status must remain blocked until live prerequisites are supplied");
     if (!["not_evaluated", "verified", "blocked"].includes(prerequisites.evidence_status)) errors.push("prerequisites.evidence_status must be bounded");
+  }
+  const backupStatus = manifest.backup_status;
+  if (backupStatus !== null && backupStatus !== undefined) {
+    if (!validReference(backupStatus.reference)) errors.push("backup_status.reference must be a safe local path");
+    if (!CHECKSUM.test(text(backupStatus.checksum))) errors.push("backup_status.checksum must be a sha256 checksum");
+    if (!SHA.test(text(backupStatus.candidate_commit)) || text(backupStatus.candidate_commit) !== text(manifest.candidate_commit)) errors.push("backup_status.candidate_commit must bind the candidate commit");
+    if (!Number.isSafeInteger(backupStatus.github_repositories) || backupStatus.github_repositories < 1) errors.push("backup_status.github_repositories must be positive");
+    if (!/^[A-Za-z0-9_-]{10,}$/.test(text(backupStatus.google_drive_folder_id))) errors.push("backup_status.google_drive_folder_id must be bounded");
+    if (!CHECKSUM.test(text(backupStatus.archive_checksum)) || !CHECKSUM.test(text(backupStatus.bundle_checksum))) errors.push("backup_status must include archive and bundle checksums");
+    if (backupStatus.production_status !== "NOT_READY") errors.push("backup_status.production_status must preserve the production hold");
   }
   const entries = Array.isArray(manifest.entries) ? manifest.entries : [];
   const ids = new Set();
@@ -262,6 +310,16 @@ export function verifyReleaseExport({ root = process.cwd(), manifest } = {}) {
       errors.push(`prerequisites could not be verified: ${error.message}`);
     }
   }
+  if (manifest?.backup_status) {
+    try {
+      const inspected = inspectBackupStatus({ root, reference: manifest.backup_status.reference, candidateCommit: manifest.candidate_commit });
+      for (const field of ["checksum", "github_repositories", "google_drive_folder_id", "archive_checksum", "bundle_checksum", "production_status"]) {
+        if (inspected[field] !== manifest.backup_status[field]) errors.push(`backup_status ${field} does not match its local artifact`);
+      }
+    } catch (error) {
+      errors.push(`backup_status could not be verified: ${error.message}`);
+    }
+  }
   for (const entry of Array.isArray(manifest?.entries) ? manifest.entries.filter((candidate) => candidate?.kind === "archive") : []) {
     try {
       if (text(entry.checksum) !== gitArchiveChecksum(root, text(manifest?.candidate_commit))) errors.push(`${entry.id} archive does not reproduce the candidate commit`);
@@ -286,9 +344,10 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   const createArchive = argumentValue(args, "--create-archive");
   const references = argumentValue(args, "--references");
   const prerequisites = argumentValue(args, "--prerequisites");
+  const backupStatus = argumentValue(args, "--backup-status");
   const candidateCommitArgument = argumentValue(args, "--candidate-commit");
   if (!output) {
-    console.error("Usage: node infra/portal/release-export.mjs --output work/exports/release-export.json [--candidate-commit <sha>] [--references README.md,infra/portal/README.md] [--prerequisites work/production/prerequisites.json] [--archive work/exports/package.zip] [--create-archive work/exports/package.zip]");
+    console.error("Usage: node infra/portal/release-export.mjs --output work/exports/release-export.json [--candidate-commit <sha>] [--references README.md,infra/portal/README.md] [--prerequisites work/production/prerequisites.json] [--backup-status work/exports/backup-status.json] [--archive work/exports/package.zip] [--create-archive work/exports/package.zip]");
     process.exitCode = 1;
   } else {
     try {
@@ -298,7 +357,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
       const credentialFindings = scanGitCommit(root, candidateCommit);
       if (credentialFindings.length) throw new Error(`Candidate commit credential scan found ${credentialFindings.length} potential finding(s); inspect the commit before export.`);
       if (createArchive) createReleaseArchive({ root, candidateCommit, reference: createArchive });
-      const manifest = buildReleaseExport({ root, candidateCommit, references: references ? references.split(",") : DEFAULT_EXPORT_REFERENCES, prerequisitesReference: prerequisites, archiveReference: createArchive || archive });
+      const manifest = buildReleaseExport({ root, candidateCommit, references: references ? references.split(",") : DEFAULT_EXPORT_REFERENCES, prerequisitesReference: prerequisites, backupStatusReference: backupStatus, archiveReference: createArchive || archive });
       const destination = path.resolve(root, output);
       fs.mkdirSync(path.dirname(destination), { recursive: true });
       fs.writeFileSync(destination, `${JSON.stringify(manifest, null, 2)}\n`);

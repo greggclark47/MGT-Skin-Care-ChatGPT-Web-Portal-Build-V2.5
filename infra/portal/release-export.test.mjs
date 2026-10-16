@@ -82,6 +82,28 @@ test("binds candidate-specific production prerequisite evidence", () => {
   assert.match(changed.errors.join("; "), /exact candidate commit/);
 });
 
+test("binds verified GitHub and Drive backup status without allowing production readiness", () => {
+  const root = fixture();
+  fs.mkdirSync(path.join(root, "work", "exports"), { recursive: true });
+  const packet = {
+    candidate_commit: COMMIT,
+    github: { status: "verified", repositories: [{ url: "https://github.com/mgt/portal", sha: COMMIT }] },
+    google_drive: { status: "verified", folder_id: "1iO0ouDvWiPEWZkYGEyXSXwGweCvOp45N", folder_url: "https://drive.google.com/drive/folders/1iO0ouDvWiPEWZkYGEyXSXwGweCvOp45N" },
+    archive: { sha256: `sha256:${"a".repeat(64)}`, bundle_sha256: `sha256:${"b".repeat(64)}` },
+    production_status: "NOT_READY"
+  };
+  fs.writeFileSync(path.join(root, "work", "exports", "backup.json"), `${JSON.stringify(packet)}\n`);
+  const manifest = buildReleaseExport({ root, candidateCommit: COMMIT, references: ["README.md"], backupStatusReference: "work/exports/backup.json", now: "2026-01-02T00:00:00.000Z" });
+  assert.equal(manifest.status, "ready_for_export");
+  assert.equal(manifest.backup_status.github_repositories, 1);
+  assert.equal(verifyReleaseExport({ root, manifest }).ok, true);
+  packet.production_status = "READY";
+  fs.writeFileSync(path.join(root, "work", "exports", "backup.json"), `${JSON.stringify(packet)}\n`);
+  const changed = buildReleaseExport({ root, candidateCommit: COMMIT, references: ["README.md"], backupStatusReference: "work/exports/backup.json", now: "2026-01-02T00:00:00.000Z" });
+  assert.equal(changed.status, "blocked");
+  assert.match(changed.errors.join("; "), /preserve the production hold/);
+});
+
 test("requires observed Drive metadata before marking upload complete", () => {
   const root = fixture();
   const manifest = buildReleaseExport({ root, candidateCommit: COMMIT, references: ["README.md"], now: "2026-01-01T00:00:00.000Z" });

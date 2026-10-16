@@ -89,7 +89,7 @@ test("static demo exposes the current release and ship-packet surface", () => {
   assert.match(html, /data-demo="Bi-weekly regimen cycle"/);
   assert.match(html, /Two-week regimen cycle/);
   assert.match(html, /review before you choose any next change/);
-  assert.match(html, /Google via Supabase/);
+  assert.match(html, /Protected Google sign-in/);
   assert.match(html, /data-demo="Google account sign-in"/);
   assert.match(html, /no Google Drive or photo access/);
   assert.match(html, /Choose device or test storage; the connection is checked before an upload/);
@@ -150,7 +150,7 @@ test("static demo keeps the ship packet interactive and clearly sample-only", ()
   assert.match(script, /"Ship authorization"/);
   assert.match(script, /Blocked · no ship authorization/);
   assert.match(script, /"Google account sign-in"/);
-  assert.match(script, /Supabase Auth · PKCE protected · Preview only/);
+  assert.match(script, /Protected account connection · PKCE · Preview only/);
   assert.match(script, /NO DRIVE SCOPE/);
   assert.match(script, /"Image library"/);
   assert.match(script, /"Bi-weekly regimen cycle"/);

@@ -191,9 +191,9 @@ const demoFlows = {
   "Google account sign-in": {
     kicker: "SECURE ACCOUNT SIGN-IN · SAMPLE FLOW",
     title: "Use Google for identity, not storage",
-    step: "Supabase Auth · PKCE protected · Preview only",
+    step: "Protected account connection · PKCE · Preview only",
     body: `
-      <p class="flow-intro">The production-ready path uses Supabase Auth to start a one-time PKCE exchange with Google. It asks Google only for basic account identity and returns to MGT after the secure exchange.</p>
+      <p class="flow-intro">The production-ready path starts a one-time protected exchange with Google. It asks Google only for basic account identity and returns to MGT after the secure exchange.</p>
       <div class="routine-preview">
         <div><b>01</b><span>Start sign-in</span><small>One-time state and PKCE verifier</small></div>
         <div><b>02</b><span>Confirm identity</span><small>Google identity scope only</small></div>

@@ -1893,3 +1893,5 @@ Until these decisions and dependencies are evidenced, the plan remains planning 
 6. **Blocked until business decision — live payments and campaigns:** retain retailer payment/receipt boundaries. The consumer Premium subscription implementation is repository-ready, but enabling enrollment still requires the approved two Prices, a connected sandbox/live account, signed-event evidence, terms and a support owner. Cap paid or affiliate experiments only after agreements and contribution metrics are available.
 **Phase F990 — deterministic release-export timestamps:** Add a documented `--generated-at` operator input so checksum-bound release manifests can be regenerated reproducibly during backup receipt rebinding and handoff review.
 
+**Phase F991 — deterministic prerequisite timestamps:** Add the same documented timestamp input and past-time validation to production prerequisite packets, keeping candidate-bound prerequisite checksums reproducible during release handoff without weakening the production hold.
+

@@ -289,3 +289,7 @@ Outstanding release work: actual hosted adapter compatibility checks; live Supab
 
 Release operators can now pass `--generated-at <ISO timestamp>` to `infra/portal/release-export.mjs`. This keeps a candidate-bound manifest reproducible when a verified backup receipt must be rebound to the final bundle checksum, and removes the need for an undocumented API-only second pass. The option changes no production state and remains subject to all existing candidate, archive, backup, prerequisite, checksum, and production-hold validation.
 
+# F991 deterministic production-prerequisite timestamp checkpoint
+
+Production prerequisite operators can now pass `--generated-at <ISO timestamp>` to `infra/portal/production-prerequisites.mjs`. Prerequisite packets require a valid past timestamp, allowing a candidate-bound packet checksum to be reproduced during release handoff while rejecting future-dated evidence. The option changes no production state and does not satisfy live configuration, provider, restore, ownership, or approval requirements.
+

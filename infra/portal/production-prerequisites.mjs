@@ -20,6 +20,10 @@ const EXTERNAL_REQUIREMENTS = Object.freeze([
 ]);
 
 function text(value) { return String(value || "").trim(); }
+function validPastIso(value, now = Date.now()) {
+  const parsed = Date.parse(text(value));
+  return Number.isFinite(parsed) && parsed <= new Date(now).getTime();
+}
 function parseEnvFile(filePath) {
   if (!filePath || !fs.existsSync(filePath)) return {};
   const values = {};
@@ -79,6 +83,7 @@ export function validateProductionPrerequisites(document) {
   if (!document || typeof document !== "object" || Array.isArray(document)) return { ok: false, errors: ["prerequisites must be an object"] };
   if (document.version !== VERSION) errors.push(`prerequisites version must be ${VERSION}`);
   if (!/^[a-f0-9]{40}$/i.test(text(document.candidate_commit))) errors.push("prerequisites candidate_commit must be a commit SHA");
+  if (!validPastIso(document.generated_at)) errors.push("prerequisites generated_at must be a past ISO timestamp");
   if (text(document.prerequisites_checksum) !== productionPrerequisitesChecksum(document)) errors.push("prerequisites_checksum must match the complete canonical prerequisites document");
   if (document.status !== "blocked_on_external_prerequisites") errors.push("prerequisites must be explicitly blocked on external prerequisites");
   const config = document.local?.configuration;
@@ -103,7 +108,7 @@ export function validateProductionPrerequisites(document) {
   return { ok: errors.length === 0, errors };
 }
 
-export function buildProductionPrerequisites({ root = process.cwd(), env = process.env, candidateCommit = "", envFile = "", checkpointFile = "", verificationFile = "" } = {}) {
+export function buildProductionPrerequisites({ root = process.cwd(), env = process.env, candidateCommit = "", envFile = "", checkpointFile = "", verificationFile = "", now = new Date().toISOString() } = {}) {
   const merged = { ...parseEnvFile(envFile), ...env };
   const preflight = validateEnvironment(merged);
   const config = { status: preflight.ok ? "ready_for_live_validation" : "blocked", errors: preflight.errors, warnings: preflight.warnings };
@@ -111,7 +116,7 @@ export function buildProductionPrerequisites({ root = process.cwd(), env = proce
   const document = {
     version: VERSION,
     candidate_commit: text(candidateCommit) || null,
-    generated_at: new Date().toISOString(),
+    generated_at: new Date(now).toISOString(),
     local: { backend_build: evidence.status === "verified" ? "verified_by_checkpoint" : "not_evaluated", portal_tests: evidence.status === "verified" ? "verified_by_verification" : "not_evaluated", evidence, configuration: config },
     external: externalRequirements(),
     status: preflight.ok && evidence.status !== "blocked" ? "blocked_on_external_prerequisites" : "blocked_on_configuration",
@@ -122,6 +127,6 @@ export function buildProductionPrerequisites({ root = process.cwd(), env = proce
 
 function argumentValue(args, name) { const index = args.indexOf(name); return index >= 0 ? args[index + 1] : ""; }
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  const args = process.argv.slice(2); const envFile = argumentValue(args, "--env-file"); const output = argumentValue(args, "--output"); const candidateCommit = argumentValue(args, "--candidate-commit"); const checkpointFile = argumentValue(args, "--checkpoint"); const verificationFile = argumentValue(args, "--verification");
-  if (!output) { console.error("Usage: node infra/portal/production-prerequisites.mjs --candidate-commit <sha> --output work/production/prerequisites.json [--env-file infra/portal/.env] [--checkpoint work/checkpoints/.../report.md --verification work/verification/.../report.md]"); process.exitCode = 1; } else { const root = path.resolve(fileURLToPath(new URL("../..", import.meta.url))); const document = buildProductionPrerequisites({ root, env: process.env, envFile: envFile ? path.resolve(envFile) : "", candidateCommit, checkpointFile, verificationFile }); const destination = path.resolve(output); fs.mkdirSync(path.dirname(destination), { recursive: true }); fs.writeFileSync(destination, `${JSON.stringify(document, null, 2)}\n`); console.log(`Production prerequisites: ${destination}`); }
+  const args = process.argv.slice(2); const envFile = argumentValue(args, "--env-file"); const output = argumentValue(args, "--output"); const candidateCommit = argumentValue(args, "--candidate-commit"); const checkpointFile = argumentValue(args, "--checkpoint"); const verificationFile = argumentValue(args, "--verification"); const generatedAt = argumentValue(args, "--generated-at");
+  if (!output) { console.error("Usage: node infra/portal/production-prerequisites.mjs --candidate-commit <sha> --output work/production/prerequisites.json [--env-file infra/portal/.env] [--generated-at <ISO timestamp>] [--checkpoint work/checkpoints/.../report.md --verification work/verification/.../report.md]"); process.exitCode = 1; } else { const root = path.resolve(fileURLToPath(new URL("../..", import.meta.url))); const document = buildProductionPrerequisites({ root, env: process.env, envFile: envFile ? path.resolve(envFile) : "", candidateCommit, checkpointFile, verificationFile, now: generatedAt || new Date().toISOString() }); const destination = path.resolve(output); fs.mkdirSync(path.dirname(destination), { recursive: true }); fs.writeFileSync(destination, `${JSON.stringify(document, null, 2)}\n`); console.log(`Production prerequisites: ${destination}`); }
 }

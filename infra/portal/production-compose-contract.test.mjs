@@ -21,7 +21,18 @@ test("production runtime keeps migrations manual and local AI opt-in", () => {
   assert.equal((compose.match(/PORTAL_AUTO_MIGRATE: "false"/g) || []).length, 2);
   assert.match(compose, /ollama:\s*\n\s+image:[\s\S]*?profiles: \["local-ai"\]/);
   assert.match(compose, /OLLAMA_ENABLED: \$\{OLLAMA_ENABLED:-false\}/);
+  assert.match(compose, /OLLAMA_BASE_URL: \$\{OLLAMA_BASE_URL:-\}/);
+  assert.match(compose, /OPENCLAW_BASE_URL: \$\{OPENCLAW_BASE_URL:-\}/);
+  assert.doesNotMatch(compose, /OLLAMA_BASE_URL: \$\{OLLAMA_BASE_URL:-http:\/\/ollama:11434\}/);
+  assert.doesNotMatch(compose, /OPENCLAW_BASE_URL: \$\{OPENCLAW_BASE_URL:-http:\/\/ollama:11434\}/);
   assert.doesNotMatch(compose.slice(compose.indexOf("  api:"), compose.indexOf("  worker:")), /depends_on:\s*\n\s+ollama:/);
+});
+
+test("production application processes declare their mode and share the configured worker readiness window", () => {
+  assert.equal((compose.match(/NODE_ENV: production/g) || []).length, 3);
+  assert.equal((compose.match(/DEMO_MODE: "false"/g) || []).length, 2);
+  assert.match(compose, /WORKER_READINESS_MAX_AGE_SECONDS: \$\{WORKER_READINESS_MAX_AGE_SECONDS:-300\}/);
+  assert.match(compose, /Number\(process\.env\.WORKER_READINESS_MAX_AGE_SECONDS\)\*1000/);
 });
 
 test("production runtime applies reduced privileges, health gates, and bounded resources", () => {

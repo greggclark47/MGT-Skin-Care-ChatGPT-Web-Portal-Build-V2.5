@@ -7,8 +7,12 @@ type NotificationFailureCode='delivery_rejected'|'delivery_unavailable'|'deliver
 type DeletionFailureCode='identity_rejected'|'identity_unavailable';
 type Notification={id:string;actor:string;kind:'replenishment_reminder'|'anti_aging_progress_reminder';status:'queued'|'processing'|'delivered'|'failed'|'read';scheduled_at:string;created_at:string;updated_at:string;attempts:number;payload:{product_id?:string;entry_id?:string;due_at:string;cadence?:string};lease_until?:string;claim_id?:string;retry_not_before?:string;retry_delay_seconds?:number;delivered_at?:string;read_at?:string;last_error_code?:NotificationFailureCode};
 type Reminder={product_id:string;due_at:string;paused?:boolean;notification_id?:string;last_notified_at?:string};
-type WorkerOptions={env?:NodeJS.ProcessEnv;delivery?:NotificationDelivery;identityDeletion?:IdentityDeletion;alertDelivery?:OperationsAlertDelivery};
-export type WorkerResult={run_id:string;created:number;delivered:number;failed:number;removed:number;deletions_completed:number;deletions_blocked:number;backup_status:'healthy'|'stale'|'unverified'};
+export type FollowUpTaskStatus='scheduled'|'processing'|'completed'|'blocked';
+export type FollowUpTask={id:string;kind:string;generation:number;due_at:string;status:FollowUpTaskStatus;attempts:number;created_at:string;updated_at:string;payload?:unknown;lease_until?:string;claim_id?:string;retry_not_before?:string;retry_delay_seconds?:number;completed_at?:string;blocked_at?:string;last_error_code?:string;superseded_generation?:number};
+export type FollowUpExecutor={kind:string;execute(task:FollowUpTask):Promise<void>};
+export type FollowUpStats={completed:number;blocked:number;failed:number;future:number;stale:number};
+type WorkerOptions={env?:NodeJS.ProcessEnv;delivery?:NotificationDelivery;identityDeletion?:IdentityDeletion;alertDelivery?:OperationsAlertDelivery;followUp?:FollowUpExecutor};
+export type WorkerResult={run_id:string;created:number;delivered:number;failed:number;removed:number;deletions_completed:number;deletions_blocked:number;backup_status:'healthy'|'stale'|'unverified';follow_ups:FollowUpStats};
 
 export interface NotificationDelivery{kind:string;deliver(notification:Notification):Promise<void>}
 export class InAppNotificationDelivery implements NotificationDelivery{
@@ -82,6 +86,61 @@ export function backupEvidenceAdmission(existing:any,incoming:{completed_at:stri
   return same?'duplicate' as const:'conflict' as const;
  }
  return 'accepted' as const;
+}
+const followUpIdPattern=/^[A-Za-z0-9_-]{1,128}$/;
+const followUpKindPattern=/^[a-z0-9][a-z0-9_.-]{0,63}$/;
+function followUpPayloadKey(value:unknown){
+ try{const encoded=JSON.stringify(value===undefined?null:value);if(encoded===undefined||Buffer.byteLength(encoded,'utf8')>32768)throw new Error();return encoded;}catch{throw new Error('Follow-up payload is invalid.');}
+}
+function validateFollowUpIdentity(id:string,generation:number){
+ if(typeof id!=='string'||!followUpIdPattern.test(id)||!Number.isSafeInteger(generation)||generation<1||generation>1000000000)throw new Error('Follow-up identity is invalid.');
+}
+function followUpGraceSeconds(value:number){return Number.isSafeInteger(value)&&value>=60&&value<=86400?value:300;}
+function followUpRetrySeconds(value:number){return Number.isSafeInteger(value)&&value>=10&&value<=86400?value:300;}
+function followUpMaxAttempts(value:number){return Number.isSafeInteger(value)&&value>=1&&value<=20?value:5;}
+export async function scheduleFollowUp(records:Records,input:{id:string;kind:string;generation:number;due_at:string;payload?:unknown},at=Date.now()){
+ validateFollowUpIdentity(input.id,input.generation);
+ if(typeof input.kind!=='string'||!followUpKindPattern.test(input.kind)||typeof input.due_at!=='string'||timestamp(input.due_at)===undefined||timestamp(input.due_at)!==Date.parse(input.due_at))throw new Error('Follow-up schedule is invalid.');
+ const payloadKey=followUpPayloadKey(input.payload);
+ await records.lock('follow-up:'+input.id);
+ const current=await records.get<FollowUpTask>('follow_up_tasks',input.id);
+ if(current){
+  const currentPayloadKey=followUpPayloadKey(current.payload);
+  if(current.generation>input.generation)return {status:'stale' as const,task:current};
+  if(current.generation===input.generation){
+   if(current.kind===input.kind&&current.due_at===input.due_at&&currentPayloadKey===payloadKey)return {status:'duplicate' as const,task:current};
+   return {status:'conflict' as const,task:current};
+  }
+  const replaced:FollowUpTask={id:input.id,kind:input.kind,generation:input.generation,due_at:input.due_at,status:'scheduled',attempts:0,created_at:iso(at),updated_at:iso(at),payload:input.payload,superseded_generation:current.generation};
+  await records.put('follow_up_tasks',input.id,replaced);return {status:'superseded' as const,task:replaced};
+ }
+ const task:FollowUpTask={id:input.id,kind:input.kind,generation:input.generation,due_at:input.due_at,status:'scheduled',attempts:0,created_at:iso(at),updated_at:iso(at),payload:input.payload};
+ await records.put('follow_up_tasks',input.id,task);return {status:'scheduled' as const,task};
+}
+export async function claimFollowUp(records:Records,id:string,generation:number,at=Date.now(),overdueGrace=300){
+ validateFollowUpIdentity(id,generation);const grace=followUpGraceSeconds(overdueGrace);await records.lock('follow-up:'+id);const current=await records.get<FollowUpTask>('follow_up_tasks',id);
+ if(!current)return {status:'missing' as const};
+ if(current.generation!==generation)return {status:'stale' as const,task:current};
+ if(current.status==='completed')return {status:'completed' as const,task:current};
+ if(current.status==='blocked')return {status:'blocked' as const,task:current};
+ const due=timestamp(current.due_at),retryAt=timestamp(current.retry_not_before);
+ if(due===undefined){const blocked={...current,status:'blocked' as const,blocked_at:iso(at),updated_at:iso(at),last_error_code:'invalid_schedule',lease_until:undefined,claim_id:undefined};await records.put('follow_up_tasks',id,blocked);return {status:'blocked' as const,task:blocked};}
+ if(retryAt!==undefined&&retryAt>at)return {status:'future' as const,task:current};
+ if(due>at)return {status:'future' as const,task:current};
+ if(at-due>grace*1000){const blocked={...current,status:'blocked' as const,blocked_at:iso(at),updated_at:iso(at),last_error_code:'overdue',lease_until:undefined,claim_id:undefined};await records.put('follow_up_tasks',id,blocked);return {status:'blocked' as const,task:blocked};}
+ const lease=timestamp(current.lease_until);if(current.status==='processing'&&lease!==undefined&&lease>at)return {status:'leased' as const,task:current};
+ const claimed:FollowUpTask={...current,status:'processing',attempts:(Number(current.attempts)||0)+1,lease_until:iso(at+5*60000),claim_id:randomUUID(),retry_not_before:undefined,retry_delay_seconds:undefined,updated_at:iso(at)};
+ await records.put('follow_up_tasks',id,claimed);return {status:'claimed' as const,task:claimed};
+}
+export async function completeFollowUp(records:Records,input:{id:string;generation:number;claimId:string},at=Date.now()){
+ validateFollowUpIdentity(input.id,input.generation);if(typeof input.claimId!=='string'||!input.claimId)throw new Error('Follow-up claim is invalid.');await records.lock('follow-up:'+input.id);const current=await records.get<FollowUpTask>('follow_up_tasks',input.id);
+ if(!current)return {status:'missing' as const};if(current.generation!==input.generation||current.claim_id!==input.claimId)return {status:'stale' as const,task:current};if(current.status!=='processing')return {status:'not_claimed' as const,task:current};
+ const completed:FollowUpTask={...current,status:'completed',completed_at:iso(at),updated_at:iso(at),lease_until:undefined,claim_id:undefined,retry_not_before:undefined,retry_delay_seconds:undefined,last_error_code:undefined};await records.put('follow_up_tasks',input.id,completed);return {status:'completed' as const,task:completed};
+}
+export async function failFollowUp(records:Records,input:{id:string;generation:number;claimId:string;errorCode:string},at=Date.now(),retryDelay=300,maxAttempts=5){
+ validateFollowUpIdentity(input.id,input.generation);if(typeof input.claimId!=='string'||!input.claimId||typeof input.errorCode!=='string'||!/^[a-z0-9_]{1,64}$/.test(input.errorCode))throw new Error('Follow-up failure is invalid.');await records.lock('follow-up:'+input.id);const current=await records.get<FollowUpTask>('follow_up_tasks',input.id);
+ if(!current)return {status:'missing' as const};if(current.generation!==input.generation||current.claim_id!==input.claimId)return {status:'stale' as const,task:current};if(current.status!=='processing')return {status:'not_claimed' as const,task:current};
+ const terminal=(Number(current.attempts)||0)>=followUpMaxAttempts(maxAttempts),delay=followUpRetrySeconds(retryDelay),failed:FollowUpTask={...current,status:terminal?'blocked':'scheduled',updated_at:iso(at),blocked_at:terminal?iso(at):undefined,last_error_code:input.errorCode,lease_until:undefined,claim_id:undefined,...(terminal?{retry_not_before:undefined,retry_delay_seconds:undefined}:{retry_not_before:iso(at+delay*1000),retry_delay_seconds:delay})};await records.put('follow_up_tasks',input.id,failed);return {status:terminal?'blocked' as const:'scheduled' as const,task:failed};
 }
 export type BackupAttestationEvidence={completed_at:string;restore_verified_at:string;location_identifier:string;restore_reference:string;checksum:string};
 export type BackupAttestationRequest={body:string;headers:Record<string,string>};
@@ -192,7 +251,7 @@ export function publicOperationalReadiness(result:any,at=Date.now()){
  };
 }
 
-export function operationalSnapshot(input:{notifications:any[];deletions:any[];tickets:any[];runs:any[];webhooks:any[]},at=Date.now(),supportTargetHours=24){
+export function operationalSnapshot(input:{notifications:any[];deletions:any[];tickets:any[];runs:any[];webhooks:any[];follow_ups?:any[]},at=Date.now(),supportTargetHours=24){
  supportTargetHours=Number.isFinite(supportTargetHours)&&supportTargetHours>=1&&supportTargetHours<=168?supportTargetHours:24;
  const pendingNotifications=input.notifications.filter(item=>['queued','processing'].includes(item?.status));
  const pendingSince=pendingNotifications.map(item=>timestamp(item?.created_at||item?.scheduled_at)).filter((value):value is number=>value!==undefined&&value<=at);
@@ -202,6 +261,7 @@ export function operationalSnapshot(input:{notifications:any[];deletions:any[];t
  const recentRuns=input.runs.filter(item=>{const completed=timestamp(item?.completed_at);return completed!==undefined&&completed<=at&&at-completed<=86400000;});
  const stalledWebhooks=input.webhooks.filter(item=>item?.status==='processing'&&(()=>{const received=timestamp(item?.last_received_at);return received!==undefined&&received<=at&&at-received>10*60000;})());
  const failedWebhooks=input.webhooks.filter(item=>item?.status==='failed');
+ const followUps=input.follow_ups||[],blockedFollowUps=followUps.filter(item=>item?.status==='blocked'),dueFollowUps=followUps.filter(item=>{const due=timestamp(item?.due_at);return due!==undefined&&due<=at&&['scheduled','processing'].includes(item?.status);});
  const alerts=[
   input.notifications.some(item=>item?.status==='failed')?'notification_delivery_failures':null,
   pendingSince.length&&at-Math.min(...pendingSince)>15*60000?'notification_queue_aging':null,
@@ -209,7 +269,8 @@ export function operationalSnapshot(input:{notifications:any[];deletions:any[];t
   overdueTickets.length?'support_response_target_missed':null,
   recentRuns.some(item=>(Number(item?.failed)||0)>0)?'worker_delivery_failures':null,
   failedWebhooks.length?'subscription_webhook_failures':null,
-  stalledWebhooks.length?'subscription_webhook_stalled':null
+  stalledWebhooks.length?'subscription_webhook_stalled':null,
+  blockedFollowUps.length?'follow_up_tasks_blocked':null
  ].filter((value):value is string=>!!value);
  return {
   healthy:alerts.length===0,
@@ -218,7 +279,8 @@ export function operationalSnapshot(input:{notifications:any[];deletions:any[];t
   deletions:{due:dueDeletions.length,blocked:dueDeletions.filter(item=>Array.isArray(item?.blocked_reasons)&&item.blocked_reasons.length||item?.last_error_code||item?.last_error).length,processing:dueDeletions.filter(item=>item?.status==='processing').length},
   support:{open:openTickets.length,overdue:overdueTickets.length,response_target_hours:supportTargetHours},
   worker:{runs_24h:recentRuns.length,delivery_failures_24h:recentRuns.reduce((total,item)=>total+(Number(item?.failed)||0),0)},
-  subscriptions:{failed:failedWebhooks.length,stalled:stalledWebhooks.length}
+  subscriptions:{failed:failedWebhooks.length,stalled:stalledWebhooks.length},
+  follow_ups:{scheduled:followUps.filter(item=>item?.status==='scheduled').length,processing:followUps.filter(item=>item?.status==='processing').length,completed:followUps.filter(item=>item?.status==='completed').length,blocked:blockedFollowUps.length,due:dueFollowUps.length}
  };
 }
 
@@ -285,7 +347,8 @@ export class OperationalWorker{
  private delivery:NotificationDelivery;
  private identityDeletion:IdentityDeletion;
  private alertDelivery:OperationsAlertDelivery;
- constructor(private store:Store,options:WorkerOptions={}){this.env=options.env||process.env;this.delivery=options.delivery||notificationDeliveryFromEnv(this.env);this.identityDeletion=options.identityDeletion||identityDeletionFromEnv(this.env);this.alertDelivery=options.alertDelivery||operationsAlertDeliveryFromEnv(this.env);}
+ private followUp?:FollowUpExecutor;
+ constructor(private store:Store,options:WorkerOptions={}){this.env=options.env||process.env;this.delivery=options.delivery||notificationDeliveryFromEnv(this.env);this.identityDeletion=options.identityDeletion||identityDeletionFromEnv(this.env);this.alertDelivery=options.alertDelivery||operationsAlertDeliveryFromEnv(this.env);this.followUp=options.followUp;}
  async runOnce(at=Date.now()):Promise<WorkerResult>{
   if(this.running)throw new Error('Operational worker is already running.');
   this.running=true;
@@ -299,22 +362,39 @@ export class OperationalWorker{
     await records.put('operation_runs',runId,{id:runId,started_at:iso(at),created,removed,backup_status,delivery:this.delivery.kind});
     return {created,removed,backup_status};
    });
+   const follow_ups=await this.processFollowUps(at);
    const deletions=await this.processDeletionRequests(at);
    let delivered=0,failed=0;
    for(const entry of await this.store.tx(records=>records.entries<Notification>('notifications'))){
     const outcome=await this.deliver(entry.id,at);
     if(outcome==='delivered')delivered++;if(outcome==='failed')failed++;
    }
-   await this.store.tx(async records=>{const run=await records.get<any>('operation_runs',runId);if(run)await records.put('operation_runs',runId,{...run,completed_at:iso(),delivered,failed,...deletions});});
+   await this.store.tx(async records=>{const run=await records.get<any>('operation_runs',runId);if(run)await records.put('operation_runs',runId,{...run,completed_at:iso(),delivered,failed,follow_ups,...deletions});});
    await this.publishOperationalAlert(at,runId);
-   return {run_id:runId,...staged,...deletions,delivered,failed};
+   return {run_id:runId,...staged,...deletions,delivered,failed,follow_ups};
   }finally{this.running=false;}
+ }
+ private async processFollowUps(at:number):Promise<FollowUpStats>{
+  const stats:FollowUpStats={completed:0,blocked:0,failed:0,future:0,stale:0};
+  const entries=await this.store.tx(records=>records.entries<FollowUpTask>('follow_up_tasks'));
+  const grace=followUpGraceSeconds(Number(this.env.OPERATIONS_FOLLOW_UP_OVERDUE_GRACE_SECONDS)||300),retry=followUpRetrySeconds(Number(this.env.OPERATIONS_FOLLOW_UP_RETRY_DELAY_SECONDS)||300),maxAttempts=followUpMaxAttempts(Number(this.env.OPERATIONS_FOLLOW_UP_MAX_ATTEMPTS)||5);
+  for(const entry of entries){
+   const task=entry.value;if(!task||!['scheduled','processing'].includes(task.status))continue;
+   const claimed=await this.store.tx(records=>claimFollowUp(records,entry.id,task.generation,at,grace));
+   if(['future','leased'].includes(claimed.status)){stats.future++;continue;}
+   if(claimed.status==='blocked'){stats.blocked++;continue;}
+   if(claimed.status!=='claimed'){if(claimed.status==='stale')stats.stale++;continue;}
+   if(!this.followUp){const failed=await this.store.tx(records=>failFollowUp(records,{id:entry.id,generation:task.generation,claimId:claimed.task.claim_id!,errorCode:'executor_unconfigured'},at,0,1));if(failed.status==='blocked')stats.blocked++;else if(failed.status==='stale')stats.stale++;else stats.failed++;continue;}
+   try{await this.followUp.execute(claimed.task);const completed=await this.store.tx(records=>completeFollowUp(records,{id:entry.id,generation:task.generation,claimId:claimed.task.claim_id!},at));if(completed.status==='completed')stats.completed++;else stats.stale++;}
+   catch{const failed=await this.store.tx(records=>failFollowUp(records,{id:entry.id,generation:task.generation,claimId:claimed.task.claim_id!,errorCode:'executor_failed'},at,retry,maxAttempts));if(failed.status==='blocked')stats.blocked++;else if(failed.status==='stale')stats.stale++;else stats.failed++;}
+  }
+  return stats;
  }
  private async publishOperationalAlert(at:number,runId:string){
   if(this.alertDelivery.kind==='disabled')return;
   const claimed=await this.store.tx(async records=>{
    await records.lock('operations:alert-publish');
-   const snapshot=operationalSnapshot({notifications:(await records.entries<any>('notifications')).map(item=>item.value),deletions:(await records.entries<any>('deletion_requests')).map(item=>item.value),tickets:await records.list<any>('tickets'),runs:(await records.entries<any>('operation_runs')).map(item=>item.value),webhooks:await records.list<any>('subscription_webhook_receipts')},at,int(this.env.SUPPORT_RESPONSE_TARGET_HOURS,24,1,168));
+   const snapshot=operationalSnapshot({notifications:(await records.entries<any>('notifications')).map(item=>item.value),deletions:(await records.entries<any>('deletion_requests')).map(item=>item.value),tickets:await records.list<any>('tickets'),runs:(await records.entries<any>('operation_runs')).map(item=>item.value),webhooks:await records.list<any>('subscription_webhook_receipts'),follow_ups:(await records.entries<any>('follow_up_tasks')).map(item=>item.value)},at,int(this.env.SUPPORT_RESPONSE_TARGET_HOURS,24,1,168));
    const previous=await records.get<any>('operations','alert_state'),status=snapshot.alerts.length?'active':'resolved';
    if(status==='resolved'&&previous?.status!=='active')return null;
    const fingerprint=createHash('sha256').update(JSON.stringify({status,alerts:[...snapshot.alerts].sort()})).digest('hex');
@@ -357,6 +437,7 @@ export class OperationalWorker{
    ['referral_metrics',int(this.env.OPERATIONS_AGGREGATE_METRIC_RETENTION_DAYS,180,30,3650),(v:any)=>timestamp(v?.updated_at||v?.date)],
    ['deletion_completions',int(this.env.OPERATIONS_DELETION_PROOF_RETENTION_DAYS,730,30,3650),(v:any)=>timestamp(v?.completed_at)],
    ['operation_runs',int(this.env.OPERATIONS_RUN_RETENTION_DAYS,90,1,3650),(v:any)=>timestamp(v?.completed_at||v?.started_at)],
+   ['follow_up_tasks',int(this.env.OPERATIONS_FOLLOW_UP_RETENTION_DAYS,365,30,3650),(v:any)=>['completed','blocked'].includes(v?.status)?timestamp(v?.completed_at||v?.blocked_at||v?.updated_at):undefined],
    ['operations_alert_events',int(this.env.OPERATIONS_ALERT_EVENT_RETENTION_DAYS,90,1,3650),(v:any)=>timestamp(v?.attempted_at)],
    ['backup_attestations',int(this.env.OPERATIONS_BACKUP_ATTESTATION_RETENTION_DAYS,90,1,3650),(v:any)=>timestamp(v?.received_at)]
   ] as const;

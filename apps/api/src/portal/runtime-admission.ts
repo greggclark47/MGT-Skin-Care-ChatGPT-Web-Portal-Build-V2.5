@@ -106,6 +106,10 @@ export function validateProductionOperationsAdmission(env:NodeJS.ProcessEnv):voi
   &&productionInteger(env.OPERATIONS_ALERT_LEASE_SECONDS,10,600,true)
   &&productionInteger(env.OPERATIONS_ALERT_MAX_RETRY_DELAY_SECONDS,10,86400,true)
   &&productionInteger(env.OPERATIONS_ALERT_MAX_ATTEMPTS,1,20,true)
+  &&productionInteger(env.OPERATIONS_FOLLOW_UP_OVERDUE_GRACE_SECONDS,60,86400,true)
+  &&productionInteger(env.OPERATIONS_FOLLOW_UP_RETRY_DELAY_SECONDS,10,86400,true)
+  &&productionInteger(env.OPERATIONS_FOLLOW_UP_MAX_ATTEMPTS,1,20,true)
+  &&productionInteger(env.OPERATIONS_FOLLOW_UP_RETENTION_DAYS,30,3650,true)
   &&/^[A-Za-z0-9_-]{1,64}$/.test(env.OPERATIONS_ALERT_KEY_ID||'');
  const retryBase=Number(env.OPERATIONS_ALERT_RETRY_COOLDOWN_SECONDS||300),retryMax=Number(env.OPERATIONS_ALERT_MAX_RETRY_DELAY_SECONDS||3600);
  if(!validCore||!validOptional||retryMax<retryBase)throw new Error('Production operations admission is invalid.');

@@ -239,7 +239,11 @@ export function validateEnvironment(env) {
     ["OPERATIONS_ALERT_EVENT_RETENTION_DAYS",1,3650],
     ["OPERATIONS_ALERT_LEASE_SECONDS",10,600],
     ["OPERATIONS_ALERT_MAX_RETRY_DELAY_SECONDS",10,86400],
-    ["OPERATIONS_ALERT_MAX_ATTEMPTS",1,20]
+    ["OPERATIONS_ALERT_MAX_ATTEMPTS",1,20],
+    ["OPERATIONS_FOLLOW_UP_OVERDUE_GRACE_SECONDS",60,86400],
+    ["OPERATIONS_FOLLOW_UP_RETRY_DELAY_SECONDS",10,86400],
+    ["OPERATIONS_FOLLOW_UP_MAX_ATTEMPTS",1,20],
+    ["OPERATIONS_FOLLOW_UP_RETENTION_DAYS",30,3650]
   ]) if (env[key] !== undefined && env[key] !== "" && (typeof env[key] !== "string" || !/^\d+$/.test(env[key]) || !wholeNumber(env[key], minimum, maximum))) errors.push(`${key} must be a whole number between ${minimum} and ${maximum}.`);
   if (wholeNumber(env.OPERATIONS_ALERT_RETRY_COOLDOWN_SECONDS || "300",10,3600) && wholeNumber(env.OPERATIONS_ALERT_MAX_RETRY_DELAY_SECONDS || "3600",10,86400) && Number(env.OPERATIONS_ALERT_MAX_RETRY_DELAY_SECONDS || 3600) < Number(env.OPERATIONS_ALERT_RETRY_COOLDOWN_SECONDS || 300)) errors.push("OPERATIONS_ALERT_MAX_RETRY_DELAY_SECONDS must be at least OPERATIONS_ALERT_RETRY_COOLDOWN_SECONDS.");
 

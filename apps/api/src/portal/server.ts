@@ -462,7 +462,8 @@ export async function createPortal(options:PortalOptions){
     deletions:(await r.entries<any>('deletion_requests')).map(item=>item.value),
     tickets:await r.list<any>('tickets'),
     runs:(await r.entries<any>('operation_runs')).map(item=>item.value),
-    webhooks:await r.list<any>('subscription_webhook_receipts')
+    webhooks:await r.list<any>('subscription_webhook_receipts'),
+    follow_ups:(await r.entries<any>('follow_up_tasks')).map(item=>item.value)
    },Date.now(),responseTarget),
    alert:await r.get<any>('operations','alert_state'),
    events:(await r.entries<any>('operations_alert_events')).map(item=>item.value).filter(item=>item&&typeof item.attempted_at==='string').sort((a,b)=>Date.parse(b.attempted_at)-Date.parse(a.attempted_at)).slice(0,10)

@@ -35,6 +35,9 @@ This register is an engineering release aid, not legal advice, a regulatory cert
   references, while validating the Supabase Google identity-mode declaration before startup.
 - Signed backup-attestation enablement, key shape, replay-age and retention settings now use the same
   fail-closed contract in direct API/worker startup admission and deployment preflight.
+- Durable follow-up tasks now have generation-fenced claims, future-time refusal, bounded retries,
+  overdue blocking, retention, and aggregate operations-health reporting; no task executor is
+  enabled implicitly.
 - Anti-aging readiness switches and operational retention are now explicit, bounded production inputs;
   they report gates only and do not activate checkout, booking or image analysis.
 

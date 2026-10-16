@@ -38,6 +38,18 @@ function canonicalize(value) {
 
 export function releaseExportChecksum(manifest) {
   const { bundle_checksum: _ignored, ...unsigned } = manifest || {};
+  // The backup receipt mirrors both its own artifact checksum and the final
+  // bundle checksum. Exclude only those mirrored fields from the unsigned
+  // input to avoid a self-referential hash; the receipt remains bound by
+  // artifact and manifest field checks below.
+  if (unsigned.backup_status) {
+    unsigned.backup_status = {
+      ...unsigned.backup_status,
+      checksum: null,
+      bundle_checksum: null,
+      ...(unsigned.backup_status.archive ? { archive: { ...unsigned.backup_status.archive, bundle_checksum: null } } : {})
+    };
+  }
   return `sha256:${createHash("sha256").update(canonicalize(unsigned)).digest("hex")}`;
 }
 
@@ -241,6 +253,7 @@ export function buildReleaseExport({ root = process.cwd(), candidateCommit = "",
     backup_status,
     errors
   };
+  if (manifest.backup_status) manifest.backup_status.bundle_checksum = releaseExportChecksum(manifest);
   return { ...manifest, bundle_checksum: releaseExportChecksum(manifest) };
 }
 
@@ -268,6 +281,7 @@ export function validateReleaseExport(manifest, { now = Date.now() } = {}) {
     if (!Number.isSafeInteger(backupStatus.github_repositories) || backupStatus.github_repositories < 1) errors.push("backup_status.github_repositories must be positive");
     if (!/^[A-Za-z0-9_-]{10,}$/.test(text(backupStatus.google_drive_folder_id))) errors.push("backup_status.google_drive_folder_id must be bounded");
     if (!CHECKSUM.test(text(backupStatus.archive_checksum)) || !CHECKSUM.test(text(backupStatus.bundle_checksum))) errors.push("backup_status must include archive and bundle checksums");
+    if (text(backupStatus.bundle_checksum) !== releaseExportChecksum(manifest)) errors.push("backup_status.bundle_checksum must bind the final release bundle checksum");
     if (backupStatus.production_status !== "NOT_READY") errors.push("backup_status.production_status must preserve the production hold");
   }
   const entries = Array.isArray(manifest.entries) ? manifest.entries : [];

@@ -96,7 +96,13 @@ test("binds verified GitHub and Drive backup status without allowing production 
   const manifest = buildReleaseExport({ root, candidateCommit: COMMIT, references: ["README.md"], backupStatusReference: "work/exports/backup.json", now: "2026-01-02T00:00:00.000Z" });
   assert.equal(manifest.status, "ready_for_export");
   assert.equal(manifest.backup_status.github_repositories, 1);
-  assert.equal(verifyReleaseExport({ root, manifest }).ok, true);
+  assert.equal(verifyReleaseExport({ root, manifest }).ok, false);
+  assert.match(verifyReleaseExport({ root, manifest }).errors.join("; "), /bundle[_ ]checksum/);
+  packet.archive.bundle_sha256 = manifest.bundle_checksum;
+  fs.writeFileSync(path.join(root, "work", "exports", "backup.json"), `${JSON.stringify(packet)}\n`);
+  const rebound = buildReleaseExport({ root, candidateCommit: COMMIT, references: ["README.md"], backupStatusReference: "work/exports/backup.json", now: "2026-01-02T00:00:00.000Z" });
+  assert.equal(rebound.status, "ready_for_export");
+  assert.equal(verifyReleaseExport({ root, manifest: rebound }).ok, true);
   packet.production_status = "READY";
   fs.writeFileSync(path.join(root, "work", "exports", "backup.json"), `${JSON.stringify(packet)}\n`);
   const changed = buildReleaseExport({ root, candidateCommit: COMMIT, references: ["README.md"], backupStatusReference: "work/exports/backup.json", now: "2026-01-02T00:00:00.000Z" });

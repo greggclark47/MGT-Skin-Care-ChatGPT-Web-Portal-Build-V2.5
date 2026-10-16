@@ -1827,6 +1827,8 @@ This checkpoint does not create a Stripe Product or Prices, connect an account, 
 
 **Phase F988 — backup-status-bound release export:** Release export generation now optionally binds a verified backup receipt covering every configured GitHub repository, the designated Google Drive folder, archive and bundle checksums, and the explicit `NOT_READY` production hold. Verification re-reads the receipt and rejects detached candidate SHAs, invalid destinations, checksum drift, or a fabricated production-ready state. This phase does not create provider receipts or authorize deployment.
 
+**Phase F989 — final bundle checksum parity:** The backup receipt now binds the final release bundle checksum through a narrowly excluded mirrored field, avoiding a self-referential hash while preserving artifact and manifest checksum verification. A stale pre-receipt bundle checksum fails verification until the receipt is rebound to the final manifest. This phase does not authorize production.
+
 **Exit evidence:** approved positioning and claims, consent-compliant measurement plan, attribution rules, partner terms where relevant, campaign cap and stop rule, baseline report, and a post-test decision grounded in observed data.
 
 ### Phase E — data, AI economics and service qualification (Critical for production)

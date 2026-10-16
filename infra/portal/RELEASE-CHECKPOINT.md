@@ -1,5 +1,7 @@
 # AI release controls checkpoint
 
+2026-10-16 signed backup freshness parity: enabled backup attestation now requires an explicit `BACKUP_ATTESTATION_MAX_AGE_SECONDS` value in preflight and runtime admission, and the request verifier no longer supplies a hidden production fallback. API and worker startup probes reject the incomplete declaration before database initialization; focused runtime coverage passes. This remains configuration-shape evidence only and does not establish a live backup service or restore drill.
+
 2026-10-16 signed approval envelope: `signed-approval.mjs` now verifies candidate-bound Ed25519 approval envelopes with bounded role, key identity, signer subject reference, strict UTC window, payload checksum, and signature checks. It does not authenticate the human, create keys, consume authority, or authorize deployment.
 
 2026-10-16 strict operations policy admission: production preflight now requires the complete notification, alert, follow-up, retention, and anti-aging operations policy tuple to be explicitly declared; missing values cannot fall back to runtime defaults. Focused production-intake coverage passes; this validates configuration shape only, not live service behavior.

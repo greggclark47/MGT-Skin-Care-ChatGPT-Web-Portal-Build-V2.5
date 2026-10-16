@@ -521,6 +521,13 @@ for (const entry of ['server','worker']) test(`${entry} rejects unsafe backup co
   }
 });
 
+for (const entry of ['server','worker']) test(`${entry} rejects enabled backup attestation without an explicit freshness window before database initialization`, () => {
+  const child=probeStartup(entry,{BACKUP_ATTESTATION_ENABLED:'true',BACKUP_ATTESTATION_SECRET:'backup-attestation-reference',BACKUP_ATTESTATION_KEY_ID:'primary',BACKUP_ATTESTATION_MAX_AGE_SECONDS:undefined});
+  assert.equal(child.error,undefined);
+  assert.equal(child.status,1);
+  assert.doesNotMatch(child.stderr,/DATABASE_OPENED|backup-attestation-reference/);
+});
+
 for (const entry of ['server','worker']) test(`${entry} rejects unsafe accessibility evidence before database initialization`, () => {
   for (const overrides of [{ACCESSIBILITY_VALIDATION_REPORT_URL:''},{ACCESSIBILITY_VALIDATION_REPORT_URL:'http://evidence.mgtskincare.test/a'},{ACCESSIBILITY_VALIDATION_REPORT_URL:'https://evidence.mgtskincare.test/a?token=hidden'},{ACCESSIBILITY_VALIDATION_REPORT_URL:'https://evidence.mgtskincare.test/a#alternate'},{ACCESSIBILITY_VALIDATED_AT:'2026-01-01T00:00:00Z'},{ACCESSIBILITY_VALIDATED_AT:'2999-01-01T00:00:00.000Z'}]) {
     const child=probeStartup(entry,overrides);assert.equal(child.error,undefined);assert.equal(child.status,1);assert.doesNotMatch(child.stderr,/DATABASE_OPENED|mgtskincare\.test|2999/);

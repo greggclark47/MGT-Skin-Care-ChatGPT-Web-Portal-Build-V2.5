@@ -44,6 +44,9 @@ This register is an engineering release aid, not legal advice, a regulatory cert
 - The Drive archive transfer contract now prepares resumable-upload metadata, export-ID
   reconciliation, and exact content/parent/property readback without making a network call or
   enabling production OAuth.
+- A recovery-drill review contract now validates candidate continuity, distinct isolated restore
+  targets, measured RTO/RPO, restored migration version, rollback and failed-restore evidence,
+  and the accountable decision without executing a live restore.
 - Anti-aging readiness switches and operational retention are now explicit, bounded production inputs;
   they report gates only and do not activate checkout, booking or image analysis.
 

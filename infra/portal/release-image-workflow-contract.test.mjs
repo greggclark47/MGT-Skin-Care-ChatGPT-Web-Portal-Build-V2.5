@@ -23,6 +23,17 @@ test("publishes, attests, and records both application images", () => {
   assert.equal((workflow.match(/create-storage-record:\s*false/g) || []).length, 2);
 });
 
+test("runs the candidate verification gate before registry authentication or image publication", () => {
+  const verification = workflow.indexOf("name: Run candidate verification before publication");
+  const login = workflow.indexOf("name: Authenticate to GitHub Container Registry");
+  const publish = workflow.indexOf("uses: docker/build-push-action@");
+  assert.ok(verification >= 0);
+  assert.ok(login > verification);
+  assert.ok(publish > verification);
+  assert.match(workflow, /pnpm install --frozen-lockfile/);
+  assert.match(workflow, /pnpm test:infra && pnpm test:compose-contract && pnpm test:lineage && pnpm test:verification/);
+});
+
 test("every workflow action is pinned to a reviewed commit", () => {
   const uses = [...workflow.matchAll(/^\s*-?\s*uses:\s*([^\s#]+)/gm)].map((match) => match[1]);
   assert.ok(uses.length >= 8);

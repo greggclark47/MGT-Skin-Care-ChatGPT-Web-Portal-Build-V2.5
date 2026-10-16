@@ -143,6 +143,17 @@ export function validateProductionBackupAdmission(env:NodeJS.ProcessEnv):void{
  if(!productionInteger(env.BACKUP_MAX_AGE_HOURS,1,72)||!productionInteger(env.BACKUP_RESTORE_MAX_AGE_DAYS,1,365))throw new Error('Production backup admission is invalid.');
 }
 
+export function validateProductionBackupAttestationAdmission(env:NodeJS.ProcessEnv):void{
+ if(env.NODE_ENV!=='production')return;
+ if(env.BACKUP_ATTESTATION_ENABLED!=='true'&&env.BACKUP_ATTESTATION_ENABLED!=='false')throw new Error('Production backup attestation admission is invalid.');
+ if(env.BACKUP_ATTESTATION_ENABLED==='true'){
+  if(!configuredReference(env.BACKUP_ATTESTATION_SECRET)||!/^[A-Za-z0-9_-]{1,64}$/.test(env.BACKUP_ATTESTATION_KEY_ID||''))throw new Error('Production backup attestation admission is invalid.');
+  if(!productionInteger(env.BACKUP_ATTESTATION_MAX_AGE_SECONDS,1,604800,true))throw new Error('Production backup attestation admission is invalid.');
+ }
+ if(env.BACKUP_ATTESTATION_ENABLED==='false'&&['BACKUP_ATTESTATION_SECRET','BACKUP_ATTESTATION_KEY_ID','BACKUP_ATTESTATION_MAX_AGE_SECONDS'].some(key=>env[key]!==undefined&&env[key]!==''))throw new Error('Production backup attestation admission is invalid.');
+ if(!productionInteger(env.OPERATIONS_BACKUP_ATTESTATION_RETENTION_DAYS??'90',1,3650))throw new Error('Production backup attestation admission is invalid.');
+}
+
 export function validateProductionAccessibilityAdmission(env:NodeJS.ProcessEnv):void{
  if(env.NODE_ENV!=='production')return;
  if(!productionHttpsUrl(env.ACCESSIBILITY_VALIDATION_REPORT_URL)||!productionPastIso(env.ACCESSIBILITY_VALIDATED_AT))throw new Error('Production accessibility admission is invalid.');
@@ -214,6 +225,7 @@ export function validateProductionDisabledFeatureResidue(env:NodeJS.ProcessEnv):
  if(env.OLLAMA_ENABLED==='false'&&populated(['OLLAMA_BASE_URL']))throw new Error('Production disabled feature residue is invalid.');
  if(env.OPENCLAW_ENABLED==='false'&&populated(['OPENCLAW_BASE_URL','OPENCLAW_API_MODE','OPENCLAW_API_KEY']))throw new Error('Production disabled feature residue is invalid.');
  if(env.CLIENT_IMAGE_DRIVE_TEST_ENABLED==='true'||populated(['TEST_GOOGLE_DRIVE_CLIENT_ID','TEST_GOOGLE_DRIVE_CLIENT_SECRET','TEST_GOOGLE_DRIVE_REFRESH_TOKEN','TEST_GOOGLE_DRIVE_FOLDER_ID']))throw new Error('Production disabled feature residue is invalid.');
+ if(env.BACKUP_ATTESTATION_ENABLED==='false'&&populated(['BACKUP_ATTESTATION_SECRET','BACKUP_ATTESTATION_KEY_ID','BACKUP_ATTESTATION_MAX_AGE_SECONDS']))throw new Error('Production disabled feature residue is invalid.');
  if(env.SUBSCRIPTIONS_ENABLED==='false'&&populated(['STRIPE_LIVE_MODE','STRIPE_SECRET_KEY','STRIPE_SUBSCRIPTION_WEBHOOK_SECRET','STRIPE_PREMIUM_PRODUCT_ID','STRIPE_PREMIUM_MONTHLY_PRICE_ID','STRIPE_PREMIUM_ANNUAL_PRICE_ID']))throw new Error('Production disabled feature residue is invalid.');
 }
 
@@ -228,6 +240,7 @@ export function productionAdmissionProjection(env:NodeJS.ProcessEnv){
   ['notifications',()=>validateProductionNotificationAdmission(env)],
   ['identity',()=>validateProductionIdentityAdmission(env)],
   ['backup',()=>validateProductionBackupAdmission(env)],
+  ['backup_attestation',()=>validateProductionBackupAttestationAdmission(env)],
   ['accessibility',()=>validateProductionAccessibilityAdmission(env)],
   ['subscriptions',()=>validateProductionSubscriptionAdmission(env)],
   ['ai',()=>validateProductionAiAdmission(env)],
@@ -257,6 +270,7 @@ export function validateApiProcessAdmission(env:NodeJS.ProcessEnv):void{
  validateProductionNotificationAdmission(env);
  validateProductionIdentityAdmission(env);
  validateProductionBackupAdmission(env);
+ validateProductionBackupAttestationAdmission(env);
  validateProductionAccessibilityAdmission(env);
  validateProductionSubscriptionAdmission(env);
  validateProductionAiAdmission(env);
@@ -274,6 +288,7 @@ export function validateWorkerRuntimeAdmission(env:NodeJS.ProcessEnv):number{
  validateProductionNotificationAdmission(env);
  validateProductionIdentityAdmission(env);
  validateProductionBackupAdmission(env);
+ validateProductionBackupAttestationAdmission(env);
  validateProductionAccessibilityAdmission(env);
  validateProductionSubscriptionAdmission(env);
  validateProductionAiAdmission(env);

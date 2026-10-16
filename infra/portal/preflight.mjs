@@ -183,8 +183,8 @@ export function validateEnvironment(env) {
   if (typeof env.BACKUP_MAX_AGE_HOURS !== "string" || !/^\d+$/.test(env.BACKUP_MAX_AGE_HOURS) || !wholeNumber(env.BACKUP_MAX_AGE_HOURS, 1, 72)) errors.push("BACKUP_MAX_AGE_HOURS must be a whole number between 1 and 72.");
   if (typeof env.BACKUP_RESTORE_MAX_AGE_DAYS !== "string" || !/^\d+$/.test(env.BACKUP_RESTORE_MAX_AGE_DAYS) || !wholeNumber(env.BACKUP_RESTORE_MAX_AGE_DAYS, 1, 365)) errors.push("BACKUP_RESTORE_MAX_AGE_DAYS must be a whole number between 1 and 365.");
 
-  const backupAttestationEnabled = env.BACKUP_ATTESTATION_ENABLED ?? "false";
-  if (!["true", "false"].includes(backupAttestationEnabled)) errors.push("BACKUP_ATTESTATION_ENABLED must be exactly true or false.");
+  const backupAttestationEnabled = env.BACKUP_ATTESTATION_ENABLED;
+  if (!["true", "false"].includes(backupAttestationEnabled)) errors.push("BACKUP_ATTESTATION_ENABLED must be explicitly true or false.");
   if (backupAttestationEnabled === "true") {
     const attestationSecret = requireValue("BACKUP_ATTESTATION_SECRET");
     if (attestationSecret && !validSecretReference(attestationSecret)) errors.push("BACKUP_ATTESTATION_SECRET must be a bounded injected reference without whitespace or control characters.");

@@ -30,6 +30,8 @@ This register is an engineering release aid, not legal advice, a regulatory cert
   reviewed database role has the required RLS authority; it does not mutate the target database.
 - Production admission now rejects test-only Google Drive image-storage flags, credentials and folder
   references, while validating the Supabase Google identity-mode declaration before startup.
+- Signed backup-attestation enablement, key shape, replay-age and retention settings now use the same
+  fail-closed contract in direct API/worker startup admission and deployment preflight.
 
 ## Release scope
 

@@ -2,7 +2,7 @@ const assert = require('node:assert/strict');
 const { test } = require('node:test');
 const { spawnSync } = require('node:child_process');
 const path = require('node:path');
-const { productionAdmissionProjection, validateRuntimeOwnership, validateProductionPortalBoundary, validateProductionDatabaseAdmission, validateProductionOperationsAdmission, validateProductionNotificationAdmission, validateProductionIdentityAdmission, validateProductionBackupAdmission, validateProductionAccessibilityAdmission, validateProductionSubscriptionAdmission, validateProductionAiAdmission, validateProductionProcessSurfaceAdmission, validateProductionImageAdmission, validateProductionSecretIsolation, validateProductionEndpointIsolation, validateProductionDisabledFeatureResidue, workerIntervalMs, workerReadinessMaxAgeMs } = require('../dist/portal/runtime-admission');
+const { productionAdmissionProjection, validateRuntimeOwnership, validateProductionPortalBoundary, validateProductionDatabaseAdmission, validateProductionOperationsAdmission, validateProductionNotificationAdmission, validateProductionIdentityAdmission, validateProductionBackupAdmission, validateProductionBackupAttestationAdmission, validateProductionAccessibilityAdmission, validateProductionSubscriptionAdmission, validateProductionAiAdmission, validateProductionProcessSurfaceAdmission, validateProductionImageAdmission, validateProductionSecretIsolation, validateProductionEndpointIsolation, validateProductionDisabledFeatureResidue, workerIntervalMs, workerReadinessMaxAgeMs } = require('../dist/portal/runtime-admission');
 const { createPortal } = require('../dist/portal/server');
 const owner = 'Gregg Clark of MGT';
 const valid = { NODE_ENV:'production', DEMO_MODE:'false', PUBLIC_ORIGIN:'https://portal.example', PORTAL_DOMAIN:'portal.example', RELEASE_OWNER_NAME:owner, SUPPORT_OWNER_NAME:owner, WORKER_INTERVAL_SECONDS:'60', WORKER_READINESS_MAX_AGE_SECONDS:'300' };
@@ -147,7 +147,7 @@ const notification = {
 const identity = {
   SUPABASE_URL:'https://identity.mgtskincare.test', SUPABASE_ANON_KEY:'anon', SUPABASE_SERVICE_ROLE_KEY:'service', SUPABASE_GOOGLE_OAUTH_ENABLED:'false'
 };
-const backup = {BACKUP_MAX_AGE_HOURS:'26',BACKUP_RESTORE_MAX_AGE_DAYS:'90'};
+const backup = {BACKUP_MAX_AGE_HOURS:'26',BACKUP_RESTORE_MAX_AGE_DAYS:'90',BACKUP_ATTESTATION_ENABLED:'false'};
 const accessibility = {ACCESSIBILITY_VALIDATION_REPORT_URL:'https://evidence.mgtskincare.test/accessibility',ACCESSIBILITY_VALIDATED_AT:'2026-01-01T00:00:00.000Z'};
 const subscription = {SUBSCRIPTIONS_ENABLED:'false'};
 const ai = {OLLAMA_ENABLED:'false',OPENCLAW_ENABLED:'false'};
@@ -241,6 +241,29 @@ test('production backup admission matches preflight freshness boundaries', async
     try{validateProductionBackupAdmission(env);}catch(error){runtimeAccepts=false;assert.equal(error.message,'Production backup admission is invalid.');}
     const report=validateEnvironment(env),preflightAccepts=!report.errors.some(error=>error.startsWith('BACKUP_'));
     assert.equal(runtimeAccepts,preflightAccepts,JSON.stringify(overrides));
+  }
+});
+
+test('production backup attestation admission matches preflight enablement and retention boundaries', async () => {
+  const {validateEnvironment}=await import('../../../infra/portal/preflight.mjs');
+  const processEnv={...valid,...operational,...notification,...identity,...backup};
+  assert.doesNotThrow(()=>validateProductionBackupAttestationAdmission(processEnv));
+  const enabled={...processEnv,BACKUP_ATTESTATION_ENABLED:'true',BACKUP_ATTESTATION_SECRET:'backup-attestation-reference',BACKUP_ATTESTATION_KEY_ID:'primary',BACKUP_ATTESTATION_MAX_AGE_SECONDS:'300'};
+  assert.doesNotThrow(()=>validateProductionBackupAttestationAdmission(enabled));
+  for(const overrides of [
+    {BACKUP_ATTESTATION_ENABLED:undefined},
+    {BACKUP_ATTESTATION_ENABLED:''},
+    {BACKUP_ATTESTATION_ENABLED:'TRUE'},
+    {BACKUP_ATTESTATION_ENABLED:'true',BACKUP_ATTESTATION_SECRET:''},
+    {BACKUP_ATTESTATION_ENABLED:'true',BACKUP_ATTESTATION_KEY_ID:'not valid'},
+    {BACKUP_ATTESTATION_ENABLED:'true',BACKUP_ATTESTATION_MAX_AGE_SECONDS:'0'},
+    {OPERATIONS_BACKUP_ATTESTATION_RETENTION_DAYS:'0'},
+    {BACKUP_ATTESTATION_SECRET:'dormant-reference'}
+  ]){
+    const env={...processEnv,...overrides};
+    assert.throws(()=>validateProductionBackupAttestationAdmission(env),error=>error.message==='Production backup attestation admission is invalid.');
+    const report=validateEnvironment(env);
+    assert.equal(report.errors.some(error=>error.includes('BACKUP_ATTESTATION')||error.toLowerCase().includes('backup attestation')||error.includes('Production test')||error.includes('retention')),true,JSON.stringify(overrides));
   }
 });
 

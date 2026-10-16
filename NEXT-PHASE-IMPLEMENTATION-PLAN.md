@@ -1897,3 +1897,5 @@ Until these decisions and dependencies are evidenced, the plan remains planning 
 
 **Phase F992 — prerequisite CLI fail-closed timestamp:** Make the prerequisite CLI reject malformed or future-dated timestamps before writing an artifact, with a regression proving no invalid packet is emitted.
 
+**Phase F993 — configuration-source admission:** Record bounded configuration-source metadata and reject an explicitly supplied but missing environment file, preventing ambient process values from masking absent production configuration.
+

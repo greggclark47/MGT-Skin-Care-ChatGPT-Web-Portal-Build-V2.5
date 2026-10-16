@@ -88,6 +88,9 @@ export function validateProductionPrerequisites(document) {
   if (document.status !== "blocked_on_external_prerequisites") errors.push("prerequisites must be explicitly blocked on external prerequisites");
   const config = document.local?.configuration;
   if (config?.status !== "ready_for_live_validation" || !Array.isArray(config.errors) || config.errors.length) errors.push("local configuration must be ready without errors before external prerequisite review");
+  if (!['process_environment', 'env_file_and_process_environment'].includes(config?.source)) errors.push("local configuration source must be bounded");
+  if (!['not_supplied', 'present', 'missing'].includes(config?.env_file_status)) errors.push("local configuration env_file_status must be bounded");
+  if (config?.env_file_status === 'missing' && config?.status !== 'blocked') errors.push("missing env file must keep local configuration blocked");
   const local = document.local;
   const evidence = local?.evidence;
   if (!evidence || !["not_evaluated", "verified"].includes(evidence.status)) errors.push("local evidence must be not_evaluated or verified");
@@ -109,9 +112,13 @@ export function validateProductionPrerequisites(document) {
 }
 
 export function buildProductionPrerequisites({ root = process.cwd(), env = process.env, candidateCommit = "", envFile = "", checkpointFile = "", verificationFile = "", now = new Date().toISOString() } = {}) {
+  const envFileProvided = Boolean(text(envFile));
+  const envFilePresent = !envFileProvided || fs.existsSync(envFile);
   const merged = { ...parseEnvFile(envFile), ...env };
   const preflight = validateEnvironment(merged);
-  const config = { status: preflight.ok ? "ready_for_live_validation" : "blocked", errors: preflight.errors, warnings: preflight.warnings };
+  const configurationErrors = [...preflight.errors];
+  if (!envFilePresent) configurationErrors.unshift("configured production env file must exist before preflight.");
+  const config = { status: configurationErrors.length ? "blocked" : "ready_for_live_validation", source: envFileProvided ? "env_file_and_process_environment" : "process_environment", env_file_status: envFileProvided ? (envFilePresent ? "present" : "missing") : "not_supplied", errors: configurationErrors, warnings: preflight.warnings };
   const evidence = buildLocalEvidence({ root, candidateCommit, checkpointFile, verificationFile });
   const document = {
     version: VERSION,
@@ -119,7 +126,7 @@ export function buildProductionPrerequisites({ root = process.cwd(), env = proce
     generated_at: new Date(now).toISOString(),
     local: { backend_build: evidence.status === "verified" ? "verified_by_checkpoint" : "not_evaluated", portal_tests: evidence.status === "verified" ? "verified_by_verification" : "not_evaluated", evidence, configuration: config },
     external: externalRequirements(),
-    status: preflight.ok && evidence.status !== "blocked" ? "blocked_on_external_prerequisites" : "blocked_on_configuration",
+    status: !configurationErrors.length && evidence.status !== "blocked" ? "blocked_on_external_prerequisites" : "blocked_on_configuration",
     next_action: !preflight.ok ? "Populate a production environment outside source control and rerun the preflight." : evidence.status === "blocked" ? "Supply matching candidate-bound checkpoint and verification reports, then regenerate the prerequisite packet." : "Collect the named live evidence and approvals, then run the production gate."
   };
   return { ...document, prerequisites_checksum: productionPrerequisitesChecksum(document) };

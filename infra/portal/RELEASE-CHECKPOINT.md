@@ -295,3 +295,7 @@ Production prerequisite operators can now pass `--generated-at <ISO timestamp>` 
 
 The CLI also refuses to write a packet when the supplied timestamp is malformed or future-dated, so the fail-closed rule applies before an artifact reaches the release archive.
 
+# F993 configuration-source checkpoint
+
+Prerequisite packets now record only bounded configuration-source metadata (`process_environment` or `env_file_and_process_environment`, plus `not_supplied`, `present`, or `missing`). An explicitly supplied but missing environment file blocks local configuration even when ambient process variables are valid. No path or secret value is serialized, and the production hold remains unchanged.
+

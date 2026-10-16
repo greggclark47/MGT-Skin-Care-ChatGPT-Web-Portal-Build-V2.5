@@ -34,6 +34,17 @@ test("CLI refuses to write a future-dated prerequisite packet", () => {
     assert.equal(fs.existsSync(output), false);
   } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });
+test("blocks a missing env file even when ambient values are otherwise valid", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "mgt-prerequisite-env-file-"));
+  try {
+    const result = buildProductionPrerequisites({ root, env: BASE, envFile: path.join(root, "missing.env"), candidateCommit: "0123456789abcdef0123456789abcdef01234567" });
+    assert.equal(result.status, "blocked_on_configuration");
+    assert.equal(result.local.configuration.status, "blocked");
+    assert.equal(result.local.configuration.source, "env_file_and_process_environment");
+    assert.equal(result.local.configuration.env_file_status, "missing");
+    assert.match(result.local.configuration.errors.join("; "), /configured production env file must exist/);
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
 test("binds passing checkpoint and verification reports to the candidate without copying report content", () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "mgt-local-evidence-"));
   try {

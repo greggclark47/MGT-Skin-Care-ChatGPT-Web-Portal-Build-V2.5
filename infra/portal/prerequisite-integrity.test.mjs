@@ -12,7 +12,7 @@ function fixture() {
   // Synthetic configuration readiness, never evidence of a deployed service.
   const document = buildProductionPrerequisites({ env: {}, candidateCommit: 'a'.repeat(40) });
   document.generated_at = now;
-  document.local.configuration = { status: 'ready_for_live_validation', errors: [], warnings: ['External observations still required'] };
+  document.local.configuration = { status: 'ready_for_live_validation', source: 'process_environment', env_file_status: 'not_supplied', errors: [], warnings: ['External observations still required'] };
   document.status = 'blocked_on_external_prerequisites';
   document.prerequisites_checksum = productionPrerequisitesChecksum(document);
   return document;

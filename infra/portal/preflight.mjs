@@ -272,6 +272,12 @@ export function validateEnvironment(env) {
   if (!String(env.OPENAI_API_KEY || "").trim()) warnings.push("Hosted OpenAI escalation is disabled; local routes remain available.");
   else if (!validSecretReference(env.OPENAI_API_KEY)) errors.push("OPENAI_API_KEY must be injected as a bounded non-placeholder reference without whitespace or control characters.");
 
+  for (const key of ["ANTI_AGING_LIVE_AI", "ANTI_AGING_CHECKOUT_ENABLED", "ANTI_AGING_BOOKING_ENABLED", "ANTI_AGING_IMAGE_ANALYSIS_ENABLED", "ANTI_AGING_ACCESSIBILITY_VERIFIED", "ANTI_AGING_RESTORE_VERIFIED", "ANTI_AGING_PRIVACY_REVIEWED"]) {
+    if (!["true", "false"].includes(env[key])) errors.push(`${key} must be explicitly true or false.`);
+  }
+  const antiAgingRetention = env.OPERATIONS_ANTI_AGING_RETENTION_DAYS ?? "365";
+  if (typeof antiAgingRetention !== "string" || !/^\d+$/.test(antiAgingRetention) || !wholeNumber(antiAgingRetention, 30, 3650)) errors.push("OPERATIONS_ANTI_AGING_RETENTION_DAYS must be a whole number between 30 and 3650.");
+
   const secretKeys = ["SUPABASE_ANON_KEY", "SUPABASE_SERVICE_ROLE_KEY", "OPERATIONS_ALERT_WEBHOOK_TOKEN"];
   if (backupAttestationEnabled === "true") secretKeys.push("BACKUP_ATTESTATION_SECRET");
   if (env.NOTIFICATION_DELIVERY === "webhook") secretKeys.push("NOTIFICATION_WEBHOOK_TOKEN");

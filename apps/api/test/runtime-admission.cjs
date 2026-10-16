@@ -2,7 +2,7 @@ const assert = require('node:assert/strict');
 const { test } = require('node:test');
 const { spawnSync } = require('node:child_process');
 const path = require('node:path');
-const { productionAdmissionProjection, validateRuntimeOwnership, validateProductionPortalBoundary, validateProductionDatabaseAdmission, validateProductionOperationsAdmission, validateProductionNotificationAdmission, validateProductionIdentityAdmission, validateProductionBackupAdmission, validateProductionBackupAttestationAdmission, validateProductionAccessibilityAdmission, validateProductionSubscriptionAdmission, validateProductionAiAdmission, validateProductionProcessSurfaceAdmission, validateProductionImageAdmission, validateProductionSecretIsolation, validateProductionEndpointIsolation, validateProductionDisabledFeatureResidue, workerIntervalMs, workerReadinessMaxAgeMs } = require('../dist/portal/runtime-admission');
+const { productionAdmissionProjection, validateRuntimeOwnership, validateProductionPortalBoundary, validateProductionDatabaseAdmission, validateProductionOperationsAdmission, validateProductionNotificationAdmission, validateProductionIdentityAdmission, validateProductionBackupAdmission, validateProductionBackupAttestationAdmission, validateProductionAntiAgingAdmission, validateProductionAccessibilityAdmission, validateProductionSubscriptionAdmission, validateProductionAiAdmission, validateProductionProcessSurfaceAdmission, validateProductionImageAdmission, validateProductionSecretIsolation, validateProductionEndpointIsolation, validateProductionDisabledFeatureResidue, workerIntervalMs, workerReadinessMaxAgeMs } = require('../dist/portal/runtime-admission');
 const { createPortal } = require('../dist/portal/server');
 const owner = 'Gregg Clark of MGT';
 const valid = { NODE_ENV:'production', DEMO_MODE:'false', PUBLIC_ORIGIN:'https://portal.example', PORTAL_DOMAIN:'portal.example', RELEASE_OWNER_NAME:owner, SUPPORT_OWNER_NAME:owner, WORKER_INTERVAL_SECONDS:'60', WORKER_READINESS_MAX_AGE_SECONDS:'300' };
@@ -148,6 +148,7 @@ const identity = {
   SUPABASE_URL:'https://identity.mgtskincare.test', SUPABASE_ANON_KEY:'anon', SUPABASE_SERVICE_ROLE_KEY:'service', SUPABASE_GOOGLE_OAUTH_ENABLED:'false'
 };
 const backup = {BACKUP_MAX_AGE_HOURS:'26',BACKUP_RESTORE_MAX_AGE_DAYS:'90',BACKUP_ATTESTATION_ENABLED:'false'};
+const antiAging = {ANTI_AGING_LIVE_AI:'false',ANTI_AGING_CHECKOUT_ENABLED:'false',ANTI_AGING_BOOKING_ENABLED:'false',ANTI_AGING_IMAGE_ANALYSIS_ENABLED:'false',ANTI_AGING_ACCESSIBILITY_VERIFIED:'false',ANTI_AGING_RESTORE_VERIFIED:'false',ANTI_AGING_PRIVACY_REVIEWED:'false',OPERATIONS_ANTI_AGING_RETENTION_DAYS:'365'};
 const accessibility = {ACCESSIBILITY_VALIDATION_REPORT_URL:'https://evidence.mgtskincare.test/accessibility',ACCESSIBILITY_VALIDATED_AT:'2026-01-01T00:00:00.000Z'};
 const subscription = {SUBSCRIPTIONS_ENABLED:'false'};
 const ai = {OLLAMA_ENABLED:'false',OPENCLAW_ENABLED:'false'};
@@ -264,6 +265,26 @@ test('production backup attestation admission matches preflight enablement and r
     assert.throws(()=>validateProductionBackupAttestationAdmission(env),error=>error.message==='Production backup attestation admission is invalid.');
     const report=validateEnvironment(env);
     assert.equal(report.errors.some(error=>error.includes('BACKUP_ATTESTATION')||error.toLowerCase().includes('backup attestation')||error.includes('Production test')||error.includes('retention')),true,JSON.stringify(overrides));
+  }
+});
+
+test('production anti-aging admission matches preflight readiness and retention boundaries', async () => {
+  const {validateEnvironment}=await import('../../../infra/portal/preflight.mjs');
+  const processEnv={...valid,...operational,...notification,...identity,...backup,...antiAging};
+  assert.doesNotThrow(()=>validateProductionAntiAgingAdmission(processEnv));
+  for(const overrides of [
+    {ANTI_AGING_LIVE_AI:undefined},
+    {ANTI_AGING_CHECKOUT_ENABLED:'TRUE'},
+    {ANTI_AGING_BOOKING_ENABLED:''},
+    {ANTI_AGING_IMAGE_ANALYSIS_ENABLED:'enabled'},
+    {ANTI_AGING_ACCESSIBILITY_VERIFIED:'1'},
+    {OPERATIONS_ANTI_AGING_RETENTION_DAYS:'29'},
+    {OPERATIONS_ANTI_AGING_RETENTION_DAYS:'3650.0'}
+  ]){
+    const env={...processEnv,...overrides};
+    assert.throws(()=>validateProductionAntiAgingAdmission(env),error=>error.message==='Production anti-aging admission is invalid.');
+    const report=validateEnvironment(env);
+    assert.equal(report.errors.some(error=>error.startsWith('ANTI_AGING_')||error.startsWith('OPERATIONS_ANTI_AGING_RETENTION_DAYS')),true,JSON.stringify(overrides));
   }
 });
 
@@ -386,7 +407,7 @@ function probeStartup(entry, overrides = {}) {
   const storePath = require.resolve('../dist/portal/store');
   const entryPath = path.resolve(__dirname,`../dist/portal/${entry}.js`);
   const boot = `const Module=require('node:module');const store=require(${JSON.stringify(storePath)});store.PgStore=class{constructor(){process.stderr.write('DATABASE_OPENED');process.exit(77);}};Module.runMain(${JSON.stringify(entryPath)});`;
-  const env = {...process.env,...valid,...operational,...notification,...identity,...backup,...accessibility,...subscription,...ai,...processSurface,...images,PORTAL_AUTO_MIGRATE:'false',DATABASE_URL:'postgresql://db.invalid/mgt?sslmode=verify-full',...overrides};
+  const env = {...process.env,...valid,...operational,...notification,...identity,...backup,...antiAging,...accessibility,...subscription,...ai,...processSurface,...images,PORTAL_AUTO_MIGRATE:'false',DATABASE_URL:'postgresql://db.invalid/mgt?sslmode=verify-full',...overrides};
   return spawnSync(process.execPath,['-e',boot],{env,encoding:'utf8',timeout:10000,windowsHide:true});
 }
 

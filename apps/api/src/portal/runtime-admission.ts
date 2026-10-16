@@ -154,6 +154,14 @@ export function validateProductionBackupAttestationAdmission(env:NodeJS.ProcessE
  if(!productionInteger(env.OPERATIONS_BACKUP_ATTESTATION_RETENTION_DAYS??'90',1,3650))throw new Error('Production backup attestation admission is invalid.');
 }
 
+export function validateProductionAntiAgingAdmission(env:NodeJS.ProcessEnv):void{
+ if(env.NODE_ENV!=='production')return;
+ for(const key of ['ANTI_AGING_LIVE_AI','ANTI_AGING_CHECKOUT_ENABLED','ANTI_AGING_BOOKING_ENABLED','ANTI_AGING_IMAGE_ANALYSIS_ENABLED','ANTI_AGING_ACCESSIBILITY_VERIFIED','ANTI_AGING_RESTORE_VERIFIED','ANTI_AGING_PRIVACY_REVIEWED']){
+  if(env[key]!=='true'&&env[key]!=='false')throw new Error('Production anti-aging admission is invalid.');
+ }
+ if(!productionInteger(env.OPERATIONS_ANTI_AGING_RETENTION_DAYS??'365',30,3650))throw new Error('Production anti-aging admission is invalid.');
+}
+
 export function validateProductionAccessibilityAdmission(env:NodeJS.ProcessEnv):void{
  if(env.NODE_ENV!=='production')return;
  if(!productionHttpsUrl(env.ACCESSIBILITY_VALIDATION_REPORT_URL)||!productionPastIso(env.ACCESSIBILITY_VALIDATED_AT))throw new Error('Production accessibility admission is invalid.');
@@ -241,6 +249,7 @@ export function productionAdmissionProjection(env:NodeJS.ProcessEnv){
   ['identity',()=>validateProductionIdentityAdmission(env)],
   ['backup',()=>validateProductionBackupAdmission(env)],
   ['backup_attestation',()=>validateProductionBackupAttestationAdmission(env)],
+  ['anti_aging',()=>validateProductionAntiAgingAdmission(env)],
   ['accessibility',()=>validateProductionAccessibilityAdmission(env)],
   ['subscriptions',()=>validateProductionSubscriptionAdmission(env)],
   ['ai',()=>validateProductionAiAdmission(env)],
@@ -271,6 +280,7 @@ export function validateApiProcessAdmission(env:NodeJS.ProcessEnv):void{
  validateProductionIdentityAdmission(env);
  validateProductionBackupAdmission(env);
  validateProductionBackupAttestationAdmission(env);
+ validateProductionAntiAgingAdmission(env);
  validateProductionAccessibilityAdmission(env);
  validateProductionSubscriptionAdmission(env);
  validateProductionAiAdmission(env);
@@ -289,6 +299,7 @@ export function validateWorkerRuntimeAdmission(env:NodeJS.ProcessEnv):number{
  validateProductionIdentityAdmission(env);
  validateProductionBackupAdmission(env);
  validateProductionBackupAttestationAdmission(env);
+ validateProductionAntiAgingAdmission(env);
  validateProductionAccessibilityAdmission(env);
  validateProductionSubscriptionAdmission(env);
  validateProductionAiAdmission(env);

@@ -303,3 +303,7 @@ Prerequisite packets now record only bounded configuration-source metadata (`pro
 
 Prerequisite packets now include checksum-bound, machine-readable configuration error classifications alongside human-readable diagnostics. The bounded vocabulary distinguishes missing environment files, disabled-feature residue, duplicate configuration references, invalid production fields, and other production configuration constraints. Validation rejects missing, unknown, reordered, or tampered classifications. This improves operational handoff while leaving all live evidence, approval, and production deployment requirements blocked.
 
+# F995 regular environment-file admission checkpoint
+
+An explicitly supplied production environment path must now resolve to a regular file. Missing and non-file paths receive distinct bounded states and error codes, remain blocked even when ambient process variables are valid, and are never parsed as configuration. The production hold and external evidence requirements remain unchanged.
+

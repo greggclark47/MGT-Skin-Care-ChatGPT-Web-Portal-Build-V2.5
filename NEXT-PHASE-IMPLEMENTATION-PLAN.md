@@ -1901,3 +1901,5 @@ Until these decisions and dependencies are evidenced, the plan remains planning 
 
 **Phase F994 — bounded configuration diagnostics:** Add checksum-bound machine-readable configuration error classifications to prerequisite packets, with strict validation of the fixed vocabulary and regression coverage for missing, unknown, reordered, and tampered classifications. Keep raw errors for human diagnosis while excluding paths, values, and secrets from the new operational field.
 
+**Phase F995 — regular environment-file admission:** Require an explicitly supplied production environment path to resolve to a regular file, classify missing versus non-file paths, and fail closed before parsing directories or other invalid targets.
+

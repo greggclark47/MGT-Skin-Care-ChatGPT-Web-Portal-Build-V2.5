@@ -319,3 +319,5 @@ The remaining build is aligned to [`PRODUCTION-SHIP-PLAN-ALIGNMENT.md`](../../PR
 
 F994 prerequisite packets add bounded `local.configuration.error_codes` alongside the existing human-readable errors. Codes are limited to environment-file absence, disabled-feature residue, duplicate configuration references, invalid production fields, and general production configuration constraints. The codes contain no paths, values, or secrets and are checksum-bound; validation rejects missing, unknown, reordered, or tampered classifications. This improves operator handoff without changing the external-evidence or production-approval hold.
 
+F995 treats an explicitly supplied environment path as valid only when it resolves to a regular file. Missing and non-file paths are recorded with separate bounded states (`missing` or `invalid`) and block the packet before parsing, so a directory or inaccessible path cannot be mistaken for usable production configuration.
+

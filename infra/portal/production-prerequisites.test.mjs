@@ -53,6 +53,20 @@ test("blocks a missing env file even when ambient values are otherwise valid", (
     assert.match(result.local.configuration.errors.join("; "), /configured production env file must exist/);
   } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });
+test("blocks an env-file directory instead of attempting to parse it", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "mgt-prerequisite-env-directory-"));
+  try {
+    const envDirectory = path.join(root, "production.env");
+    fs.mkdirSync(envDirectory);
+    const result = buildProductionPrerequisites({ root, env: BASE, envFile: envDirectory, candidateCommit: "0123456789abcdef0123456789abcdef01234567" });
+    assert.equal(result.status, "blocked_on_configuration");
+    assert.equal(result.local.configuration.status, "blocked");
+    assert.equal(result.local.configuration.source, "env_file_and_process_environment");
+    assert.equal(result.local.configuration.env_file_status, "invalid");
+    assert.deepEqual(result.local.configuration.error_codes, ["ENV_FILE_INVALID"]);
+    assert.match(result.local.configuration.errors.join("; "), /regular file/);
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
 test("binds passing checkpoint and verification reports to the candidate without copying report content", () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "mgt-local-evidence-"));
   try {

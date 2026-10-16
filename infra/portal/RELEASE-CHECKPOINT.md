@@ -1,5 +1,9 @@
 # AI release controls checkpoint
 
+2026-10-16 commit-pinned export generation: release tooling can create an idempotent candidate ZIP from the exact Git commit under `work/exports/`, after the candidate commit credential scan passes. Reuse of an archive for another commit, unsafe output paths, or mismatched bytes remains blocked. No remote publication or upload was performed.
+
+2026-10-16 remote-artifact readback hardening: confirmed receipts now require repository and release-asset identity, exact archive name/bytes/checksum/URL/tag, and Drive parent-folder identity plus exact filename. Focused and full local verification passed; live destination receipts remain external evidence.
+
 2026-10-06 multi-remote receipt checkpoint: release receipt validation now requires an observed candidate-commit receipt for every GitHub repository listed in the export manifest. A push to only one configured remote cannot satisfy the GitHub destination when two repositories are in scope.
 
 2026-10-06 deferred-commerce removal checkpoint: Referral-only launch boundaries now remove the dormant fulfillment, partner-onboarding, connected-account approval, payout, transfer-reversal, and product-refund handlers from the compiled portal server. The explicit deferred/retailer-owned boundary responses remain in place, and the compliance contract fails if those routes or Stripe Connect/refund operations return. Premium membership billing remains the only enabled Stripe workflow.

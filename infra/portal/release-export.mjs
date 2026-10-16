@@ -245,9 +245,9 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
       const root = path.resolve(fileURLToPath(new URL("../..", import.meta.url)));
       const candidateCommit = candidateCommitArgument || gitValue(root, ["rev-parse", "HEAD"]);
       if (archive && createArchive) throw new Error("Use either --archive or --create-archive, not both.");
-      if (createArchive) createReleaseArchive({ root, candidateCommit, reference: createArchive });
       const credentialFindings = scanGitCommit(root, candidateCommit);
       if (credentialFindings.length) throw new Error(`Candidate commit credential scan found ${credentialFindings.length} potential finding(s); inspect the commit before export.`);
+      if (createArchive) createReleaseArchive({ root, candidateCommit, reference: createArchive });
       const manifest = buildReleaseExport({ root, candidateCommit, references: references ? references.split(",") : DEFAULT_EXPORT_REFERENCES, archiveReference: createArchive || archive });
       const destination = path.resolve(root, output);
       fs.mkdirSync(path.dirname(destination), { recursive: true });

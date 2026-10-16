@@ -23,6 +23,7 @@ test("production runtime keeps migrations manual and local AI opt-in", () => {
   assert.match(compose, /OLLAMA_ENABLED: \$\{OLLAMA_ENABLED:-false\}/);
   assert.match(compose, /OLLAMA_BASE_URL: \$\{OLLAMA_BASE_URL:-\}/);
   assert.match(compose, /OPENCLAW_BASE_URL: \$\{OPENCLAW_BASE_URL:-\}/);
+  assert.match(compose, /OPENCLAW_API_MODE: \$\{OPENCLAW_API_MODE:-\}/);
   assert.doesNotMatch(compose, /OLLAMA_BASE_URL: \$\{OLLAMA_BASE_URL:-http:\/\/ollama:11434\}/);
   assert.doesNotMatch(compose, /OPENCLAW_BASE_URL: \$\{OPENCLAW_BASE_URL:-http:\/\/ollama:11434\}/);
   assert.doesNotMatch(compose.slice(compose.indexOf("  api:"), compose.indexOf("  worker:")), /depends_on:\s*\n\s+ollama:/);

@@ -13,6 +13,8 @@ test('production admission projection exposes category outcomes without submitte
   assert.equal(projection.healthy,false);
   assert(projection.issues.includes('database'));
   assert(projection.next_actions.some(item=>item.id==='database'&&/reviewed PostgreSQL target/i.test(item.action)));
+  assert.deepEqual(projection.next_actions.map(item=>item.id).sort(),projection.issues.slice().sort(),'every blocked category must have reviewed guidance');
+  assert(projection.next_actions.every(item=>typeof item.action==='string'&&item.action.length>20),'guidance must remain bounded text');
   assert.equal(JSON.stringify(projection).includes('DATABASE_URL'),false);
   assert.equal(JSON.stringify(projection).includes('portal.example'),false);
   assert.equal(JSON.stringify(projection).includes('Gregg Clark'),false);

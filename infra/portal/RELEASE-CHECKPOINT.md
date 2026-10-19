@@ -335,3 +335,7 @@ The operations console now renders production admission guidance only for a prod
 
 The reviewed production-remediation catalogue is now shared between the API and web portal. Server responses and browser validation therefore use the same fixed category/action pairs, while malformed, unknown, or altered responses remain hidden from the operator view. This does not alter production admission, external evidence, or approval requirements.
 
+### F1003 — complete admission guidance
+
+Production admission now fails closed if a blocked category is missing its reviewed remediation entry. Regression coverage requires every failed category in a production projection to map to one bounded action. This prevents unactionable readiness blocks without returning configuration values or evidence details.
+

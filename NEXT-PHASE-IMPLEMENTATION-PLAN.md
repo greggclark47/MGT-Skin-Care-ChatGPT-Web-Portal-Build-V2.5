@@ -1917,3 +1917,5 @@ Until these decisions and dependencies are evidenced, the plan remains planning 
 
 **Phase F1002 — shared admission catalogue:** Move the reviewed category/action pairs into the shared cross-platform package. The API derives its production response from that catalogue and the web console validates against the same source, preventing copy drift while still refusing unknown or altered response text.
 
+**Phase F1003 — complete admission guidance:** Make production admission fail closed if any blocked category has no reviewed remediation entry. The response contract verifies that every issue maps to exactly one bounded safe action, preventing future checks from becoming unactionable without exposing configuration details.
+

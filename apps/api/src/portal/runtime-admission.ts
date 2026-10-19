@@ -274,7 +274,8 @@ export function productionAdmissionProjection(env:NodeJS.ProcessEnv){
  ];
  const results=checks.map(([id,validate])=>{try{validate();return{id,healthy:true};}catch{return{id,healthy:false};}});
  const issues=results.filter(check=>!check.healthy).map(check=>check.id);
- return {mode:'production' as const,healthy:issues.length===0,issues,checks:results,next_actions:issues.flatMap(id=>{const action=reviewedProductionAdmissionAction(id);return action?[action]:[];})};
+ const next_actions=issues.map(id=>{const action=reviewedProductionAdmissionAction(id);if(!action)throw new Error('Production admission guidance is incomplete.');return action;});
+ return {mode:'production' as const,healthy:issues.length===0,issues,checks:results,next_actions};
 }
 
 export function validateApiRuntimeAdmission(env:NodeJS.ProcessEnv):void{

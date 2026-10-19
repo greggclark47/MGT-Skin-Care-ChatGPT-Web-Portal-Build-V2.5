@@ -1,3 +1,5 @@
+import { reviewedProductionAdmissionAction } from '@mgt/shared';
+
 // Runtime admission is deliberately independent of the deployment CLI: direct
 // service execution must reject invalid declarations before opening a database.
 export function validateRuntimeOwnership(env:NodeJS.ProcessEnv):void{
@@ -248,27 +250,6 @@ export function validateProductionDisabledFeatureResidue(env:NodeJS.ProcessEnv):
  if(env.SUBSCRIPTIONS_ENABLED==='false'&&populated(['STRIPE_LIVE_MODE','STRIPE_SECRET_KEY','STRIPE_SUBSCRIPTION_WEBHOOK_SECRET','STRIPE_PREMIUM_PRODUCT_ID','STRIPE_PREMIUM_MONTHLY_PRICE_ID','STRIPE_PREMIUM_ANNUAL_PRICE_ID']))throw new Error('Production disabled feature residue is invalid.');
 }
 
-const PRODUCTION_ADMISSION_ACTIONS:Record<string,string>=Object.freeze({
- ownership:'Confirm the approved release and support owner declarations.',
- portal_boundary:'Provide the approved HTTPS portal origin and matching domain.',
- worker_timing:'Set a bounded worker interval and readiness age with the required safety margin.',
- database:'Provide the reviewed PostgreSQL target with full TLS verification and migrations disabled at runtime.',
- operations:'Provide named operations contacts, alert delivery, retry policy and retention settings.',
- notifications:'Choose an approved in-app or HTTPS notification delivery path with bounded retry settings.',
- identity:'Configure the approved Supabase identity project and distinct public and service credentials.',
- backup:'Provide bounded backup freshness and restore-drill age settings.',
- backup_attestation:'Choose the reviewed backup-attestation mode and its bounded retention policy.',
- anti_aging:'Review anti-aging feature flags and retention policy before enabling production traffic.',
- accessibility:'Attach a current deployed accessibility validation report.',
- subscriptions:'Keep subscriptions disabled or provide approved terms, catalog IDs, and signed billing settings.',
- ai:'Keep optional AI runtimes disabled or provide the reviewed service mode and isolation settings.',
- process_surface:'Bind the production process to the approved host, port and worker-health path.',
- image:'Pin every production image to a distinct immutable digest.',
- secret_isolation:'Ensure every configured production secret is distinct and isolated by purpose.',
- endpoint_isolation:'Ensure monitoring, runbook, accessibility and delivery endpoints are distinct.',
- disabled_feature_residue:'Remove configuration residue for disabled test, commerce, AI or webhook features.'
-});
-
 export function productionAdmissionProjection(env:NodeJS.ProcessEnv){
  if(env.NODE_ENV!=='production')return {mode:'non_production' as const,healthy:true,issues:[] as string[],checks:[] as {id:string;healthy:boolean}[]};
  const checks:[string,()=>void][]=[
@@ -293,7 +274,7 @@ export function productionAdmissionProjection(env:NodeJS.ProcessEnv){
  ];
  const results=checks.map(([id,validate])=>{try{validate();return{id,healthy:true};}catch{return{id,healthy:false};}});
  const issues=results.filter(check=>!check.healthy).map(check=>check.id);
- return {mode:'production' as const,healthy:issues.length===0,issues,checks:results,next_actions:issues.map(id=>({id,action:PRODUCTION_ADMISSION_ACTIONS[id]}))};
+ return {mode:'production' as const,healthy:issues.length===0,issues,checks:results,next_actions:issues.flatMap(id=>{const action=reviewedProductionAdmissionAction(id);return action?[action]:[];})};
 }
 
 export function validateApiRuntimeAdmission(env:NodeJS.ProcessEnv):void{

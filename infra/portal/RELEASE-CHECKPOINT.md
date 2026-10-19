@@ -331,3 +331,7 @@ The production admission projection now returns safe next-action guidance for fa
 
 The operations console now renders production admission guidance only for a production runtime. It accepts only the fixed reviewed category/action pairs and refuses to echo unexpected response text, preserving a browser-side boundary against configuration or secret disclosure. The panel makes clear that it is not deployment evidence and that external qualification and human approval remain required.
 
+### F1002 — shared admission catalogue
+
+The reviewed production-remediation catalogue is now shared between the API and web portal. Server responses and browser validation therefore use the same fixed category/action pairs, while malformed, unknown, or altered responses remain hidden from the operator view. This does not alter production admission, external evidence, or approval requirements.
+

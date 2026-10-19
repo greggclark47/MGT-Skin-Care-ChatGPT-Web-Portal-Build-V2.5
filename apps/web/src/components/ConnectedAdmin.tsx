@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useId, useState } from 'react';
+import { reviewedProductionAdmissionActions } from '@mgt/shared';
 import { hub, useHub } from '../lib/hub';
 import { CharacterCount, LoadState, Timestamp } from './HubFrames';
 
@@ -37,34 +38,9 @@ type ProductionAdmission = {
   next_actions?: Array<{ id?: string; action?: string }>;
 };
 
-// This allowlist is a display boundary as well as a usability aid. The API is the
-// authority for admission; the portal only renders pre-reviewed, category-level
-// guidance and never echoes arbitrary response text into an operator console.
-const productionAdmissionActions: Record<string, string> = {
-  ownership: 'Confirm the approved release and support owner declarations.',
-  portal_boundary: 'Provide the approved HTTPS portal origin and matching domain.',
-  worker_timing: 'Set a bounded worker interval and readiness age with the required safety margin.',
-  database: 'Provide the reviewed PostgreSQL target with full TLS verification and migrations disabled at runtime.',
-  operations: 'Provide named operations contacts, alert delivery, retry policy and retention settings.',
-  notifications: 'Choose an approved in-app or HTTPS notification delivery path with bounded retry settings.',
-  identity: 'Configure the approved Supabase identity project and distinct public and service credentials.',
-  backup: 'Provide bounded backup freshness and restore-drill age settings.',
-  backup_attestation: 'Choose the reviewed backup-attestation mode and its bounded retention policy.',
-  anti_aging: 'Review anti-aging feature flags and retention policy before enabling production traffic.',
-  accessibility: 'Attach a current deployed accessibility validation report.',
-  subscriptions: 'Keep subscriptions disabled or provide approved terms, catalog IDs, and signed billing settings.',
-  ai: 'Keep optional AI runtimes disabled or provide the reviewed service mode and isolation settings.',
-  process_surface: 'Bind the production process to the approved host, port and worker-health path.',
-  image: 'Pin every production image to a distinct immutable digest.',
-  secret_isolation: 'Ensure every configured production secret is distinct and isolated by purpose.',
-  endpoint_isolation: 'Ensure monitoring, runbook, accessibility and delivery endpoints are distinct.',
-  disabled_feature_residue: 'Remove configuration residue for disabled test, commerce, AI or webhook features.'
-};
-
 export function ProductionAdmissionGuidance({ admission }: { admission?: ProductionAdmission }) {
   if (admission?.mode !== 'production') return null;
-  const actions = (admission.next_actions || []).flatMap(({ id, action }) =>
-    typeof id === 'string' && productionAdmissionActions[id] === action ? [{ id, action }] : []);
+  const actions = reviewedProductionAdmissionActions(admission.next_actions);
   return <section className="readiness-phase" aria-labelledby="production-admission-heading">
     <div className="row"><h3 id="production-admission-heading">Production admission</h3><span className={'pill '+(admission.healthy ? 'success' : '')}>{admission.healthy ? 'Ready' : 'Blocked'}</span></div>
     <p className="muted">This guidance is category-level only. It does not show configuration values, credentials, service locations, or deployment evidence.</p>

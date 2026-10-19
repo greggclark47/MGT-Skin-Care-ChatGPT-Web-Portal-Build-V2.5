@@ -1915,3 +1915,5 @@ Until these decisions and dependencies are evidenced, the plan remains planning 
 
 **Phase F1001 — safe operator admission view:** Render production admission actions in the operations console only when the runtime identifies itself as production. The browser allowlists every reviewed category/action pair before display, refusing to echo unexpected API text. The panel states its display boundary, preserves the non-production experience, and confirms that external evidence and human approval still gate launch.
 
+**Phase F1002 — shared admission catalogue:** Move the reviewed category/action pairs into the shared cross-platform package. The API derives its production response from that catalogue and the web console validates against the same source, preventing copy drift while still refusing unknown or altered response text.
+

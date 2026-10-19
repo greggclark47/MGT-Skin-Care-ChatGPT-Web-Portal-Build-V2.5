@@ -327,3 +327,7 @@ The versioned match-intelligence contract now labels each datapoint as account-o
 
 The production admission projection now returns safe next-action guidance for failed configuration categories. Guidance is category-level only and excludes environment names, values, credentials, URLs, operational locations, timestamps and evidence details. Non-production output remains backward-compatible, and the production runtime still fails closed until every required category and external evidence gate is satisfied.
 
+### F1001 — safe operator admission view
+
+The operations console now renders production admission guidance only for a production runtime. It accepts only the fixed reviewed category/action pairs and refuses to echo unexpected response text, preserving a browser-side boundary against configuration or secret disclosure. The panel makes clear that it is not deployment evidence and that external qualification and human approval remain required.
+

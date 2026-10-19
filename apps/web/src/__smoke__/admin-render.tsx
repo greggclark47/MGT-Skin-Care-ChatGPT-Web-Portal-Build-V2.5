@@ -2,7 +2,7 @@ import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { IngredientRulesConsole } from '../components/admin/IngredientRulesConsole';
 import { KnowledgeConsole } from '../components/admin/KnowledgeConsole';
-import { AuditTable, DataTable, MetricSummary, SupportTicketEditor } from '../components/ConnectedAdmin';
+import { AuditTable, DataTable, MetricSummary, ProductionAdmissionGuidance, SupportTicketEditor } from '../components/ConnectedAdmin';
 import { AuditTrail } from '../components/admin/AdminPrimitives';
 import type { KnowledgeObject, VersionedIngredientRule } from '@mgt/domain';
 
@@ -192,6 +192,20 @@ console.log('\n== 13. Audit evidence uses machine-readable dates ==');
 
   const trail = renderToStaticMarkup(<AuditTrail entries={[{ actor_id: 'sme-1', action: 'knowledge.approved', created_at: '2026-09-25T12:00:00.000Z' }]}/>);
   check('admin primitive audit trail keeps machine-readable dates', trail.includes('<time dateTime="2026-09-25T12:00:00.000Z"'));
+}
+
+console.log('\n== 14. Production admission shows only reviewed category-level guidance ==');
+{
+  const blocked = renderToStaticMarkup(<ProductionAdmissionGuidance admission={{ mode: 'production', healthy: false, next_actions: [{ id: 'database', action: 'Provide the reviewed PostgreSQL target with full TLS verification and migrations disabled at runtime.' }] }}/>);
+  check('production admission is clearly labelled', blocked.includes('Production admission') && blocked.includes('Blocked'));
+  check('reviewed remediation is shown', blocked.includes('reviewed PostgreSQL target'));
+  check('guidance declares the safe display boundary', blocked.includes('does not show configuration values, credentials'));
+
+  const unsafe = renderToStaticMarkup(<ProductionAdmissionGuidance admission={{ mode: 'production', healthy: false, next_actions: [{ id: 'database', action: 'DATABASE_URL=do-not-render-this' }] }}/>);
+  check('unexpected response text is not echoed', !unsafe.includes('DATABASE_URL=do-not-render-this') && unsafe.includes('no unrecognized response details'));
+
+  const nonProduction = renderToStaticMarkup(<ProductionAdmissionGuidance admission={{ mode: 'non_production', healthy: true }}/>);
+  check('non-production has no production admission panel', nonProduction === '');
 }
 
 console.log(failures === 0

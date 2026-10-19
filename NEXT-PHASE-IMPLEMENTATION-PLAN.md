@@ -1913,3 +1913,5 @@ Until these decisions and dependencies are evidenced, the plan remains planning 
 
 **Phase F1000 — redacted production admission actions:** Extend the production admission projection with safe next-action guidance for each failed category. The API returns only bounded remediation text and category IDs; it does not expose environment variable names, values, credentials, URLs, operational locations or evidence details. Non-production projections remain unchanged, and a failed category remains a hard production block.
 
+**Phase F1001 — safe operator admission view:** Render production admission actions in the operations console only when the runtime identifies itself as production. The browser allowlists every reviewed category/action pair before display, refusing to echo unexpected API text. The panel states its display boundary, preserves the non-production experience, and confirms that external evidence and human approval still gate launch.
+

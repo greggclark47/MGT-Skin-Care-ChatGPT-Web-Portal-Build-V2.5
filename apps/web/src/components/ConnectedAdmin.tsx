@@ -31,12 +31,53 @@ function RefreshButton({ children, loading, onClick }: { children: React.ReactNo
   return <button className="button" type="button" disabled={loading} onClick={onClick}>{loading ? 'Refreshing…' : children}</button>;
 }
 
+type ProductionAdmission = {
+  mode?: string;
+  healthy?: boolean;
+  next_actions?: Array<{ id?: string; action?: string }>;
+};
+
+// This allowlist is a display boundary as well as a usability aid. The API is the
+// authority for admission; the portal only renders pre-reviewed, category-level
+// guidance and never echoes arbitrary response text into an operator console.
+const productionAdmissionActions: Record<string, string> = {
+  ownership: 'Confirm the approved release and support owner declarations.',
+  portal_boundary: 'Provide the approved HTTPS portal origin and matching domain.',
+  worker_timing: 'Set a bounded worker interval and readiness age with the required safety margin.',
+  database: 'Provide the reviewed PostgreSQL target with full TLS verification and migrations disabled at runtime.',
+  operations: 'Provide named operations contacts, alert delivery, retry policy and retention settings.',
+  notifications: 'Choose an approved in-app or HTTPS notification delivery path with bounded retry settings.',
+  identity: 'Configure the approved Supabase identity project and distinct public and service credentials.',
+  backup: 'Provide bounded backup freshness and restore-drill age settings.',
+  backup_attestation: 'Choose the reviewed backup-attestation mode and its bounded retention policy.',
+  anti_aging: 'Review anti-aging feature flags and retention policy before enabling production traffic.',
+  accessibility: 'Attach a current deployed accessibility validation report.',
+  subscriptions: 'Keep subscriptions disabled or provide approved terms, catalog IDs, and signed billing settings.',
+  ai: 'Keep optional AI runtimes disabled or provide the reviewed service mode and isolation settings.',
+  process_surface: 'Bind the production process to the approved host, port and worker-health path.',
+  image: 'Pin every production image to a distinct immutable digest.',
+  secret_isolation: 'Ensure every configured production secret is distinct and isolated by purpose.',
+  endpoint_isolation: 'Ensure monitoring, runbook, accessibility and delivery endpoints are distinct.',
+  disabled_feature_residue: 'Remove configuration residue for disabled test, commerce, AI or webhook features.'
+};
+
+export function ProductionAdmissionGuidance({ admission }: { admission?: ProductionAdmission }) {
+  if (admission?.mode !== 'production') return null;
+  const actions = (admission.next_actions || []).flatMap(({ id, action }) =>
+    typeof id === 'string' && productionAdmissionActions[id] === action ? [{ id, action }] : []);
+  return <section className="readiness-phase" aria-labelledby="production-admission-heading">
+    <div className="row"><h3 id="production-admission-heading">Production admission</h3><span className={'pill '+(admission.healthy ? 'success' : '')}>{admission.healthy ? 'Ready' : 'Blocked'}</span></div>
+    <p className="muted">This guidance is category-level only. It does not show configuration values, credentials, service locations, or deployment evidence.</p>
+    {admission.healthy ? <p className="notice success">All runtime admission categories are currently satisfied. Separate external evidence and human approval are still required before launch.</p> : actions.length ? <ol className="compact-list">{actions.map(({ id, action }) => <li key={id}>{action}</li>)}</ol> : <p className="notice error">Admission is blocked. Refresh this page; no unrecognized response details are displayed here.</p>}
+  </section>;
+}
+
 function Readiness() {
   const state = useHub('/admin/readiness');
   const phaseName = (value: string) => ({data_identity:'Data & identity',operations_recovery:'Operations & recovery',ai_quality:'AI & quality',billing_commercial:'Billing & commercial',support_accessibility:'Support & accessibility'} as Record<string,string>)[value] || label(value);
   return <><section className="panel" aria-labelledby="launch-setup-heading" aria-busy={state.loading}>
     <h2 id="launch-setup-heading">Production phase readiness</h2><LoadState {...state} retry={state.reload}/>
-    {state.data && <><p>{state.data.note}</p>{state.data.phases?.map((phase:any)=><section className="readiness-phase" key={phase.id} aria-labelledby={'readiness-'+phase.id}><div className="row"><h3 id={'readiness-'+phase.id}>{phaseName(phase.id)}</h3><span className={'pill '+(phase.status==='ready'?'success':'')}>{phase.status==='ready'?'Ready':'Blocked'} · {phase.ready}/{phase.total}</span></div>{phase.blockers.length?<ul className="compact-list">{phase.blockers.map((blocker:string)=><li key={blocker}>{blocker}</li>)}</ul>:<p className="muted">All repository-visible checks in this phase are currently satisfied.</p>}</section>)}<details><summary>View individual checks</summary><dl className="profile-details">{state.data.checks.map((c: any) => <div key={c.name}><dt>{c.name}<small className="muted"> · {c.evidence}</small></dt><dd>{c.configured ? 'Ready' : 'Blocked'}</dd></div>)}</dl></details><RefreshButton loading={state.loading} onClick={state.reload}>Refresh phase readiness</RefreshButton></>}
+    {state.data && <><p>{state.data.note}</p><ProductionAdmissionGuidance admission={state.data.production_admission}/>{state.data.phases?.map((phase:any)=><section className="readiness-phase" key={phase.id} aria-labelledby={'readiness-'+phase.id}><div className="row"><h3 id={'readiness-'+phase.id}>{phaseName(phase.id)}</h3><span className={'pill '+(phase.status==='ready'?'success':'')}>{phase.status==='ready'?'Ready':'Blocked'} · {phase.ready}/{phase.total}</span></div>{phase.blockers.length?<ul className="compact-list">{phase.blockers.map((blocker:string)=><li key={blocker}>{blocker}</li>)}</ul>:<p className="muted">All repository-visible checks in this phase are currently satisfied.</p>}</section>)}<details><summary>View individual checks</summary><dl className="profile-details">{state.data.checks.map((c: any) => <div key={c.name}><dt>{c.name}<small className="muted"> · {c.evidence}</small></dt><dd>{c.configured ? 'Ready' : 'Blocked'}</dd></div>)}</dl></details><RefreshButton loading={state.loading} onClick={state.reload}>Refresh phase readiness</RefreshButton></>}
   </section><CatalogHealth/></>;
 }
 

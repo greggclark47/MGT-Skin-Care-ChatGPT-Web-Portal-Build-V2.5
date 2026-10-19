@@ -451,7 +451,7 @@ export async function createPortal(options:PortalOptions){
    {name:'Deployed accessibility evidence',configured:accessibilityEvidence,phase:'support_accessibility',evidence:'runtime'}
   ];
   const publicOperations=publicOperationalReadiness(operations);
-  res.json({checks,phases:readinessPhases(checks),operations:publicOperations,production_admission:productionAdmissionProjection(env),ai_runtime:{enabled:aiRuntime.enabled,healthy:aiRuntime.healthy},backup:publicOperations.backup,note:'Configuration and runtime signals are grouped by production phase. Admission status exposes category outcomes only; submitted values and secrets are never returned. Operational locations, restore references, checksums, run records, and delivery details are intentionally excluded. External service qualification and human approval remain separate release evidence.'});
+  res.json({checks,phases:readinessPhases(checks),operations:publicOperations,production_admission:productionAdmissionProjection(env),ai_runtime:{enabled:aiRuntime.enabled,healthy:aiRuntime.healthy},backup:publicOperations.backup,note:'Configuration and runtime signals are grouped by production phase. Production admission adds bounded category-level next actions only; submitted values and secrets are never returned. Operational locations, restore references, checksums, run records, and delivery details are intentionally excluded. External service qualification and human approval remain separate release evidence.'});
  });
  get('/admin/operations-health',async(req,res)=>{
   role(req,['superadmin','compliance']);

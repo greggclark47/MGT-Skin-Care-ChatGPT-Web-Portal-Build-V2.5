@@ -16,3 +16,9 @@ test('unexpected production admission responses are not rendered',()=>{
  assert.deepEqual(reviewedProductionAdmissionActions([{id:'database',action:'DATABASE_URL=do-not-render-this'},{id:'unknown',action:'unexpected'}]),[]);
  assert.deepEqual(reviewedProductionAdmissionActions('not an array'),[]);
 });
+
+test('accepted guidance is deduplicated and follows reviewed catalogue order',()=>{
+ const ownership=reviewedProductionAdmissionAction('ownership');
+ const database=reviewedProductionAdmissionAction('database');
+ assert.deepEqual(reviewedProductionAdmissionActions([database,null,ownership,database]),[ownership,database]);
+});

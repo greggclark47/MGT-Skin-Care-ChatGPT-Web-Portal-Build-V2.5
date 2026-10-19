@@ -339,3 +339,7 @@ The reviewed production-remediation catalogue is now shared between the API and 
 
 Production admission now fails closed if a blocked category is missing its reviewed remediation entry. Regression coverage requires every failed category in a production projection to map to one bounded action. This prevents unactionable readiness blocks without returning configuration values or evidence details.
 
+### F1004 — canonical guidance display
+
+The operator view now deduplicates accepted remediation categories and renders them in the fixed reviewed catalogue order. Reordered or repeated response entries cannot alter task priority or create duplicate work, and unexpected values remain hidden. Production admission and launch requirements are unchanged.
+

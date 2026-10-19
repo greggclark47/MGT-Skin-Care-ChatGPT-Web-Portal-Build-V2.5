@@ -1919,3 +1919,5 @@ Until these decisions and dependencies are evidenced, the plan remains planning 
 
 **Phase F1003 — complete admission guidance:** Make production admission fail closed if any blocked category has no reviewed remediation entry. The response contract verifies that every issue maps to exactly one bounded safe action, preventing future checks from becoming unactionable without exposing configuration details.
 
+**Phase F1004 — canonical guidance display:** Deduplicate reviewed production guidance and render it in catalogue order. Valid but reordered or repeated response entries cannot change priority or create duplicate operator tasks; unexpected values remain hidden.
+

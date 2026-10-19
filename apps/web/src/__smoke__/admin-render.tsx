@@ -204,6 +204,9 @@ console.log('\n== 14. Production admission shows only reviewed category-level gu
   const unsafe = renderToStaticMarkup(<ProductionAdmissionGuidance admission={{ mode: 'production', healthy: false, next_actions: [{ id: 'database', action: 'DATABASE_URL=do-not-render-this' }] }}/>);
   check('unexpected response text is not echoed', !unsafe.includes('DATABASE_URL=do-not-render-this') && unsafe.includes('no unrecognized response details'));
 
+  const reordered = renderToStaticMarkup(<ProductionAdmissionGuidance admission={{ mode: 'production', healthy: false, next_actions: [{ id: 'database', action: 'Provide the reviewed PostgreSQL target with full TLS verification and migrations disabled at runtime.' }, { id: 'ownership', action: 'Confirm the approved release and support owner declarations.' }, { id: 'database', action: 'Provide the reviewed PostgreSQL target with full TLS verification and migrations disabled at runtime.' }] }}/>);
+  check('reviewed guidance has stable order and no duplicates', reordered.indexOf('approved release and support owner') < reordered.indexOf('reviewed PostgreSQL target') && (reordered.match(/reviewed PostgreSQL target/g) || []).length === 1);
+
   const nonProduction = renderToStaticMarkup(<ProductionAdmissionGuidance admission={{ mode: 'non_production', healthy: true }}/>);
   check('non-production has no production admission panel', nonProduction === '');
 }

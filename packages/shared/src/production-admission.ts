@@ -35,9 +35,11 @@ export function reviewedProductionAdmissionAction(id: unknown): ProductionAdmiss
 // the exact reviewed pair so a mismatched or unexpected response fails closed.
 export function reviewedProductionAdmissionActions(value: unknown): ProductionAdmissionAction[] {
   if (!Array.isArray(value)) return [];
-  return value.flatMap(item => {
-    if (!item || typeof item !== 'object') return [];
+  const accepted = new Set<ProductionAdmissionId>();
+  for (const item of value) {
+    if (!item || typeof item !== 'object') continue;
     const candidate = reviewedProductionAdmissionAction((item as { id?: unknown }).id);
-    return candidate && (item as { action?: unknown }).action === candidate.action ? [candidate] : [];
-  });
+    if (candidate && (item as { action?: unknown }).action === candidate.action) accepted.add(candidate.id);
+  }
+  return (Object.keys(PRODUCTION_ADMISSION_ACTIONS) as ProductionAdmissionId[]).flatMap(id => accepted.has(id) ? [reviewedProductionAdmissionAction(id)!] : []);
 }

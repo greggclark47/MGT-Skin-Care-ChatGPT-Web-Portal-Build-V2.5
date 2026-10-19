@@ -1,5 +1,7 @@
 # AI release controls checkpoint
 
+2026-10-19 production build submission checkpoint: `production-build-submission.mjs` now converts a checksum-bound, candidate-specific prerequisite packet into a non-secret submission list. It identifies eight repository-ready infrastructure packages and preserves configuration plus external evidence as explicit holds. The record does not select a vendor, deploy a service, run migrations, provision credentials, transfer customer data, or authorize traffic.
+
 2026-10-16 final bundle checksum parity: backup-status evidence now binds the final release manifest checksum through a narrowly excluded mirrored field, avoiding a circular hash. Stale pre-receipt bundle checksums fail re-verification until rebound; production remains held.
 
 2026-10-16 backup-status-bound release export: release export generation can now attach and re-verify a non-secret backup receipt covering GitHub candidate SHAs, the designated Drive folder, archive/bundle checksums, and the explicit production hold. It does not create remote receipts, accept a production-ready state, or authorize deployment.

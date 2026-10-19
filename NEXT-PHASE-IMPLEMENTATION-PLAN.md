@@ -1909,3 +1909,5 @@ Until these decisions and dependencies are evidenced, the plan remains planning 
 
 **Phase F998 — privacy-safe retailer discovery context:** Extend the versioned match-intelligence contract with user-selected concern/outcome terms and an explicit privacy note for retailer discovery. Keep routine-slot terms separate so simplification updates the routine search without losing the selected goals; do not include identity, age, sensitivity, photos, or health-derived values, and keep AI narrative-only.
 
+**Phase F999 — match datapoint provenance:** Add explicit provenance and retailer-query eligibility to every match datapoint. Broad concern/outcome terms are labeled as portal discovery context; sensitivity, age, routine, budget and avoidance inputs remain account-only. Web and Android expose the same boundary so users can understand how each answer contributes without implying that profile data is sent to an external retailer.
+

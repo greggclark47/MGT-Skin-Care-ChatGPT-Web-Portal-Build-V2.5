@@ -76,7 +76,7 @@ export default function App() {
         <Text style={styles.body}>{result.match_intelligence.coverage.required_slots_matched} of {result.match_intelligence.coverage.required_slots_total} core steps matched from {result.match_intelligence.coverage.eligible_products_considered} eligible products.</Text>
         <Text style={styles.method}>Explainable match · reviewed rules · AI text does not select or rank products</Text>
         <Text style={styles.resultHeading}>Datapoints used</Text>
-        {result.match_intelligence.data_points.slice(0,4).map(point=><Text key={point.id} style={styles.dataPoint}>{point.label}: {point.value}</Text>)}
+        {result.match_intelligence.data_points.slice(0,4).map(point=><Text key={point.id} style={styles.dataPoint}>{point.label}: {point.value} · {point.retailer_query_eligible?'portal discovery context only':'account-only'}</Text>)}
         <Text style={styles.resultHeading}>Retailer discovery context</Text>
         <Text style={styles.configNote}>{[...result.match_intelligence.retail_discovery.profile_terms,...result.match_intelligence.retail_discovery.query_terms].slice(0,3).join(' · ')}</Text>
         <Text style={styles.configNote}>{result.match_intelligence.retail_discovery.privacy_note}</Text>

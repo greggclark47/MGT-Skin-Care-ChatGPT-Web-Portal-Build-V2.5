@@ -319,3 +319,7 @@ Production environment readiness now revalidates the structural envelope of a pr
 
 The versioned match-intelligence contract now separates selected concern/outcome terms from routine-slot terms for retailer discovery. The web portal and Android result surfaces explain that this context stays inside MGT and that no profile, account identity, or photo is sent to a retailer. Simplifying a routine updates only routine terms while preserving the selected goals. AI remains narrative-only and cannot select, rank, include, or exclude products.
 
+### F999 — match datapoint provenance
+
+The versioned match-intelligence contract now labels each datapoint as account-only or portal-discovery context and exposes a boolean retailer-query eligibility flag. The web and Android clients render the same privacy boundary. Only broad user-selected concerns and desired outcome terms can contribute to the internal portal discovery context; sensitivity, age, routine experience, budget and ingredient avoidances remain account-only. This does not send profile data to a retailer, enable AI ranking, or alter the external-referral boundary.
+

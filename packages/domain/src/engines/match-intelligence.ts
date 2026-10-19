@@ -5,13 +5,17 @@ import type { CandidateProduct, ExclusionResult, ScoreResult } from './scoring-e
 import { SCORING_ENGINE_VERSION } from './scoring-engine';
 import type { RoutineSlot } from '../types/enums';
 
-export const MATCH_INTELLIGENCE_VERSION = '1.3.0';
+export const MATCH_INTELLIGENCE_VERSION = '1.4.0';
+
+export type MatchDataPointVisibility = 'account_only' | 'portal_discovery_context';
 
 export interface MatchDataPoint {
   id: keyof SkinProfileInput;
   label: string;
   value: string;
   effect: string;
+  visibility: MatchDataPointVisibility;
+  retailer_query_eligible: boolean;
 }
 
 export interface MatchCoverage {
@@ -83,7 +87,17 @@ function displayValue(value: string | string[]): string {
 function dataPoints(input: SkinProfileInput): MatchDataPoint[] {
   return (Object.keys(labels) as (keyof SkinProfileInput)[])
     .filter((id) => id !== 'ingredient_avoidances' || input.ingredient_avoidances.length > 0)
-    .map((id) => ({ id, label: labels[id], value: displayValue(input[id]), effect: effects[id] }));
+    .map((id) => {
+      const retailerQueryEligible = id === 'concerns' || id === 'desired_outcome';
+      return {
+        id,
+        label: labels[id],
+        value: displayValue(input[id]),
+        effect: effects[id],
+        visibility: retailerQueryEligible ? 'portal_discovery_context' : 'account_only',
+        retailer_query_eligible: retailerQueryEligible,
+      } satisfies MatchDataPoint;
+    });
 }
 
 function ingredientRole(ingredient: string): string {

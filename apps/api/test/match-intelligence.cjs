@@ -18,6 +18,10 @@ test('profile match returns explainable versioned intelligence without AI rankin
  assert.match(intelligence.version,/^1\./);assert.match(intelligence.safety_matrix_version,/^im-\d+-[a-z0-9]+$/);
  assert.ok(intelligence.data_points.some(point=>point.id==='sensitivity'&&point.value==='Moderate'));
  assert.ok(intelligence.data_points.some(point=>point.id==='budget_range'));
+ assert.equal(intelligence.data_points.find(point=>point.id==='concerns').visibility,'portal_discovery_context');
+ assert.equal(intelligence.data_points.find(point=>point.id==='concerns').retailer_query_eligible,true);
+ assert.equal(intelligence.data_points.find(point=>point.id==='sensitivity').visibility,'account_only');
+ assert.equal(intelligence.data_points.find(point=>point.id==='sensitivity').retailer_query_eligible,false);
  assert.equal(intelligence.coverage.required_slots_total,4);
  assert.ok(intelligence.coverage.excluded_products>=1);
  assert.equal(intelligence.coverage.required_slots_matched,result.routine.steps.filter(step=>['cleanser','treatment','moisturizer','sunscreen'].includes(step.slot)).length);

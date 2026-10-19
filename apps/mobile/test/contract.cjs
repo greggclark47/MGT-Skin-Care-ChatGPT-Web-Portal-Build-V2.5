@@ -36,6 +36,7 @@ test('mobile Skin Match consumes shared questionnaire and profile contracts',()=
  assert.match(entry,/retail_discovery\.profile_terms/);
  assert.match(entry,/retail_discovery\.privacy_note/);
  assert.match(entry,/Explore retailer discovery/);
+ assert.match(entry,/retailer_query_eligible/);
  assert.match(entry,/AI text does not select or rank products/);
  assert.match(entry,/reversible future-match exclusions are managed in the secure web portal/);
  assert.match(entry,/Removing feedback does not lower saved sensitivity settings/);

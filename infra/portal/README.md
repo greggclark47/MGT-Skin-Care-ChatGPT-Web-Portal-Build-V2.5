@@ -325,3 +325,5 @@ F996 makes supplied env-file parsing fail closed on malformed or duplicate assig
 
 F997 makes production-environment readiness validate the upstream prerequisite-review envelope when it claims `ready_for_prerequisite_review`. Version, canonical checksum, complete record set, owner, timestamps, status, references, bytes, and error state must be structurally valid before the downstream environment review can become ready.
 
+F998 adds privacy-safe retailer discovery context to match intelligence. Selected concern and desired-outcome terms are kept separate from routine-slot terms, shown consistently in the web and Android result surfaces, and explicitly kept inside the MGT portal. No identity, age, sensitivity, photo, or health-derived value is sent to retailers; AI remains explain-only.
+

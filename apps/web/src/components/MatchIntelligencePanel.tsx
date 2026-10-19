@@ -9,7 +9,7 @@ type FeedbackExclusion={id:string;name:string};
 export function MatchIntelligencePanel({intelligence,productName,onProductFeedback,busyProductFeedback,feedbackExclusions=[],onRemoveFeedback,busyFeedbackRemoval}:{intelligence:MatchIntelligence;productName:(id:string)=>string;onProductFeedback?:(id:string,feedback:ProductFeedback)=>void;busyProductFeedback?:{productId:string;feedback:ProductFeedback}|null;feedbackExclusions?:FeedbackExclusion[];onRemoveFeedback?:(productId:string)=>void;busyFeedbackRemoval?:string|null}){
  const [details,setDetails]=useState(false);const coverage=intelligence.coverage;
  const confidence={strong:'Strong catalog coverage',balanced:'Balanced catalog coverage',limited:'Limited catalog coverage'}[coverage.confidence];
- const query=intelligence.retail_discovery.query_terms.slice(0,3).join(' ');
+ const query=[...intelligence.retail_discovery.profile_terms,...intelligence.retail_discovery.query_terms].slice(0,3).join(' ');
  return <section className="match-intelligence panel" aria-labelledby="match-intelligence-heading">
   <div className="row"><div><span className="eyebrow">EXPLAINABLE MATCH INTELLIGENCE</span><h2 id="match-intelligence-heading">Why these products are in your routine</h2></div><span className={'pill match-confidence '+coverage.confidence}>{confidence}</span></div>
   <p>This result is selected by reviewed safety rules and versioned scoring. AI-written text does not select or rank products.</p>
@@ -26,7 +26,7 @@ export function MatchIntelligencePanel({intelligence,productName,onProductFeedba
    <p className="muted">Engine {intelligence.version} · scoring {intelligence.scoring_engine_version} · routine {intelligence.routine_engine_version} · safety matrix {intelligence.safety_matrix_version}</p>
   </div>}
   <div className="match-product-grid">{intelligence.product_matches.map(explanation=><ProductExplanationCard key={explanation.product_id} explanation={explanation} productName={productName(explanation.product_id)} onFeedback={onProductFeedback} busyFeedback={busyProductFeedback}/>)}</div>
-  <div className="notice"><strong>{intelligence.retail_discovery.label}</strong><p>{intelligence.retail_discovery.disclosure}</p><Link className="button" href={'/shop?segment=skincare&q='+encodeURIComponent(query)}>Explore external retailers ↗</Link></div>
+  <div className="notice"><strong>{intelligence.retail_discovery.label}</strong><p>{intelligence.retail_discovery.disclosure}</p><p className="muted">{intelligence.retail_discovery.privacy_note}</p><Link className="button" href={'/shop?segment=skincare&q='+encodeURIComponent(query)}>Explore external retailers ↗</Link></div>
   <details className="match-limitations"><summary>Important limitations</summary><ul>{intelligence.limitations.map(item=><li key={item}>{item}</li>)}</ul></details>
  </section>;
 }

@@ -77,9 +77,12 @@ export default function App() {
         <Text style={styles.method}>Explainable match · reviewed rules · AI text does not select or rank products</Text>
         <Text style={styles.resultHeading}>Datapoints used</Text>
         {result.match_intelligence.data_points.slice(0,4).map(point=><Text key={point.id} style={styles.dataPoint}>{point.label}: {point.value}</Text>)}
+        <Text style={styles.resultHeading}>Retailer discovery context</Text>
+        <Text style={styles.configNote}>{[...result.match_intelligence.retail_discovery.profile_terms,...result.match_intelligence.retail_discovery.query_terms].slice(0,3).join(' · ')}</Text>
+        <Text style={styles.configNote}>{result.match_intelligence.retail_discovery.privacy_note}</Text>
         <Text style={styles.configNote}>Product feedback, review, and reversible future-match exclusions are managed in the secure web portal. Removing feedback does not lower saved sensitivity settings. AI and photos do not make those changes.</Text>
         <Text style={styles.configNote}>Photos are not analyzed. Product and retailer details can change; review current labels and storefront information.</Text>
-        {isHttpsUrl(portalUrl)&&<Pressable style={styles.cta} onPress={()=>void Linking.openURL(portalUrl.replace(/\/+$/, '')+'/routine')} accessibilityRole="link"><Text style={styles.ctaLabel}>Review full match details</Text></Pressable>}
+        {isHttpsUrl(portalUrl)&&<><Pressable style={styles.cta} onPress={()=>void Linking.openURL(portalUrl.replace(/\/+$/, '')+'/routine')} accessibilityRole="link"><Text style={styles.ctaLabel}>Review full match details</Text></Pressable><Pressable style={styles.portalLink} onPress={()=>void Linking.openURL(portalUrl.replace(/\/+$/, '')+'/shop?segment=skincare&q='+encodeURIComponent([...result.match_intelligence.retail_discovery.profile_terms,...result.match_intelligence.retail_discovery.query_terms].slice(0,3).join(' ')))} accessibilityRole="link"><Text style={styles.legalLink}>Explore retailer discovery ↗</Text></Pressable></>}
       </View>}
       {view === 'error' && <Text style={styles.body}>{!apiBaseUrl ? 'This production build is missing its API configuration.' : !releaseConfigurationReady ? 'This production build is missing HTTPS privacy and terms links.' : 'Something went wrong. Please try again.'}</Text>}
     </SafeAreaView>

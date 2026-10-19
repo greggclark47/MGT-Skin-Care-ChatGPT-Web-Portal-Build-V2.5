@@ -24,6 +24,8 @@ test('profile match returns explainable versioned intelligence without AI rankin
  assert.equal(intelligence.product_matches.length,result.routine.steps.length);
  assert.ok(intelligence.product_matches.every(item=>Number.isInteger(item.match_score)&&item.match_score>=0&&item.match_score<=100&&item.blurb===null));
  assert.equal(intelligence.retail_discovery.segment,'skincare');
+ assert.deepEqual(intelligence.retail_discovery.profile_terms,['anti_aging','hydration','smoother']);
+ assert.match(intelligence.retail_discovery.privacy_note,/No profile, account identity, or photo/);
  assert.match(intelligence.retail_discovery.disclosure,/not personal suitability/i);
  assert.ok(intelligence.limitations.some(item=>/Photos are not analyzed/.test(item)));
 });

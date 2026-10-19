@@ -5,7 +5,7 @@ import type { CandidateProduct, ExclusionResult, ScoreResult } from './scoring-e
 import { SCORING_ENGINE_VERSION } from './scoring-engine';
 import type { RoutineSlot } from '../types/enums';
 
-export const MATCH_INTELLIGENCE_VERSION = '1.2.0';
+export const MATCH_INTELLIGENCE_VERSION = '1.3.0';
 
 export interface MatchDataPoint {
   id: keyof SkinProfileInput;
@@ -27,7 +27,9 @@ export interface MatchCoverage {
 export interface RetailDiscoveryPath {
   segment: 'skincare';
   label: string;
+  profile_terms: string[];
   query_terms: string[];
+  privacy_note: string;
   disclosure: string;
 }
 
@@ -178,7 +180,11 @@ export function buildMatchIntelligence(input: {
     retail_discovery: {
       segment: 'skincare',
       label: 'Explore skincare retailers for this routine',
+      // These are broad, user-selected goals only. Do not add sensitivity, age,
+      // identity, photo, account, or health-derived values to retailer search context.
+      profile_terms: [...new Set([...input.profile_input.concerns, input.profile_input.desired_outcome])],
       query_terms: [...new Set(input.routine.steps.map((step) => step.slot))],
+      privacy_note: 'Search context stays inside the MGT portal. No profile, account identity, or photo is sent to a retailer.',
       disclosure: 'Retailer listings are discovery links, not personal suitability, price, availability, or purchase recommendations.',
     },
     limitations: [
@@ -208,6 +214,7 @@ export function projectMatchIntelligenceToRoutine(intelligence: MatchIntelligenc
     product_matches: productMatches,
     retail_discovery: {
       ...intelligence.retail_discovery,
+      profile_terms: [...intelligence.retail_discovery.profile_terms],
       query_terms: [...new Set(routine.steps.map((step) => step.slot))],
     },
   };

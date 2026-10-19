@@ -315,3 +315,7 @@ Production prerequisite parsing now rejects malformed and duplicate assignments 
 
 Production environment readiness now revalidates the structural envelope of a prerequisite review that claims readiness. A status string and checksum-shaped value cannot promote a forged or incomplete upstream review; the exact record set, owner, timestamps, artifact fields, errors, and canonical checksum must pass before downstream readiness is admitted.
 
+# F998 privacy-safe retailer discovery checkpoint
+
+The versioned match-intelligence contract now separates selected concern/outcome terms from routine-slot terms for retailer discovery. The web portal and Android result surfaces explain that this context stays inside MGT and that no profile, account identity, or photo is sent to a retailer. Simplifying a routine updates only routine terms while preserving the selected goals. AI remains narrative-only and cannot select, rank, include, or exclude products.
+

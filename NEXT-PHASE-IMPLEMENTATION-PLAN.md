@@ -1907,3 +1907,5 @@ Until these decisions and dependencies are evidenced, the plan remains planning 
 
 **Phase F997 — upstream prerequisite-envelope admission:** Revalidate the structural prerequisite-review envelope before allowing the production-environment review to become ready, preventing a forged status/checksum pair from bypassing the prerequisite record boundary.
 
+**Phase F998 — privacy-safe retailer discovery context:** Extend the versioned match-intelligence contract with user-selected concern/outcome terms and an explicit privacy note for retailer discovery. Keep routine-slot terms separate so simplification updates the routine search without losing the selected goals; do not include identity, age, sensitivity, photos, or health-derived values, and keep AI narrative-only.
+

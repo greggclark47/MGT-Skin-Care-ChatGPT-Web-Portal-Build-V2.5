@@ -1,5 +1,7 @@
 # AI release controls checkpoint
 
+2026-10-19 production build intake review checkpoint: `production-build-intake-review.mjs` now validates an operator-filled intake without preserving its values, reports only bounded missing field names, and blocks credential-like input. A complete intake proceeds only to external evidence review; it still cannot deploy, migrate, provision credentials, transfer data, or change traffic.
+
 2026-10-19 production build intake checkpoint: `production-build-intake.mjs` now turns the current checksum-bound submission into a reusable blank operator intake with non-secret identifiers, decisions, owners, evidence references, and secret names/paths only. It rejects credential-like values and remains an explicit non-deployment record.
 
 2026-10-19 production build submission checkpoint: `production-build-submission.mjs` now converts a checksum-bound, candidate-specific prerequisite packet into a non-secret submission list. It identifies eight repository-ready infrastructure packages and preserves configuration plus external evidence as explicit holds. The record does not select a vendor, deploy a service, run migrations, provision credentials, transfer customer data, or authorize traffic.

@@ -18,6 +18,12 @@ pnpm infra:production-build-intake -- --submission work/production/submission-<c
 
 The intake binds the submission checksum and provides blank fields for identifiers, decisions, ownership, evidence references, and secret **names/paths only**. It rejects credential-like values and is not a deployment request.
 
+After an operator completes the intake, create a redacted completeness review. It reports field names that are still missing and never copies submitted values into the review:
+
+```powershell
+pnpm infra:production-build-intake-review -- --intake work/production/intake-<commit>.json --output work/production/intake-review-<commit>.json
+```
+
 ## Work that can start now
 
 | Work package | Expected handoff evidence |

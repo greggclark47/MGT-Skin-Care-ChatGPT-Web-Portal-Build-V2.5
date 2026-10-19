@@ -10,6 +10,7 @@ const INPUT_KEYS = Object.freeze(["hosting_provider", "production_origin", "port
 const DECISION_KEYS = Object.freeze(["local_ai_posture", "enable_subscriptions_for_launch", "stripe_launch_mode", "retention_policy_approved", "customer_image_production_storage_approved"]);
 const SECRET_REFERENCE_KEYS = Object.freeze(["database_url_secret_name", "supabase_anon_key_secret_name", "supabase_service_role_key_secret_name", "stripe_secret_key_secret_name", "stripe_webhook_secret_name", "notification_webhook_token_secret_name", "openai_api_key_secret_name_if_enabled", "openclaw_api_key_secret_name_if_enabled"]);
 const APPROVAL_KEYS = Object.freeze(["primary_accountable_owner", "production_configuration_owner", "database_migration_owner", "billing_owner", "support_owner", "security_and_privacy_owner", "accessibility_sign_off_owner", "rollback_owner", "release_execution_owner", "post_launch_review_owner", "final_closeout_owner", "go_no_go_owner", "approved_launch_window_iso"]);
+const EVIDENCE_REFERENCE_KEYS = Object.freeze(["production_configuration", "hosting_target", "database_target", "secret_manager", "backup_restore", "support_owner", "accessibility_report", "rollback_authority", "launch_approval", "github_receipt", "drive_receipt"]);
 
 function text(value) { return String(value || "").trim(); }
 function keysObject(keys) { return Object.fromEntries(keys.map((key) => [key, null])); }
@@ -35,7 +36,8 @@ export function validateProductionBuildIntake(document, { now = Date.now() } = {
   if (!exactNullableKeys(document.decisions, DECISION_KEYS)) errors.push("decisions must retain its exact safe field set");
   if (!exactNullableKeys(document.secret_references_only, SECRET_REFERENCE_KEYS)) errors.push("secret_references_only must retain its exact safe field set");
   if (!exactNullableKeys(document.approvals, APPROVAL_KEYS)) errors.push("approvals must retain its exact safe field set");
-  if (!Array.isArray(document.required_evidence) || document.required_evidence.some((entry) => !entry || typeof entry.id !== "string" || typeof entry.requirement !== "string" || entry.status !== "awaiting_reference")) errors.push("required_evidence must contain only awaiting-reference entries");
+  if (!exactNullableKeys(document.evidence_references, EVIDENCE_REFERENCE_KEYS)) errors.push("evidence_references must retain its exact safe field set");
+  if (!Array.isArray(document.required_evidence) || document.required_evidence.length !== EVIDENCE_REFERENCE_KEYS.length || document.required_evidence.some((entry) => !entry || !EVIDENCE_REFERENCE_KEYS.includes(entry.id) || typeof entry.requirement !== "string" || entry.status !== "awaiting_reference")) errors.push("required_evidence must contain only bounded awaiting-reference entries");
   if (text(document.intake_checksum) !== productionBuildIntakeChecksum(document)) errors.push("intake_checksum must match the complete canonical intake");
   return { ok: errors.length === 0, errors };
 }
@@ -56,6 +58,7 @@ export function buildProductionBuildIntake({ submission, now = new Date().toISOS
     decisions: keysObject(DECISION_KEYS),
     secret_references_only: keysObject(SECRET_REFERENCE_KEYS),
     approvals: keysObject(APPROVAL_KEYS),
+    evidence_references: keysObject(EVIDENCE_REFERENCE_KEYS),
     required_evidence: submission.on_hold.map(({ id, requirement }) => ({ id, requirement, status: "awaiting_reference" })),
     instructions: ["Enter identifiers, decisions, owner names, and evidence references only.", "Keep all secret values in the approved secret manager; record only a secret name or path.", "Keep subscriptions and production customer-image storage disabled until their separate approvals and validation are complete."]
   };

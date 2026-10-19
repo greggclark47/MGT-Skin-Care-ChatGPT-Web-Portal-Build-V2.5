@@ -323,3 +323,7 @@ The versioned match-intelligence contract now separates selected concern/outcome
 
 The versioned match-intelligence contract now labels each datapoint as account-only or portal-discovery context and exposes a boolean retailer-query eligibility flag. The web and Android clients render the same privacy boundary. Only broad user-selected concerns and desired outcome terms can contribute to the internal portal discovery context; sensitivity, age, routine experience, budget and ingredient avoidances remain account-only. This does not send profile data to a retailer, enable AI ranking, or alter the external-referral boundary.
 
+### F1000 — redacted production admission actions
+
+The production admission projection now returns safe next-action guidance for failed configuration categories. Guidance is category-level only and excludes environment names, values, credentials, URLs, operational locations, timestamps and evidence details. Non-production output remains backward-compatible, and the production runtime still fails closed until every required category and external evidence gate is satisfied.
+

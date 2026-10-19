@@ -12,6 +12,8 @@ test('production admission projection exposes category outcomes without submitte
   assert.equal(projection.mode,'production');
   assert.equal(projection.healthy,false);
   assert(projection.issues.includes('database'));
+  assert(projection.next_actions.some(item=>item.id==='database'&&/reviewed PostgreSQL target/i.test(item.action)));
+  assert.equal(JSON.stringify(projection).includes('DATABASE_URL'),false);
   assert.equal(JSON.stringify(projection).includes('portal.example'),false);
   assert.equal(JSON.stringify(projection).includes('Gregg Clark'),false);
   assert.deepEqual(productionAdmissionProjection({NODE_ENV:'test'}),{mode:'non_production',healthy:true,issues:[],checks:[]});

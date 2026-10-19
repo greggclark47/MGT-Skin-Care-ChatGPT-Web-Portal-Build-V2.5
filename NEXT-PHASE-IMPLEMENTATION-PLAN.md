@@ -1911,3 +1911,5 @@ Until these decisions and dependencies are evidenced, the plan remains planning 
 
 **Phase F999 — match datapoint provenance:** Add explicit provenance and retailer-query eligibility to every match datapoint. Broad concern/outcome terms are labeled as portal discovery context; sensitivity, age, routine, budget and avoidance inputs remain account-only. Web and Android expose the same boundary so users can understand how each answer contributes without implying that profile data is sent to an external retailer.
 
+**Phase F1000 — redacted production admission actions:** Extend the production admission projection with safe next-action guidance for each failed category. The API returns only bounded remediation text and category IDs; it does not expose environment variable names, values, credentials, URLs, operational locations or evidence details. Non-production projections remain unchanged, and a failed category remains a hard production block.
+

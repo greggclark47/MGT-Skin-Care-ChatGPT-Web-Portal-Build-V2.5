@@ -10,6 +10,14 @@ pnpm infra:production-build-submission -- --prerequisites work/production/prereq
 
 The generated JSON binds the exact candidate and prerequisite checksum, lists eight repository-ready work packages, and keeps every missing production input visibly on hold. It serializes only bounded configuration error codes, never configuration values or credentials.
 
+Create the next, non-secret operator intake from that submission:
+
+```powershell
+pnpm infra:production-build-intake -- --submission work/production/submission-<commit>.json --output work/production/intake-<commit>.json
+```
+
+The intake binds the submission checksum and provides blank fields for identifiers, decisions, ownership, evidence references, and secret **names/paths only**. It rejects credential-like values and is not a deployment request.
+
 ## Work that can start now
 
 | Work package | Expected handoff evidence |

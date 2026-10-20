@@ -70,9 +70,10 @@ test("static demo exposes the current release and ship-packet surface", () => {
   assert.match(html, /Ship authorization: blocked/);
   assert.match(html, /aria-label="MGT Skin Care home"/);
   assert.match(html, /class="brand-mark-image" src="mgt-mark\.svg"/);
-  assert.match(html, /<small class="build-version">v4\.354<\/small>/);
+  assert.match(html, /<small class="build-version">v4\.355<\/small>/);
   assert.match(html, /id="wardrobe"/);
-  assert.match(html, /COLOR MATCH &amp; WARDROBE · v4\.354/);
+  assert.match(html, /COLOR MATCH &amp; WARDROBE · v4\.355/);
+  assert.match(html, /per-upload test Drive consent/);
   assert.match(html, /shared appearance descriptors/);
   assert.match(html, /retail wardrobe segments/);
   assert.match(html, /newer color profile or wardrobe/);

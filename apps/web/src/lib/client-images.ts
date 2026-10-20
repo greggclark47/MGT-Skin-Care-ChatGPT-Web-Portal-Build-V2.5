@@ -2,6 +2,7 @@ export const CLIENT_IMAGE_LIMIT = 12;
 export const CLIENT_IMAGE_MAX_BYTES = 8 * 1024 * 1024;
 export const CLIENT_IMAGE_STORED_MAX_BYTES = 5 * 1024 * 1024;
 export const CLIENT_IMAGE_LIBRARY_MAX_BYTES = 40 * 1024 * 1024;
+export const TEST_IMAGE_UPLOAD_CONSENT_VERSION = 'client-image-drive-test-1';
 
 export const CLIENT_IMAGE_CATEGORIES = [
   { id: 'front', label: 'Front view' },
@@ -44,7 +45,7 @@ async function testDriveRequest(path:string,init:RequestInit={}):Promise<any>{
 export async function listTestDriveClientImages():Promise<TestDriveClientImage[]>{return (await testDriveRequest('')).images as TestDriveClientImage[];}
 export async function getTestDriveConnection():Promise<TestDriveConnection>{return testDriveRequest('/status') as Promise<TestDriveConnection>;}
 export async function uploadTestDriveClientImage(image:ClientImage):Promise<TestDriveClientImage>{
-  const data=await testDriveRequest('',{method:'POST',headers:{'content-type':'application/octet-stream','x-client-image-category':image.category,'x-client-image-name':`${image.id}|Skincare photo.jpg`},body:image.blob});
+  const data=await testDriveRequest('',{method:'POST',headers:{'content-type':'application/octet-stream','x-client-image-category':image.category,'x-client-image-name':`${image.id}|Skincare photo.jpg`,'x-client-image-consent':TEST_IMAGE_UPLOAD_CONSENT_VERSION},body:image.blob});
   return data.image as TestDriveClientImage;
 }
 export async function updateTestDriveClientImageCategory(id:string,category:ClientImageCategory):Promise<TestDriveClientImage>{

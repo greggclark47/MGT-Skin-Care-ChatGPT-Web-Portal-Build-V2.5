@@ -38,6 +38,7 @@ export function ClientImageStudio({ compact = false }: { compact?: boolean }) {
   const [images, setImages] = useState<ClientImage[]>([]);
   const [driveImages, setDriveImages] = useState<TestDriveClientImage[]>([]);
   const [destination, setDestination] = useState<'device'|'test-drive'>('device');
+  const [driveConsent, setDriveConsent] = useState(false);
   const [driveConnection, setDriveConnection] = useState<'idle'|'checking'|'ready'|'unavailable'>('idle');
   const [driveMessage, setDriveMessage] = useState('');
   const [loading, setLoading] = useState(true);
@@ -87,7 +88,7 @@ export function ClientImageStudio({ compact = false }: { compact?: boolean }) {
   useEffect(() => { if (destination === 'test-drive' && testDriveEnabled) void verifyDrive(); }, [destination, testDriveEnabled, verifyDrive]);
 
   function chooseDestination(next:'device'|'test-drive') {
-    setDestination(next); setError(''); setMessage('');
+    setDestination(next); setDriveConsent(false); setError(''); setMessage('');
     if (next === 'device') { setDriveConnection('idle'); setDriveMessage(''); }
   }
 
@@ -102,8 +103,10 @@ export function ClientImageStudio({ compact = false }: { compact?: boolean }) {
       if (destination === 'test-drive') {
         if (!testDriveEnabled) throw new Error('Test Google Drive storage is not enabled for this environment.');
         if (driveConnection !== 'ready') throw new Error('Verify the Google Drive test connection before uploading.');
+        if (!driveConsent) throw new Error('Confirm the test Drive upload consent before choosing images.');
         for (const image of prepared) await uploadTestDriveClientImage(image);
         await refreshDrive();
+        setDriveConsent(false);
         setMessage(`${prepared.length} ${prepared.length === 1 ? 'test copy is' : 'test copies are'} saved in the designated private Google Drive folder. Test storage only; not analyzed.`);
       } else {
         for (const image of prepared) await saveClientImage(scope, image);
@@ -167,6 +170,7 @@ export function ClientImageStudio({ compact = false }: { compact?: boolean }) {
       <small>JPEG, PNG, or WebP · up to 8 MB each · max {CLIENT_IMAGE_LIMIT}. Saved copies are resized, converted to JPEG, and stripped of embedded metadata. Signed-in accounts open with the saved default destination.</small>
     </div>
     {destination === 'test-drive' && <div className={`client-drive-status state-${driveConnection}`} aria-live="polite"><span>{driveConnection==='checking'?'Checking connection':driveConnection==='ready'?'Drive test storage ready':driveConnection==='unavailable'?'Drive test storage unavailable':'Drive test storage'}</span><p>{driveMessage||'Choose this destination to verify the private test connection.'}</p>{driveConnection==='unavailable'&&testDriveEnabled&&<button className="text-button" type="button" disabled={busy} onClick={()=>void verifyDrive()}>Check connection again</button>}</div>}
+    {destination === 'test-drive' && <label className="studio-consent client-drive-consent"><input type="checkbox" checked={driveConsent} disabled={busy || driveConnection !== 'ready'} onChange={event=>setDriveConsent(event.target.checked)}/>I consent to upload the selected prepared image copies to the designated private test Drive folder for this upload only. Test storage is not production storage.</label>}
     <p className="notice">{destination === 'test-drive' ? 'Test-only destination: chosen copies are sent to the designated private Google Drive folder through the portal. Do not use Drive test storage for customer or production data. Images are not analyzed or shared with retailers.' : 'Stored only in this browser profile on this device. Images are not sent to MGT, shared with retailers, synced to your account, or used for AI analysis. Android native image picking is not connected.'}</p>
     {message && <p className="notice success" role="status">{message}</p>}
     {error && <p className="notice error" role="alert">{error}</p>}

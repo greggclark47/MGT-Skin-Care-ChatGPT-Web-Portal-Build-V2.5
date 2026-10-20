@@ -6,7 +6,7 @@ const {OperationalWorker,InAppNotificationDelivery}=require('../dist/portal/oper
 const {createPortal}=require('../dist/portal/server');
 const {
  clientImageDriveTestEnabled,clientImageDriveTestStatus,listTestDriveImages,saveTestDriveImage,getTestDriveImage,
- deleteTestDriveImage,updateTestDriveImageCategory,TEST_IMAGE_FOLDER_NAME,
+ deleteTestDriveImage,updateTestDriveImageCategory,TEST_IMAGE_FOLDER_NAME,TEST_IMAGE_UPLOAD_CONSENT_VERSION,
 }=require('../dist/portal/client-image-drive');
 
 const enabled={NODE_ENV:'test',CLIENT_IMAGE_DRIVE_TEST_ENABLED:'true',TEST_GOOGLE_DRIVE_CLIENT_ID:'client',TEST_GOOGLE_DRIVE_CLIENT_SECRET:'secret',TEST_GOOGLE_DRIVE_REFRESH_TOKEN:'refresh'};
@@ -20,6 +20,16 @@ test('test Drive configuration stays disabled in production and fails closed whe
  assert.deepEqual(clientImageDriveTestStatus({...enabled,TEST_GOOGLE_DRIVE_FOLDER_ID:'folder-1'}),{enabled:true,environment:'test',folder:'configured',message:'Private test storage is available to verify before an upload.'});
  assert.equal(clientImageDriveTestStatus({...enabled,TEST_GOOGLE_DRIVE_REFRESH_TOKEN:''}).enabled,false);
  assert.equal(TEST_IMAGE_FOLDER_NAME,'MGT Skin Care Client Image Test Storage');
+ assert.equal(TEST_IMAGE_UPLOAD_CONSENT_VERSION,'client-image-drive-test-1');
+});
+
+test('test Drive binary uploads require request-scoped consent',async t=>{
+ const db=new LocalStore(':memory:'),env={...enabled,DEMO_MODE:'true',PUBLIC_ORIGIN:'http://localhost:3000',TEST_GOOGLE_DRIVE_FOLDER_ID:'folder-1'};const app=await createPortal({store:db,env,verifyOtp:async email=>({id:'image-consent',email})});
+ const server=app.listen(0,'127.0.0.1');await new Promise(resolve=>server.once('listening',resolve));t.after(async()=>{await new Promise(resolve=>server.close(resolve));await db.close();});
+ let cookie='',csrf='';const base=`http://127.0.0.1:${server.address().port}/api/hub`;const request=async(path,init={})=>{const response=await fetch(base+path,{...init,headers:{cookie,origin:'http://localhost:3000',...(init.headers||{})}});if(response.headers.get('set-cookie'))cookie=response.headers.get('set-cookie').split(';')[0];const data=await response.json();if(data.csrf)csrf=data.csrf;return{response,data};};
+ await request('/session');await request('/auth/verify',{method:'POST',headers:{'content-type':'application/json','x-csrf-token':csrf},body:JSON.stringify({email:'image-consent@example.test',code:'123456'})});await request('/session');
+ const missing=await request('/client-images',{method:'POST',headers:{'content-type':'application/octet-stream','x-csrf-token':csrf,'x-client-image-category':'front','x-client-image-name':'123e4567-e89b-42d3-a456-426614174004|photo.jpg'},body:jpeg});
+ assert.equal(missing.response.status,400);assert.equal(missing.data.error.code,'image_consent_required');
 });
 
 test('test Drive image records are actor-isolated and support lifecycle changes',async t=>{

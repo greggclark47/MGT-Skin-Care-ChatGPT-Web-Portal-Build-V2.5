@@ -16,6 +16,9 @@ prepared JPEG to a designated private test folder and keeps per-actor ownership 
 portal store. Test Drive limits are 12 images and 40 MB per actor. The Drive OAuth refresh token
 stays server-side, media is proxied through the authenticated portal, and generated Drive filenames
 do not contain the customer's original filename or profile data.
+Each Drive upload batch also requires a request-scoped consent confirmation in the portal. The
+confirmation resets after a successful batch; choosing the Drive destination alone never grants
+upload consent.
 
 ## Image guidance
 
@@ -66,8 +69,8 @@ separate, least-privilege, server-only, and limited to the designated MGT test f
    non-production API environment; set `TEST_GOOGLE_DRIVE_FOLDER_ID` to the designated folder.
    The API
    reports the option available only when all values exist and `NODE_ENV` is not `production`.
-4. Restart the API. In My Skin, choose “Google Drive private test folder” explicitly before
-   taking/uploading an image. Verify list, preview, purpose change, and removal using synthetic
+4. Restart the API. In My Skin, choose “Google Drive private test folder” explicitly, verify the
+   connection, and confirm the request-scoped upload consent before taking/uploading an image. Verify list, preview, purpose change, and removal using synthetic
    test images. A failed upload should not leave a usable library entry.
 5. Revoke the test OAuth grant and remove test images/folder after verification. Do not upload
    actual customer photos to this test path.

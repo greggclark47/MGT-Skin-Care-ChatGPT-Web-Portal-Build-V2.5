@@ -7,6 +7,7 @@ const IMAGE_LIMIT = 12;
 const IMAGE_BYTES_LIMIT = 5 * 1024 * 1024;
 const LIBRARY_BYTES_LIMIT = 40 * 1024 * 1024;
 export const TEST_IMAGE_FOLDER_NAME = 'MGT Skin Care Client Image Test Storage';
+export const TEST_IMAGE_UPLOAD_CONSENT_VERSION = 'client-image-drive-test-1';
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const CATEGORIES = new Set(['front','left','right','concern','routine','progress','product','other']);
 

@@ -24,6 +24,7 @@ export type TaskType =
   | 'anti_aging_search'
   | 'anti_aging_comparison'
   | 'anti_aging_provider_summary'
+  | 'style_color_match'
   | 'embed';
 
 export type BudgetClass = 'tier1_copy' | 'tier2_vision' | 'tier3_premium' | 'embedding';

@@ -1,6 +1,11 @@
 // Creative, preference-based coordination. No photo analysis or inferred skin tone.
 export const STYLE_OPTIONS = {
  palette: ['warm','cool','balanced'], contrast: ['soft','balanced','bold'],
+ faceShape: ['not specified','oval','round','square','heart','diamond','long'],
+ skinDepth: ['not specified','fair','light','medium','tan','deep','very deep'],
+ skinUndertone: ['not specified','warm','cool','neutral','olive'],
+ hairColor: ['not specified','black','brown','auburn','red','blonde','gray or silver','white','fashion color','covered or no visible hair'],
+ eyeColor: ['not specified','brown','hazel','green','blue','gray','amber','multiple colors'],
  occasion: ['everyday','work','occasion'], expression: ['minimal','polished','expressive'],
  texture: ['not specified','straight','wavy','curly','coily','mixed textures'], effort: ['quick','unhurried'],
  hairGoal: ['keep my color','subtle change','statement change'],
@@ -16,8 +21,21 @@ export const STYLE_OPTIONS = {
 } as const;
 export type StyleOptionKey=keyof typeof STYLE_OPTIONS;
 export type StyleProfile = {[K in StyleOptionKey]: (typeof STYLE_OPTIONS)[K][number]} & {personalNotes:string};
-export const DEFAULT_STYLE:StyleProfile={palette:'balanced',contrast:'balanced',occasion:'everyday',expression:'minimal',texture:'not specified',effort:'quick',hairGoal:'keep my color',hairPresentation:'not specified',makeup:'color inspiration',clothing:'open to options',coverage:'not specified',headwear:'not specified',climate:'not specified',fastening:'not specified',comfort:'not specified',sensory:'not specified',personalNotes:''};
+export const DEFAULT_STYLE:StyleProfile={palette:'balanced',contrast:'balanced',faceShape:'not specified',skinDepth:'not specified',skinUndertone:'not specified',hairColor:'not specified',eyeColor:'not specified',occasion:'everyday',expression:'minimal',texture:'not specified',effort:'quick',hairGoal:'keep my color',hairPresentation:'not specified',makeup:'color inspiration',clothing:'open to options',coverage:'not specified',headwear:'not specified',climate:'not specified',fastening:'not specified',comfort:'not specified',sensory:'not specified',personalNotes:''};
 export function normalizeStyle(input:Partial<StyleProfile>|undefined):StyleProfile{return {...DEFAULT_STYLE,...input};}
+
+export type StylePalette = keyof typeof STYLE_PALETTES;
+export function preferredStylePalette(input:Partial<StyleProfile>):StylePalette {
+ const p=normalizeStyle(input);let warm=0,cool=0;
+ if(p.skinUndertone==='warm')warm+=3;if(p.skinUndertone==='cool')cool+=3;
+ if(p.skinUndertone==='olive')warm+=1;
+ if(['auburn','red','blonde'].includes(p.hairColor))warm+=1;
+ if(['gray or silver','white'].includes(p.hairColor))cool+=1;
+ if(['amber','hazel'].includes(p.eyeColor))warm+=1;
+ if(['blue','gray'].includes(p.eyeColor))cool+=1;
+ if(warm===cool)return p.palette;
+ return warm>cool?'warm':'cool';
+}
 export const STYLE_SECTIONS = [
  {id:'personal-color',title:'Personal Color',intro:'One palette to connect your makeup, hair and wardrobe.'},
  {id:'makeup',title:'Makeup Artist',intro:'Build a color story for lips, cheeks and eyes.'},

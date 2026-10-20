@@ -89,6 +89,10 @@ export const TASK_REGISTRY: Record<TaskType, TaskConfig> = {
     type: 'object', required: ['summary', 'limitations', 'citation'], properties: { summary: { type: 'string' }, limitations: { type: 'array' }, citation: { type: 'object' } },
   }),
 
+  style_color_match: tier1('style_color_match', 'v1.0.0', false, {
+    type: 'object', required: ['palette', 'reason', 'wardrobe_ideas'], properties: { palette: { type: 'string' }, reason: { type: 'string' }, wardrobe_ideas: { type: 'array' } },
+  }),
+
   embed: {
     task_type: 'embed', primary: OLLAMA_EMBED,
     fallbacks: [], budget_class: 'embedding', requires_entitlement: false,

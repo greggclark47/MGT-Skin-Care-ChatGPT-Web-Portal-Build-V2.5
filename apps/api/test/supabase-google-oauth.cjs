@@ -66,3 +66,61 @@ test('Google OAuth callback exchanges PKCE code server-side and never retains pr
   assert.equal(persisted.includes('must-not-persist'), false);
   assert.equal(persisted.includes('oauth-code-12345678'), false);
 });
+
+test('Google OAuth callbacks reject invalid, expired, replayed, and failed provider flows', async t => {
+  const db = new LocalStore(':memory:');
+  const app = await createPortal({ store: db, env });
+  const server = app.listen(0, '127.0.0.1');
+  await new Promise(resolve => server.once('listening', resolve));
+  t.after(async () => { await new Promise(resolve => server.close(resolve)); await db.close(); });
+  const base = `http://127.0.0.1:${server.address().port}/api/hub`;
+  let cookie = '';
+  const request = async path => {
+    const response = await fetch(base + path, { headers: { cookie }, redirect: 'manual' });
+    if (response.headers.get('set-cookie')) cookie = response.headers.get('set-cookie').split(';')[0];
+    return response;
+  };
+  const issue = async () => {
+    const response = await request('/auth/google');
+    assert.equal(response.status, 302);
+    const location = new URL(response.headers.get('location'));
+    return { state: location.searchParams.get('state'), code: 'oauth-code-87654321' };
+  };
+
+  const invalid = await request('/auth/google/callback?state=invalid&code=oauth-code-87654321');
+  assert.equal(invalid.status, 400);
+
+  const expired = await issue();
+  await db.tx(async records => {
+    const flow = await records.get('supabase_google_oauth_flows', expired.state);
+    await records.put('supabase_google_oauth_flows', expired.state, { ...flow, expires_at: Date.now() - 1 });
+  });
+  const expiredResponse = await request(`/auth/google/callback?state=${expired.state}&code=${expired.code}`);
+  assert.equal(expiredResponse.status, 400);
+
+  const replay = await issue();
+  const originalFetch = global.fetch;
+  global.fetch = async (url, init) => {
+    if (String(url) === 'https://identity.test/auth/v1/token?grant_type=pkce') {
+      return new Response(JSON.stringify({ user: { id: 'google-replay-user', email: 'replay@example.test' } }), { status: 200, headers: { 'content-type': 'application/json' } });
+    }
+    return originalFetch(url, init);
+  };
+  try {
+    const connected = await request(`/auth/google/callback?state=${replay.state}&code=${replay.code}`);
+    assert.equal(connected.status, 303);
+    const replayed = await request(`/auth/google/callback?state=${replay.state}&code=${replay.code}`);
+    assert.equal(replayed.status, 400);
+  } finally { global.fetch = originalFetch; }
+
+  const failed = await issue();
+  global.fetch = async (url, init) => {
+    if (String(url) === 'https://identity.test/auth/v1/token?grant_type=pkce') return new Response('provider unavailable', { status: 503 });
+    return originalFetch(url, init);
+  };
+  try {
+    const failedResponse = await request(`/auth/google/callback?state=${failed.state}&code=${failed.code}`);
+    assert.equal(failedResponse.status, 303);
+    assert.equal(failedResponse.headers.get('location'), 'http://portal.test/account?oauth=failed');
+  } finally { global.fetch = originalFetch; }
+});

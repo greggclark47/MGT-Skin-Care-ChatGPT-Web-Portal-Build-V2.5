@@ -23,13 +23,14 @@ import { antiAgingRouter } from '../modules/anti-aging/router';
 import { SEED_ANTI_AGING_INGREDIENTS, SEED_ANTI_AGING_PRODUCTS, SEED_ANTI_AGING_TREATMENTS, SEED_ANTI_AGING_PROVIDERS } from '../modules/anti-aging/catalog';
 import {TestDriveImageStorage,clientImageDriveTestEnabled,clientImageDriveTestStatus,listTestDriveImages,saveTestDriveImage,getTestDriveImage,deleteTestDriveImage,updateTestDriveImageCategory,TEST_IMAGE_UPLOAD_CONSENT_VERSION} from './client-image-drive';
 import {createSupabaseGoogleAuthorizeUrl,exchangeSupabaseGoogleCode,supabaseGoogleOAuthEnabled,type SupabaseOAuthIdentity} from './supabase-google-oauth';
-import {accountProfileInput,readAccountProfile,saveAccountProfile} from './account-profile';
+import {accountProfileInput,customerOutputContext,readAccountProfile,saveAccountProfile} from './account-profile';
+import type {CustomerOutputContext} from '@mgt/shared';
 import {buildAccountServiceOverview} from './account-overview';
 type StripeClient=Stripe;
 export interface PortalOptions{store:Store;env?:NodeJS.ProcessEnv;stripe?:StripeClient;coach?:SafeCoach;analysisGateway?:AiGateway;verifyOtp?:(email:string,otp:string)=>Promise<{id:string,email:string}>}
 const now=()=>new Date().toISOString();
 const emptyCart=()=>({items:[] as {product_id:string,quantity:number}[],revision:randomUUID()});
-const PROFILE_MERGE_SCOPES=['profiles','carts','reminders','saved_retailers','style_profiles','wardrobes'] as const;
+ const PROFILE_MERGE_SCOPES=['account_profiles','profiles','carts','reminders','saved_retailers','style_profiles','wardrobes'] as const;
 type PendingProfileMerge={id:string;guest_actor:string;account_id:string;email:string;created_at:string;expires_at:string};
 const OPERATOR_ROLES=['superadmin','catalog_editor','sme','compliance','viewer'] as const;
 const SUPPORT_TYPES=['portal_help','onboarding','routine_guidance','product_retailer','account_privacy'] as const;
@@ -313,7 +314,7 @@ export async function createPortal(options:PortalOptions){
    check(req.actor.startsWith('guest_'),409,'merge_not_pending','There is no browser profile waiting to be linked.');
    const pending=await r.get<PendingProfileMerge>('profile_merge_pending',req.actor);check(pending&&Date.parse(pending.expires_at)>Date.now(),409,'merge_expired','This profile choice expired. Sign in again to create a new choice.');
    const user=await r.get<any>('accounts',pending!.account_id);check(user&&user.email===pending!.email,409,'merge_account_missing','The account could not be found. Sign in again to continue.');
-   const actor='user_'+user.id;await r.lock('identity:'+hash(user.id));for(const owner of [req.actor,actor].sort())await r.lock('profile:'+hash(owner));
+    const actor='user_'+user.id;await r.lock('identity:'+hash(user.id));for(const owner of [req.actor,actor].sort()){await r.lock('profile:'+hash(owner));await r.lock('account-profile:'+hash(owner));}
    for(const scope of PROFILE_MERGE_SCOPES){const guest=await r.get(scope,req.actor),existing=await r.get(scope,actor);if(choice==='guest'&&guest)await r.put(scope,actor,guest);else if(choice==='account'&&!existing&&guest)await r.put(scope,actor,guest);if(guest)await r.remove(scope,req.actor);}
    const linked=await r.get<any>('profiles',actor);if(linked?.revision)await r.put('profile_revisions',actor,{revision:linked.revision});await r.remove('profile_revisions',req.actor);
    for(const ticket of (await r.list<any>('tickets')).filter(t=>t.actor===req.actor))await r.put('tickets',ticket.id,{...ticket,actor,email:user.email});
@@ -328,10 +329,10 @@ export async function createPortal(options:PortalOptions){
  get('/notifications',async(req,res)=>{const notifications=await db.tx(async r=>(await r.entries<any>('notifications')).map(x=>x.value).filter(x=>x.actor===req.actor).sort((a,b)=>b.created_at.localeCompare(a.created_at)).slice(0,50).map(publicNotification));res.json({notifications});});
  post('/notifications/read',async(req,res)=>{const id=text(req.body.id,100);await db.tx(async r=>{await r.lock('notification:'+hash(id));const notification=await r.get<any>('notifications',id);check(notification?.actor===req.actor,404,'notification_missing','Notification not found.');if(notification.status!=='delivered'&&notification.status!=='read')throw new Fault(409,'notification_pending','This notification is still being delivered.');await r.put('notifications',id,{...notification,status:'read',read_at:now(),updated_at:now()});});res.json({saved:true});});
  get('/knowledge',async(_req,res)=>res.json({articles:await db.tx(async r=>(await r.list('knowledge')).filter(a=>a.status==='approved'&&a.approved_by))}));
- const reviewedAnswer=async(req:HubRequest,message:string)=>{
+  const reviewedAnswer=async(req:HubRequest,message:string)=>{
   const user=account(req);
-  const access=await db.tx(async r=>{await requireAiDisclosure(r,req.actor);const usage=await portalUsageAccount(r,req.actor,user.id);await rate(r,'ai-user:'+hash(usage.userId),20,86400000);await rate(r,'ai-global',500,86400000);return {usage,premium:(await portalEntitlement(r,req.actor)).premium,articles:(await r.list<Knowledge>('knowledge')).filter(a=>a.status==='approved'&&a.approved_by)};});
-  const answer=await coach.answer(message,access.articles,access.usage.actor,access.premium);await db.tx(r=>audit(r,req.actor,'coach.answer','prompt-v2.1'));return answer;
+   const access=await db.tx(async r=>{await requireAiDisclosure(r,req.actor);const usage=await portalUsageAccount(r,req.actor,user.id);await rate(r,'ai-user:'+hash(usage.userId),20,86400000);await rate(r,'ai-global',500,86400000);return {usage,premium:(await portalEntitlement(r,req.actor)).premium,articles:(await r.list<Knowledge>('knowledge')).filter(a=>a.status==='approved'&&a.approved_by),customer_context:customerOutputContext(await r.get<any>('account_profiles',req.actor))};});
+   const answer=await coach.answer(message,access.articles,access.usage.actor,access.premium);await db.tx(r=>audit(r,req.actor,'coach.answer','prompt-v2.1'));return {...answer,customer_context:access.customer_context};
  };
  post('/coach',async(req,res)=>{
   const message=text(req.body.message,1800);const screening=screenInputResult(message);if(screening)return res.json({kind:'guidance',...screening,citations:[]});
@@ -340,22 +341,23 @@ export async function createPortal(options:PortalOptions){
  post('/assistant',async(req,res)=>{
   const message=text(req.body.message,1800);
   await db.tx(r=>rate(r,'assistant:'+hash(req.actor),30,3600000));
+   const customer_context:CustomerOutputContext=await db.tx(async r=>customerOutputContext(await r.get<any>('account_profiles',req.actor)));
   const inquiry=consolidateInquiry(message,req.body.history);
   const route=routeAssistantRequest(req.body.role,inquiry.routing_text);
   await db.tx(async r=>{await supportMetric(r,'guidance_requested',route.role);if(route.kind!=='reviewed_ai'&&route.next_step?.path==='/support')await supportMetric(r,'handoff_offered',route.category);});
   if(route.kind!=='reviewed_ai'){
    await db.tx(r=>supportMetric(r,'guidance_result',`${route.role}:${route.kind}:${route.category}`));
-   return res.json({...route,inquiry_context:{turns:inquiry.turns,repeated:inquiry.repeated,topics:inquiry.topics,summary:inquiry.summary}});
+    return res.json({...route,customer_context,inquiry_context:{turns:inquiry.turns,repeated:inquiry.repeated,topics:inquiry.topics,summary:inquiry.summary}});
   }
   try{
    const answer=await reviewedAnswer(req,inquiry.routing_text);
    const result={...answer,role:route.role,category:route.category,next_step:answer.kind==='no_match'?{label:'Open Portal Support',path:'/support'}:null};
    await db.tx(async r=>{await supportMetric(r,'guidance_result',`${route.role}:${result.kind}:${route.category}`);if(result.next_step)await supportMetric(r,'handoff_offered','no_match');});
-   res.json({...result,inquiry_context:{turns:inquiry.turns,repeated:inquiry.repeated,topics:inquiry.topics,summary:inquiry.summary}});
+    res.json({...result,customer_context,inquiry_context:{turns:inquiry.turns,repeated:inquiry.repeated,topics:inquiry.topics,summary:inquiry.summary}});
   }catch(error){
    if(!(error instanceof Fault)||!['knowledge_pending','ai_not_configured','ai_unavailable'].includes(error.code))throw error;
    await db.tx(async r=>{await supportMetric(r,'guidance_result',`${route.role}:handoff:reviewed_unavailable`);await supportMetric(r,'handoff_offered','reviewed_unavailable');});
-   res.json({role:route.role,kind:'handoff',category:'reviewed_unavailable',text:'A reviewed skincare answer is unavailable right now. Save a Portal Support request if you need help; this guidance has not contacted staff.',citations:[],next_step:{label:'Open Portal Support',path:'/support'},inquiry_context:{turns:inquiry.turns,repeated:inquiry.repeated,topics:inquiry.topics,summary:inquiry.summary}});
+    res.json({role:route.role,kind:'handoff',category:'reviewed_unavailable',text:'A reviewed skincare answer is unavailable right now. Save a Portal Support request if you need help; this guidance has not contacted staff.',citations:[],next_step:{label:'Open Portal Support',path:'/support'},customer_context,inquiry_context:{turns:inquiry.turns,repeated:inquiry.repeated,topics:inquiry.topics,summary:inquiry.summary}});
   }
  });
  post('/assistant/action',async(req,res)=>{

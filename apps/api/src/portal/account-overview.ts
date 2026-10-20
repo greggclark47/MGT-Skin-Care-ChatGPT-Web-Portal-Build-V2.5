@@ -1,6 +1,7 @@
 import type {AccountProfile,AccountServiceId,AccountServiceInterest,AccountServiceOverview,AccountServiceState,AccountServiceStatus,AccountSetupStep} from '@mgt/shared';
 import type {Records} from './store';
 import {hash} from './security';
+import {customerOutputContext} from './account-profile';
 
 type OverviewOptions={
  billingConfigured:boolean;
@@ -59,5 +60,5 @@ export async function buildAccountServiceOverview(records:Records,actor:string,o
  focus.percent=focus.total?Math.round(focus.ready/focus.total*100):0;
  const actionable=focusServices.filter(service=>service.state==='attention'||service.state==='setup').sort((a,b)=>a.state===b.state?services.indexOf(a)-services.indexOf(b):a.state==='attention'?-1:1).slice(0,4);
  const next_steps:AccountSetupStep[]=actionable.map(service=>({id:service.id,label:STEP_LABELS[service.id],detail:service.detail,href:service.href,priority:service.state as 'attention'|'setup'}));
- return{generated_at:options.generatedAt||new Date().toISOString(),summary,focus,next_steps,services,privacy_note:'This overview contains readiness states and counts only. It excludes profile answers, support messages, image identifiers, billing-provider references and payment details. Service choices organize this checklist; they do not change access or payment.'};
+ return{generated_at:options.generatedAt||new Date().toISOString(),customer_context:customerOutputContext(accountProfile),summary,focus,next_steps,services,privacy_note:'This overview contains readiness states and counts only. It excludes profile answers, support messages, image identifiers, billing-provider references and payment details. Service choices organize this checklist; they do not change access or payment.'};
 }

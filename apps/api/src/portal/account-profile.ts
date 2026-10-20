@@ -1,7 +1,19 @@
 import {randomUUID} from 'node:crypto';
 import type {Records} from './store';
 import {check,hash} from './security';
-import {ACCOUNT_LOCALES,ACCOUNT_SERVICE_INTERESTS,IMAGE_STORAGE_PREFERENCES,MEASUREMENT_SYSTEMS,type AccountProfile,type AccountProfileInput} from '@mgt/shared';
+import {ACCOUNT_LOCALES,ACCOUNT_SERVICE_INTERESTS,IMAGE_STORAGE_PREFERENCES,MEASUREMENT_SYSTEMS,type AccountProfile,type AccountProfileInput,type CustomerOutputContext} from '@mgt/shared';
+
+export function customerOutputContext(profile:AccountProfile|null|undefined):CustomerOutputContext{
+ return{
+  profile_ready:!!profile,
+  preferred_name:profile?.preferred_name||null,
+  locale:profile?.locale||null,
+  timezone:profile?.timezone||null,
+  measurement_system:profile?.measurement_system||null,
+  service_interests:Array.isArray(profile?.service_interests)?[...profile.service_interests]:[],
+  synchronized_at:profile?.updated_at||null
+ };
+}
 
 function validTimezone(value:string){
  try{new Intl.DateTimeFormat('en-US',{timeZone:value}).format();return true;}catch{return false;}

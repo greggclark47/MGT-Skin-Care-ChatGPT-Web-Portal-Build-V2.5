@@ -26,6 +26,16 @@ export type AccountProfile=AccountProfileInput&{
  revision:string;
 };
 
+export type CustomerOutputContext={
+ profile_ready:boolean;
+ preferred_name:string|null;
+ locale:AccountLocale|null;
+ timezone:string|null;
+ measurement_system:MeasurementSystem|null;
+ service_interests:AccountServiceInterest[];
+ synchronized_at:string|null;
+};
+
 export const ACCOUNT_SERVICE_IDS=['account_profile','skin_routine','anti_aging','beauty_style','retail_discovery','images','billing','support','analysis_permission','privacy_controls'] as const;
 export type AccountServiceId=typeof ACCOUNT_SERVICE_IDS[number];
 export type AccountServiceState='ready'|'setup'|'attention'|'unavailable';
@@ -47,6 +57,7 @@ export type AccountSetupStep={
 };
 export type AccountServiceOverview={
  generated_at:string;
+ customer_context:CustomerOutputContext;
  summary:{ready:number;attention:number;setup:number;unavailable:number;total:number};
  focus:{ready:number;attention:number;setup:number;unavailable:number;total:number;percent:number;service_ids:AccountServiceId[]};
  next_steps:AccountSetupStep[];

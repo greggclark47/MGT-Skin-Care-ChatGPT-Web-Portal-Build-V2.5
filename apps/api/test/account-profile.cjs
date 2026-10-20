@@ -50,6 +50,10 @@ test('account overview requires sign-in and returns isolated metadata-only readi
  const member=f.client();await member.login();
  const empty=await member.send('/account/overview');assert.equal(empty.data.focus.total,1);assert.equal(empty.data.focus.percent,0);assert.deepEqual(empty.data.focus.service_ids,['account_profile']);assert.deepEqual(empty.data.next_steps.map(step=>step.id),['account_profile']);
  await member.send('/account/profile',{...input,expected_revision:null});
+ const guidance=await member.send('/assistant',{role:'onboarding',message:'How do I get started?'});
+ assert.equal(guidance.status,200);
+ assert.deepEqual(guidance.data.customer_context,{profile_ready:true,preferred_name:'Alex',locale:'en-US',timezone:'America/New_York',measurement_system:'us',service_interests:['skin_match','routine_care','anti_aging'],synchronized_at:guidance.data.customer_context.synchronized_at});
+ assert.equal(typeof guidance.data.customer_context.synchronized_at,'string');
  const actor='user_member@example.com';
  await f.db.tx(async r=>{
   await r.put('profiles',actor,{routine:{steps:[{product_id:'private-product-one'},{product_id:'private-product-two'}]},input:{concerns:['private-concern']}});

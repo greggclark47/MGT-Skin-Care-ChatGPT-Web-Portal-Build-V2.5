@@ -36,7 +36,7 @@ jobs:
       - name: Install locked dependencies
         run: pnpm install --frozen-lockfile
       - name: Run candidate verification before publication
-        run: pnpm test:infra && pnpm test:compose-contract && pnpm test:lineage && pnpm test:verification
+        run: pnpm test:infra && pnpm test:application && pnpm test:compose-contract && pnpm test:lineage && pnpm test:verification
       - name: Require an approved immutable Node base image
         shell: bash
         run: |

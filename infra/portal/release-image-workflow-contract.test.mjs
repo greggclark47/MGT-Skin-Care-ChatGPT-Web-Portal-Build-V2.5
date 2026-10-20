@@ -31,7 +31,7 @@ test("runs the candidate verification gate before registry authentication or ima
   assert.ok(login > verification);
   assert.ok(publish > verification);
   assert.match(workflow, /pnpm install --frozen-lockfile/);
-  assert.match(workflow, /pnpm test:infra && pnpm test:compose-contract && pnpm test:lineage && pnpm test:verification/);
+  assert.match(workflow, /pnpm test:infra && pnpm test:application && pnpm test:compose-contract && pnpm test:lineage && pnpm test:verification/);
 });
 
 test("every workflow action is pinned to a reviewed commit", () => {

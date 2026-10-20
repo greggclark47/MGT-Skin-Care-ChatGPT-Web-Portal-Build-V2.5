@@ -31,6 +31,6 @@ jobs:
       - name: Install locked dependencies
         run: pnpm install --frozen-lockfile
       - name: Validate deployment contracts
-        run: pnpm test:infra && pnpm test:compose-contract && pnpm test:lineage
+        run: pnpm test:infra && pnpm test:application && pnpm test:compose-contract && pnpm test:lineage
       - name: Run local release gate
         run: pnpm test:verification

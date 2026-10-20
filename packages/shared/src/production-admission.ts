@@ -8,7 +8,7 @@ export const PRODUCTION_ADMISSION_ACTIONS = Object.freeze({
   database: 'Provide the reviewed PostgreSQL target with full TLS verification and migrations disabled at runtime.',
   operations: 'Provide named operations contacts, alert delivery, retry policy and retention settings.',
   notifications: 'Choose an approved in-app or HTTPS notification delivery path with bounded retry settings.',
-  identity: 'Configure the approved Supabase identity project and distinct public and service credentials.',
+  identity: 'Configure the approved identity project and distinct public and service credentials.',
   backup: 'Provide bounded backup freshness and restore-drill age settings.',
   backup_attestation: 'Choose the reviewed backup-attestation mode and its bounded retention policy.',
   anti_aging: 'Review anti-aging feature flags and retention policy before enabling production traffic.',

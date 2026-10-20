@@ -22,7 +22,8 @@ const {createPortal}=require('../dist/portal/server');const {LocalStore}=require
  assert.equal((await a('/assistant',{role:'routine_guidance',message:'What does a moisturizer do?',ai_consent:true})).status,401);
  const directory=(await a('/retailers')).data,retailers=directory.retailers;assert.equal(retailers.length,11);assert.deepEqual(new Set(retailers.map(r=>r.region)),new Set(['South Korea','US','EU']));
  assert.equal(new Set(retailers.map(r=>r.id)).size,retailers.length);
- assert.equal(directory.segments.length,7);
+ assert.equal(directory.segments.length,8);
+ assert.equal(directory.segments.find(segment=>segment.id==='wardrobe')?.studio,'/wardrobe');
  for(const segment of directory.segments){assert(retailers.some(r=>r.segments.includes(segment.id)),segment.id+' has a destination');assert(segment.studio.startsWith('/'));}
  for(const retailer of retailers){assert(retailer.specialty);assert(retailer.segments.every(id=>directory.segments.some(s=>s.id===id)));assert.equal(new URL(retailer.source_url).protocol,'https:');}
  for(const r of retailers){const url=new URL(r.url);assert.equal(url.protocol,'https:');assert.equal(url.search,'');assert.equal(url.username,'');assert.equal(r.relationship,'independent');assert(RETAILERS.some(v=>v.id===r.id&&v.url===r.url));}

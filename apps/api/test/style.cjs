@@ -4,9 +4,12 @@ const {LocalStore}=require('../dist/portal/store');
 const {DEFAULT_STYLE,STYLE_SECTIONS,stylePlan}=require('@mgt/domain');
 (async()=>{
  const db=new LocalStore(':memory:');
- const app=await createPortal({store:db,env:{NODE_ENV:'test',DEMO_MODE:'true',PUBLIC_ORIGIN:'http://localhost:3000'},verifyOtp:async email=>({id:'style-user',email})});
+ let matchRequest;
+ const match={palette:'balanced',reason:'A balanced palette is one option to compare with colors you already enjoy.',wardrobe_ideas:['Try a soft neutral top.','Use a muted accent.','Compare two favorite shades.']};
+ const analysisGateway={configured:true,execute:async request=>{matchRequest=request;return{ok:true,parsed:match};}};
+ const app=await createPortal({store:db,analysisGateway,env:{NODE_ENV:'test',DEMO_MODE:'true',PUBLIC_ORIGIN:'http://localhost:3000'},verifyOtp:async email=>({id:'style-user',email})});
  const server=app.listen(0,'127.0.0.1');await new Promise(r=>server.once('listening',r));
- function client(){let cookie='',csrf='';return async(path,body,headers={})=>{const res=await fetch('http://127.0.0.1:'+server.address().port+'/api/hub'+path,{method:body===undefined?'GET':'POST',headers:{cookie,origin:'http://localhost:3000','content-type':'application/json','x-csrf-token':csrf,...headers},body:body===undefined?undefined:JSON.stringify(body)});if(res.headers.get('set-cookie'))cookie=res.headers.get('set-cookie').split(';')[0];const data=await res.json();if(data.csrf)csrf=data.csrf;return {status:res.status,data};};}
+ function client(){let cookie='',csrf='';return async(path,body,headers={})=>{const res=await fetch('http://127.0.0.1:'+server.address().port+'/api/hub'+path,{method:body===undefined?'GET':'POST',headers:{cookie,origin:'http://localhost:3000','content-type':'application/json','x-csrf-token':csrf,...headers},body:body===undefined?undefined:JSON.stringify(body)});if(res.headers.get('set-cookie'))cookie=res.headers.get('set-cookie').split(';')[0];const text=await res.text();let data;try{data=JSON.parse(text);}catch{throw new Error(`${path} returned ${res.status} non-JSON: ${text.slice(0,300)}`);}if(data.csrf)csrf=data.csrf;return {status:res.status,data};};}
  try{
   const a=client(),b=client();await a('/session');await b('/session');
   assert.equal((await a('/style-profile')).data.profile,null);
@@ -21,6 +24,18 @@ const {DEFAULT_STYLE,STYLE_SECTIONS,stylePlan}=require('@mgt/domain');
   assert.equal(saved.input.palette,'cool');assert.equal(saved.input.texture,'coily');assert(!('consent' in saved.input));
   assert.equal((await a('/style-profile',{...preferences,texture:null})).status,400);
   assert.deepEqual((await a('/style-profile')).data.profile,saved);
+  assert.equal((await a('/style-match',{})).status,400,'AI requires per-request consent');
+  assert.equal((await a('/style-match',{ai_consent:true})).status,200);
+  assert.equal(matchRequest.task_type,'style_color_match');
+  assert(!matchRequest.user_prompt.includes('personalNotes'),'Personal notes are not sent to AI');
+  assert(!matchRequest.user_prompt.includes('wardrobe'),'Wardrobe entries are not sent to AI');
+  assert(!matchRequest.user_prompt.includes('photo'),'Photos are not sent to AI');
+  assert.equal((await a('/style-match',{ai_consent:true})).data.palette,'balanced');
+  const wardrobe=[{id:'00000000-0000-4000-8000-000000000001',name:'Blue jacket',category:'outer layer',color:'blue',notes:'favorite'}];
+  assert.equal((await a('/wardrobe',{items:wardrobe,consent:false})).status,400,'Wardrobe persistence requires consent');
+  assert.equal((await a('/wardrobe',{items:wardrobe,consent:true})).status,200);
+  const savedWardrobe=(await a('/wardrobe')).data.items;assert.equal(savedWardrobe.length,1);assert.equal(savedWardrobe[0].name,'Blue jacket');assert(Number.isFinite(Date.parse(savedWardrobe[0].created_at)));
+  assert.equal((await a('/wardrobe',{items:Array.from({length:51},(_,i)=>({...wardrobe[0],id:i.toString(16).padStart(8,'0')})),consent:true})).status,400,'Wardrobe size is bounded');
   assert.equal((await a('/account/export')).status,401);
   assert.equal((await a('/auth/verify',{email:'style@example.com',code:'123456'})).status,200);await a('/session');
   assert.deepEqual((await a('/style-profile')).data.profile,saved);

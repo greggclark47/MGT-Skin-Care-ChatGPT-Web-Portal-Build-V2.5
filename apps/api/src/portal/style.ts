@@ -7,10 +7,24 @@ import type {AiGateway} from '@mgt/ai-gateway';
 const WARDROBE_CATEGORIES=['top','bottom','dress or jumpsuit','outer layer','headwear','accessory','shoes','other'] as const;
 type WardrobeItem={id:string;name:string;category:typeof WARDROBE_CATEGORIES[number];color:string;notes:string;created_at:string};
 type WardrobeState={items:WardrobeItem[];revision:string;updated_at:string};
+type SavedStyleProfile={input:StyleProfile;updated_at:string;consent_version:string;revision?:string};
 export function wardrobeItems(value:unknown):WardrobeItem[]{return Array.isArray(value)?value:Array.isArray((value as any)?.items)?(value as any).items:[];}
 function wardrobeState(value:unknown):{items:WardrobeItem[];revision:string|null;updated_at:string|null}{
  const record=value&&typeof value==='object'&&!Array.isArray(value)?value as Partial<WardrobeState>:null;
  return{items:wardrobeItems(value),revision:typeof record?.revision==='string'?record.revision:Array.isArray(value)?'legacy':null,updated_at:typeof record?.updated_at==='string'?record.updated_at:null};
+}
+function styleProfileRevision(value:unknown):string|null{
+ if(!value||typeof value!=='object'||Array.isArray(value))return null;
+ const revision=(value as SavedStyleProfile).revision;return typeof revision==='string'?revision:'legacy';
+}
+export function publicStyleProfile(value:unknown){
+ if(!value||typeof value!=='object'||Array.isArray(value))return null;
+ const profile=value as SavedStyleProfile;
+ return {...profile,input:normalizeStyle(profile.input),revision:styleProfileRevision(profile)};
+}
+export function exportedStyleProfile(value:unknown){
+ const profile=publicStyleProfile(value);if(!profile)return null;
+ const {revision,...exported}=profile;return exported;
 }
 function validateWardrobe(value:unknown):WardrobeItem[]{
  check(Array.isArray(value)&&value.length<=50,400,'wardrobe_limit','Keep up to 50 wardrobe pieces.');
@@ -31,9 +45,10 @@ function validMatch(value:any){
  return value&&typeof value==='object'&&['warm','cool','balanced'].includes(value.palette)&&typeof value.reason==='string'&&value.reason.length<=360&&Array.isArray(value.wardrobe_ideas)&&value.wardrobe_ideas.length===3&&value.wardrobe_ideas.every((x:unknown)=>typeof x==='string'&&x.trim().length>0&&x.length<=180);
 }
 export function installStyle(app:Express,db:Store,gateway?:AiGateway){
- app.get('/api/hub/style-profile',wrap(async(req,res)=>{const profile=await db.tx(r=>r.get('style_profiles',req.actor));res.json({profile:profile?{...profile,input:normalizeStyle(profile.input)}:null});}));
+ app.get('/api/hub/style-profile',wrap(async(req,res)=>{const profile=await db.tx(r=>r.get('style_profiles',req.actor));res.set('Cache-Control','private, no-store').json({profile:publicStyleProfile(profile)});}));
  app.post('/api/hub/style-profile',wrap(async(req,res)=>{
   check(req.body?.consent===true,400,'consent_required','Please agree to save your beauty and style preferences.');
+  check(Object.prototype.hasOwnProperty.call(req.body||{},'expected_revision')&&(req.body.expected_revision===null||(typeof req.body.expected_revision==='string'&&req.body.expected_revision.length<=64)),400,'style_profile_revision_required','Refresh your style profile before saving.');
   const input={} as StyleProfile;
   for(const key of Object.keys(STYLE_OPTIONS) as StyleOptionKey[]){
    const value=req.body[key]===undefined?DEFAULT_STYLE[key]:req.body[key];check((STYLE_OPTIONS[key] as readonly string[]).includes(value),400,'invalid_style','Choose a listed option for each style preference.');
@@ -42,9 +57,8 @@ export function installStyle(app:Express,db:Store,gateway?:AiGateway){
   const notes=req.body.personalNotes===undefined?'':req.body.personalNotes;
   check(typeof notes==='string'&&notes.length<=500,400,'invalid_style_notes','Keep your styling brief to 500 characters.');
   input.personalNotes=notes.trim();
-  const previous=await db.tx(r=>r.get<any>('style_profiles',req.actor));
-  const profile={...previous,input,updated_at:new Date().toISOString(),consent_version:'2026-09-07'};
-  await db.tx(r=>r.put('style_profiles',req.actor,profile));res.json({profile});
+  const profile=await db.tx(async r=>{await r.lock('style-profile:'+req.actor);const previous=await r.get<any>('style_profiles',req.actor);check(styleProfileRevision(previous)===req.body.expected_revision,409,'style_profile_changed','Your style profile changed since you opened it. Load the latest version before saving.');const next={...previous,input,updated_at:new Date().toISOString(),consent_version:'2026-09-07',revision:randomUUID()};await r.put('style_profiles',req.actor,next);return next;});
+  res.set('Cache-Control','private, no-store').json({profile:publicStyleProfile(profile)});
  }));
  app.get('/api/hub/wardrobe',wrap(async(req,res)=>{const state=wardrobeState(await db.tx(r=>r.get('wardrobes',req.actor)));res.set('Cache-Control','private, no-store').json({...state,limit:50});}));
  app.post('/api/hub/wardrobe',wrap(async(req,res)=>{

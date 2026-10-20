@@ -122,6 +122,7 @@
     "test:production-post-launch-review": "node --test infra/portal/production-post-launch-review.test.mjs",
     "test:production-final-closeout-review": "node --test infra/portal/production-final-closeout-review.test.mjs",
     "test:infra": "node infra/portal/run-contract-tests.cjs",
+    "test:application": "node infra/portal/run-application-tests.cjs",
     "test:lineage": "node --test infra/db/migration-lineage.test.mjs",
     "test:database-audit": "node --test infra/db/production-audit.test.mjs",
     "test:credential-scan": "node --test infra/portal/tracked-secret-scan.test.mjs",

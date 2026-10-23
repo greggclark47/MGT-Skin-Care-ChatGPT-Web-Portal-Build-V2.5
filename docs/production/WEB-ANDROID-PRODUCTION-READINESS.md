@@ -63,6 +63,13 @@ This register is an engineering release aid, not legal advice, a regulatory cert
 - Test Google Drive image connection now checks the configured or previously created folder's
   identity, type, trash state and upload permission, rather than treating a refreshed OAuth token
   alone as proof that images can be saved. An uncreated folder remains a first-upload setup step.
+- A queued account-deletion request now prevents new test Drive image uploads at the deletion
+  worker's account lock; existing images remain available for the customer to remove so deletion
+  can proceed after their test copies are gone.
+- New test Drive uploads require a signed-in account. Historical guest test-image records transfer
+  during account linking (including when a profile merge choice is needed), preserving both image
+  libraries and bringing those copies under account export and deletion checks. In-progress legacy
+  uploads delay linking instead of silently orphaning a copy.
 - A non-mutating Ed25519 approval-envelope verifier now binds candidate, artifact, role, key,
   signer-subject reference, validity window, payload checksum, and signature before approval
   evidence can be reviewed; human identity and production authorization remain external gates.

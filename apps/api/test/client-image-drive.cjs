@@ -6,7 +6,7 @@ const {OperationalWorker,InAppNotificationDelivery}=require('../dist/portal/oper
 const {createPortal}=require('../dist/portal/server');
 const {
  clientImageDriveTestEnabled,clientImageDriveTestStatus,listTestDriveImages,saveTestDriveImage,getTestDriveImage,
- deleteTestDriveImage,updateTestDriveImageCategory,TestDriveImageStorage,TEST_IMAGE_FOLDER_NAME,TEST_IMAGE_UPLOAD_CONSENT_VERSION,
+ deleteTestDriveImage,updateTestDriveImageCategory,transferGuestTestDriveImages,TestDriveImageStorage,TEST_IMAGE_FOLDER_NAME,TEST_IMAGE_UPLOAD_CONSENT_VERSION,
 }=require('../dist/portal/client-image-drive');
 
 const enabled={NODE_ENV:'test',CLIENT_IMAGE_DRIVE_TEST_ENABLED:'true',TEST_GOOGLE_DRIVE_CLIENT_ID:'client',TEST_GOOGLE_DRIVE_CLIENT_SECRET:'secret',TEST_GOOGLE_DRIVE_REFRESH_TOKEN:'refresh'};
@@ -69,6 +69,61 @@ test('test Drive binary uploads require request-scoped consent',async t=>{
  await request('/session');await request('/auth/verify',{method:'POST',headers:{'content-type':'application/json','x-csrf-token':csrf},body:JSON.stringify({email:'image-consent@example.test',code:'123456'})});await request('/session');
  const missing=await request('/client-images',{method:'POST',headers:{'content-type':'application/octet-stream','x-csrf-token':csrf,'x-client-image-category':'front','x-client-image-name':'123e4567-e89b-42d3-a456-426614174004|photo.jpg'},body:jpeg});
  assert.equal(missing.response.status,400);assert.equal(missing.data.error.code,'image_consent_required');
+});
+
+test('new test Drive uploads are refused while account deletion is pending, without calling Drive',async t=>{
+ const db=new LocalStore(':memory:'),env={...enabled,DEMO_MODE:'true',PUBLIC_ORIGIN:'http://localhost:3000',TEST_GOOGLE_DRIVE_FOLDER_ID:'folder-1'};
+ const app=await createPortal({store:db,env,verifyOtp:async email=>({id:'closing-image-account',email})});
+ const server=app.listen(0,'127.0.0.1');await new Promise(resolve=>server.once('listening',resolve));
+ t.after(async()=>{await new Promise(resolve=>server.close(resolve));await db.close();});
+ let cookie='',csrf='';const base=`http://127.0.0.1:${server.address().port}/api/hub`;
+ const request=async(path,init={})=>{const response=await fetch(base+path,{...init,headers:{cookie,origin:'http://localhost:3000',...(init.headers||{})}});if(response.headers.get('set-cookie'))cookie=response.headers.get('set-cookie').split(';')[0];const data=await response.json();if(data.csrf)csrf=data.csrf;return{response,data};};
+ await request('/session');await request('/auth/verify',{method:'POST',headers:{'content-type':'application/json','x-csrf-token':csrf},body:JSON.stringify({email:'closing@example.test',code:'123456'})});await request('/session');
+ const requested=await request('/account/deletion-request',{method:'POST',headers:{'content-type':'application/json','x-csrf-token':csrf},body:JSON.stringify({confirm:true})});assert.equal(requested.response.status,200);
+ const upload=()=>request('/client-images',{method:'POST',headers:{'content-type':'application/octet-stream','x-csrf-token':csrf,'x-client-image-consent':TEST_IMAGE_UPLOAD_CONSENT_VERSION,'x-client-image-category':'front','x-client-image-name':'123e4567-e89b-42d3-a456-426614174009|photo.jpg'},body:jpeg});
+ const rejected=await upload();assert.equal(rejected.response.status,409);assert.equal(rejected.data.error.code,'account_closing');
+ assert.deepEqual(await db.tx(records=>records.list('client_image_drive')),[]);
+ const cancelled=await request('/account/deletion-cancel',{method:'POST',headers:{'content-type':'application/json','x-csrf-token':csrf},body:JSON.stringify({confirm:true})});assert.equal(cancelled.response.status,200);
+ const drive={configuredFolderId:'test-folder',upload:async()=> 'saved-file',remove:async()=>{},createPrivateTestFolder:async()=>{throw new Error('not expected');}};
+ const actor='user_closing-image-account',imageActor=createHash('sha256').update(actor).digest('hex');
+ assert.equal((await saveTestDriveImage(db,drive,imageActor,jpeg,'front','123e4567-e89b-42d3-a456-426614174009|photo.jpg',actor)).id,'123e4567-e89b-42d3-a456-426614174009');
+});
+
+test('historical guest test images move into the verified account and new guest uploads require sign-in',async t=>{
+ const db=new LocalStore(':memory:'),env={...enabled,DEMO_MODE:'true',PUBLIC_ORIGIN:'http://localhost:3000',TEST_GOOGLE_DRIVE_FOLDER_ID:'folder-1'};
+ const app=await createPortal({store:db,env,verifyOtp:async email=>({id:'linked-image-account',email})});
+ const server=app.listen(0,'127.0.0.1');await new Promise(resolve=>server.once('listening',resolve));
+ t.after(async()=>{await new Promise(resolve=>server.close(resolve));await db.close();});
+ let cookie='',csrf='';const base=`http://127.0.0.1:${server.address().port}/api/hub`;
+ const request=async(path,init={})=>{const response=await fetch(base+path,{...init,headers:{cookie,origin:'http://localhost:3000',...(init.headers||{})}});if(response.headers.get('set-cookie'))cookie=response.headers.get('set-cookie').split(';')[0];const data=await response.json();if(data.csrf)csrf=data.csrf;return{response,data};};
+ await request('/session');const guestActor=(await db.tx(r=>r.list('sessions')))[0].actor,guestImageActor=createHash('sha256').update(guestActor).digest('hex');
+ const id='123e4567-e89b-42d3-a456-426614174010';
+ await db.tx(r=>r.put('client_image_drive',`${guestImageActor}:${id}`,{id,actor:guestImageActor,fileId:'existing-guest-copy',category:'progress',name:'guest.jpg',size:jpeg.length,createdAt:'2026-10-20T00:00:00.000Z',status:'ready'}));
+ const upload=await request('/client-images',{method:'POST',headers:{'content-type':'application/octet-stream','x-csrf-token':csrf,'x-client-image-consent':TEST_IMAGE_UPLOAD_CONSENT_VERSION,'x-client-image-category':'front','x-client-image-name':'123e4567-e89b-42d3-a456-426614174011|photo.jpg'},body:jpeg});
+ assert.equal(upload.response.status,401);assert.equal(upload.data.error.code,'sign_in_required');
+ assert.equal((await request('/auth/verify',{method:'POST',headers:{'content-type':'application/json','x-csrf-token':csrf},body:JSON.stringify({email:'linked@example.test',code:'123456'})})).response.status,200);
+ await request('/session');
+ const listed=await request('/client-images');assert.equal(listed.response.status,200);assert.deepEqual(listed.data.images.map(image=>image.id),[id]);
+ const exported=await request('/account/export');assert.deepEqual(exported.data.test_drive_images.map(image=>image.id),[id]);
+ const accountImageActor=createHash('sha256').update('user_linked-image-account').digest('hex');
+ assert.equal(await db.tx(r=>r.get('client_image_drive',`${guestImageActor}:${id}`)),undefined);
+ assert.equal((await db.tx(r=>r.get('client_image_drive',`${accountImageActor}:${id}`))).fileId,'existing-guest-copy');
+});
+
+test('guest image linking preserves colliding IDs and refuses an in-progress legacy upload',async t=>{
+ const db=new LocalStore(':memory:');t.after(()=>db.close());
+ const guestActor='guest_legacy',accountActor='user_existing',from=createHash('sha256').update(guestActor).digest('hex'),to=createHash('sha256').update(accountActor).digest('hex'),id='123e4567-e89b-42d3-a456-426614174012';
+ const image=(actor,fileId,status='ready',createdAt='2026-10-20T00:00:00.000Z')=>({id,actor,fileId,category:'front',name:'image.jpg',size:jpeg.length,createdAt,status});
+ await db.tx(async r=>{await r.put('client_image_drive',`${from}:${id}`,image(from,'guest-file'));await r.put('client_image_drive',`${to}:${id}`,image(to,'account-file'));});
+ assert.equal(await db.tx(r=>transferGuestTestDriveImages(r,guestActor,accountActor)),1);
+ const moved=await db.tx(r=>r.list('client_image_drive'));
+ assert.equal(moved.length,2);assert(moved.every(item=>item.actor===to));assert.deepEqual(new Set(moved.map(item=>item.fileId)),new Set(['guest-file','account-file']));assert.equal(new Set(moved.map(item=>item.id)).size,2);
+ const pendingId='123e4567-e89b-42d3-a456-426614174013',pending={...image(from,'','pending',new Date().toISOString()),id:pendingId};
+ await db.tx(r=>r.put('client_image_drive',`${from}:${pendingId}`,pending));
+ await assert.rejects(db.tx(r=>transferGuestTestDriveImages(r,guestActor,accountActor)),error=>error.code==='image_upload_in_progress');
+ assert(await db.tx(r=>r.get('client_image_drive',`${from}:${pendingId}`)));
+ await db.tx(r=>transferGuestTestDriveImages(r,guestActor,accountActor,Date.now()+3600001));
+ assert.equal(await db.tx(r=>r.get('client_image_drive',`${from}:${pendingId}`)),undefined);
 });
 
 test('test Drive image records are actor-isolated and support lifecycle changes',async t=>{

@@ -1,5 +1,6 @@
-import { randomUUID } from 'node:crypto';
-import type { Store } from './store';
+import { createHash, randomUUID } from 'node:crypto';
+import type { Records, Store } from './store';
+import { check } from './security';
 
 const DRIVE_API = 'https://www.googleapis.com/drive/v3';
 const DRIVE_UPLOAD = 'https://www.googleapis.com/upload/drive/v3/files';
@@ -76,15 +77,38 @@ export class TestDriveImageStorage {
 }
 
 function publicImage(record:DriveRecord):ClientDriveImage{return{id:record.id,category:record.category,name:record.name,size:record.size,createdAt:record.createdAt,contentUrl:`/api/hub/client-images/${record.id}/content`};}
+// Preserve historical guest test images when the guest becomes an account. New guest uploads are
+// refused at the route, so a pending legacy upload is the only in-flight handoff to handle.
+export async function transferGuestTestDriveImages(records:Records,guestActor:string,accountActor:string,at=Date.now()):Promise<number>{
+ check(guestActor.startsWith('guest_')&&accountActor.startsWith('user_')&&accountActor.length>5,400,'invalid_image_owner','The image owner is invalid.');
+ const from=createHash('sha256').update(guestActor).digest('hex'),to=createHash('sha256').update(accountActor).digest('hex');
+ for(const owner of [from,to].sort())await records.lock(`client-image-drive:${owner}`);
+ const guest=(await records.entries<DriveRecord>('client_image_drive')).filter(item=>item.value.actor===from);
+ for(const item of guest.filter(item=>item.value.status==='pending')){
+  const created=Date.parse(item.value.createdAt);
+  check(Number.isFinite(created)&&at-created>3600000,409,'image_upload_in_progress','Wait for your test image upload to finish before signing in, or remove a stalled image and try again.');
+  await records.remove('client_image_drive',item.id);
+ }
+ let moved=0;
+ for(const item of guest.filter(item=>item.value.status==='ready')){
+  let id=item.value.id,key=`${to}:${id}`;
+  while(await records.get('client_image_drive',key)){id=randomUUID();key=`${to}:${id}`;}
+  await records.put('client_image_drive',key,{...item.value,id,actor:to});
+  await records.remove('client_image_drive',item.id);
+  moved++;
+ }
+ return moved;
+}
 export async function listTestDriveImages(db:Store,actor:string):Promise<ClientDriveImage[]>{
  return db.tx(async records=>(await records.list<DriveRecord>('client_image_drive')).filter(item=>item.actor===actor&&item.status==='ready').sort((a,b)=>b.createdAt.localeCompare(a.createdAt)).map(publicImage));
 }
-export async function saveTestDriveImage(db:Store,drive:TestDriveImageStorage,actor:string,bytes:Buffer,category:string,name:string):Promise<ClientDriveImage>{
+export async function saveTestDriveImage(db:Store,drive:TestDriveImageStorage,actor:string,bytes:Buffer,category:string,name:string,accountActor?:string):Promise<ClientDriveImage>{
  if(!CATEGORIES.has(category))throw new Error('Choose a valid image purpose.');
  if(!UUID.test(name.slice(0,36)))throw new Error('The image request is invalid.');
+ if(accountActor)check(accountActor.startsWith('user_')&&accountActor.length>5&&actor===createHash('sha256').update(accountActor).digest('hex'),400,'invalid_image_owner','The image owner is invalid.');
  const id=name.slice(0,36),key=`${actor}:${id}`,safeName=name.slice(37).replace(/[\u0000-\u001f\\/]/g,'_').slice(0,120)||'skincare-photo.jpg';
  const record:DriveRecord={id,actor,fileId:'',category,name:safeName,size:bytes.length,createdAt:new Date().toISOString(),status:'pending'};
- await db.tx(async records=>{await records.lock(`client-image-drive:${actor}`);const recordsForActor=(await records.list<DriveRecord>('client_image_drive')).filter(item=>item.actor===actor);const stale=recordsForActor.filter(item=>item.status==='pending'&&Date.now()-Date.parse(item.createdAt)>3600000);for(const item of stale)await records.remove('client_image_drive',`${actor}:${item.id}`);const current=recordsForActor.filter(item=>!stale.includes(item));if(current.length>=IMAGE_LIMIT||current.reduce((sum,item)=>sum+item.size,0)+bytes.length>LIBRARY_BYTES_LIMIT)throw new Error(current.length>=IMAGE_LIMIT?'The test Drive image library is limited to 12 images.':'The test Drive image library is limited to 40 MB.');if(await records.get('client_image_drive',key))throw new Error('This image was already saved.');await records.put('client_image_drive',key,record);});
+ await db.tx(async records=>{if(accountActor){await records.lock('account-deletion:'+createHash('sha256').update(accountActor).digest('hex'));check(await records.get('accounts',accountActor.slice(5)),409,'account_closing','This account is no longer available for image uploads.');check(!await records.get('deletion_requests',accountActor),409,'account_closing','Cancel the account deletion request before uploading more images.');}await records.lock(`client-image-drive:${actor}`);const recordsForActor=(await records.list<DriveRecord>('client_image_drive')).filter(item=>item.actor===actor);const stale=recordsForActor.filter(item=>item.status==='pending'&&Date.now()-Date.parse(item.createdAt)>3600000);for(const item of stale)await records.remove('client_image_drive',`${actor}:${item.id}`);const current=recordsForActor.filter(item=>!stale.includes(item));if(current.length>=IMAGE_LIMIT||current.reduce((sum,item)=>sum+item.size,0)+bytes.length>LIBRARY_BYTES_LIMIT)throw new Error(current.length>=IMAGE_LIMIT?'The test Drive image library is limited to 12 images.':'The test Drive image library is limited to 40 MB.');if(await records.get('client_image_drive',key))throw new Error('This image was already saved.');await records.put('client_image_drive',key,record);});
  let uploadedFileId='';
  try{let folderId=drive.configuredFolderId;if(!folderId){folderId=await db.tx(records=>records.get<string>('client_image_drive_config','test_folder'))||'';if(!folderId){const created=await drive.createPrivateTestFolder();folderId=await db.tx(async records=>{await records.lock('client-image-drive-folder');const existing=await records.get<string>('client_image_drive_config','test_folder');if(existing)return existing;await records.put('client_image_drive_config','test_folder',created);return created;});}}uploadedFileId=await drive.upload(bytes,id,folderId);record.fileId=uploadedFileId;record.status='ready';await db.tx(records=>records.put('client_image_drive',key,record));return publicImage(record);}
  catch(error){if(uploadedFileId)await drive.remove(uploadedFileId).catch(()=>undefined);await db.tx(records=>records.remove('client_image_drive',key)).catch(()=>undefined);throw error;}

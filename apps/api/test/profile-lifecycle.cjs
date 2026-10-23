@@ -70,20 +70,26 @@ test('profile: sign-in never silently discards a different guest profile when th
 test('profile: explicit merge choice links the guest without reusing the verification code',async t=>{
  const f=await fixture(t),owner=f.client(),guest=f.client();await owner.login();await owner.send('/api/hub/profile',input);
  await guest.send('/api/hub/session');const guestProfile=await guest.send('/api/hub/profile',{...input,skin_type:'oily'});
+ const guestActor=(await f.db.tx(r=>r.list('sessions'))).find(session=>session.actor.startsWith('guest_')).actor,guestImageActor=hash(guestActor),accountImageActor=hash('user_owner@test.invalid');
+ const guestImageId='123e4567-e89b-42d3-a456-426614174015',accountImageId='123e4567-e89b-42d3-a456-426614174016';
+ await f.db.tx(async r=>{for(const [actor,id,fileId] of [[guestImageActor,guestImageId,'guest-file'],[accountImageActor,accountImageId,'account-file']])await r.put('client_image_drive',`${actor}:${id}`,{id,actor,fileId,category:'front',name:'test.jpg',size:8,createdAt:'2026-10-20T00:00:00.000Z',status:'ready'});});
  assert.equal((await guest.send('/api/hub/auth/verify',{email:'owner@test.invalid',code:'123456'})).status,409);
  const merged=await guest.send('/api/hub/auth/merge',{choice:'guest'});assert.equal(merged.status,200);assert.equal(merged.data.merged,'guest');
  const session=await guest.send('/api/hub/session');assert.equal(session.data.account.email,'owner@test.invalid');
  assert.deepEqual((await guest.send('/api/hub/profile')).data.profile,guestProfile.data.profile);
  assert.equal((await f.db.tx(r=>r.list('profile_merge_pending'))).length,0);
+ const images=await f.db.tx(r=>r.list('client_image_drive'));assert.equal(images.length,2);assert(images.every(image=>image.actor===accountImageActor));assert.deepEqual(new Set(images.map(image=>image.fileId)),new Set(['guest-file','account-file']));
 });
 test('profile: switching signed-in identities never copies the first account into the second',async t=>{
  const f=await fixture(t),client=f.client(),first='user_first@test.invalid',second='user_second@test.invalid';
  await client.login('first@test.invalid');
  assert.equal((await client.send('/api/hub/profile',input)).status,200);
  const scopes=['account_profiles','profiles','carts','reminders','saved_retailers','style_profiles','wardrobes'];
+ const imageId='123e4567-e89b-42d3-a456-426614174014',firstImageActor=hash(first),secondImageActor=hash(second);
  await f.db.tx(async records=>{
   for(const scope of scopes.filter(scope=>scope!=='profiles'))await records.put(scope,first,{owner:first,scope});
   await records.put('tickets','first-ticket',{id:'first-ticket',actor:first,subject:'Private support',message:'First account only'});
+  await records.put('client_image_drive',`${firstImageActor}:${imageId}`,{id:imageId,actor:firstImageActor,fileId:'first-account-only',category:'front',name:'private.jpg',size:8,createdAt:'2026-10-20T00:00:00.000Z',status:'ready'});
  });
  const original=await f.db.tx(async records=>Object.fromEntries(await Promise.all(scopes.map(async scope=>[scope,await records.get(scope,first)]))));
  const firstCookie=client.cookie();
@@ -97,6 +103,8 @@ test('profile: switching signed-in identities never copies the first account int
    assert.equal(await records.get(scope,second),undefined,`${scope} is not copied to the second account`);
   }
   assert.equal((await records.get('tickets','first-ticket')).actor,first);
+  assert.equal((await records.get('client_image_drive',`${firstImageActor}:${imageId}`)).fileId,'first-account-only');
+  assert.equal(await records.get('client_image_drive',`${secondImageActor}:${imageId}`),undefined,'photos are not copied during account switching');
   assert.deepEqual(await records.list('profile_merge_pending'),[]);
  });
  const stale=f.client(firstCookie);

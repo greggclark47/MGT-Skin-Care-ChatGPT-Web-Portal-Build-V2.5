@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from 'node:crypto';
 import type { Records, Store } from './store';
-import { check } from './security';
+import { check, Fault } from './security';
 
 const DRIVE_API = 'https://www.googleapis.com/drive/v3';
 const DRIVE_UPLOAD = 'https://www.googleapis.com/upload/drive/v3/files';
@@ -12,8 +12,8 @@ export const TEST_IMAGE_UPLOAD_CONSENT_VERSION = 'client-image-drive-test-1';
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const CATEGORIES = new Set(['front','left','right','concern','routine','progress','product','other']);
 
-type DriveRecord = { id:string; actor:string; fileId:string; category:string; name:string; size:number; createdAt:string; status:'pending'|'ready' };
-export type ClientDriveImage = Omit<DriveRecord,'actor'|'fileId'|'status'> & { contentUrl:string };
+type DriveRecord = { id:string; actor:string; fileId:string; category:string; name:string; size:number; createdAt:string; status:'pending'|'ready'|'deleting'; deleteClaimId?:string; deleteLeaseUntil?:number };
+export type ClientDriveImage = Omit<DriveRecord,'actor'|'fileId'|'status'|'deleteClaimId'|'deleteLeaseUntil'> & { contentUrl:string; removalPending:boolean };
 
 export function clientImageDriveTestEnabled(env:NodeJS.ProcessEnv):boolean {
  return env.NODE_ENV!=='production'&&env.CLIENT_IMAGE_DRIVE_TEST_ENABLED==='true'&&!!env.TEST_GOOGLE_DRIVE_CLIENT_ID&&!!env.TEST_GOOGLE_DRIVE_CLIENT_SECRET&&!!env.TEST_GOOGLE_DRIVE_REFRESH_TOKEN;
@@ -76,14 +76,17 @@ export class TestDriveImageStorage {
  async remove(fileId:string):Promise<void>{await this.request(`${DRIVE_API}/files/${encodeURIComponent(fileId)}`,{method:'DELETE'});}
 }
 
-function publicImage(record:DriveRecord):ClientDriveImage{return{id:record.id,category:record.category,name:record.name,size:record.size,createdAt:record.createdAt,contentUrl:`/api/hub/client-images/${record.id}/content`};}
+function publicImage(record:DriveRecord):ClientDriveImage{return{id:record.id,category:record.category,name:record.name,size:record.size,createdAt:record.createdAt,contentUrl:`/api/hub/client-images/${record.id}/content`,removalPending:record.status==='deleting'};}
 // Preserve historical guest test images when the guest becomes an account. New guest uploads are
 // refused at the route, so a pending legacy upload is the only in-flight handoff to handle.
 export async function transferGuestTestDriveImages(records:Records,guestActor:string,accountActor:string,at=Date.now()):Promise<number>{
  check(guestActor.startsWith('guest_')&&accountActor.startsWith('user_')&&accountActor.length>5,400,'invalid_image_owner','The image owner is invalid.');
  const from=createHash('sha256').update(guestActor).digest('hex'),to=createHash('sha256').update(accountActor).digest('hex');
+ await records.lock('account-deletion:'+createHash('sha256').update(accountActor).digest('hex'));
+ check((await records.get<any>('deletion_requests',accountActor))?.status!=='processing',409,'account_closing','Account deletion is in progress. Test images cannot be linked now.');
  for(const owner of [from,to].sort())await records.lock(`client-image-drive:${owner}`);
  const guest=(await records.entries<DriveRecord>('client_image_drive')).filter(item=>item.value.actor===from);
+ for(const item of guest.filter(item=>item.value.status==='deleting'))check(false,409,'image_delete_in_progress','Wait for your test image removal to finish before signing in, or retry removing the image.');
  for(const item of guest.filter(item=>item.value.status==='pending')){
   const created=Date.parse(item.value.createdAt);
   check(Number.isFinite(created)&&at-created>3600000,409,'image_upload_in_progress','Wait for your test image upload to finish before signing in, or remove a stalled image and try again.');
@@ -100,7 +103,7 @@ export async function transferGuestTestDriveImages(records:Records,guestActor:st
  return moved;
 }
 export async function listTestDriveImages(db:Store,actor:string):Promise<ClientDriveImage[]>{
- return db.tx(async records=>(await records.list<DriveRecord>('client_image_drive')).filter(item=>item.actor===actor&&item.status==='ready').sort((a,b)=>b.createdAt.localeCompare(a.createdAt)).map(publicImage));
+ return db.tx(async records=>(await records.list<DriveRecord>('client_image_drive')).filter(item=>item.actor===actor&&['ready','deleting'].includes(item.status)).sort((a,b)=>b.createdAt.localeCompare(a.createdAt)).map(publicImage));
 }
 export async function saveTestDriveImage(db:Store,drive:TestDriveImageStorage,actor:string,bytes:Buffer,category:string,name:string,accountActor?:string):Promise<ClientDriveImage>{
  if(!CATEGORIES.has(category))throw new Error('Choose a valid image purpose.');
@@ -117,7 +120,25 @@ export async function getTestDriveImage(db:Store,drive:TestDriveImageStorage,act
  if(!UUID.test(id))return undefined;const item=await db.tx(records=>records.get<DriveRecord>('client_image_drive',`${actor}:${id}`));if(!item||item.actor!==actor||item.status!=='ready')return undefined;const bytes=await drive.content(item.fileId);if(bytes.length!==item.size||bytes.length>IMAGE_BYTES_LIMIT||bytes.length<4||bytes[0]!==0xff||bytes[1]!==0xd8||bytes[2]!==0xff)throw new Error('The stored test image did not pass validation.');return{record:publicImage(item),bytes};
 }
 export async function deleteTestDriveImage(db:Store,drive:TestDriveImageStorage,actor:string,id:string):Promise<boolean>{
- if(!UUID.test(id))return false;const key=`${actor}:${id}`,item=await db.tx(records=>records.get<DriveRecord>('client_image_drive',key));if(!item||item.actor!==actor||item.status!=='ready')return false;await drive.remove(item.fileId);await db.tx(records=>records.remove('client_image_drive',key));return true;
+ if(!UUID.test(id))return false;
+ const key=`${actor}:${id}`,claimId=randomUUID();
+ const item=await db.tx(async records=>{
+  await records.lock(`client-image-drive:${actor}`);
+  const current=await records.get<DriveRecord>('client_image_drive',key);
+  if(!current||current.actor!==actor||!['ready','deleting'].includes(current.status))return undefined;
+  if(current.status==='deleting'&&typeof current.deleteLeaseUntil==='number'&&current.deleteLeaseUntil>Date.now())throw new Fault(409,'image_delete_in_progress','This image removal is still in progress. Try again shortly.');
+  await records.put('client_image_drive',key,{...current,status:'deleting',deleteClaimId:claimId,deleteLeaseUntil:Date.now()+60000});
+  return current;
+ });
+ if(!item)return false;
+ try{
+  await drive.remove(item.fileId);
+  await db.tx(async records=>{await records.lock(`client-image-drive:${actor}`);const current=await records.get<DriveRecord>('client_image_drive',key);if(current?.deleteClaimId===claimId)await records.remove('client_image_drive',key);});
+  return true;
+ }catch(error){
+  await db.tx(async records=>{await records.lock(`client-image-drive:${actor}`);const current=await records.get<DriveRecord>('client_image_drive',key);if(current?.deleteClaimId===claimId){const {deleteClaimId:_,deleteLeaseUntil:__,...ready}=current;await records.put('client_image_drive',key,{...ready,status:'ready'});}}).catch(()=>undefined);
+  throw error;
+ }
 }
 export async function updateTestDriveImageCategory(db:Store,actor:string,id:string,category:string):Promise<ClientDriveImage|undefined>{
  if(!UUID.test(id)||!CATEGORIES.has(category))return undefined;const key=`${actor}:${id}`;return db.tx(async records=>{await records.lock(`client-image-drive:${actor}`);const item=await records.get<DriveRecord>('client_image_drive',key);if(!item||item.actor!==actor||item.status!=='ready')return undefined;const updated={...item,category};await records.put('client_image_drive',key,updated);return publicImage(updated);});

@@ -110,6 +110,18 @@ test('profile: switching signed-in identities never copies the first account int
  const stale=f.client(firstCookie);
  assert.equal((await stale.send('/api/hub/session')).data.account,null,'the old session is revoked when switching');
 });
+test('identity: account deletion processing fences guest linking before records move',async t=>{
+ const f=await fixture(t),owner=f.client(),guest=f.client();await owner.login();await guest.send('/api/hub/session');
+ const guestActor=(await f.db.tx(r=>r.list('sessions'))).find(session=>session.actor.startsWith('guest_')).actor;
+ await f.db.tx(async r=>{
+  await r.put('deletion_requests','user_owner@test.invalid',{request_id:'closing-owner',actor:'user_owner@test.invalid',user_id:'owner@test.invalid',status:'processing',requested_at:'2026-10-20T00:00:00.000Z',not_before:'2026-10-21T00:00:00.000Z'});
+  await r.put('saved_retailers',guestActor,['guest-choice']);
+ });
+ const result=await guest.send('/api/hub/auth/verify',{email:'owner@test.invalid',code:'123456'});
+ assert.equal(result.status,409);assert.equal(result.data.error.code,'account_closing');
+ assert.equal((await guest.send('/api/hub/session')).data.account,null);
+ await f.db.tx(async r=>{assert.deepEqual(await r.get('saved_retailers',guestActor),['guest-choice']);assert.equal(await r.get('saved_retailers','user_owner@test.invalid'),undefined);});
+});
 test('session: removed account cannot retain its old actor through a stale cookie',async t=>{
  const f=await fixture(t),c=f.client();await c.login();await c.send('/api/hub/profile',input);
  await f.db.tx(r=>r.remove('accounts','owner@test.invalid'));

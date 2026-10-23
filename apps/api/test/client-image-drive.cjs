@@ -126,6 +126,33 @@ test('guest image linking preserves colliding IDs and refuses an in-progress leg
  assert.equal(await db.tx(r=>r.get('client_image_drive',`${from}:${pendingId}`)),undefined);
 });
 
+test('Drive removal is fenced against guest linking and remains visible for safe retry',async t=>{
+ const db=new LocalStore(':memory:');t.after(()=>db.close());
+ const guestActor='guest_removing',accountActor='user_after-removal',from=createHash('sha256').update(guestActor).digest('hex'),id='123e4567-e89b-42d3-a456-426614174017';
+ await db.tx(r=>r.put('client_image_drive',`${from}:${id}`,{id,actor:from,fileId:'guest-file-to-remove',category:'front',name:'guest.jpg',size:jpeg.length,createdAt:'2026-10-20T00:00:00.000Z',status:'ready'}));
+ let beginRemoval,finishRemoval;const started=new Promise(resolve=>{beginRemoval=resolve;});const release=new Promise(resolve=>{finishRemoval=resolve;});
+ const drive={remove:async fileId=>{assert.equal(fileId,'guest-file-to-remove');beginRemoval();await release;}};
+ const removing=deleteTestDriveImage(db,drive,from,id);await started;
+ const visible=await listTestDriveImages(db,from);assert.equal(visible.length,1);assert.equal(visible[0].removalPending,true);
+ await assert.rejects(deleteTestDriveImage(db,drive,from,id),error=>error.code==='image_delete_in_progress');
+ await assert.rejects(db.tx(r=>transferGuestTestDriveImages(r,guestActor,accountActor)),error=>error.code==='image_delete_in_progress');
+ finishRemoval();assert.equal(await removing,true);
+ assert.deepEqual(await listTestDriveImages(db,from),[]);
+ assert.deepEqual(await db.tx(r=>r.list('client_image_drive')),[]);
+});
+
+test('failed or interrupted Drive removal keeps ownership and allows a bounded retry',async t=>{
+ const db=new LocalStore(':memory:');t.after(()=>db.close());
+ const actor='d'.repeat(64),id='123e4567-e89b-42d3-a456-426614174018',key=`${actor}:${id}`;
+ await db.tx(r=>r.put('client_image_drive',key,{id,actor,fileId:'still-private',category:'front',name:'photo.jpg',size:jpeg.length,createdAt:'2026-10-20T00:00:00.000Z',status:'ready'}));
+ await assert.rejects(deleteTestDriveImage(db,{remove:async()=>{throw new Error('offline');}},actor,id),/offline/);
+ assert.equal((await db.tx(r=>r.get('client_image_drive',key))).status,'ready');
+ await db.tx(async r=>r.put('client_image_drive',key,{...(await r.get('client_image_drive',key)),status:'deleting',deleteClaimId:'abandoned',deleteLeaseUntil:Date.now()-1}));
+ assert.equal((await listTestDriveImages(db,actor))[0].removalPending,true);
+ assert.equal(await deleteTestDriveImage(db,{remove:async fileId=>assert.equal(fileId,'still-private')},actor,id),true);
+ assert.equal(await db.tx(r=>r.get('client_image_drive',key)),undefined);
+});
+
 test('test Drive image records are actor-isolated and support lifecycle changes',async t=>{
  const db=new LocalStore(':memory:');t.after(()=>db.close());
  const stored=new Map(),removed=[];

@@ -25,7 +25,7 @@ export async function buildAccountServiceOverview(records:Records,actor:string,o
  const savedRetailers=await records.get<string[]>('saved_retailers',actor)||[];
  const progress=(await records.list<any>('anti_aging_progress')).filter(item=>item.actor===actor);
  const progressReminders=(await records.list<any>('anti_aging_reminders')).filter(item=>item.actor===actor);
- const images=(await records.list<any>('client_image_drive')).filter(item=>item.actor===hash(actor)&&item.status==='ready');
+ const images=(await records.list<any>('client_image_drive')).filter(item=>item.actor===hash(actor)&&['ready','deleting'].includes(item.status));
  const openSupport=(await records.list<any>('tickets')).filter(item=>item.actor===actor&&['open','in_review','waiting_customer'].includes(item.status));
  const subscription=await records.get<any>('subscriptions',actor+':consumer');
  const disclosure=await records.get<any>('consents',actor+':ai_disclosure');

@@ -70,6 +70,10 @@ This register is an engineering release aid, not legal advice, a regulatory cert
   during account linking (including when a profile merge choice is needed), preserving both image
   libraries and bringing those copies under account export and deletion checks. In-progress legacy
   uploads delay linking instead of silently orphaning a copy.
+- Test Drive removal now has a leased, retryable ownership state. Linking waits for an active
+  removal rather than moving a record for a file being deleted; removal failures keep the record
+  visible and account deletion blocked. Identity linking also refuses an account already in its
+  processing deletion stage, and direct account-profile merging shares the profile write lock.
 - A non-mutating Ed25519 approval-envelope verifier now binds candidate, artifact, role, key,
   signer-subject reference, validity window, payload checksum, and signature before approval
   evidence can be reviewed; human identity and production authorization remain external gates.

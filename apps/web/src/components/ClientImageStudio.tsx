@@ -29,8 +29,8 @@ function ImageCard({ image, onCategory, onDelete }: { image: ClientImage; onCate
 
 function TestDriveImageCard({ image, onCategory, onDelete }: { image: TestDriveClientImage; onCategory: (image: TestDriveClientImage, category: ClientImageCategory) => void; onDelete: (image: TestDriveClientImage) => void }) {
   return <article className="client-image-card">
-    <img src={image.contentUrl} alt={`${CLIENT_IMAGE_CATEGORIES.find(item => item.id === image.category)?.label || 'Skincare'} image`} loading="lazy"/>
-    <div className="client-image-card-details"><strong>{image.name}</strong><label className="field">Image purpose<select aria-label={`Image purpose for ${image.name}`} value={image.category} onChange={event => onCategory(image, event.target.value as ClientImageCategory)}>{CLIENT_IMAGE_CATEGORIES.map(item => <option key={item.id} value={item.id}>{item.label}</option>)}</select></label><small>{(image.size / 1024).toFixed(0)} KB · Private test Drive folder</small><button type="button" className="text-button" onClick={() => onDelete(image)}>Remove image</button></div>
+    {!image.removalPending && <img src={image.contentUrl} alt={`${CLIENT_IMAGE_CATEGORIES.find(item => item.id === image.category)?.label || 'Skincare'} image`} loading="lazy"/>}
+    <div className="client-image-card-details"><strong>{image.name}</strong><label className="field">Image purpose<select aria-label={`Image purpose for ${image.name}`} value={image.category} disabled={image.removalPending} onChange={event => onCategory(image, event.target.value as ClientImageCategory)}>{CLIENT_IMAGE_CATEGORIES.map(item => <option key={item.id} value={item.id}>{item.label}</option>)}</select></label><small>{image.removalPending?'Removal pending · try again shortly':`${(image.size / 1024).toFixed(0)} KB · Private test Drive folder`}</small><button type="button" className="text-button" onClick={() => onDelete(image)}>{image.removalPending?'Retry removal':'Remove image'}</button></div>
   </article>;
 }
 

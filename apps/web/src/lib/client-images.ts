@@ -25,7 +25,7 @@ export type ClientImage = {
   createdAt: string;
   blob: Blob;
 };
-export type TestDriveClientImage = Omit<ClientImage,'blob'|'mimeType'> & { contentUrl:string };
+export type TestDriveClientImage = Omit<ClientImage,'blob'|'mimeType'> & { contentUrl:string; removalPending?:boolean };
 export type TestDriveConnection={enabled:boolean;environment:'test'|'unavailable';folder:'configured'|'created_on_first_upload'|'unavailable';connection:'ready'|'unavailable';message:string};
 
 const DB_NAME = 'mgt-client-image-library-v1-';

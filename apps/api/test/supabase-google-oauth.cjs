@@ -67,6 +67,47 @@ test('Google OAuth callback exchanges PKCE code server-side and never retains pr
   assert.equal(persisted.includes('oauth-code-12345678'), false);
 });
 
+test('Google OAuth account switch does not merge the previously signed-in account', async t => {
+  const db = new LocalStore(':memory:');
+  const app = await createPortal({ store: db, env, verifyOtp: async email => ({ id: 'first-user', email }) });
+  const server = app.listen(0, '127.0.0.1');
+  await new Promise(resolve => server.once('listening', resolve));
+  t.after(async () => { await new Promise(resolve => server.close(resolve)); await db.close(); });
+  const base = `http://127.0.0.1:${server.address().port}/api/hub`;
+  let cookie = '', csrf = '';
+  const request = async (path, body) => {
+    const response = await fetch(base + path, { method: body === undefined ? 'GET' : 'POST', headers: { cookie, origin: env.PUBLIC_ORIGIN, 'content-type': 'application/json', 'x-csrf-token': csrf }, body: body === undefined ? undefined : JSON.stringify(body), redirect: 'manual' });
+    if (response.headers.get('set-cookie')) cookie = response.headers.get('set-cookie').split(';')[0];
+    return response;
+  };
+  csrf = (await (await request('/session')).json()).csrf;
+  assert.equal((await request('/auth/verify', { email: 'first@example.test', code: '123456' })).status, 200);
+  csrf = (await (await request('/session')).json()).csrf;
+  await db.tx(async records => {
+    await records.put('profiles', 'user_first-user', { owner: 'first-user', private_note: 'first only' });
+    await records.put('account_profiles', 'user_first-user', { owner: 'first-user' });
+  });
+  const start = await request('/auth/google');
+  const state = new URL(start.headers.get('location')).searchParams.get('state');
+  const originalFetch = global.fetch;
+  global.fetch = async (url, init) => String(url) === 'https://identity.test/auth/v1/token?grant_type=pkce'
+    ? new Response(JSON.stringify({ user: { id: 'second-user', email: 'second@example.test' } }), { status: 200, headers: { 'content-type': 'application/json' } })
+    : originalFetch(url, init);
+  try {
+    const callback = await request(`/auth/google/callback?state=${state}&code=oauth-code-switch-123`);
+    assert.equal(callback.status, 303);
+    assert.equal(callback.headers.get('location'), 'http://portal.test/account?oauth=connected');
+  } finally { global.fetch = originalFetch; }
+  const session = await (await request('/session')).json();
+  assert.equal(session.account.id, 'second-user');
+  await db.tx(async records => {
+    assert.equal((await records.get('profiles', 'user_first-user')).private_note, 'first only');
+    assert.equal(await records.get('profiles', 'user_second-user'), undefined);
+    assert.equal(await records.get('account_profiles', 'user_second-user'), undefined);
+    assert.deepEqual(await records.list('profile_merge_pending'), []);
+  });
+});
+
 test('Google OAuth callbacks reject invalid, expired, replayed, and failed provider flows', async t => {
   const db = new LocalStore(':memory:');
   const app = await createPortal({ store: db, env });

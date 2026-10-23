@@ -76,6 +76,32 @@ test('profile: explicit merge choice links the guest without reusing the verific
  assert.deepEqual((await guest.send('/api/hub/profile')).data.profile,guestProfile.data.profile);
  assert.equal((await f.db.tx(r=>r.list('profile_merge_pending'))).length,0);
 });
+test('profile: switching signed-in identities never copies the first account into the second',async t=>{
+ const f=await fixture(t),client=f.client(),first='user_first@test.invalid',second='user_second@test.invalid';
+ await client.login('first@test.invalid');
+ assert.equal((await client.send('/api/hub/profile',input)).status,200);
+ const scopes=['account_profiles','profiles','carts','reminders','saved_retailers','style_profiles','wardrobes'];
+ await f.db.tx(async records=>{
+  for(const scope of scopes.filter(scope=>scope!=='profiles'))await records.put(scope,first,{owner:first,scope});
+  await records.put('tickets','first-ticket',{id:'first-ticket',actor:first,subject:'Private support',message:'First account only'});
+ });
+ const original=await f.db.tx(async records=>Object.fromEntries(await Promise.all(scopes.map(async scope=>[scope,await records.get(scope,first)]))));
+ const firstCookie=client.cookie();
+ const switched=await client.send('/api/hub/auth/verify',{email:'second@test.invalid',code:'123456'});
+ assert.equal(switched.status,200,JSON.stringify(switched.data));
+ assert.equal((await client.send('/api/hub/session')).data.account.id,'second@test.invalid');
+ assert.equal((await client.send('/api/hub/profile')).data.profile,null);
+ await f.db.tx(async records=>{
+  for(const scope of scopes){
+   assert.deepEqual(await records.get(scope,first),original[scope],`${scope} stays with the first account`);
+   assert.equal(await records.get(scope,second),undefined,`${scope} is not copied to the second account`);
+  }
+  assert.equal((await records.get('tickets','first-ticket')).actor,first);
+  assert.deepEqual(await records.list('profile_merge_pending'),[]);
+ });
+ const stale=f.client(firstCookie);
+ assert.equal((await stale.send('/api/hub/session')).data.account,null,'the old session is revoked when switching');
+});
 test('session: removed account cannot retain its old actor through a stale cookie',async t=>{
  const f=await fixture(t),c=f.client();await c.login();await c.send('/api/hub/profile',input);
  await f.db.tx(r=>r.remove('accounts','owner@test.invalid'));

@@ -264,20 +264,24 @@ export async function createPortal(options:PortalOptions){
  const supa=async(path:string,body:any)=>{authConfigured();const r=await fetch(env.SUPABASE_URL+'/auth/v1/'+path,{method:'POST',headers:{apikey:env.SUPABASE_ANON_KEY!,'content-type':'application/json'},body:JSON.stringify(body),signal:AbortSignal.timeout(10000)});check(r.ok,400,'auth_failed','The sign-in request could not be completed. Please check the code or try again.');return r.json() as Promise<any>;};
  const completeVerifiedIdentity=async(req:HubRequest,res:Response,verified:SupabaseOAuthIdentity):Promise<boolean>=>{
   const email=verified.email.toLowerCase();check(/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email),401,'identity_invalid','Identity could not be verified.');
+  // A signed-in account may switch identities, but its records must never be treated as guest data.
+  const guest=req.actor.startsWith('guest_');
   const secret=token(),sid=hash(secret);const merge=await db.tx(async r=>{
    await r.lock('identity:'+hash(verified.id));
    let user=await r.get('accounts',verified.id);if(!user){user={id:verified.id,email,roles:[],created_at:now()};await r.put('accounts',user.id,user);}
    const actor='user_'+user.id;
    for(const owner of [...new Set([req.actor,actor])].sort())await r.lock('profile:'+hash(owner));
-   if(req.actor.startsWith('guest_')){
+   if(guest){
     const conflicts=[] as string[];
     for(const scope of PROFILE_MERGE_SCOPES){const guest=await r.get(scope,req.actor),existing=await r.get(scope,actor);if(guest&&existing&&JSON.stringify(guest)!==JSON.stringify(existing))conflicts.push(scope);}
     if(conflicts.length){const pending:PendingProfileMerge={id:randomUUID(),guest_actor:req.actor,account_id:user.id,email:user.email,created_at:now(),expires_at:new Date(Date.now()+15*60*1000).toISOString()};await r.put('profile_merge_pending',req.actor,{...pending,conflicts});return true;}
    }
-   for(const scope of PROFILE_MERGE_SCOPES){const old=await r.get(scope,req.actor);if(old&&!(await r.get(scope,actor))){await r.put(scope,actor,old);}if(req.actor.startsWith('guest_'))await r.remove(scope,req.actor);}
-   const linked=await r.get('profiles',actor);if(linked?.revision)await r.put('profile_revisions',actor,{revision:linked.revision});
-   if(req.actor.startsWith('guest_'))await r.remove('profile_revisions',req.actor);
-   if(req.actor.startsWith('guest_')){for(const ticket of (await r.list('tickets')).filter((t:any)=>t.actor===req.actor)){await r.put('tickets',ticket.id,{...ticket,actor,email:user.email});}}
+   if(guest){
+    for(const scope of PROFILE_MERGE_SCOPES){const old=await r.get(scope,req.actor);if(old&&!(await r.get(scope,actor))){await r.put(scope,actor,old);}await r.remove(scope,req.actor);}
+    const linked=await r.get('profiles',actor);if(linked?.revision)await r.put('profile_revisions',actor,{revision:linked.revision});
+    await r.remove('profile_revisions',req.actor);
+    for(const ticket of (await r.list('tickets')).filter((t:any)=>t.actor===req.actor)){await r.put('tickets',ticket.id,{...ticket,actor,email:user.email});}
+   }
    await r.remove('sessions',req.sid);await r.put('sessions',sid,{id:sid,actor,userId:user.id,csrf:token(),expires:Date.now()+86400000});return false;
   });
   if(!merge)res.cookie(prod?'__Host-mgt':'mgt',secret,{httpOnly:true,secure:prod,sameSite:'lax',path:'/',maxAge:86400000});

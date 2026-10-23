@@ -263,6 +263,7 @@ export async function createPortal(options:PortalOptions){
  const authConfigured=()=>check(env.SUPABASE_URL&&env.SUPABASE_ANON_KEY,503,'auth_unconfigured','Sign-in is awaiting launch configuration.');
  const supa=async(path:string,body:any)=>{authConfigured();const r=await fetch(env.SUPABASE_URL+'/auth/v1/'+path,{method:'POST',headers:{apikey:env.SUPABASE_ANON_KEY!,'content-type':'application/json'},body:JSON.stringify(body),signal:AbortSignal.timeout(10000)});check(r.ok,400,'auth_failed','The sign-in request could not be completed. Please check the code or try again.');return r.json() as Promise<any>;};
  const completeVerifiedIdentity=async(req:HubRequest,res:Response,verified:SupabaseOAuthIdentity):Promise<boolean>=>{
+  check(typeof verified?.id==='string'&&verified.id.length>=1&&verified.id.length<=128&&verified.id===verified.id.trim()&&!/[\u0000-\u001f\u007f]/.test(verified.id)&&typeof verified.email==='string'&&verified.email.length>=3&&verified.email.length<=254,401,'identity_invalid','Identity could not be verified.');
   const email=verified.email.toLowerCase();check(/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email),401,'identity_invalid','Identity could not be verified.');
   // A signed-in account may switch identities, but its records must never be treated as guest data.
   const guest=req.actor.startsWith('guest_');
@@ -271,7 +272,14 @@ export async function createPortal(options:PortalOptions){
    const verifiedActor='user_'+verified.id;
    await r.lock('account-deletion:'+hash(verifiedActor));
    check((await r.get<any>('deletion_requests',verifiedActor))?.status!=='processing',409,'account_closing','Account deletion is in progress. Please try again later.');
-   let user=await r.get('accounts',verified.id);if(!user){user={id:verified.id,email,roles:[],created_at:now()};await r.put('accounts',user.id,user);}
+   let user=await r.get<any>('accounts',verified.id);
+   if(!user){user={id:verified.id,email,roles:[],created_at:now()};await r.put('accounts',user.id,user);}
+   else if(user.email!==email){
+    user={...user,email};await r.put('accounts',user.id,user);
+    for(const session of await r.entries<Session>('sessions'))if(session.value.userId===user.id)await r.remove('sessions',session.id);
+    for(const ticket of await r.entries<any>('tickets'))if(ticket.value?.actor===verifiedActor)await r.put('tickets',ticket.id,{...ticket.value,email});
+    await audit(r,verifiedActor,'account.email_verified_changed','self');
+   }
    const actor='user_'+user.id;
    for(const owner of [...new Set([req.actor,actor])].sort())await r.lock('profile:'+hash(owner));
    for(const owner of [...new Set([req.actor,actor])].sort())await r.lock('account-profile:'+hash(owner));

@@ -74,6 +74,10 @@ This register is an engineering release aid, not legal advice, a regulatory cert
   removal rather than moving a record for a file being deleted; removal failures keep the record
   visible and account deletion blocked. Identity linking also refuses an account already in its
   processing deletion stage, and direct account-profile merging shares the profile write lock.
+- A provider-verified email change on the same identity now refreshes the account and its support
+  contact records, preserves ID-bound data and roles, and revokes earlier local sessions. Malformed
+  identity subjects fail before account creation or session rotation; this does not substitute for
+  a live Supabase sign-in and recovery rehearsal.
 - A non-mutating Ed25519 approval-envelope verifier now binds candidate, artifact, role, key,
   signer-subject reference, validity window, payload checksum, and signature before approval
   evidence can be reviewed; human identity and production authorization remain external gates.

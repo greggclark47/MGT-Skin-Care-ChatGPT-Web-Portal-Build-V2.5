@@ -6,12 +6,12 @@ const {createPortal}=require('../dist/portal/server');
 const {LocalStore}=require('../dist/portal/store');
 const {hash}=require('../dist/portal/security');
 const input={skin_type:'dry',concerns:['hydration'],sensitivity:'none',age_band:'26_35',current_routine:'basic',desired_outcome:'glow',budget_range:'between_25_50',ingredient_avoidances:[],consent:true};
-async function fixture(t){
+async function fixture(t,verifyOtp=async email=>({id:email,email})){
  const root=path.resolve(__dirname,'../../..','work/verification');fs.mkdirSync(root,{recursive:true});
  const dir=fs.mkdtempSync(path.join(root,'profile-'));const file=path.join(dir,'store.sqlite');
  const db=new LocalStore(file);let failAudit=false;
  const store={kind:db.kind,close:()=>db.close(),tx:fn=>db.tx(r=>fn({...r,put:async(scope,id,value)=>{if(failAudit&&scope==='audit')throw Error('Injected mid-write failure');return r.put(scope,id,value);}}))};
- const app=await createPortal({store,env:{NODE_ENV:'test',DEMO_MODE:'true',PUBLIC_ORIGIN:'http://portal.test'},verifyOtp:async email=>({id:email,email})});
+ const app=await createPortal({store,env:{NODE_ENV:'test',DEMO_MODE:'true',PUBLIC_ORIGIN:'http://portal.test'},verifyOtp});
  const server=app.listen(0,'127.0.0.1');await new Promise(r=>server.once('listening',r));
  const base='http://127.0.0.1:'+server.address().port;
  t.after(async()=>{server.closeAllConnections();await new Promise(r=>server.close(r));await db.close();});
@@ -121,6 +121,33 @@ test('identity: account deletion processing fences guest linking before records 
  assert.equal(result.status,409);assert.equal(result.data.error.code,'account_closing');
  assert.equal((await guest.send('/api/hub/session')).data.account,null);
  await f.db.tx(async r=>{assert.deepEqual(await r.get('saved_retailers',guestActor),['guest-choice']);assert.equal(await r.get('saved_retailers','user_owner@test.invalid'),undefined);});
+});
+test('identity: a provider-verified email change preserves the account and revokes older sessions',async t=>{
+ const f=await fixture(t,async email=>({id:'stable-customer-id',email})),first=f.client(),other=f.client();
+ await first.login('previous@example.test');await other.login('previous@example.test');
+ const oldCookie=other.cookie(),actor='user_stable-customer-id';
+ await f.db.tx(async r=>{
+  const account=await r.get('accounts','stable-customer-id');await r.put('accounts',account.id,{...account,roles:['viewer']});
+  await r.put('saved_retailers',actor,['preserved-retailer']);
+  await r.put('tickets','email-change-ticket',{id:'email-change-ticket',actor,email:'previous@example.test',subject:'Private support',message:'Account owner only',status:'open'});
+ });
+ const changed=await first.send('/api/hub/auth/verify',{email:'current@example.test',code:'123456'});
+ assert.equal(changed.status,200,JSON.stringify(changed.data));
+ const current=(await first.send('/api/hub/session')).data.account;assert.equal(current.id,'stable-customer-id');assert.equal(current.email,'current@example.test');assert.deepEqual(current.roles,['viewer']);
+ await f.db.tx(async r=>{
+  assert.deepEqual(await r.get('saved_retailers',actor),['preserved-retailer']);
+  assert.equal((await r.get('tickets','email-change-ticket')).email,'current@example.test');
+  assert((await r.list('audit')).some(event=>event.action==='account.email_verified_changed'));
+ });
+ const stale=f.client(oldCookie);assert.equal((await stale.send('/api/hub/session')).data.account,null,'an earlier local session cannot survive the verified address change');
+ assert.equal((await first.send('/api/hub/session')).data.account.email,'current@example.test');
+});
+test('identity: malformed provider subjects fail before account or session mutation',async t=>{
+ const f=await fixture(t,async email=>({id:{unexpected:true},email})),client=f.client();await client.send('/api/hub/session');
+ const response=await client.send('/api/hub/auth/verify',{email:'person@example.test',code:'123456'});
+ assert.equal(response.status,401);assert.equal(response.data.error.code,'identity_invalid');
+ assert.deepEqual(await f.db.tx(r=>r.list('accounts')),[]);
+ assert.equal((await client.send('/api/hub/session')).data.account,null);
 });
 test('session: removed account cannot retain its old actor through a stale cookie',async t=>{
  const f=await fixture(t),c=f.client();await c.login();await c.send('/api/hub/profile',input);

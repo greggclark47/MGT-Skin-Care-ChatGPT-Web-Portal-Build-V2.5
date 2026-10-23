@@ -1,1 +1,1 @@
-{ "name": "@mgt/mobile", "version": "0.1.0", "private": true }
+{ "name": "@mgt/mobile", "version": "0.1.0", "private": true, "scripts": { "test:contract": "node --test test/contract.cjs", "android:preview": "eas build --platform android --profile preview", "android:production": "eas build --platform android --profile production", "android:submit:internal": "eas submit --platform android --profile production" } }

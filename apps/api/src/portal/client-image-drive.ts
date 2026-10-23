@@ -29,9 +29,15 @@ export class TestDriveImageStorage {
  constructor(private env:NodeJS.ProcessEnv){}
  get enabled(){return clientImageDriveTestEnabled(this.env);}
  get configuredFolderId(){return this.env.TEST_GOOGLE_DRIVE_FOLDER_ID||'';}
- async verifyConnection():Promise<boolean>{
+ async verifyConnection(folderId=this.configuredFolderId):Promise<boolean>{
   if(!this.enabled)return false;
-  try{await this.accessToken();return true;}catch{return false;}
+  try{
+   await this.accessToken();
+   if(!folderId)return true; // A private folder will be created on the first upload.
+   const response=await this.request(`${DRIVE_API}/files/${encodeURIComponent(folderId)}?fields=id,mimeType,trashed,capabilities(canAddChildren)&supportsAllDrives=true`,{method:'GET'});
+   const folder=await response.json() as {id?:string;mimeType?:string;trashed?:boolean;capabilities?:{canAddChildren?:boolean}};
+   return folder.id===folderId&&folder.mimeType==='application/vnd.google-apps.folder'&&folder.trashed===false&&folder.capabilities?.canAddChildren===true;
+  }catch{return false;}
  }
  private async accessToken():Promise<string>{
   if(!this.enabled)throw new Error('Test Google Drive image storage is not configured.');

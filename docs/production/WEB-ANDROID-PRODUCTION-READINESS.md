@@ -60,6 +60,9 @@ This register is an engineering release aid, not legal advice, a regulatory cert
 - Email and Google sign-in now keep account switching separate from guest onboarding: only an
   anonymous guest may merge saved records. Switching between signed-in identities rotates the
   session without copying the previous account's profile, preferences, or wardrobe.
+- Test Google Drive image connection now checks the configured or previously created folder's
+  identity, type, trash state and upload permission, rather than treating a refreshed OAuth token
+  alone as proof that images can be saved. An uncreated folder remains a first-upload setup step.
 - A non-mutating Ed25519 approval-envelope verifier now binds candidate, artifact, role, key,
   signer-subject reference, validity window, payload checksum, and signature before approval
   evidence can be reviewed; human identity and production authorization remain external gates.

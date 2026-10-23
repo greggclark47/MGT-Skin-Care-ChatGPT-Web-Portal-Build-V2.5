@@ -6,7 +6,7 @@ const {OperationalWorker,InAppNotificationDelivery}=require('../dist/portal/oper
 const {createPortal}=require('../dist/portal/server');
 const {
  clientImageDriveTestEnabled,clientImageDriveTestStatus,listTestDriveImages,saveTestDriveImage,getTestDriveImage,
- deleteTestDriveImage,updateTestDriveImageCategory,TEST_IMAGE_FOLDER_NAME,TEST_IMAGE_UPLOAD_CONSENT_VERSION,
+ deleteTestDriveImage,updateTestDriveImageCategory,TestDriveImageStorage,TEST_IMAGE_FOLDER_NAME,TEST_IMAGE_UPLOAD_CONSENT_VERSION,
 }=require('../dist/portal/client-image-drive');
 
 const enabled={NODE_ENV:'test',CLIENT_IMAGE_DRIVE_TEST_ENABLED:'true',TEST_GOOGLE_DRIVE_CLIENT_ID:'client',TEST_GOOGLE_DRIVE_CLIENT_SECRET:'secret',TEST_GOOGLE_DRIVE_REFRESH_TOKEN:'refresh'};
@@ -21,6 +21,45 @@ test('test Drive configuration stays disabled in production and fails closed whe
  assert.equal(clientImageDriveTestStatus({...enabled,TEST_GOOGLE_DRIVE_REFRESH_TOKEN:''}).enabled,false);
  assert.equal(TEST_IMAGE_FOLDER_NAME,'MGT Skin Care Client Image Test Storage');
  assert.equal(TEST_IMAGE_UPLOAD_CONSENT_VERSION,'client-image-drive-test-1');
+});
+
+test('test Drive connection checks the actual writable folder, including a folder created earlier',async t=>{
+ const originalFetch=global.fetch,folderId='folder-1',requests=[];
+ let metadata={id:folderId,mimeType:'application/vnd.google-apps.folder',trashed:false,capabilities:{canAddChildren:true}};
+ global.fetch=async(url,init)=>{
+  requests.push(String(url));
+  if(String(url)==='https://oauth2.googleapis.com/token')return Response.json({access_token:'test-token',expires_in:3600});
+  assert.equal(init.headers.authorization,'Bearer test-token');
+  if(String(url).includes('/files/'+folderId))return Response.json(metadata);
+  return new Response('',{status:404});
+ };
+ t.after(()=>{global.fetch=originalFetch;});
+ const drive=new TestDriveImageStorage({...enabled,TEST_GOOGLE_DRIVE_FOLDER_ID:folderId});
+ assert.equal(await drive.verifyConnection(),true);
+ assert.match(requests.at(-1),/fields=id,mimeType,trashed,capabilities\(canAddChildren\)&supportsAllDrives=true$/);
+ for(const invalid of [
+  {...metadata,id:'different-folder'},
+  {...metadata,mimeType:'image/jpeg'},
+  {...metadata,trashed:true},
+  {...metadata,capabilities:{canAddChildren:false}},
+  {...metadata,capabilities:{}},
+ ]){metadata=invalid;assert.equal(await drive.verifyConnection(),false);}
+ metadata={id:folderId,mimeType:'application/vnd.google-apps.folder',trashed:false,capabilities:{canAddChildren:true}};
+ assert.equal(await new TestDriveImageStorage(enabled).verifyConnection(folderId),true);
+ const withoutFolder=new TestDriveImageStorage(enabled),before=requests.length;
+ assert.equal(await withoutFolder.verifyConnection(),true);
+ assert.equal(requests.length,before+1);
+});
+
+test('test Drive status validates the saved folder rather than only its OAuth token',async t=>{
+ const db=new LocalStore(':memory:'),env={...enabled,DEMO_MODE:'true',PUBLIC_ORIGIN:'http://localhost:3000'};
+ await db.tx(r=>r.put('client_image_drive_config','test_folder','saved-folder'));
+ const app=await createPortal({store:db,env});const server=app.listen(0,'127.0.0.1');await new Promise(resolve=>server.once('listening',resolve));
+ const originalFetch=global.fetch;t.after(async()=>{global.fetch=originalFetch;await new Promise(resolve=>server.close(resolve));await db.close();});
+ let canAddChildren=false;global.fetch=async(url)=>String(url)==='https://oauth2.googleapis.com/token'?Response.json({access_token:'test-token',expires_in:3600}):Response.json({id:'saved-folder',mimeType:'application/vnd.google-apps.folder',trashed:false,capabilities:{canAddChildren}});
+ let cookie='';const status=async()=>{const response=await originalFetch(`http://127.0.0.1:${server.address().port}/api/hub/client-images/status`,{headers:{cookie}});if(response.headers.get('set-cookie'))cookie=response.headers.get('set-cookie').split(';')[0];return response.json();};
+ assert.equal((await status()).connection,'unavailable');
+ canAddChildren=true;assert.equal((await status()).connection,'ready');
 });
 
 test('test Drive binary uploads require request-scoped consent',async t=>{

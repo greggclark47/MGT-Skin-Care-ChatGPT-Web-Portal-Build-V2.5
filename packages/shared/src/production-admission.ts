@@ -4,6 +4,7 @@
 export const PRODUCTION_ADMISSION_ACTIONS = Object.freeze({
   ownership: 'Confirm the approved release and support owner declarations.',
   portal_boundary: 'Provide the approved HTTPS portal origin and matching domain.',
+  edge_authentication: 'Inject a distinct private token shared only by the edge and API to authenticate forwarded client addresses.',
   worker_timing: 'Set a bounded worker interval and readiness age with the required safety margin.',
   database: 'Provide the reviewed PostgreSQL target with full TLS verification and migrations disabled at runtime.',
   operations: 'Provide named operations contacts, alert delivery, retry policy and retention settings.',

@@ -134,6 +134,7 @@ export function validateEnvironment(env) {
     errors.push("PORTAL_DOMAIN must be a canonical lowercase production DNS hostname.");
   }
   if (publicOrigin && portalDomain && !validProductionOrigin(publicOrigin, portalDomain)) errors.push("PUBLIC_ORIGIN must be the exact HTTPS origin for PORTAL_DOMAIN, without credentials, port, path, query, or fragment.");
+  if (typeof env.MGT_EDGE_TOKEN !== "string" || !/^[A-Za-z0-9_-]{32,256}$/.test(env.MGT_EDGE_TOKEN)) errors.push("MGT_EDGE_TOKEN must be an injected 32-256 character private edge authentication token.");
 
   if (!digestImage(env.NODE_IMAGE)) errors.push("NODE_IMAGE must use an approved immutable @sha256 image digest.");
   if (!digestImage(env.API_IMAGE)) errors.push("API_IMAGE must use an approved immutable @sha256 application image digest.");
@@ -304,7 +305,7 @@ export function validateEnvironment(env) {
   const antiAgingRetention = env.OPERATIONS_ANTI_AGING_RETENTION_DAYS;
   if (typeof antiAgingRetention !== "string" || !/^\d+$/.test(antiAgingRetention) || !wholeNumber(antiAgingRetention, 30, 3650)) errors.push("OPERATIONS_ANTI_AGING_RETENTION_DAYS must be a whole number between 30 and 3650.");
 
-  const secretKeys = ["SUPABASE_ANON_KEY", "SUPABASE_SERVICE_ROLE_KEY", "OPERATIONS_ALERT_WEBHOOK_TOKEN"];
+  const secretKeys = ["SUPABASE_ANON_KEY", "SUPABASE_SERVICE_ROLE_KEY", "OPERATIONS_ALERT_WEBHOOK_TOKEN", "MGT_EDGE_TOKEN"];
   if (backupAttestationEnabled === "true") secretKeys.push("BACKUP_ATTESTATION_SECRET");
   if (env.NOTIFICATION_DELIVERY === "webhook") secretKeys.push("NOTIFICATION_WEBHOOK_TOKEN");
   if (env.OPENCLAW_ENABLED === "true" && env.OPENCLAW_API_MODE === "openai-completions") secretKeys.push("OPENCLAW_API_KEY");

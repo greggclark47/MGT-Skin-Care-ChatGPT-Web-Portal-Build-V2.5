@@ -44,6 +44,7 @@ test("edge applies browser security policy and suppresses server identity", () =
   assert.match(caddyfile, /Cross-Origin-Opener-Policy "same-origin"/);
   assert.match(caddyfile, /Cross-Origin-Resource-Policy "same-origin"/);
   assert.equal((caddyfile.match(/header_up X-MGT-Client-IP \{remote_host\}/g) || []).length, 2);
+  assert.equal((caddyfile.match(/header_up X-MGT-Edge-Token \{\$MGT_EDGE_TOKEN\}/g) || []).length, 2);
   assert.match(caddyfile, /-Server/);
 });
 

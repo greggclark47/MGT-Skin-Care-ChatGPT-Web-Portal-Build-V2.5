@@ -2,10 +2,20 @@ const assert = require('node:assert/strict');
 const { test } = require('node:test');
 const { spawnSync } = require('node:child_process');
 const path = require('node:path');
-const { productionAdmissionProjection, validateRuntimeOwnership, validateProductionPortalBoundary, validateProductionDatabaseAdmission, validateProductionOperationsAdmission, validateProductionNotificationAdmission, validateProductionIdentityAdmission, validateProductionBackupAdmission, validateProductionBackupAttestationAdmission, validateProductionAntiAgingAdmission, validateProductionAccessibilityAdmission, validateProductionSubscriptionAdmission, validateProductionAiAdmission, validateProductionProcessSurfaceAdmission, validateProductionImageAdmission, validateProductionSecretIsolation, validateProductionEndpointIsolation, validateProductionDisabledFeatureResidue, workerIntervalMs, workerReadinessMaxAgeMs } = require('../dist/portal/runtime-admission');
+const { productionAdmissionProjection, validateRuntimeOwnership, validateProductionPortalBoundary, validateProductionEdgeToken, validateProductionDatabaseAdmission, validateProductionOperationsAdmission, validateProductionNotificationAdmission, validateProductionIdentityAdmission, validateProductionBackupAdmission, validateProductionBackupAttestationAdmission, validateProductionAntiAgingAdmission, validateProductionAccessibilityAdmission, validateProductionSubscriptionAdmission, validateProductionAiAdmission, validateProductionProcessSurfaceAdmission, validateProductionImageAdmission, validateProductionSecretIsolation, validateProductionEndpointIsolation, validateProductionDisabledFeatureResidue, workerIntervalMs, workerReadinessMaxAgeMs } = require('../dist/portal/runtime-admission');
 const { createPortal } = require('../dist/portal/server');
 const owner = 'Gregg Clark of MGT';
-const valid = { NODE_ENV:'production', DEMO_MODE:'false', PUBLIC_ORIGIN:'https://portal.example', PORTAL_DOMAIN:'portal.example', RELEASE_OWNER_NAME:owner, SUPPORT_OWNER_NAME:owner, WORKER_INTERVAL_SECONDS:'60', WORKER_READINESS_MAX_AGE_SECONDS:'300' };
+const valid = { NODE_ENV:'production', DEMO_MODE:'false', PUBLIC_ORIGIN:'https://portal.example', PORTAL_DOMAIN:'portal.example', MGT_EDGE_TOKEN:'runtime-test-edge-token-unique-123456789', RELEASE_OWNER_NAME:owner, SUPPORT_OWNER_NAME:owner, WORKER_INTERVAL_SECONDS:'60', WORKER_READINESS_MAX_AGE_SECONDS:'300' };
+
+test('production requires a private edge forwarding token without disclosing its value', () => {
+ assert.doesNotThrow(()=>validateProductionEdgeToken(valid));
+ for(const value of [undefined,'short','a'.repeat(257),'bad token','line\nbreak']){
+  assert.throws(()=>validateProductionEdgeToken({...valid,MGT_EDGE_TOKEN:value}),/Production edge authentication is invalid/);
+ }
+ const report=productionAdmissionProjection({...valid,MGT_EDGE_TOKEN:undefined});
+ assert(report.issues.includes('edge_authentication'));
+ assert.equal(JSON.stringify(report).includes(valid.MGT_EDGE_TOKEN),false);
+});
 
 test('production admission projection exposes category outcomes without submitted values', () => {
   const projection=productionAdmissionProjection({...valid,PORTAL_AUTO_MIGRATE:'false'});

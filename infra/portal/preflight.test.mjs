@@ -9,6 +9,7 @@ const production = {
   DATABASE_URL: "postgresql://mgt:secure@db.internal:5432/mgt?sslmode=verify-full",
   PORTAL_AUTO_MIGRATE: "false",
   PORTAL_DOMAIN: "portal.mgtskincare.test",
+  MGT_EDGE_TOKEN: "preflight-test-edge-token-unique-123456789",
   SUPABASE_URL: "https://project.supabase.co",
   SUPABASE_ANON_KEY: "anon-production-value",
   SUPABASE_SERVICE_ROLE_KEY: "service-production-value",
@@ -130,6 +131,17 @@ test("requires the exact lowercase production demo-mode declaration", () => {
     assert.equal(result.ok, false, JSON.stringify(value));
     assert.ok(result.errors.some((error) => error.startsWith("DEMO_MODE")));
   }
+});
+
+test("requires a distinct bounded edge authentication token", () => {
+ for (const value of [undefined, "short", "a".repeat(257), "contains space", production.SUPABASE_SERVICE_ROLE_KEY]) {
+  const result = validateEnvironment({ ...production, MGT_EDGE_TOKEN: value });
+  assert.equal(result.ok, false);
+  assert(result.errors.some(error => error.startsWith("MGT_EDGE_TOKEN") || error.includes("secret references")));
+  assert.equal(result.errors.join(" ").includes(String(value)), false);
+ }
+ const reused=validateEnvironment({...production,SUPABASE_SERVICE_ROLE_KEY:production.MGT_EDGE_TOKEN});
+ assert(reused.errors.some(error=>error.includes('secret references')));
 });
 
 test("rejects unverified database TLS and automatic production migrations", () => {

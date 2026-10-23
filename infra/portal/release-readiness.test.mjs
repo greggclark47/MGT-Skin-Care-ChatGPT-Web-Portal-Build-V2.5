@@ -12,6 +12,7 @@ const base = {
   DATABASE_URL: "postgresql://mgt:secure@db.internal:5432/mgt?sslmode=verify-full",
   PORTAL_AUTO_MIGRATE: "false",
   PORTAL_DOMAIN: "portal.mgtskincare.test",
+  MGT_EDGE_TOKEN: "readiness-test-edge-token-unique-123456789",
   SUPABASE_URL: "https://project.supabase.co",
   SUPABASE_ANON_KEY: "anon-production-value",
   SUPABASE_SERVICE_ROLE_KEY: "service-production-value",

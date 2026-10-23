@@ -27,6 +27,7 @@ services:
       HOST: 0.0.0.0
       PORT: 3100
       PROCESS_ROLE: api
+      MGT_EDGE_TOKEN: ${MGT_EDGE_TOKEN:?Set the private edge-to-API authentication token}
       DATABASE_URL: ${DATABASE_URL:?Set the reviewed production database connection}
       PORTAL_AUTO_MIGRATE: "false"
       WORKER_INTERVAL_SECONDS: ${WORKER_INTERVAL_SECONDS:?Set the reviewed worker interval}
@@ -106,6 +107,7 @@ services:
     environment:
       NODE_ENV: production
       PORTAL_DOMAIN: ${PORTAL_DOMAIN:?Set the approved portal domain}
+      MGT_EDGE_TOKEN: ${MGT_EDGE_TOKEN:?Set the private edge-to-API authentication token}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - certificates:/data

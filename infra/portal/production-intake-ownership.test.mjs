@@ -14,7 +14,7 @@ const ENV = {
   NODE_ENV: "production", DEMO_MODE: "false", PUBLIC_ORIGIN: "https://portal.mgt-skin-care.test",
   HOST: "0.0.0.0", PORT: "8787", WORKER_HEALTH_FILE: "/tmp/mgt-worker-health.json",
   DATABASE_URL: "postgresql://u:p@db.mgt-skin-care.test:5432/postgres?sslmode=verify-full", PORTAL_AUTO_MIGRATE: "false",
-  PORTAL_DOMAIN: "portal.mgt-skin-care.test", NODE_IMAGE: "node@sha256:" + "a".repeat(64), API_IMAGE: "ghcr.io/mgt/api@sha256:" + "d".repeat(64),
+  PORTAL_DOMAIN: "portal.mgt-skin-care.test", MGT_EDGE_TOKEN: "intake-test-edge-token-unique-123456789", NODE_IMAGE: "node@sha256:" + "a".repeat(64), API_IMAGE: "ghcr.io/mgt/api@sha256:" + "d".repeat(64),
   WEB_IMAGE: "ghcr.io/mgt/web@sha256:" + "e".repeat(64), OLLAMA_IMAGE: "ollama/ollama@sha256:" + "b".repeat(64), CADDY_IMAGE: "caddy@sha256:" + "c".repeat(64),
   SUPABASE_URL: "https://project.supabase.co", SUPABASE_ANON_KEY: "anon", SUPABASE_SERVICE_ROLE_KEY: "service", SUPABASE_GOOGLE_OAUTH_ENABLED: "false",
   OLLAMA_ENABLED: "true", OLLAMA_BASE_URL: "https://ollama.mgt-skin-care.test", OPENCLAW_ENABLED: "false",

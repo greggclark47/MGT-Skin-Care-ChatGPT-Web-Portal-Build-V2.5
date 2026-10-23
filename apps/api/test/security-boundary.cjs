@@ -1,5 +1,5 @@
 const assert=require('node:assert/strict');
-const {hasExactOrigin,sessionCookieValue,rate,text}=require('../dist/portal/security');
+const {hasExactOrigin,sessionCookieValue,sessionRateSource,rate,text}=require('../dist/portal/security');
 
 assert.equal(hasExactOrigin('https://portal.example','https://portal.example'),true);
 assert.equal(hasExactOrigin(['https://portal.example'],'https://portal.example'),false);
@@ -9,6 +9,16 @@ assert.equal(sessionCookieValue('mgt='+'a'.repeat(64),'mgt'),'a'.repeat(64));
 assert.equal(sessionCookieValue('mgt='+'a'.repeat(64)+'; mgt='+'b'.repeat(64),'mgt'),undefined);
 assert.equal(sessionCookieValue(['mgt='+'a'.repeat(64)],'mgt'),undefined);
 assert.equal(sessionCookieValue('mgt=not-a-token','mgt'),undefined);
+
+const edgeToken='test-edge-token-not-for-production-use-123456';
+const source=(headers,remoteAddress='10.0.0.5')=>sessionRateSource({headers,socket:{remoteAddress}},true,edgeToken);
+assert.equal(source({'x-mgt-client-ip':'198.51.100.42'}),'10.0.0.5');
+assert.equal(source({'x-mgt-client-ip':'198.51.100.42','x-mgt-edge-token':'wrong'}),'10.0.0.5');
+assert.equal(source({'x-mgt-client-ip':['198.51.100.42'],'x-mgt-edge-token':edgeToken}),'10.0.0.5');
+assert.equal(source({'x-mgt-client-ip':'not-an-ip','x-mgt-edge-token':edgeToken}),'10.0.0.5');
+assert.equal(source({'x-mgt-client-ip':'198.51.100.42','x-mgt-edge-token':edgeToken}),'198.51.100.42');
+assert.equal(source({'x-mgt-client-ip':'2001:db8::1','x-mgt-edge-token':edgeToken}),'2001:db8::1');
+assert.equal(sessionRateSource({headers:{'x-mgt-client-ip':'198.51.100.42','x-mgt-edge-token':edgeToken},socket:{remoteAddress:'10.0.0.5'}},true),'10.0.0.5');
 
 const records={
  lock:async()=>{},

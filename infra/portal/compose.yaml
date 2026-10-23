@@ -44,6 +44,7 @@ services:
     env_file: .env
     environment:
       HOST: 0.0.0.0
+      MGT_EDGE_TOKEN: ${MGT_EDGE_TOKEN:?Set the private edge-to-API authentication token}
       DATABASE_URL: ${DATABASE_URL:?Set the reviewed Supabase database connection}
       PORTAL_AUTO_MIGRATE: "false"
       OLLAMA_ENABLED: ${OLLAMA_ENABLED:-false}
@@ -118,6 +119,7 @@ services:
     ports: ["80:80", "443:443"]
     environment:
       PORTAL_DOMAIN: ${PORTAL_DOMAIN:?Set portal domain}
+      MGT_EDGE_TOKEN: ${MGT_EDGE_TOKEN:?Set the private edge-to-API authentication token}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - certificates:/data

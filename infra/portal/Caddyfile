@@ -24,11 +24,13 @@
  handle /api/hub/* {
   reverse_proxy api:3100 {
    header_up X-MGT-Client-IP {remote_host}
+   header_up X-MGT-Edge-Token {$MGT_EDGE_TOKEN}
   }
  }
  handle /api/v1/* {
   reverse_proxy api:3100 {
    header_up X-MGT-Client-IP {remote_host}
+   header_up X-MGT-Edge-Token {$MGT_EDGE_TOKEN}
   }
  }
  handle {

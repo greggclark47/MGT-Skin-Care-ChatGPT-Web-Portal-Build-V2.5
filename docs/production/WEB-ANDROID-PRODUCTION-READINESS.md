@@ -54,6 +54,9 @@ This register is an engineering release aid, not legal advice, a regulatory cert
 - Production preflight now requires the complete operations and retention policy tuple explicitly;
   production cannot silently inherit worker defaults for notifications, alerts, follow-ups, or
   operational data retention.
+- The edge now authenticates forwarded client addresses with a private shared token. Unauthenticated
+  or malformed forwarded addresses fall back to the socket address for anonymous-session throttling;
+  production startup and preflight require a distinct injected token. Keep the API network private.
 - A non-mutating Ed25519 approval-envelope verifier now binds candidate, artifact, role, key,
   signer-subject reference, validity window, payload checksum, and signature before approval
   evidence can be reviewed; human identity and production authorization remain external gates.

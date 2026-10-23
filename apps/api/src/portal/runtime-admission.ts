@@ -44,6 +44,12 @@ export function validateProductionPortalBoundary(env:NodeJS.ProcessEnv):void{
  }catch{throw new Error('Production portal boundary is invalid.');}
 }
 
+export function validateProductionEdgeToken(env:NodeJS.ProcessEnv):void{
+ if(env.NODE_ENV!=='production')return;
+ const value=env.MGT_EDGE_TOKEN;
+ if(typeof value!=='string'||value.length<32||value.length>256||!/^[A-Za-z0-9_-]+$/.test(value))throw new Error('Production edge authentication is invalid.');
+}
+
 export function validateProductionDatabaseAdmission(env:NodeJS.ProcessEnv):void{
  if(env.NODE_ENV!=='production')return;
  if(env.PORTAL_AUTO_MIGRATE!=='false')throw new Error('Production database admission is invalid.');
@@ -222,7 +228,7 @@ export function validateProductionImageAdmission(env:NodeJS.ProcessEnv):void{
 
 export function validateProductionSecretIsolation(env:NodeJS.ProcessEnv):void{
  if(env.NODE_ENV!=='production')return;
- const keys=['SUPABASE_ANON_KEY','SUPABASE_SERVICE_ROLE_KEY','OPERATIONS_ALERT_WEBHOOK_TOKEN'];
+ const keys=['SUPABASE_ANON_KEY','SUPABASE_SERVICE_ROLE_KEY','OPERATIONS_ALERT_WEBHOOK_TOKEN','MGT_EDGE_TOKEN'];
  if(env.NOTIFICATION_DELIVERY==='webhook')keys.push('NOTIFICATION_WEBHOOK_TOKEN');
  if(env.OPENCLAW_ENABLED==='true'&&env.OPENCLAW_API_MODE==='openai-completions')keys.push('OPENCLAW_API_KEY');
  if(configuredReference(env.OPENAI_API_KEY))keys.push('OPENAI_API_KEY');
@@ -255,6 +261,7 @@ export function productionAdmissionProjection(env:NodeJS.ProcessEnv){
  const checks:[string,()=>void][]=[
   ['ownership',()=>validateRuntimeOwnership(env)],
   ['portal_boundary',()=>validateProductionPortalBoundary(env)],
+  ['edge_authentication',()=>validateProductionEdgeToken(env)],
   ['worker_timing',()=>{workerReadinessMaxAgeMs(env);}],
   ['database',()=>validateProductionDatabaseAdmission(env)],
   ['operations',()=>validateProductionOperationsAdmission(env)],
@@ -288,6 +295,7 @@ export function validateApiRuntimeAdmission(env:NodeJS.ProcessEnv):void{
 
 export function validateApiProcessAdmission(env:NodeJS.ProcessEnv):void{
  validateApiRuntimeAdmission(env);
+ validateProductionEdgeToken(env);
  validateProductionDatabaseAdmission(env);
  validateProductionOperationsAdmission(env);
  validateProductionNotificationAdmission(env);

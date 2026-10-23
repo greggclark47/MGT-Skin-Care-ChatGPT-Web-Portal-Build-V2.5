@@ -1,4 +1,5 @@
 import {randomBytes,createHash,timingSafeEqual} from 'node:crypto';
+import {isIP} from 'node:net';
 import type {Request,Response,NextFunction} from 'express';
 import type {Store,Records} from './store';
 export const hash=(v:string)=>createHash('sha256').update(v).digest('hex');
@@ -17,7 +18,16 @@ export function sessionCookieValue(header:string|string[]|undefined,name:string)
  const value=matches[0].slice(name.length+1);
  return /^[a-f0-9]{64}$/.test(value)?value:undefined;
 }
-export function sessionMiddleware(store:Store,origin:string,production:boolean){
+export function sessionRateSource(req:Request,production:boolean,edgeToken?:string):string{
+ const socketAddress=req.socket.remoteAddress||'unknown';
+ const submittedToken=req.headers['x-mgt-edge-token'];
+ const submittedAddress=req.headers['x-mgt-client-ip'];
+ if(!production||typeof edgeToken!=='string'||edgeToken.length<32||typeof submittedToken!=='string'||typeof submittedAddress!=='string'||!isIP(submittedAddress))return socketAddress;
+ const expected=createHash('sha256').update(edgeToken).digest();
+ const received=createHash('sha256').update(submittedToken).digest();
+ return timingSafeEqual(expected,received)?submittedAddress:socketAddress;
+}
+export function sessionMiddleware(store:Store,origin:string,production:boolean,edgeToken?:string){
  const cookie=production?'__Host-mgt':'mgt';
  return wrap(async(req,res,next)=>{
   const raw=sessionCookieValue(req.headers.cookie,cookie);
@@ -27,7 +37,7 @@ export function sessionMiddleware(store:Store,origin:string,production:boolean){
    let s=sessionId?await db.get<Session>('sessions',sessionId):undefined;
    if(s&&s.expires<=Date.now()){await db.remove('sessions',s.id);s=undefined;}
    if(s?.userId){const user=await db.get('accounts',s.userId);if(user)req.account=user;else{await db.remove('sessions',s.id);s=undefined;}}
-   if(!s){const edgeSource=production&&typeof req.headers['x-mgt-client-ip']==='string'&&/^[0-9a-f:.]{2,64}$/i.test(req.headers['x-mgt-client-ip'])?req.headers['x-mgt-client-ip']:req.socket.remoteAddress||'unknown';
+   if(!s){const edgeSource=sessionRateSource(req,production,edgeToken);
     await rate(db,'session-create:'+hash(edgeSource),120,10*60000);
     const secret=token();s={id:hash(secret),actor:'guest_'+token(),csrf:token(),expires:Date.now()+86400000};
     await db.put('sessions',s.id,s);res.cookie(cookie,secret,{httpOnly:true,secure:production,sameSite:'lax',path:'/',maxAge:86400000});}

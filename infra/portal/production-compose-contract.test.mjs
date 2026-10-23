@@ -15,6 +15,7 @@ test("production runtime exposes only the TLS edge", () => {
   assert.equal((compose.match(/^\s+ports:/gm) || []).length, 1);
   assert.match(compose, /ports:\s*\n\s+- "80:80"\s*\n\s+- "443:443"/);
   assert.equal((compose.match(/^\s+expose:/gm) || []).length, 2);
+  assert.equal((compose.match(/MGT_EDGE_TOKEN: \$\{MGT_EDGE_TOKEN:\?Set the private edge-to-API authentication token\}/g) || []).length, 2);
 });
 
 test("production runtime keeps migrations manual and local AI opt-in", () => {

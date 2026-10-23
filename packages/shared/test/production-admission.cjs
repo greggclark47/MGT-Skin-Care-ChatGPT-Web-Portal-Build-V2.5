@@ -3,7 +3,7 @@ const {test}=require('node:test');
 const {PRODUCTION_ADMISSION_ACTIONS,reviewedProductionAdmissionAction,reviewedProductionAdmissionActions}=require('../dist');
 
 test('production admission actions are bounded and reviewed',()=>{
- assert.equal(Object.keys(PRODUCTION_ADMISSION_ACTIONS).length,18);
+ assert.equal(Object.keys(PRODUCTION_ADMISSION_ACTIONS).length,19);
  for(const [id,action] of Object.entries(PRODUCTION_ADMISSION_ACTIONS)){
   assert.deepEqual(reviewedProductionAdmissionAction(id),{id,action});
   assert.equal(/(?:[A-Z][A-Z0-9_]{2,}=|https?:\/\/|@sha256:)/.test(action),false,id);

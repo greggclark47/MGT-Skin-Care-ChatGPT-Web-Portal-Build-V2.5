@@ -4,6 +4,7 @@
 
 export * from './types/enums';
 export * from './types/skin-profile';
+export * from './types/anti-aging';
 
 export * from './engines/rules-engine';
 export * from './engines/scoring-engine';
@@ -20,3 +21,8 @@ export * from './engines/rbac';
 export * from './engines/referral-engine';
 export * from './engines/style-engine';
 export * from './engines/analytics-aggregates';
+export * from './engines/anti-aging-ai';
+export * from './engines/anti-aging-roadmap';
+export * from './engines/match-intelligence';
+export * from './engines/regimen-cycle';
+export * from './engines/inquiry-context';

@@ -1,41 +1,76 @@
 'use client';
-import React,{useState} from 'react';
+import React,{useEffect,useState} from 'react';
 import Link from 'next/link';
-import {hub,useHub} from '../../lib/hub';
-import {AppFrame,LoadState} from '../../components/HubFrames';
+import {HubError,hub,useHub} from '../../lib/hub';
+import {AppFrame,LoadState,Timestamp} from '../../components/HubFrames';
 import {ConfirmDialog} from '../../components/ConfirmDialog';
+import {GuestAccess} from '../../components/GuestAccess';
+import {AccountDeletionPanel} from '../../components/CustomerStatusPanels';
+import {AccountProfileForm} from '../../components/AccountProfileForm';
+import {AccountBillingPanel} from '../../components/AccountBillingPanel';
+import {ClientImageStudio} from '../../components/ClientImageStudio';
+import {AccountServiceOverview} from '../../components/AccountServiceOverview';
+import accountStyles from './account.module.css';
+
+type AccountAction='email'|'verify'|'logout'|'merge-guest'|'merge-account'|'privacy-request'|'privacy-cancel'|'';
+
+function AiDisclosureControls(){
+ const state=useHub('/account/consents');
+ const [busy,setBusy]=useState(false),[error,setError]=useState('');
+ const disclosure=state.data?.ai_disclosure;
+ const granted=disclosure?.granted===true;
+ async function setDisclosure(next:boolean){
+  if(busy)return;setBusy(true);setError('');
+  try{await hub('/account/consents',{consent_type:'ai_disclosure',granted:next});await state.reload();}
+  catch(e){setError((e as Error).message);}finally{setBusy(false);}
+ }
+ return <section className="panel" id="analysis-permission" aria-labelledby="analysis-permission-heading" aria-busy={busy||state.loading}>
+  <span className="eyebrow">ANALYSIS PERMISSION</span><h2 id="analysis-permission-heading">Platform analysis</h2>
+  <LoadState {...state} retry={state.reload}/>
+  {!state.loading&&!state.error&&<><p>{granted?'Permission is currently recorded for platform analysis.':'No active permission is recorded for platform analysis.'}</p>{disclosure?.captured_at&&<p className="muted">Recorded <Timestamp value={disclosure.captured_at}/>{disclosure.version?' · '+disclosure.version:''}</p>}<button className="button" type="button" disabled={busy} onClick={()=>void setDisclosure(!granted)}>{busy?'Saving…':granted?'Withdraw permission':'Allow analysis service'}</button></>}
+  {error&&<p className="notice error" role="alert">{error}</p>}
+ </section>;
+}
 
 export default function Account(){
  const state=useHub('/session');
  const [email,setEmail]=useState(''),[code,setCode]=useState(''),[sent,setSent]=useState(false);
- const [busy,setBusy]=useState(false),[message,setMessage]=useState(''),[error,setError]=useState(''),[privacyAction,setPrivacyAction]=useState<'request'|'cancel'|null>(null);
- async function act(path:string,body:unknown){
-  if(busy)return;setBusy(true);setMessage('');setError('');
+ const [busyAction,setBusyAction]=useState<AccountAction>(''),[message,setMessage]=useState(''),[error,setError]=useState(''),[mergeConflict,setMergeConflict]=useState(false),[oauthResult,setOauthResult]=useState(''),[privacyAction,setPrivacyAction]=useState<'request'|'cancel'|null>(null);
+ const busy=busyAction!=='';
+ useEffect(()=>{const result=new URLSearchParams(window.location.search).get('oauth')||'';if(['connected','merge','failed'].includes(result)){setOauthResult(result);window.history.replaceState(null,'',window.location.pathname);}},[]);
+ async function act(path:string,body:unknown,action:AccountAction){
+  if(busy)return;setBusyAction(action);setMessage('');setError('');
   try{
    await hub(path,body);
    if(path==='/auth/email'){setSent(true);setCode('');setMessage('Check your email for the verification code.');}
-   else{setSent(false);setCode('');setMessage(path==='/auth/logout'?'You are signed out.':'Your account is connected.');}
-  }catch(e){setError((e as Error).message);}finally{setBusy(false);}
+   else{setSent(false);setCode('');setMergeConflict(false);setOauthResult('');setMessage(path==='/auth/logout'?'You are signed out.':path==='/auth/merge'?'Your profiles are connected using the choice you made.':'Your account is connected.');state.reload();}
+  }catch(e){const failure=e instanceof HubError?e:null;setMergeConflict(failure?.code==='profile_merge_conflict');setError((e as Error).message);}finally{setBusyAction('');}
  }
- async function privacy(path:string){
-  if(busy)return;setBusy(true);setMessage('');setError('');
+ async function privacy(path:string,action:AccountAction){
+  if(busy)return;setBusyAction(action);setMessage('');setError('');
   try{
    await hub(path,{confirm:true});
    setMessage(path.endsWith('cancel')?'Your account deletion request was cancelled.':'Your deletion request is scheduled. You can cancel it before processing begins.');
    setPrivacyAction(null);state.reload();
-  }catch(e){setError((e as Error).message);}finally{setBusy(false);}
+  }catch(e){setError((e as Error).message);}finally{setBusyAction('');}
  }
  const deletion=state.data?.deletion_request;
- return <AppFrame title="My Account">
+ return <AppFrame title="My Account"><div className={accountStyles.accountCenter}>
   <p className="lead">Your skincare, connected to you.</p>
-  <LoadState {...state} retry={state.reload}/>
-  {message&&<p className="notice success" role="status">{message}</p>}{error&&<p className="notice error" role="alert">{error}</p>}
+ <LoadState {...state} retry={state.reload}/>
+  {state.data&&<GuestAccess signedIn={!!state.data.account}/>}
+  {message&&<p className="notice success" role="status">{message}</p>}{oauthResult==='connected'&&<p className="notice success" role="status">Your account is connected through Google sign-in.</p>}{oauthResult==='failed'&&<p id="account-error" className="notice error" role="alert">Google sign-in could not be completed. Please try again or use email sign-in.</p>}{error&&<p id="account-error" className="notice error" role="alert">{error}</p>}{(mergeConflict||oauthResult==='merge')&&<section className="notice error" aria-labelledby="merge-conflict-title"><h3 id="merge-conflict-title">Account linking needs your choice</h3><p>Your browser profile and account profile are different. Both were kept safely, and nothing was overwritten.</p><p>Choose which saved profile should become the connected account. The other profile will be removed only after you choose. Any earlier test Drive images are kept alongside images already in the account, regardless of this profile choice.</p><div className="actions"><button type="button" className="button primary" disabled={busy} onClick={()=>void act('/auth/merge',{choice:'guest'},'merge-guest')}>{busyAction==='merge-guest'?'Connecting browser profile…':'Keep this browser profile'}</button><button type="button" className="button" disabled={busy} onClick={()=>void act('/auth/merge',{choice:'account'},'merge-account')}>{busyAction==='merge-account'?'Connecting account profile…':'Use my account profile'}</button><Link className="button" href="/support">Ask for help</Link></div></section>}
   {!state.loading&&!state.error&&state.data&&(state.data.account?<>
-   <section className="panel account-panel"><span className="eyebrow">CONNECTED ACCOUNT</span><h2>Welcome back.</h2><p className="account-email">{state.data.account.email}</p><div className="actions"><Link className="button primary" href="/my-skin">View my profile</Link><button disabled={busy} type="button" className="button" onClick={()=>void act('/auth/logout',{})}>{busy?'Please wait…':'Sign out'}</button></div></section>
-   <div className="actions"><Link className="button" href="/membership">Plans & Billing</Link></div>
+   <section className="panel account-panel"><span className="eyebrow">CONNECTED ACCOUNT</span><h2>Welcome back.</h2><p className="account-email">{state.data.account.email}</p><div className="account-section-links" aria-label="Account sections"><a href="#profile-settings"><strong>Profile</strong><span>Identity and service preferences</span></a><a href="#payment-settings"><strong>Payments</strong><span>Premium setup and billing management</span></a><a href="#image-library"><strong>Images</strong><span>Upload, organize and remove photos</span></a></div><div className="actions"><Link className="button primary" href="/my-skin">View my skin profile</Link><button disabled={busy} type="button" className="button" onClick={()=>void act('/auth/logout',{},'logout')}>{busyAction==='logout'?'Signing out…':'Sign out'}</button></div></section>
+   <AccountServiceOverview/>
+   <AccountProfileForm testDriveEnabled={state.data.client_image_drive_test_enabled===true}/>
+   <AccountBillingPanel configured={state.data.subscription_billing_configured===true}/>
+   <div id="image-library"><ClientImageStudio/></div>
+   <div className="actions"><Link className="button" href="/subscription">Your subscription details</Link><Link className="button" href="/membership">Plans &amp; Billing</Link></div>
    <section className="account-tools" aria-label="Account tools"><a href="/api/hub/account/export"><strong>Download my data <span aria-hidden="true">↓</span></strong><span>Export the information saved to your account.</span></a><Link href="/orders"><strong>Retailer purchase help <span aria-hidden="true">→</span></strong><span>Find where to ask about payments, delivery and returns.</span></Link></section>
-   <section className="panel"><span className="eyebrow">PRIVACY CONTROL</span><h2>Account deletion</h2>{deletion?<><p>Your request is scheduled for {new Date(deletion.not_before).toLocaleString()}. Active billing, unfinished transactions, operator access, or unsettled AI charges must be resolved before deletion can finish.</p>{deletion.blocked_reasons?.length>0&&<p className="notice">Processing is paused while account obligations are resolved.</p>}<button className="button" disabled={busy||deletion.status!=='pending'} onClick={()=>setPrivacyAction('cancel')}>Cancel deletion request</button></>:<><p>Request deletion of your portal data and sign-in identity. A 30-day cancellation window applies. Legally required transaction records may be retained in anonymized form.</p><button className="button" disabled={busy} onClick={()=>setPrivacyAction('request')}>Request account deletion</button></>}</section>
-   <ConfirmDialog open={privacyAction!==null} title={privacyAction==='cancel'?'Keep this account?':'Delete this account?'} busy={busy} onCancel={()=>setPrivacyAction(null)} onConfirm={()=>void privacy(privacyAction==='cancel'?'/account/deletion-cancel':'/account/deletion-request')} confirmLabel={privacyAction==='cancel'?'Keep my account':'Schedule deletion'}><p>{privacyAction==='cancel'?'This cancels the pending deletion and keeps your account and saved portal data.':'Deletion begins after 30 days. Before then, download your data or cancel this request from this page.'}</p></ConfirmDialog>
-  </>:<form className="panel stack account-panel" onSubmit={e=>{e.preventDefault();void act(sent?'/auth/verify':'/auth/email',sent?{email:email.trim(),code}:{email:email.trim()});}}><span className="eyebrow">{sent?'STEP 2 OF 2 · VERIFY':'STEP 1 OF 2 · EMAIL'}</span><h2>{sent?'Check your inbox.':'Keep your skincare connected.'}</h2><p>{sent?'Enter the verification code sent to your email address.':'Sign in with a code sent to your email. Your current browser’s profile can be linked to your account.'}</p>{!state.data.auth_configured&&<p className="notice">Email sign-in is awaiting service configuration. Your sample profile can still be saved in this browser’s portal session.</p>}<label className="field">Email address<input type="email" required autoComplete="email" disabled={busy||sent} value={email} onChange={e=>setEmail(e.target.value)}/></label>{sent&&<label className="field">Verification code<input className="verification-code" required inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6,8}" maxLength={8} disabled={busy} value={code} onChange={e=>setCode(e.target.value)} aria-describedby="code-help"/><span className="muted" id="code-help">Enter the 6–8 digit code from your email.</span></label>}<button className="button primary" disabled={busy||!state.data.auth_configured}>{busy?'Please wait…':sent?'Verify and sign in':'Email me a code'}</button>{sent&&<button type="button" className="text-button" disabled={busy} onClick={()=>{setSent(false);setCode('');setMessage('');setError('');}}>Use a different email or request a new code</button>}</form>)}
- </AppFrame>;
+   <AiDisclosureControls/>
+   <div id="privacy-controls"><AccountDeletionPanel deletion={deletion} busy={busy} onRequest={()=>setPrivacyAction('request')} onCancel={()=>setPrivacyAction('cancel')}/></div>
+   <ConfirmDialog open={privacyAction!==null} title={privacyAction==='cancel'?'Keep this account?':'Delete this account?'} busy={busy} onCancel={()=>setPrivacyAction(null)} onConfirm={()=>void privacy(privacyAction==='cancel'?'/account/deletion-cancel':'/account/deletion-request',privacyAction==='cancel'?'privacy-cancel':'privacy-request')} confirmLabel={privacyAction==='cancel'?'Keep my account':'Schedule deletion'}><p>{privacyAction==='cancel'?'This cancels the pending deletion and keeps your account and saved portal data.':'Deletion begins after 30 days. Before then, download your data or cancel this request from this page.'}</p></ConfirmDialog>
+  </>:<form className="panel stack account-panel" aria-busy={busy} aria-describedby={error?'account-error':undefined} onSubmit={e=>{e.preventDefault();void act(sent?'/auth/verify':'/auth/email',sent?{email:email.trim(),code}:{email:email.trim()},sent?'verify':'email');}}><span className="eyebrow">{sent?'STEP 2 OF 2 · VERIFY':'STEP 1 OF 2 · EMAIL'}</span><h2>{sent?'Check your inbox.':'Keep your skincare connected.'}</h2><p>{sent?'Enter the verification code sent to your email address.':'Sign in with a code sent to your email. Your current browser’s profile can be linked to your account.'}</p>{!state.data.auth_configured&&<p className="notice">Email sign-in is awaiting service configuration. Your sample profile can still be saved in this browser’s portal session.</p>}<label className="field">Email address<input type="email" required autoComplete="email" disabled={busy||sent} value={email} aria-invalid={!!error&&!sent} onChange={e=>{setEmail(e.target.value);if(error)setError('');}}/></label>{sent&&<label className="field">Verification code<input className="verification-code" required inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6,8}" maxLength={8} disabled={busy} value={code} onChange={e=>{setCode(e.target.value);if(error)setError('');}} aria-invalid={!!error} aria-describedby={error?'code-help account-error':'code-help'}/><span className="muted" id="code-help">Enter the 6–8 digit code from your email.</span></label>}<button className="button primary" type="submit" disabled={busy||!state.data.auth_configured}>{busyAction==='email'?'Sending code…':busyAction==='verify'?'Verifying code…':sent?'Verify and sign in':'Email me a code'}</button>{sent&&<button type="button" className="text-button" disabled={busy} onClick={()=>{setSent(false);setCode('');setMessage('');setError('');}}>Use a different email or request a new code</button>}{!sent&&state.data.google_oauth_configured===true&&<><p className="muted">Or use a connected sign-in provider.</p><a className="button" href="/api/hub/auth/google">Continue with Google</a><small className="muted">Google sign-in uses a protected account connection and does not grant access to your personal Google Drive.</small></>}</form>)}
+ </div></AppFrame>;
 }

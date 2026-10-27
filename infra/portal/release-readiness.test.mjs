@@ -1,0 +1,152 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+import { buildReleaseReadiness, liveEvidenceFromEnvironment, RELEASE_PHASES, RELEASE_STATUSES } from "./release-readiness.mjs";
+
+const base = {
+  NODE_ENV: "production",
+  DEMO_MODE: "false",
+  HOST: "0.0.0.0",
+  PORT: "8787",
+  WORKER_HEALTH_FILE: "/tmp/mgt-worker-health.json",
+  PUBLIC_ORIGIN: "https://portal.mgtskincare.test",
+  DATABASE_URL: "postgresql://mgt:secure@db.internal:5432/mgt?sslmode=verify-full",
+  PORTAL_AUTO_MIGRATE: "false",
+  PORTAL_DOMAIN: "portal.mgtskincare.test",
+  MGT_EDGE_TOKEN: "readiness-test-edge-token-unique-123456789",
+  SUPABASE_URL: "https://project.supabase.co",
+  SUPABASE_ANON_KEY: "anon-production-value",
+  SUPABASE_SERVICE_ROLE_KEY: "service-production-value",
+  SUPABASE_GOOGLE_OAUTH_ENABLED: "false",
+  OLLAMA_ENABLED: "true",
+  OLLAMA_BASE_URL: "http://ollama:11434",
+  OPENCLAW_ENABLED: "false",
+  WORKER_INTERVAL_SECONDS: "60",
+  WORKER_READINESS_MAX_AGE_SECONDS: "300",
+  BACKUP_MAX_AGE_HOURS: "26",
+  BACKUP_RESTORE_MAX_AGE_DAYS: "90",
+  BACKUP_ATTESTATION_ENABLED: "false",
+  ANTI_AGING_LIVE_AI: "false",
+  ANTI_AGING_CHECKOUT_ENABLED: "false",
+  ANTI_AGING_BOOKING_ENABLED: "false",
+  ANTI_AGING_IMAGE_ANALYSIS_ENABLED: "false",
+  ANTI_AGING_ACCESSIBILITY_VERIFIED: "false",
+  ANTI_AGING_RESTORE_VERIFIED: "false",
+  ANTI_AGING_PRIVACY_REVIEWED: "false",
+  OPERATIONS_ANTI_AGING_RETENTION_DAYS: "365",
+  NOTIFICATION_DELIVERY: "in_app",
+  RELEASE_OWNER_NAME: "Gregg Clark of MGT",
+  SUPPORT_OWNER_NAME: "Gregg Clark of MGT",
+  SUPPORT_OWNER_EMAIL: "support-lead@mgtskincare.test",
+  ACCESSIBILITY_VALIDATION_REPORT_URL: "https://evidence.mgtskincare.test/a11y/report",
+  ACCESSIBILITY_VALIDATED_AT: "2026-09-01T00:00:00.000Z",
+  MONITORING_DASHBOARD_URL: "https://monitoring.mgtskincare.test/dashboard",
+  INCIDENT_RUNBOOK_URL: "https://operations.mgtskincare.test/runbook",
+  ALERT_OWNER_EMAIL: "alerts@mgtskincare.test",
+  SUPPORT_RESPONSE_TARGET_HOURS: "24",
+  OPERATIONS_ALERT_DELIVERY: "webhook",
+  OPERATIONS_ALERT_WEBHOOK_URL: "https://alerts.mgtskincare.test/events",
+  OPERATIONS_ALERT_WEBHOOK_TOKEN: "configured-alert-token",
+  OPERATIONS_ALERT_KEY_ID: "primary",
+  OPERATIONS_ALERT_TIMEOUT_MS: "10000",
+  OPERATIONS_ALERT_LEASE_SECONDS: "60",
+  OPERATIONS_ALERT_RETRY_COOLDOWN_SECONDS: "300",
+  OPERATIONS_ALERT_MAX_RETRY_DELAY_SECONDS: "3600",
+  OPERATIONS_ALERT_MAX_ATTEMPTS: "5",
+  OPERATIONS_ALERT_EVENT_RETENTION_DAYS: "90",
+  OPERATIONS_FOLLOW_UP_OVERDUE_GRACE_SECONDS: "300",
+  OPERATIONS_FOLLOW_UP_RETRY_DELAY_SECONDS: "300",
+  OPERATIONS_FOLLOW_UP_MAX_ATTEMPTS: "5",
+  OPERATIONS_FOLLOW_UP_RETENTION_DAYS: "365",
+  OPERATIONS_AI_LOG_RETENTION_DAYS: "30",
+  OPERATIONS_NOTIFICATION_RETENTION_DAYS: "90",
+  OPERATIONS_BILLING_RETENTION_DAYS: "730",
+  OPERATIONS_WEBHOOK_RECEIPT_RETENTION_DAYS: "90",
+  OPERATIONS_AGGREGATE_METRIC_RETENTION_DAYS: "180",
+  OPERATIONS_DELETION_PROOF_RETENTION_DAYS: "730",
+  OPERATIONS_RUN_RETENTION_DAYS: "90",
+  OPERATIONS_BACKUP_ATTESTATION_RETENTION_DAYS: "90",
+  NOTIFICATION_RETRY_COOLDOWN_SECONDS: "300",
+  NOTIFICATION_MAX_RETRY_DELAY_SECONDS: "3600",
+  NOTIFICATION_MAX_ATTEMPTS: "3",
+  SUBSCRIPTIONS_ENABLED: "false",
+  SUBSCRIPTION_TERMS_APPROVED: "false",
+  NODE_IMAGE: `node@sha256:${"c".repeat(64)}`,
+  API_IMAGE: `ghcr.io/mgt/api@sha256:${"d".repeat(64)}`,
+  WEB_IMAGE: `ghcr.io/mgt/web@sha256:${"e".repeat(64)}`,
+  OLLAMA_IMAGE: `ollama/ollama@sha256:${"a".repeat(64)}`,
+  CADDY_IMAGE: `caddy@sha256:${"b".repeat(64)}`
+};
+
+test("no preflight failure can be omitted from release readiness", () => {
+  const evidence = Object.fromEntries(['support_workflow','accessibility_deployed','database_rls','backup_restore','stripe_sandbox','container_startup','ai_provider'].map(key => [key, true]));
+  assert.equal(buildReleaseReadiness({ env: base, localGates: true, liveEvidence: evidence }).release_ready, true);
+  for (const changed of [
+    { RELEASE_OWNER_NAME: 'Unrecorded delegate' },
+    { SUPPORT_OWNER_NAME: 'Gregg Clark of MGT ' },
+    { OPERATIONS_ALERT_TIMEOUT_MS: '0' },
+    { MONITORING_DASHBOARD_URL: '' },
+    { NOTIFICATION_MAX_ATTEMPTS: '0' }
+  ]) {
+    const result = buildReleaseReadiness({ env: { ...base, ...changed }, localGates: true, liveEvidence: evidence });
+    assert.equal(result.preflight.ok, false);
+    assert.equal(result.release_ready, false);
+    assert.equal(result.phases.find(phase => phase.id === 'F72').status, 'blocked');
+    assert.equal(result.phases.find(phase => phase.id === 'F80').status, 'blocked');
+  }
+});
+
+test("defines the ten next phases and only uses documented statuses", () => {
+  assert.deepEqual(RELEASE_PHASES.map((item) => item.id), ["F71", "F72", "F73", "F74", "F75", "F76", "F77", "F78", "F79", "F80"]);
+  assert.ok(RELEASE_PHASES.every((item) => item.owner && item.evidence));
+  const packet = buildReleaseReadiness({ env: base });
+  assert.ok(packet.phases.every((item) => RELEASE_STATUSES.includes(item.status)));
+});
+
+test("keeps local configuration separate from live deployment proof", () => {
+  const packet = buildReleaseReadiness({ env: base, localGates: true });
+  assert.equal(packet.preflight.ok, true);
+  assert.equal(packet.phases.find((item) => item.id === "F72").status, "pass");
+  assert.equal(packet.phases.find((item) => item.id === "F75").status, "pending");
+  assert.equal(packet.release_ready, false);
+});
+
+test("marks disabled subscriptions as not applicable and blocks incomplete setup", () => {
+  const disabled = buildReleaseReadiness({ env: base });
+  assert.equal(disabled.phases.find((item) => item.id === "F77").status, "not_applicable");
+  const enabled = buildReleaseReadiness({ env: { ...base, SUBSCRIPTIONS_ENABLED: "true" } });
+  assert.equal(enabled.phases.find((item) => item.id === "F77").status, "blocked");
+});
+
+test("reaches a ready packet only with local gates and every required live evidence item", () => {
+  const packet = buildReleaseReadiness({
+    env: base,
+    localGates: true,
+    liveEvidence: {
+      support_workflow: true,
+      accessibility_deployed: true,
+      database_rls: true,
+      backup_restore: true,
+      container_startup: true,
+      ai_provider: true
+    }
+  });
+  assert.equal(packet.release_ready, true);
+  assert.ok(packet.phases.every((item) => item.status === "pass" || item.status === "not_applicable"));
+});
+
+test("never includes secret values in the packet", () => {
+  const packet = buildReleaseReadiness({ env: { ...base, SUPABASE_SERVICE_ROLE_KEY: "super-secret-value" } });
+  assert.equal(JSON.stringify(packet).includes("super-secret-value"), false);
+});
+
+test("maps only explicit non-secret evidence flags from the environment", () => {
+  const evidence = liveEvidenceFromEnvironment({
+    RELEASE_EVIDENCE_SUPPORT_WORKFLOW: "true",
+    RELEASE_EVIDENCE_DATABASE_RLS: "TRUE",
+    RELEASE_EVIDENCE_AI_PROVIDER: "false"
+  });
+  assert.equal(evidence.support_workflow, true);
+  assert.equal(evidence.database_rls, true);
+  assert.equal(evidence.ai_provider, false);
+  assert.equal(evidence.container_startup, false);
+});

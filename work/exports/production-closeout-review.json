@@ -1,0 +1,32 @@
+{
+  "version": "1.0",
+  "candidate_commit": "6ed0b09678e85262c15f8bab7aae7dc3cc0d5807",
+  "bundle_checksum": "sha256:7f6e092578792f957e0ba3935dc8d65254a914190b528fbebec378bc1a117249",
+  "production_stabilization_checksum": "sha256:e950d5d12dfbf44ce7cf1a8619688baa76485a69776cdb8b007656178204d966",
+  "generated_at": "2026-10-06T16:48:13.672Z",
+  "status": "pending_production_stabilization_review",
+  "entries": [],
+  "errors": [
+    "release_candidate_identity record is required",
+    "production_url_attestation record is required",
+    "dns_tls_attestation record is required",
+    "health_readiness_attestation record is required",
+    "route_smoke_attestation record is required",
+    "auth_session_attestation record is required",
+    "database_integrity_attestation record is required",
+    "rls_isolation_attestation record is required",
+    "backup_restore_attestation record is required",
+    "worker_queue_attestation record is required",
+    "billing_webhook_attestation record is required",
+    "notification_delivery_attestation record is required",
+    "ai_boundary_attestation record is required",
+    "support_handoff_attestation record is required",
+    "accessibility_attestation record is required",
+    "privacy_retention_attestation record is required",
+    "security_log_attestation record is required",
+    "monitoring_alert_attestation record is required",
+    "rollback_target_attestation record is required",
+    "closure_owner_approval record is required"
+  ],
+  "production_closeout_checksum": "sha256:96e334c9e23f0eb9eba94b4f4ed19689f9ef94db75fa66385b691e1bc77e99d1"
+}

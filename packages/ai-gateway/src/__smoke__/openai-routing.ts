@@ -35,9 +35,20 @@ async function main() {
   const local = new OpenClawAdapter('http://127.0.0.1:11434/v1', 'ollama', async (url) => {
     localUrl = url;
     return {choices: [{message: {content: 'local answer'}}], usage: {prompt_tokens: 10, completion_tokens: 4}};
-  });
+  }, 'openai-completions');
   assert.equal((await local.complete(getTaskConfig('product_why').fallbacks[2], 's', 'u', new AbortController().signal)).text, 'local answer');
   assert.equal(localUrl, 'http://127.0.0.1:11434/v1/chat/completions');
+
+  let nativeUrl = '';
+  const native = new OpenClawAdapter('http://ollama:11434', 'ollama', async (url, headers, body) => {
+    nativeUrl = url;
+    assert.deepEqual(headers, {});
+    assert.equal((body as {stream?: boolean}).stream, false);
+    return {message: {content: 'native local answer'}, prompt_eval_count: 8, eval_count: 3};
+  });
+  const nativeResponse = await native.complete(getTaskConfig('product_why').fallbacks[2], 's', 'u', new AbortController().signal);
+  assert.equal(nativeResponse.text, 'native local answer');
+  assert.equal(nativeUrl, 'http://ollama:11434/api/chat');
 
   let calls = 0;
   const gateway = new AiGateway({adapters: {openai: {

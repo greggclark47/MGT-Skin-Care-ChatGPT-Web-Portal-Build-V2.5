@@ -1,0 +1,279 @@
+# ARCHITECTURAL PSEUDO-CONFIGURATION; NOT EXECUTABLE GITHUB ACTIONS YAML.
+# Intentionally outside .github/workflows. All adapters and reference bindings below
+# require implementation. No deployment, credential value or approval is generated.
+# Translate stage dependencies into protected GitHub Actions jobs after acceptance.
+specification: mgt-governance-pipeline/1
+status: design_only
+authority:
+  canonical_owner: "Gregg Clark of MGT"
+  release_owner: "Gregg Clark of MGT"
+  platform_owner: "Gregg Clark of MGT"
+  data_owner: "Gregg Clark of MGT"
+  support_owner: "Gregg Clark of MGT"
+  accessibility_owner: "Gregg Clark of MGT"
+  reviewer: "Gregg Clark of MGT"
+  monitoring_owner: "Gregg Clark of MGT"
+  release_decider: "Gregg Clark of MGT"
+  # Require independently supplied env declarations to equal the literal above.
+  # Do not overwrite wrong RELEASE_OWNER_NAME/SUPPORT_OWNER_NAME before checking.
+  authenticated_human: VERIFIED_GREGG_ISSUER_SUBJECT_BINDING_REF
+  machine_identity_is_not_human_approval: true
+
+bindings:
+  # Abstract inventory references only, not fabricated IDs, URLs or credentials.
+  entity: APPROVED_INC_RECORD_REF
+  public_origin: APPROVED_PRODUCTION_ORIGIN_REF
+  staging_origin: APPROVED_STAGING_ORIGIN_REF
+  github_a: APPROVED_PRIMARY_REPOSITORY_ID_REF
+  github_b: APPROVED_SECONDARY_REPOSITORY_ID_REF
+  drive_folder: APPROVED_CORPORATE_DRIVE_FOLDER_ID_REF
+  policy: PROTECTED_POLICY_PACKAGE_DIGEST_REF
+  runner: APPROVED_EPHEMERAL_RUNNER_IMAGE_DIGEST_REF
+  staging_identity: APPROVED_STAGING_WORKLOAD_IDENTITY_REF
+  deploy_identity: APPROVED_DEPLOYMENT_WORKLOAD_IDENTITY_REF
+  rollback_identity: APPROVED_ROLLBACK_WORKLOAD_IDENTITY_REF
+  export_identity: APPROVED_EXPORT_WORKLOAD_IDENTITY_REF
+  runtime_secret_references: APPROVED_SECRET_REFERENCE_SET_REF
+  signing_service: APPROVED_MANAGED_SIGNER_REF
+  staging_authority: APPROVED_STANDING_STAGING_AUTOMATION_REF
+  failover_authority: APPROVED_STANDING_FAILOVER_POLICY_REF
+
+github_actions_translation:
+  source_event: protected_branch_candidate
+  untrusted_prs: isolated_read_only_validation_without_external_privilege
+  actions_and_reusable_workflows: reviewed_full_commit_sha_only
+  no_mutable_image_tags: true
+  checkout: exact_candidate_sha_after_trusted_owner_bootstrap
+  workflow_policy_origin: separately_protected_not_candidate_controlled
+  cloud_identity: short_lived_oidc_with_verified_claim_bindings
+  default_permissions: {}
+  per_job_permissions: minimum_for_that_stage
+  concurrency:
+    production_group: one_per_approved_target_not_per_candidate
+    cancel_in_progress: false
+    additional_guard: database_slot_lock_and_target_fencing
+  admin_bypass: forbidden
+  # Required-reviewer availability and self-review behavior depend on plan/settings.
+  # GitHub environment approval never substitutes for the role evidence ledger.
+  environment_interlock: verified_capability_plus_governance_service_authority
+  runners: ephemeral_isolated_no_production_network_for_untrusted_builds
+  persist_checkout_credentials: false
+  raw_logs_artifact_upload: forbidden
+  missing_skipped_cancelled_timed_out_required_job: block
+
+timing:
+  max_execution_window_seconds: 14400
+  approval_max_age_at_issuance_seconds: 3600
+  proposed_approval_max_age_at_start_seconds: 3600
+  proposed_max_clock_drift_seconds: 30
+  issuance_window_predicate: server_now_le_start_lt_end
+  execution_window_predicate: start_le_server_now_lt_end
+  expiry: min_window_end_and_all_required_approval_age_ceilings
+  changed_bindings: revoke_and_reissue
+  proposed_monitor_lateness_seconds:
+    15m: 300
+    1h: 600
+    24h: 3600
+    7d: 14400
+
+stages:
+  owner_bootstrap:
+    needs: []
+    privileges: none
+    operations:
+      - verify_protected_policy_digest_and_runtime_identity
+      - assert_release_and_support_env_owners_equal_canonical_literal
+      - assert_all_owner_reviewer_approver_monitor_decider_fields_equal_literal
+      - resolve_verified_entity_origin_contacts_and_inventory
+    output: signed_non_secret_bootstrap_result
+
+  candidate_verification:
+    needs: [owner_bootstrap]
+    privileges: isolated_build_and_read_only_source
+    operations:
+      - repeat_owner_bootstrap
+      - checkout_exact_protected_candidate_sha
+      - run_frozen_dependency_install_and_full_local_verification
+      - scan_source_dependencies_sbom_images_iac_and_public_artifacts
+      - deny_high_critical_findings_missing_results_or_stale_scanner_data
+      - scan_output_before_any_normal_log_or_artifact_serialization
+    output: passed_candidate_bound_quality_and_hygiene_report
+
+  immutable_images:
+    needs: [candidate_verification]
+    privileges: scoped_registry_publish_and_provenance_signing
+    operations:
+      - repeat_owner_bootstrap
+      - build_once_from_pinned_toolchain_and_base_digests
+      - publish_only_to_approved_candidate_registry_namespace
+      - verify_provenance_and_bind_exact_image_and_platform_digests
+      - freeze_signed_candidate_envelope
+    output: candidate_envelope_hash
+
+  automatic_staging_gate:
+    needs: [immutable_images]
+    privileges: standing_authorization_scoped_staging_only
+    operations:
+      - repeat_owner_bootstrap
+      - verify_standing_staging_execution_authority
+      - verify_isolated_origin_data_network_and_secret_namespace
+      - validate_redacted_secret_injection_and_cross_environment_denial
+      - deploy_candidate_digests_with_approved_manual_migration_path
+      - run_dependency_policy_and_health_readiness_worker_tls_probes
+      - collect_synthetic_customer_flow_and_redacted_role_observations
+      - independently_verify_checksums_provenance_and_candidate_continuity
+    failure: staging_hold_and_affected_mutation_rollback
+    output: staging_automation_pass
+
+  staging_handoff:
+    needs: [automatic_staging_gate]
+    privileges: ledger_observation_append_and_managed_signing
+    operations:
+      - require_exact_role_artifact_set_and_independent_verifier_report
+      - freeze_handoff_root_and_origin_image_config_schema_tuple
+    output: signed_staging_handoff
+
+  staging_human_review:
+    needs: [staging_handoff]
+    privileges: authenticated_human_approval_append_only
+    required_roles: [release, platform]
+    separate_actions_per_role: true
+    approver: "Gregg Clark of MGT"
+    operations:
+      - authenticate_verified_human_with_mfa
+      - show_role_scoped_evidence_and_effective_expiry
+      - record_each_actual_approve_or_hold_with_signature
+      - require_identical_future_window_no_longer_than_four_hours
+    no_automatic_approve: true
+    output: pending_operator_execution
+
+  staging_operator_execution:
+    needs: [staging_human_review]
+    privileges: scoped_staging_executor
+    operations:
+      - require_independent_explicit_operator_action_record
+      - repeat_owner_bootstrap_and_validate_execution_time_not_issuance_time
+      - consume_one_use_authority_under_lock
+      - perform_idempotent_fenced_action
+      - collect_fresh_post_action_probes_and_independent_receipt
+    output: staging_execution_and_post_action_pass
+
+  production_evidence:
+    needs: [staging_operator_execution]
+    privileges: approved_dark_slot_scope_and_observation_append
+    required_checks:
+      - target_identity
+      - candidate_continuity
+      - production_preflight
+      - production_readiness
+      - customer_smoke
+      - data_rls_backup
+      - support_accessibility
+      - rollback_monitoring
+    required_distinct_role_artifacts: [release, platform, data, support, accessibility]
+    operations:
+      - verify_prior_authority_for_any_dark_slot_or_migration_mutation
+      - collect_actual_production_shaped_non_secret_observations
+      - verify_all_eight_checks_and_five_separate_role_artifacts
+      - freeze_new_production_handoff
+    output: signed_production_handoff
+
+  production_human_review:
+    needs: [production_evidence]
+    privileges: authenticated_human_approval_append_only
+    required_roles: [release, platform, data, support, accessibility]
+    separate_actions_per_role: true
+    approver: "Gregg Clark of MGT"
+    operations:
+      - authenticate_and_record_each_role_review
+      - bind_all_approvals_to_same_production_handoff_and_window
+      - record_separate_final_release_decision_pending_hold_or_go
+    no_automatic_go: true
+    output: pending_operator_execution
+
+  production_operator_execution:
+    needs: [production_human_review]
+    privileges: approved_target_scoped_deployment_workload
+    operations:
+      - require_separate_explicit_operator_action
+      - repeat_owner_bootstrap_recheck_all_bindings_and_revocations
+      - verify_clock_window_freshness_and_safe_rollback_tuple
+      - lock_target_consume_nonce_increment_fence_and_append_outbox
+      - execute_fenced_idempotent_traffic_ramp_without_rebuilding
+      - observe_target_generation_and_fresh_post_action_probes
+    output: independent_execution_receipt_and_immediate_results
+
+  operational_closeout:
+    needs: [production_operator_execution]
+    privileges: non_secret_ledger_append
+    operations:
+      - require_actual_immediate_success_and_no_unresolved_blocker
+      - record_operational_closeout_not_final_governance_closeout
+      - enqueue_durable_followup_observations
+      - require_explicit_current_publication_authority
+    output: immutable_export_intent
+
+  archive_and_readback:
+    needs: [operational_closeout]
+    privileges: approved_github_destinations_and_drive_folder_only
+    operations:
+      - repeat_owner_bootstrap_and_validate_destination_inventory
+      - freeze_source_and_evidence_generation
+      - scan_and_hash_all_payloads_before_upload
+      - preserve_exact_commit_and_same_source_zip_in_github_a_and_b
+      - resumable_upload_non_secret_evidence_zip_to_approved_drive_folder
+      - independently_read_back_bytes_and_metadata_at_every_destination
+      - compare_exact_name_size_hash_candidate_parent_and_observed_ids
+      - append_signed_receipts_as_sidecars_not_inside_the_attested_archive
+    any_destination_missing_or_mismatched: closeout_blocked
+    retry: bounded_backoff_with_idempotency_and_ambiguous_result_reconciliation
+    output: verified_initial_receipt_set
+
+  followup_and_final_closeout:
+    needs: [archive_and_readback]
+    runs_in: external_durable_scheduler_not_a_seven_day_actions_job
+    monitoring_owner: "Gregg Clark of MGT"
+    due_offsets: [15m, 1h, 24h, 7d]
+    operations:
+      - collect_actual_observations_at_due_times
+      - mark_missing_late_or_failed_required_observations_blocked
+      - never_undo_newer_generation_for_an_older_release_check
+      - append_new_evidence_and_export_generations
+      - verify_final_generation_receipts_and_all_due_checks
+      - record_explicit_final_closeout_review
+    output: signed_final_closeout_or_hold
+
+independent_safety_controller:
+  # This is an external HA controller, not just an Actions failure handler.
+  watches:
+    - runner_loss_or_cancel_after_mutation
+    - required_verification_failure
+    - leaked_secret_detection
+    - timestamp_or_binding_mismatch
+    - execution_window_expiry
+    - target_health_failure
+    - receipt_mismatch_or_overdue_required_monitor
+  first_actions:
+    - revoke_outstanding_affected_authority
+    - halt_further_candidate_mutations
+    - append_sanitized_incident_and_alert_gregg
+  before_any_mutation: record_no_mutation_no_rollback_needed
+  after_mutation:
+    - verify_current_target_generation_matches_affected_execution
+    - execute_only_preapproved_compatible_rollback_tuple
+    - otherwise_isolate_or_enter_safe_maintenance_mode
+    - never_blindly_reverse_destructive_database_migrations
+  secret_incident_extra:
+    - revoke_or_rotate_via_approved_secret_manager
+    - restrict_tainted_log_artifact_access_and_remediate
+    - keep_only_sanitized_normal_ledger_evidence
+
+activation_blockers:
+  - actual_INC_domain_jurisdiction_and_legal_applicability_unconfirmed
+  - verified_human_identity_and_contacts_not_bound
+  - cloud_provider_accounts_regions_budget_and_capacity_not_selected
+  - retention_recovery_and_freshness_proposals_not_approved
+  - standing_staging_failover_rollback_and_publication_authority_not_recorded
+  - repository_protections_and_private_plan_capabilities_not_verified
+  - approved_Drive_folder_and_live_access_not_verified
+  - adapters_trusted_transition_functions_and_live_acceptance_not_implemented

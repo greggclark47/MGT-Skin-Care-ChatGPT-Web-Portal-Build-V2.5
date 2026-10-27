@@ -21,6 +21,7 @@ import type {
   KnowledgeRepository, AdminUserRepository, AdminAuditRepository, IngredientRuleRepository,
 } from './persistence/repositories';
 import type { RoutineSlot, ScoreResult } from '@mgt/domain';
+import { antiAgingRouter } from './modules/anti-aging/router';
 
 // SC-P1-P3 wiring per the Section C.2 module table.
 //
@@ -112,6 +113,10 @@ export function createApp(deps: AppDeps): Express {
     (sessionId) => getSession(sessionId)?.slotResults ?? new Map<RoutineSlot, ScoreResult[]>(),
     (productId) => catalog.price_cents(productId),
   ));
+
+  // Anti-aging discovery is intentionally read-only and referral-only. It has no
+  // checkout, booking, diagnosis, or provider-contact mutation surface.
+  app.use('/api/v1', antiAgingRouter());
 
   // --- Admin (knowledge approval + ingredient-rules safety matrix) — only mounted when an
   // AdminUserRepository is supplied, since every route here sits behind requireAdmin(). Tests

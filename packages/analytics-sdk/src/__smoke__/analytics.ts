@@ -21,10 +21,16 @@ async function main() {
   {
     const t = new CapturingTransport();
     const c = new AnalyticsClient({ anonymousId: 'anon-1', transport: t });
+    const invalidName = c.track(null as unknown as string);
+    check('invalid event name rejected', invalidName.accepted === false && invalidName.reason === 'invalid_event_name', invalidName);
+    const invalidProperties = c.track('routine.viewed', null as unknown as Record<string, unknown>);
+    check('invalid property shape rejected', invalidProperties.accepted === false && invalidProperties.reason === 'invalid_properties', invalidProperties);
     const unknown = c.track('made.up.event');
     check('unknown event rejected', unknown.accepted === false && unknown.reason === 'unknown_event:made.up.event', unknown);
     const missing = c.track('purchase.completed', { order_id: 'o1' }); // total_cents missing
     check('missing required property rejected', missing.accepted === false && missing.reason === 'missing_property:total_cents', missing);
+    const undefinedRequired = c.track('purchase.completed', { order_id: 'o1', total_cents: undefined });
+    check('undefined required property rejected', undefinedRequired.accepted === false && undefinedRequired.reason === 'missing_property:total_cents', undefinedRequired);
     const good = c.track('purchase.completed', { order_id: 'o1', total_cents: 4500 });
     check('valid event accepted', good.accepted === true);
   }
@@ -84,6 +90,12 @@ async function main() {
     check('no event lacks privacy/retention/purpose', bad.length === 0, bad.map((b) => b.name));
     const coachContent = EVENT_REGISTRY['coach.message_sent'].required_properties;
     check('coach events never require message content', !coachContent.some((p) => /text|message|content|body/.test(p)), coachContent);
+    const supportEvents = Object.values(EVENT_REGISTRY).filter((event) => event.name.startsWith('support.'));
+    check('support events are aggregate-only', supportEvents.length === 7 && supportEvents.every((event) => event.retention_class === 'agg'), supportEvents);
+    check('support events never require customer content', supportEvents.every((event) => !event.required_properties.some((property) => /text|message|content|body|email|account|user/.test(property))), supportEvents);
+    const retailerEvents = Object.values(EVENT_REGISTRY).filter((event) => event.name.startsWith('retailer.'));
+    check('retailer events are aggregate-only', retailerEvents.length === 2 && retailerEvents.every((event) => event.retention_class === 'agg'), retailerEvents);
+    check('retailer events contain no customer or transaction fields', retailerEvents.every((event) => !event.required_properties.some((property) => /user|account|email|profile|order|amount|revenue|profit|search/.test(property))), retailerEvents);
   }
 
   console.log(failures === 0 ? '\nANALYTICS SDK: ALL CHECKS PASSED' : `\nANALYTICS SDK: ${failures} CHECK(S) FAILED`);

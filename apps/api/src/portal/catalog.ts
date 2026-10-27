@@ -1,4 +1,4 @@
-import {classify,buildRoutine,scoreProduct,compileMatrix,ingredientAllowedByMatrix,SEED_INGREDIENT_RULES,type CandidateProduct,type SkinProfileInput,type RoutineSlot,type ScoreResult} from '@mgt/domain';
+import {classify,buildRoutine,buildMatchIntelligence,scoreProduct,compileMatrix,ingredientAllowedByMatrix,SEED_INGREDIENT_RULES,type CandidateProduct,type SkinProfileInput,type RoutineSlot,type ScoreResult} from '@mgt/domain';
 import {SEED_CATALOG} from '../modules/catalog/store';
 import {check} from './security';
 import type {Records,Store} from './store';
@@ -8,7 +8,7 @@ export async function initializeCatalog(store:Store,demo:boolean){await store.tx
  for(const p of SEED_CATALOG){const existing=await db.get<Product>('products',p.id);if(!existing||existing.sample)await db.put('products',p.id,{...p,name:names[p.id],description:'Sample catalog item from the MGT v2 blueprint. Not available for purchase.',sample:true,stock:100,merchant_id:'sample',approved:false});}
  for(const r of SEED_INGREDIENT_RULES){const existing=await db.get<any>('rules',r.ingredient_key);if(!existing||existing.sample)await db.put('rules',r.ingredient_key,{...r,status:'draft',sample:true});}
 }});}
-export async function match(db:Records,input:SkinProfileInput,demo:boolean){
+export async function match(db:Records,input:SkinProfileInput,demo:boolean,feedbackExcludedProductIds:readonly string[]=[]){
  const c=classify(input);
  // v2 used conflicting ceiling definitions. The portal applies the user tolerance directly:
  // lower means more reactive. All ingredient eligibility uses the versioned matrix, never the old constant loader.
@@ -17,7 +17,13 @@ export async function match(db:Records,input:SkinProfileInput,demo:boolean){
  check(rules.length,503,'safety_review_pending','Recommendations are awaiting ingredient review.');
  const matrix=compileMatrix(rules.map(r=>({...r,status:'approved'})));
  const products=(await db.list<Product>('products')).filter(p=>p.status==='active'&&p.stock>0&&(demo||p.approved&&!p.sample));
- const eligible=products.filter(p=>p.ingredients.length>0&&p.ingredients.every(i=>matrix.rules.has(i)&&ingredientAllowedByMatrix(i,matrix,c.profile_vector.sensitivity_ceiling,c.avoid_flags,input.ingredient_avoidances)));
+ const feedbackExclusions=new Set(feedbackExcludedProductIds.filter(id=>typeof id==='string'&&id.length>0));
+ const safetyEligible=products.filter(p=>p.ingredients.length>0&&p.ingredients.every(i=>matrix.rules.has(i)&&ingredientAllowedByMatrix(i,matrix,c.profile_vector.sensitivity_ceiling,c.avoid_flags,input.ingredient_avoidances)));
+ // Count every saved exclusion that still exists in the reviewed catalog. A later safety
+ // filter can independently remove the same product, but that must not erase the person's
+ // feedback from the explainability summary.
+ const feedbackExcludedProductIdsInCatalog=products.filter(product=>feedbackExclusions.has(product.id)).map(product=>product.id);
+ const eligible=safetyEligible.filter(product=>!feedbackExclusions.has(product.id));
  const slots=new Map<RoutineSlot,ScoreResult[]>();const ingredients=new Map<string,string[]>();
  for(const p of eligible){
   // Safety is already applied by the reviewed matrix. The legacy scorer is used for ranking only.
@@ -26,8 +32,9 @@ export async function match(db:Records,input:SkinProfileInput,demo:boolean){
  }
  let routine=buildRoutine(slots,ingredients);
  if(input.current_routine!=='advanced')routine={...routine,steps:routine.steps.filter(s=>!s.is_optional)};
+ const match_intelligence=buildMatchIntelligence({profile_input:input,profile_vector:c.profile_vector,routine,slot_results:slots,products:eligible,safety_matrix_version:matrix.matrix_version,excluded_products:products.length-eligible.length,feedback_excluded_product_ids:feedbackExcludedProductIdsInCatalog});
  // No unreviewed pairing advice or photos in this release. Full label directions remain authoritative.
- return {input,...c,routine,matrix_version:matrix.matrix_version,results:[...slots.values()].flat(),created_at:new Date().toISOString(),sample:demo};
+ return {input,...c,routine,match_intelligence,matrix_version:matrix.matrix_version,results:[...slots.values()].flat(),created_at:new Date().toISOString(),sample:demo};
 }
 export function quote(cart:{items:{product_id:string,quantity:number}[]},products:Product[],premium:boolean,strict=true){
  const items=cart.items.map(i=>{const p=products.find(p=>p.id===i.product_id);const available=!!p&&p.status==='active'&&p.stock>=i.quantity;if(strict)check(available,409,'product_unavailable','A product is no longer available in that quantity.');return {product_id:i.product_id,name:p?.name||'Unavailable product',quantity:i.quantity,unit_price_cents:p?.price_cents||0,merchant_id:p?.merchant_id||'',sample:p?.sample||false,approved:p?.approved||false,available};});

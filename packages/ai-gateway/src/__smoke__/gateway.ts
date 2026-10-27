@@ -1,6 +1,7 @@
 import { AiGateway, NoopLogSink } from '../router';
 import { CircuitBreaker } from '../circuit-breaker';
 import { InMemoryBudgetStore } from '../budget';
+import { getTaskConfig } from '../task-registry';
 import type { ProviderAdapter } from '../adapters';
 import type { ModelConfig, ProviderName, ProviderResponse } from '../types';
 
@@ -30,6 +31,13 @@ function check(label: string, condition: boolean, detail?: unknown) {
 }
 
 async function main() {
+  console.log('\n== 0. Style color match is registered as a bounded optional task ==');
+  {
+    const config = getTaskConfig('style_color_match');
+    check('task has tier-1 budget and no grounding requirement', config.budget_class === 'tier1_copy' && config.grounded === false);
+    check('task schema requires palette, reason and wardrobe ideas', config.response_schema?.required?.join(',') === 'palette,reason,wardrobe_ideas');
+  }
+
   console.log('\n== 1. Happy path: primary succeeds, validation passes ==');
   {
     const log = new NoopLogSink();

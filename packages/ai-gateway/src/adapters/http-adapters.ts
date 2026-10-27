@@ -62,14 +62,35 @@ export class OllamaAdapter implements ProviderAdapter {
   }
 }
 
-// OpenClaw is an optional OpenAI-compatible orchestration endpoint. By default it points at
-// Ollama's /v1 surface, so enabling it does not introduce a second paid provider.
+// OpenClaw is an optional orchestration adapter. Native mode talks directly to Ollama;
+// the compatibility mode is explicit so enabling it does not introduce a second paid provider.
+export type OpenClawApiMode = 'ollama' | 'openai-completions';
+
 export class OpenClawAdapter extends OpenAiAdapter {
-  constructor(baseUrl = 'http://127.0.0.1:11434/v1', apiKey = 'ollama', post: HttpPost = defaultHttpPost) {
+  constructor(
+    baseUrl = 'http://127.0.0.1:11434',
+    apiKey = 'ollama',
+    post: HttpPost = defaultHttpPost,
+    private apiMode: OpenClawApiMode = 'ollama',
+  ) {
     super(apiKey, baseUrl, post, 'openclaw');
   }
   async complete(config: ModelConfig, systemPrompt: string, userPrompt: string, signal: AbortSignal): Promise<ProviderResponse> {
-    // The local OpenAI-compatible Ollama surface uses Chat Completions.
+    if (this.apiMode === 'ollama') {
+      const json = await this.post(`${this.baseUrl.replace(/\/$/, '')}/api/chat`, {}, {
+        model: config.model,
+        messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userPrompt }],
+        stream: false,
+        keep_alive: '10m',
+        options: { num_predict: config.max_tokens, temperature: config.temperature },
+      }, signal);
+      return {
+        text: json.message?.content ?? json.response ?? '',
+        input_tokens: json.prompt_eval_count ?? 0,
+        output_tokens: json.eval_count ?? 0,
+        model: config.model, provider: this.name,
+      };
+    }
     const json = await this.post(`${this.baseUrl.replace(/\/$/, '')}/chat/completions`, {
       authorization: `Bearer ${this.apiKey}`,
     }, {

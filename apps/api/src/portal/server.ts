@@ -1,4 +1,6 @@
 import {installBilling,installSubscriptionWebhook,subscriptionBillingConfigured} from './billing';
+import {commercialBillingStatus,installCommercialBilling} from './commercial-billing';
+import {installAgentOperations} from './agent-operations';
 import {productionAdmissionProjection,validateApiProcessAdmission,validateApiRuntimeAdmission,workerReadinessMaxAgeMs} from './runtime-admission';
 import {portalV1Router,portalEntitlement,portalUsageAccount,ownEntitlement} from './subscriptions';
 import {installGuestAccess,activeGuestAccess} from './guest-access';
@@ -477,6 +479,8 @@ export async function createPortal(options:PortalOptions){
  }));
  app.use('/api/v1',portalV1Router(db,stripe,env));
  installBilling(app,db,stripe,env,origin);
+ installCommercialBilling(app,db,stripe,env);
+ installAgentOperations(app,db,gateway);
  installGuestAccess(app,db);
  installStyle(app,db,gateway);
  const get=(path:string,fn:(r:HubRequest,s:Response)=>Promise<any>)=>app.get('/api/hub'+path,wrap(fn));
@@ -878,6 +882,7 @@ export async function createPortal(options:PortalOptions){
   const monitoringConfigured=typeof env.MONITORING_DASHBOARD_URL==='string'&&/^https:\/\//.test(env.MONITORING_DASHBOARD_URL)&&typeof env.INCIDENT_RUNBOOK_URL==='string'&&/^https:\/\//.test(env.INCIDENT_RUNBOOK_URL)&&typeof env.ALERT_OWNER_EMAIL==='string'&&/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(env.ALERT_OWNER_EMAIL);
   const alertDeliveryConfigured=env.OPERATIONS_ALERT_DELIVERY==='webhook'&&typeof env.OPERATIONS_ALERT_WEBHOOK_URL==='string'&&/^https:\/\//.test(env.OPERATIONS_ALERT_WEBHOOK_URL)&&!!env.OPERATIONS_ALERT_WEBHOOK_TOKEN;
   const sponsoredContentConfigured=env.MGT_SPONSORED_CONTENT_ENABLED==='false'||env.MGT_SPONSORED_CONTENT_ENABLED==='true'&&env.MGT_SPONSORED_CONTENT_REVIEWED==='true'&&env.MGT_OMNI_RETAIL_ENABLED==='true'&&env.MGT_RETAIL_PARTNER_AUTHORIZATION_REVIEWED==='true'&&typeof env.MGT_SPONSORED_CONTENT_APPROVAL_REFERENCE==='string'&&/^[A-Za-z0-9][A-Za-z0-9._:/-]{7,199}$/.test(env.MGT_SPONSORED_CONTENT_APPROVAL_REFERENCE)&&typeof env.MGT_SPONSORED_CONTENT_APPROVED_AT==='string'&&!Number.isNaN(Date.parse(env.MGT_SPONSORED_CONTENT_APPROVED_AT));
+  const commercialBilling=commercialBillingStatus(stripe,env);
   const checks:ReadinessCheck[]=[
    {name:'Production database',configured:db.kind==='postgres',phase:'data_identity',evidence:'runtime'},
    {name:'Email sign-in',configured:!!(env.SUPABASE_URL&&env.SUPABASE_ANON_KEY),phase:'data_identity',evidence:'configuration'},
@@ -895,6 +900,8 @@ export async function createPortal(options:PortalOptions){
    ...PLAN_DEFINITIONS.flatMap(plan=>BILLING_CYCLES.map(cycle=>({name:plan.name+' '+cycle+' price',required:env.SUBSCRIPTIONS_ENABLED==='true',configured:!!priceIdFor(env,plan,cycle),phase:'billing_commercial',evidence:'configuration' as const}))),
    {name:'Subscription terms approved',required:env.SUBSCRIPTIONS_ENABLED==='true',configured:env.SUBSCRIPTION_TERMS_APPROVED==='true'&&!!company?.policies_published,phase:'billing_commercial',evidence:'configuration'},
    {name:'Subscriptions enabled',required:env.SUBSCRIPTIONS_ENABLED==='true',configured:env.SUBSCRIPTIONS_ENABLED==='true',phase:'billing_commercial',evidence:'configuration'},
+   {name:'Stripe API usage meter',required:commercialBilling.usage_requested,configured:commercialBilling.usage_configured,phase:'billing_commercial',evidence:'configuration'},
+   {name:'Stripe B2B draft invoicing',required:commercialBilling.invoicing_requested,configured:commercialBilling.invoicing_configured,phase:'billing_commercial',evidence:'configuration'},
    {name:'Free-plan sponsored content review',required:env.MGT_SPONSORED_CONTENT_ENABLED==='true',configured:sponsoredContentConfigured,phase:'billing_commercial',evidence:'configuration'},
    {name:'Company legal and support details',configured:!!(company?.legal_name&&company?.support_email),phase:'support_accessibility',evidence:'configuration'},
    {name:'Accountable support owner',configured:supportOwner,phase:'support_accessibility',evidence:'configuration'},

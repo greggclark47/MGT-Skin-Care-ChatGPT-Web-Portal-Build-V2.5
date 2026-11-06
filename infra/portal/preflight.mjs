@@ -297,6 +297,15 @@ export function validateEnvironment(env) {
   if (wholeNumber(alertTimeoutMs, 1000, 30000) && wholeNumber(alertLeaseSeconds, 10, 600) && alertLeaseSeconds * 1000 < alertTimeoutMs + 5000) errors.push("OPERATIONS_ALERT_LEASE_SECONDS must exceed OPERATIONS_ALERT_TIMEOUT_MS by at least five seconds.");
 
   if (!["true", "false"].includes(env.SUBSCRIPTIONS_ENABLED)) errors.push("SUBSCRIPTIONS_ENABLED must be exactly true or false.");
+  for (const key of ["STRIPE_USAGE_BILLING_ENABLED", "STRIPE_B2B_INVOICING_ENABLED"]) if (env[key] !== undefined && !["true", "false"].includes(env[key])) errors.push(`${key} must be exactly true or false.`);
+  const commercialStripeEnabled = env.STRIPE_USAGE_BILLING_ENABLED === "true" || env.STRIPE_B2B_INVOICING_ENABLED === "true";
+  if (commercialStripeEnabled && env.SUBSCRIPTIONS_ENABLED !== "true") {
+    for (const key of ["STRIPE_LIVE_MODE", "STRIPE_SECRET_KEY"]) requireValue(key);
+    const pattern = env.STRIPE_LIVE_MODE === "true" ? /^sk_live_[A-Za-z0-9_]+$/ : /^sk_test_[A-Za-z0-9_]+$/;
+    if (!["true", "false"].includes(env.STRIPE_LIVE_MODE)) errors.push("STRIPE_LIVE_MODE must be true or false when commercial Stripe billing is enabled.");
+    if (!pattern.test(String(env.STRIPE_SECRET_KEY || ""))) errors.push("STRIPE_SECRET_KEY must match the configured Stripe mode.");
+  }
+  if (env.STRIPE_USAGE_BILLING_ENABLED === "true" && !/^[a-z][a-z0-9_.-]{2,99}$/.test(String(env.STRIPE_API_METER_EVENT_NAME || ""))) errors.push("STRIPE_API_METER_EVENT_NAME must identify the approved Stripe Billing Meter event.");
   if (env.SUBSCRIPTIONS_ENABLED === "true") {
     if (env.SUBSCRIPTION_TERMS_APPROVED !== "true") errors.push("SUBSCRIPTION_TERMS_APPROVED must be exactly true before subscriptions are enabled.");
     for (const key of [
@@ -343,7 +352,8 @@ export function validateEnvironment(env) {
   if (env.NOTIFICATION_DELIVERY === "webhook") secretKeys.push("NOTIFICATION_WEBHOOK_TOKEN");
   if (env.OPENCLAW_ENABLED === "true" && env.OPENCLAW_API_MODE === "openai-completions") secretKeys.push("OPENCLAW_API_KEY");
   if (env.HOSTED_OPENAI_ENABLED === "true") secretKeys.push("OPENAI_API_KEY");
-  if (env.SUBSCRIPTIONS_ENABLED === "true") secretKeys.push("STRIPE_SECRET_KEY", "STRIPE_SUBSCRIPTION_WEBHOOK_SECRET");
+  if (env.SUBSCRIPTIONS_ENABLED === "true" || commercialStripeEnabled) secretKeys.push("STRIPE_SECRET_KEY");
+  if (env.SUBSCRIPTIONS_ENABLED === "true") secretKeys.push("STRIPE_SUBSCRIPTION_WEBHOOK_SECRET");
   const secretReferences = secretKeys.map((key) => env[key]).filter(validSecretReference);
   if (new Set(secretReferences).size !== secretReferences.length) errors.push("Production secret references must remain distinct across integration roles.");
 
@@ -360,7 +370,8 @@ export function validateEnvironment(env) {
   if (env.HOSTED_OPENAI_ENABLED === "false" && populated(["OPENAI_API_KEY"])) errors.push("Disabled hosted OpenAI must not retain a credential.");
   if (env.NODE_ENV === "production" && (env.CLIENT_IMAGE_DRIVE_TEST_ENABLED === "true" || populated(["TEST_GOOGLE_DRIVE_CLIENT_ID", "TEST_GOOGLE_DRIVE_CLIENT_SECRET", "TEST_GOOGLE_DRIVE_REFRESH_TOKEN", "TEST_GOOGLE_DRIVE_FOLDER_ID"]))) errors.push("Production test Google Drive image storage must remain disabled and must not retain test credentials or folder configuration.");
   if (backupAttestationEnabled === "false" && populated(["BACKUP_ATTESTATION_SECRET", "BACKUP_ATTESTATION_KEY_ID", "BACKUP_ATTESTATION_MAX_AGE_SECONDS"])) errors.push("Disabled backup attestation must not retain signing configuration.");
-  if (env.SUBSCRIPTIONS_ENABLED === "false" && populated(["STRIPE_LIVE_MODE", "STRIPE_SECRET_KEY", "STRIPE_SUBSCRIPTION_WEBHOOK_SECRET", "STRIPE_PREMIUM_PRODUCT_ID", "STRIPE_PREMIUM_MONTHLY_PRICE_ID", "STRIPE_PREMIUM_ANNUAL_PRICE_ID", "STRIPE_STUDIO_MONTHLY_PRICE_ID", "STRIPE_STUDIO_ANNUAL_PRICE_ID"])) errors.push("Disabled subscriptions must not retain Stripe configuration.");
+  if (env.SUBSCRIPTIONS_ENABLED === "false" && !commercialStripeEnabled && populated(["STRIPE_LIVE_MODE", "STRIPE_SECRET_KEY", "STRIPE_SUBSCRIPTION_WEBHOOK_SECRET", "STRIPE_PREMIUM_PRODUCT_ID", "STRIPE_PREMIUM_MONTHLY_PRICE_ID", "STRIPE_PREMIUM_ANNUAL_PRICE_ID", "STRIPE_STUDIO_MONTHLY_PRICE_ID", "STRIPE_STUDIO_ANNUAL_PRICE_ID", "STRIPE_API_METER_EVENT_NAME"])) errors.push("Disabled subscriptions and commercial billing must not retain Stripe configuration.");
+  if (env.STRIPE_USAGE_BILLING_ENABLED !== "true" && populated(["STRIPE_API_METER_EVENT_NAME"])) errors.push("Disabled usage billing must not retain a Stripe meter event name.");
 
   return { ok: errors.length === 0, errors, warnings };
 }
@@ -457,6 +468,15 @@ function validateApiRuntimeEnvironment(context) {
   if (accessibilityReport && !validControlUrl(accessibilityReport)) errors.push("ACCESSIBILITY_VALIDATION_REPORT_URL must be a production HTTPS evidence URL without embedded credentials.");
   if (accessibilityAt && !validIsoDate(accessibilityAt)) errors.push("ACCESSIBILITY_VALIDATED_AT must be a past ISO timestamp.");
   if (!["true", "false"].includes(env.SUBSCRIPTIONS_ENABLED)) errors.push("SUBSCRIPTIONS_ENABLED must be exactly true or false.");
+  for (const key of ["STRIPE_USAGE_BILLING_ENABLED", "STRIPE_B2B_INVOICING_ENABLED"]) if (env[key] !== undefined && !["true", "false"].includes(env[key])) errors.push(`${key} must be exactly true or false.`);
+  const commercialStripeEnabled = env.STRIPE_USAGE_BILLING_ENABLED === "true" || env.STRIPE_B2B_INVOICING_ENABLED === "true";
+  if (commercialStripeEnabled && env.SUBSCRIPTIONS_ENABLED !== "true") {
+    for (const key of ["STRIPE_LIVE_MODE", "STRIPE_SECRET_KEY"]) requireValue(key);
+    const pattern = env.STRIPE_LIVE_MODE === "true" ? /^sk_live_[A-Za-z0-9_]+$/ : /^sk_test_[A-Za-z0-9_]+$/;
+    if (!["true", "false"].includes(env.STRIPE_LIVE_MODE)) errors.push("STRIPE_LIVE_MODE must be true or false when commercial Stripe billing is enabled.");
+    if (!pattern.test(String(env.STRIPE_SECRET_KEY || ""))) errors.push("STRIPE_SECRET_KEY must match the configured Stripe mode.");
+  }
+  if (env.STRIPE_USAGE_BILLING_ENABLED === "true" && !/^[a-z][a-z0-9_.-]{2,99}$/.test(String(env.STRIPE_API_METER_EVENT_NAME || ""))) errors.push("STRIPE_API_METER_EVENT_NAME must identify the approved Stripe Billing Meter event.");
   if (env.SUBSCRIPTIONS_ENABLED === "true") {
     if (env.SUBSCRIPTION_TERMS_APPROVED !== "true") errors.push("SUBSCRIPTION_TERMS_APPROVED must be exactly true before subscriptions are enabled.");
     for (const key of ["STRIPE_LIVE_MODE", "STRIPE_SECRET_KEY", "STRIPE_SUBSCRIPTION_WEBHOOK_SECRET", "STRIPE_PREMIUM_PRODUCT_ID", "STRIPE_PREMIUM_MONTHLY_PRICE_ID", "STRIPE_PREMIUM_ANNUAL_PRICE_ID"]) requireValue(key);
@@ -481,7 +501,8 @@ function validateApiRuntimeEnvironment(context) {
   if (env.HOSTED_OPENAI_ENABLED === "false" && populated(["OPENAI_API_KEY"])) errors.push("Disabled hosted OpenAI must not retain a credential.");
   if (env.NODE_ENV === "production" && (env.CLIENT_IMAGE_DRIVE_TEST_ENABLED === "true" || populated(["TEST_GOOGLE_DRIVE_CLIENT_ID", "TEST_GOOGLE_DRIVE_CLIENT_SECRET", "TEST_GOOGLE_DRIVE_REFRESH_TOKEN", "TEST_GOOGLE_DRIVE_FOLDER_ID"]))) errors.push("Production test Google Drive image storage must remain disabled and must not retain test credentials or folder configuration.");
   if (attestation === "false" && populated(["BACKUP_ATTESTATION_SECRET", "BACKUP_ATTESTATION_KEY_ID", "BACKUP_ATTESTATION_MAX_AGE_SECONDS"])) errors.push("Disabled backup attestation must not retain signing configuration.");
-  if (env.SUBSCRIPTIONS_ENABLED === "false" && populated(["STRIPE_LIVE_MODE", "STRIPE_SECRET_KEY", "STRIPE_SUBSCRIPTION_WEBHOOK_SECRET", "STRIPE_PREMIUM_PRODUCT_ID", "STRIPE_PREMIUM_MONTHLY_PRICE_ID", "STRIPE_PREMIUM_ANNUAL_PRICE_ID", "STRIPE_STUDIO_MONTHLY_PRICE_ID", "STRIPE_STUDIO_ANNUAL_PRICE_ID"])) errors.push("Disabled subscriptions must not retain Stripe configuration.");
+  if (env.SUBSCRIPTIONS_ENABLED === "false" && !commercialStripeEnabled && populated(["STRIPE_LIVE_MODE", "STRIPE_SECRET_KEY", "STRIPE_SUBSCRIPTION_WEBHOOK_SECRET", "STRIPE_PREMIUM_PRODUCT_ID", "STRIPE_PREMIUM_MONTHLY_PRICE_ID", "STRIPE_PREMIUM_ANNUAL_PRICE_ID", "STRIPE_STUDIO_MONTHLY_PRICE_ID", "STRIPE_STUDIO_ANNUAL_PRICE_ID", "STRIPE_API_METER_EVENT_NAME"])) errors.push("Disabled subscriptions and commercial billing must not retain Stripe configuration.");
+  if (env.STRIPE_USAGE_BILLING_ENABLED !== "true" && populated(["STRIPE_API_METER_EVENT_NAME"])) errors.push("Disabled usage billing must not retain a Stripe meter event name.");
 }
 
 function validateWorkerRuntimeEnvironment(context) {

@@ -101,14 +101,14 @@ export function installSubscriptionWebhook(app:express.Express,db:Store,stripe:S
   await db.tx(async r=>{await r.lock('subscription-receipt:'+hash(event.id));const prior=await r.get<any>('subscription_webhook_receipts',event.id);await r.put('subscription_webhook_receipts',event.id,{id:event.id,type:event.type,status:prior?.status==='processed'?'processed':'processing',attempts:(prior?.attempts||0)+1,duplicate_count:prior?.duplicate_count||0,first_received_at:prior?.first_received_at||received_at,last_received_at:received_at,processed_at:prior?.processed_at||null,last_error_code:null});});
   try{
    check(event.livemode===(env.STRIPE_LIVE_MODE==='true'),400,'mode_mismatch','Payment mode mismatch.');
-   const allowed=['customer.subscription.created','customer.subscription.updated','customer.subscription.deleted','checkout.session.completed'];
+   const allowed=['customer.subscription.created','customer.subscription.updated','customer.subscription.deleted','checkout.session.completed','invoice.paid','invoice.payment_failed'];
    let outcome:{processed?:boolean;duplicate?:boolean;ignored?:boolean};
    if(!allowed.includes(event.type))outcome={ignored:true};
    else outcome=await db.tx(async r=>{
     await r.lock('subscription-event:'+hash(event.id));
     if(await r.get('subscription_events',event.id))return{duplicate:true};
     const object=event.data.object as any;
-    const id=event.type==='checkout.session.completed'?object.subscription:object.id;
+    const id=event.type==='checkout.session.completed'||event.type==='invoice.paid'||event.type==='invoice.payment_failed'?object.subscription:object.id;
     if(!id)return{ignored:true};
     // Discover the account, then re-read current state while holding its billing lock.
     const discovered=await stripe!.subscriptions.retrieve(typeof id==='string'?id:id.id);

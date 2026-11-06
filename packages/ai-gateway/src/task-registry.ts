@@ -4,6 +4,7 @@ import type { TaskConfig, TaskType } from './types';
 // local reasoning fallback, and GPT-5.6 Sol is the opt-in, entitlement-gated hosted tier.
 // Every assignment is a config value, so routing can change without changing callers.
 const OLLAMA_FAST = { provider: 'ollama' as const, model: 'llama3.2:3b', max_tokens: 700, temperature: 0.3 };
+const QWEN_LOCAL = { provider: 'ollama' as const, model: 'qwen3.5:4b', max_tokens: 1000, temperature: 0.3 };
 const DEEPSEEK_LOCAL = { provider: 'ollama' as const, model: 'deepseek-r1:8b', max_tokens: 900, temperature: 0.2 };
 const OLLAMA_VISION = { provider: 'ollama' as const, model: 'llava:latest', max_tokens: 700, temperature: 0.2 };
 const OPENAI_SOL = { provider: 'openai' as const, model: 'gpt-5.6-sol', max_tokens: 2000, temperature: 0.4, reasoning_effort: 'medium' as const };
@@ -109,6 +110,16 @@ export const TASK_REGISTRY: Record<TaskType, TaskConfig> = {
   style_color_match: tier1('style_color_match', 'v1.0.0', false, {
     type: 'object', required: ['palette', 'reason', 'wardrobe_ideas'], properties: { palette: { type: 'string' }, reason: { type: 'string' }, wardrobe_ideas: { type: 'array' } },
   }),
+
+  social_engagement_draft: {
+    task_type:'social_engagement_draft',primary:DEEPSEEK_LOCAL,fallbacks:[OPENCLAW,QWEN_LOCAL],budget_class:'tier1_copy',requires_entitlement:false,prompt_version:'v1.0.0',timeout_ms:12000,grounded:false,
+  },
+  marketing_promotion_draft: {
+    task_type:'marketing_promotion_draft',primary:QWEN_LOCAL,fallbacks:[DEEPSEEK_LOCAL,OPENCLAW],budget_class:'tier1_copy',requires_entitlement:false,prompt_version:'v1.0.0',timeout_ms:12000,grounded:false,
+  },
+  retailer_outreach_draft: {
+    task_type:'retailer_outreach_draft',primary:DEEPSEEK_LOCAL,fallbacks:[OPENCLAW,QWEN_LOCAL],budget_class:'tier1_copy',requires_entitlement:false,prompt_version:'v1.0.0',timeout_ms:12000,grounded:false,
+  },
 
   embed: {
     task_type: 'embed', primary: OLLAMA_EMBED,

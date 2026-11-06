@@ -224,9 +224,15 @@ export function validateProductionAccessibilityAdmission(env:NodeJS.ProcessEnv):
 export function validateProductionSubscriptionAdmission(env:NodeJS.ProcessEnv):void{
  if(env.NODE_ENV!=='production')return;
  if(env.SUBSCRIPTIONS_ENABLED!=='true'&&env.SUBSCRIPTIONS_ENABLED!=='false')throw new Error('Production subscription admission is invalid.');
- if(env.SUBSCRIPTIONS_ENABLED==='false')return;
- if(env.SUBSCRIPTION_TERMS_APPROVED!=='true'||(env.STRIPE_LIVE_MODE!=='true'&&env.STRIPE_LIVE_MODE!=='false'))throw new Error('Production subscription admission is invalid.');
+ if(env.STRIPE_USAGE_BILLING_ENABLED!==undefined&&env.STRIPE_USAGE_BILLING_ENABLED!=='true'&&env.STRIPE_USAGE_BILLING_ENABLED!=='false')throw new Error('Production commercial billing admission is invalid.');
+ if(env.STRIPE_B2B_INVOICING_ENABLED!==undefined&&env.STRIPE_B2B_INVOICING_ENABLED!=='true'&&env.STRIPE_B2B_INVOICING_ENABLED!=='false')throw new Error('Production commercial billing admission is invalid.');
+ const stripeRequired=env.SUBSCRIPTIONS_ENABLED==='true'||env.STRIPE_USAGE_BILLING_ENABLED==='true'||env.STRIPE_B2B_INVOICING_ENABLED==='true';
+ if(!stripeRequired)return;
+ if(env.STRIPE_LIVE_MODE!=='true'&&env.STRIPE_LIVE_MODE!=='false')throw new Error('Production subscription admission is invalid.');
  if(typeof env.STRIPE_SECRET_KEY!=='string'||!(env.STRIPE_LIVE_MODE==='true'?/^sk_live_[A-Za-z0-9_]+$/:/^sk_test_[A-Za-z0-9_]+$/).test(env.STRIPE_SECRET_KEY))throw new Error('Production subscription admission is invalid.');
+ if(env.STRIPE_USAGE_BILLING_ENABLED==='true'&&!/^[a-z][a-z0-9_.-]{2,99}$/.test(env.STRIPE_API_METER_EVENT_NAME||''))throw new Error('Production commercial billing admission is invalid.');
+ if(env.SUBSCRIPTIONS_ENABLED==='false')return;
+ if(env.SUBSCRIPTION_TERMS_APPROVED!=='true')throw new Error('Production subscription admission is invalid.');
  if(typeof env.STRIPE_SUBSCRIPTION_WEBHOOK_SECRET!=='string'||!/^whsec_[A-Za-z0-9_]+$/.test(env.STRIPE_SUBSCRIPTION_WEBHOOK_SECRET))throw new Error('Production subscription admission is invalid.');
  if(typeof env.STRIPE_PREMIUM_PRODUCT_ID!=='string'||!/^prod_[A-Za-z0-9_]+$/.test(env.STRIPE_PREMIUM_PRODUCT_ID))throw new Error('Production subscription admission is invalid.');
  if(typeof env.STRIPE_PREMIUM_MONTHLY_PRICE_ID!=='string'||!/^price_[A-Za-z0-9_]+$/.test(env.STRIPE_PREMIUM_MONTHLY_PRICE_ID))throw new Error('Production subscription admission is invalid.');
@@ -293,7 +299,8 @@ export function validateProductionSecretIsolation(env:NodeJS.ProcessEnv):void{
  if(env.NOTIFICATION_DELIVERY==='webhook')keys.push('NOTIFICATION_WEBHOOK_TOKEN');
  if(env.OPENCLAW_ENABLED==='true'&&env.OPENCLAW_API_MODE==='openai-completions')keys.push('OPENCLAW_API_KEY');
  if(env.HOSTED_OPENAI_ENABLED==='true')keys.push('OPENAI_API_KEY');
- if(env.SUBSCRIPTIONS_ENABLED==='true')keys.push('STRIPE_SECRET_KEY','STRIPE_SUBSCRIPTION_WEBHOOK_SECRET');
+ if(env.SUBSCRIPTIONS_ENABLED==='true'||env.STRIPE_USAGE_BILLING_ENABLED==='true'||env.STRIPE_B2B_INVOICING_ENABLED==='true')keys.push('STRIPE_SECRET_KEY');
+ if(env.SUBSCRIPTIONS_ENABLED==='true')keys.push('STRIPE_SUBSCRIPTION_WEBHOOK_SECRET');
  const references=keys.map(key=>env[key]).filter(configuredReference);
  if(new Set(references).size!==references.length)throw new Error('Production secret isolation is invalid.');
 }
@@ -309,7 +316,8 @@ export function validateProductionApiSecretIsolation(env:NodeJS.ProcessEnv):void
  if(env.BACKUP_ATTESTATION_ENABLED==='true')keys.push('BACKUP_ATTESTATION_SECRET');
  if(env.OPENCLAW_ENABLED==='true'&&env.OPENCLAW_API_MODE==='openai-completions')keys.push('OPENCLAW_API_KEY');
  if(env.HOSTED_OPENAI_ENABLED==='true')keys.push('OPENAI_API_KEY');
- if(env.SUBSCRIPTIONS_ENABLED==='true')keys.push('STRIPE_SECRET_KEY','STRIPE_SUBSCRIPTION_WEBHOOK_SECRET');
+ if(env.SUBSCRIPTIONS_ENABLED==='true'||env.STRIPE_USAGE_BILLING_ENABLED==='true'||env.STRIPE_B2B_INVOICING_ENABLED==='true')keys.push('STRIPE_SECRET_KEY');
+ if(env.SUBSCRIPTIONS_ENABLED==='true')keys.push('STRIPE_SUBSCRIPTION_WEBHOOK_SECRET');
  requireDistinctSecretReferences(env,keys);
 }
 export function validateProductionWorkerSecretIsolation(env:NodeJS.ProcessEnv):void{
@@ -356,7 +364,9 @@ export function validateProductionApiDisabledFeatureResidue(env:NodeJS.ProcessEn
  if(env.HOSTED_OPENAI_ENABLED==='false'&&populated(['OPENAI_API_KEY']))throw new Error('Production disabled feature residue is invalid.');
  if(env.CLIENT_IMAGE_DRIVE_TEST_ENABLED==='true'||populated(['TEST_GOOGLE_DRIVE_CLIENT_ID','TEST_GOOGLE_DRIVE_CLIENT_SECRET','TEST_GOOGLE_DRIVE_REFRESH_TOKEN','TEST_GOOGLE_DRIVE_FOLDER_ID']))throw new Error('Production disabled feature residue is invalid.');
  if(env.BACKUP_ATTESTATION_ENABLED==='false'&&populated(['BACKUP_ATTESTATION_SECRET','BACKUP_ATTESTATION_KEY_ID','BACKUP_ATTESTATION_MAX_AGE_SECONDS']))throw new Error('Production disabled feature residue is invalid.');
- if(env.SUBSCRIPTIONS_ENABLED==='false'&&populated(['STRIPE_LIVE_MODE','STRIPE_SECRET_KEY','STRIPE_SUBSCRIPTION_WEBHOOK_SECRET','STRIPE_PREMIUM_PRODUCT_ID','STRIPE_PREMIUM_MONTHLY_PRICE_ID','STRIPE_PREMIUM_ANNUAL_PRICE_ID','STRIPE_STUDIO_MONTHLY_PRICE_ID','STRIPE_STUDIO_ANNUAL_PRICE_ID']))throw new Error('Production disabled feature residue is invalid.');
+ const stripeDisabled=env.SUBSCRIPTIONS_ENABLED==='false'&&env.STRIPE_USAGE_BILLING_ENABLED!=='true'&&env.STRIPE_B2B_INVOICING_ENABLED!=='true';
+ if(stripeDisabled&&populated(['STRIPE_LIVE_MODE','STRIPE_SECRET_KEY','STRIPE_SUBSCRIPTION_WEBHOOK_SECRET','STRIPE_PREMIUM_PRODUCT_ID','STRIPE_PREMIUM_MONTHLY_PRICE_ID','STRIPE_PREMIUM_ANNUAL_PRICE_ID','STRIPE_STUDIO_MONTHLY_PRICE_ID','STRIPE_STUDIO_ANNUAL_PRICE_ID','STRIPE_API_METER_EVENT_NAME']))throw new Error('Production disabled feature residue is invalid.');
+ if(env.STRIPE_USAGE_BILLING_ENABLED!=='true'&&populated(['STRIPE_API_METER_EVENT_NAME']))throw new Error('Production disabled feature residue is invalid.');
 }
 
 export function validateProductionWorkerDisabledFeatureResidue(env:NodeJS.ProcessEnv):void{

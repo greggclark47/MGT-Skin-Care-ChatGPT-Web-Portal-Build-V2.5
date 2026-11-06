@@ -27,6 +27,9 @@ export type TaskType =
   | 'complexion_profile_summary'
   | 'photo_journal_cosmetic_summary'
   | 'style_color_match'
+  | 'social_engagement_draft'
+  | 'marketing_promotion_draft'
+  | 'retailer_outreach_draft'
   | 'embed';
 
 export type BudgetClass = 'tier1_copy' | 'tier2_vision' | 'tier3_premium' | 'embedding';

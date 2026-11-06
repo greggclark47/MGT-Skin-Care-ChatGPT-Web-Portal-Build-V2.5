@@ -12,4 +12,5 @@ export type {
   BudgetClass, GatewayRequest, GatewayResponse, ModelConfig, ProviderName, ProviderResponse,
   RoutingLogEntry, RoutingLogSink, TaskType,
 } from './types';
+export { TASK_REGISTRY, getTaskConfig } from './task-registry';
 export const AI_GATEWAY_VERSION = '0.2.0-local-first';

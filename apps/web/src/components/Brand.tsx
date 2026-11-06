@@ -1,4 +1,4 @@
 import React from 'react';
 import Link from 'next/link';
-export function Brand(){return <Link className="brand" href="/" aria-label="MGT Skin Care home"><img src="/mgt-mark.svg" width="48" height="48" alt="" /><span>MGT<span className="brand-sub">SKIN CARE</span></span></Link>;}
+export function Brand(){return <Link className="brand team47-brand" href="/" aria-label="Team 47 Studio home"><span className="brand-logo-pair" aria-hidden="true"><img className="brand-logo-image brand-logo-light" src="/brand/team47studio-horizontal-light-surface.png" width="300" height="75" alt=""/><img className="brand-logo-image brand-logo-dark" src="/brand/team47studio-horizontal-dark-surface.png" width="300" height="75" alt=""/></span><span className="sr-only">Team 47 Studio</span></Link>;}
 

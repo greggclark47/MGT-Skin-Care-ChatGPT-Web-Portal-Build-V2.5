@@ -16,6 +16,10 @@ function check(label: string, cond: boolean, detail?: unknown) {
 
 // dollars-per-MTok, as published.
 const ANCHORS: Record<string, { input_usd: number; output_usd: number }> = {
+  'gpt-5': { input_usd: 1.25, output_usd: 10 },
+  'gpt-6-astra': { input_usd: 10, output_usd: 50 },
+  'gpt-6.1-sol': { input_usd: 2, output_usd: 10 },
+  'gpt-6-luna': { input_usd: .1, output_usd: .5 },
   'gpt-5.6-sol':   { input_usd: 4, output_usd: 20 },
   'gpt-5.6-terra': { input_usd: 2, output_usd: 12 },
   'gpt-5.6-luna':  { input_usd: .2, output_usd: 1.2 },
@@ -65,6 +69,13 @@ console.log('\n== 5. Models we could not re-verify are declared, not hidden ==')
   check('gpt-4o-mini flagged legacy', legacy.includes('gpt-4o-mini'), legacy);
   // Legacy hosted rows remain visible for auditability, but the active registry is local-first.
   console.log(`  NOTE  legacy hosted models: ${legacy.join(', ')}`);
+}
+
+console.log('\n== 6. Temporary deprecated routes carry a removal date ==');
+{
+  const gpt5 = PRICING_PER_MTOK['gpt-5'];
+  check('GPT-5 is explicitly deprecated', gpt5?.deprecated === true);
+  check('GPT-5 removal date is recorded', gpt5?.removal_on === '2026-12-11', gpt5?.removal_on);
 }
 
 console.log(failures === 0 ? '\nPRICING: ALL CHECKS PASSED' : `\nPRICING: ${failures} CHECK(S) FAILED`);

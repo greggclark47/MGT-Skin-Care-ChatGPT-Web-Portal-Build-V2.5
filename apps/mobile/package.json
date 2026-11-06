@@ -1,1 +1,1 @@
-{ "name": "@mgt/mobile", "version": "0.1.0", "private": true }
+{ "name": "@mgt/mobile", "version": "0.1.0", "private": true, "scripts": { "test:contract": "node --test test/contract.cjs test/production-config.cjs", "validate:production-config": "node scripts/validate-production-config.cjs", "android:preview": "eas build --platform android --profile preview", "android:production": "pnpm run validate:production-config && eas build --platform android --profile production", "android:submit:internal": "eas submit --platform android --profile production" } }

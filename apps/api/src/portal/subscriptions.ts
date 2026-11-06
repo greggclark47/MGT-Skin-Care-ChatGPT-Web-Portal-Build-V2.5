@@ -34,15 +34,27 @@ const periodEnd = (record: SubscriptionRecord): string | null => {
 };
 const platformManaged = (record: SubscriptionRecord) => record.source === 'revenuecat';
 const sourceKnown = (record: SubscriptionRecord) => record.source === undefined || record.source === 'stripe' || platformManaged(record);
+const validSubscriptionRecord = (record: unknown): record is SubscriptionRecord => {
+  if(!record||typeof record!=='object'||Array.isArray(record))return false;
+  const value=record as SubscriptionRecord;
+  const bounded=(item:unknown,max:number)=>item===undefined||typeof item==='string'&&item.length>0&&item.length<=max&&!/[\u0000\u007f]/.test(item);
+  return bounded(value.subscription_id,200)&&bounded(value.customer_id,200)&&bounded(value.source,80)&&
+    (value.status===undefined||typeof value.status==='string'&&value.status.length<=40&&!/[\u0000\u007f]/.test(value.status))&&
+    (value.active===undefined||typeof value.active==='boolean')&&(value.premium===undefined||typeof value.premium==='boolean')&&
+    (value.cancel_at_period_end===undefined||typeof value.cancel_at_period_end==='boolean')&&
+    (value.current_period_end===undefined||typeof value.current_period_end==='number'&&Number.isFinite(value.current_period_end)&&value.current_period_end>=0)&&
+    (value.cycle===undefined||typeof value.cycle==='string'&&value.cycle.length<=40&&!/[\u0000\u007f]/.test(value.cycle))&&
+    (value.updated_at===undefined||typeof value.updated_at==='string'&&Number.isFinite(Date.parse(value.updated_at)));
+};
 
 async function ownedRecords(records: Records, actor: string): Promise<Owned[]> {
   const result: Owned[] = [];
   const audience = 'consumer';
   const key = actor + ':' + audience;
   const record = await records.get<SubscriptionRecord>('subscriptions', key);
-  if (record?.subscription_id) result.push({scope:'subscriptions',key,audience,record});
+  if (record?.subscription_id&&validSubscriptionRecord(record)) result.push({scope:'subscriptions',key,audience,record});
   const legacy = await records.get<SubscriptionRecord>('memberships',actor);
-  if (legacy?.subscription_id && !result.some(item => item.record.subscription_id === legacy.subscription_id)) {
+  if (legacy?.subscription_id&&validSubscriptionRecord(legacy) && !result.some(item => item.record.subscription_id === legacy.subscription_id)) {
     result.push({scope:'memberships',key:actor,audience:'consumer',record:legacy});
   }
   return result;
@@ -58,7 +70,7 @@ export async function ownEntitlement(records: Records, actor: string) {
   const consumer = await records.get<SubscriptionRecord>('subscriptions',actor+':consumer');
   const eligible = [membership?.premium === true ? membership : undefined,
     consumer && (consumer.active === true || consumer.status === 'past_due') ? consumer : undefined].filter((record): record is SubscriptionRecord =>
-      !!record && sourceKnown(record) && ['active','trialing','past_due'].includes(record.status || ''));
+      !!record && validSubscriptionRecord(record) && sourceKnown(record) && ['active','trialing','past_due'].includes(record.status || ''));
   const now = Date.now();
   const current = eligible.filter(record => periodEnd(record) === null || record.current_period_end! * 1000 > now - (record.status === 'past_due' ? OVERDUE_GRACE_MS : 0));
   const ends = current.map(periodEnd);

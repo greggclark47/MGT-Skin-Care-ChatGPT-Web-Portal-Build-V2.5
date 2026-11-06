@@ -5,11 +5,20 @@ import {
   CLIENT_IMAGE_CATEGORIES, CLIENT_IMAGE_LIMIT, CLIENT_IMAGE_MAX_BYTES,
   deleteClientImage, listClientImages, prepareClientImage, saveClientImage,
   updateClientImageCategory, listTestDriveClientImages, uploadTestDriveClientImage, deleteTestDriveClientImage, updateTestDriveClientImageCategory, getTestDriveConnection,
-  type ClientImage, type TestDriveClientImage, type ClientImageCategory,
+  requestPhotoJournalCosmeticSummary,
+  type ClientImage, type TestDriveClientImage, type ClientImageCategory, type ClientImageOrigin, type PhotoJournalAnalysisResponse, type PhotoJournalAnalysisStatus,
 } from '../lib/client-images';
 import { hub, useHub } from '../lib/hub';
+import { GuidedFaceCapture } from './GuidedFaceCapture';
 
-function ImageCard({ image, onCategory, onDelete }: { image: ClientImage; onCategory: (id: string, category: ClientImageCategory) => void; onDelete: (image: ClientImage) => void }) {
+const sourceLabel: Record<ClientImageOrigin, string> = {
+  personal_upload: 'Personal upload',
+  google_drive_picker: 'Google Drive file picker',
+  guided_face_camera: 'Guided camera capture',
+  test_drive_library: 'Private test Drive library',
+};
+
+function ImageCard({ image, onCategory, onDelete, onAnalyze, analysisDisabled }: { image: ClientImage; onCategory: (id: string, category: ClientImageCategory) => void; onDelete: (image: ClientImage) => void; onAnalyze?: (image: ClientImage) => void; analysisDisabled?: boolean }) {
   const [preview, setPreview] = useState('');
   useEffect(() => {
     const url = URL.createObjectURL(image.blob);
@@ -21,16 +30,17 @@ function ImageCard({ image, onCategory, onDelete }: { image: ClientImage; onCate
     <div className="client-image-card-details">
       <strong>{image.name}</strong>
       <label className="field">Image purpose<select aria-label={`Image purpose for ${image.name}`} value={image.category} onChange={event => onCategory(image.id, event.target.value as ClientImageCategory)}>{CLIENT_IMAGE_CATEGORIES.map(item => <option key={item.id} value={item.id}>{item.label}</option>)}</select></label>
-      <small>{(image.size / 1024).toFixed(0)} KB · Saved in this browser</small>
+      <small>{(image.size / 1024).toFixed(0)} KB · Saved in this browser{image.origin ? ` · ${sourceLabel[image.origin]}` : ''}</small>
+      {onAnalyze && <button type="button" className="text-button" onClick={() => onAnalyze(image)} disabled={analysisDisabled}>Create private cosmetic note</button>}
       <button type="button" className="text-button" onClick={() => onDelete(image)}>Remove image</button>
     </div>
   </article>;
 }
 
-function TestDriveImageCard({ image, onCategory, onDelete }: { image: TestDriveClientImage; onCategory: (image: TestDriveClientImage, category: ClientImageCategory) => void; onDelete: (image: TestDriveClientImage) => void }) {
+function TestDriveImageCard({ image, onCategory, onDelete, onAnalyze, analysisDisabled }: { image: TestDriveClientImage; onCategory: (image: TestDriveClientImage, category: ClientImageCategory) => void; onDelete: (image: TestDriveClientImage) => void; onAnalyze?: (image: TestDriveClientImage) => void; analysisDisabled?: boolean }) {
   return <article className="client-image-card">
     {!image.removalPending && <img src={image.contentUrl} alt={`${CLIENT_IMAGE_CATEGORIES.find(item => item.id === image.category)?.label || 'Skincare'} image`} loading="lazy"/>}
-    <div className="client-image-card-details"><strong>{image.name}</strong><label className="field">Image purpose<select aria-label={`Image purpose for ${image.name}`} value={image.category} disabled={image.removalPending} onChange={event => onCategory(image, event.target.value as ClientImageCategory)}>{CLIENT_IMAGE_CATEGORIES.map(item => <option key={item.id} value={item.id}>{item.label}</option>)}</select></label><small>{image.removalPending?'Removal pending · try again shortly':`${(image.size / 1024).toFixed(0)} KB · Private test Drive folder`}</small><button type="button" className="text-button" onClick={() => onDelete(image)}>{image.removalPending?'Retry removal':'Remove image'}</button></div>
+    <div className="client-image-card-details"><strong>{image.name}</strong><label className="field">Image purpose<select aria-label={`Image purpose for ${image.name}`} value={image.category} disabled={image.removalPending} onChange={event => onCategory(image, event.target.value as ClientImageCategory)}>{CLIENT_IMAGE_CATEGORIES.map(item => <option key={item.id} value={item.id}>{item.label}</option>)}</select></label><small>{image.removalPending?'Removal pending · try again shortly':`${(image.size / 1024).toFixed(0)} KB · Private test Drive folder`}</small>{onAnalyze && <button type="button" className="text-button" disabled={analysisDisabled || image.removalPending} onClick={() => onAnalyze(image)}>Create private cosmetic note</button>}<button type="button" className="text-button" onClick={() => onDelete(image)}>{image.removalPending?'Retry removal':'Remove image'}</button></div>
   </article>;
 }
 
@@ -46,12 +56,20 @@ export function ClientImageStudio({ compact = false }: { compact?: boolean }) {
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [category, setCategory] = useState<ClientImageCategory>('front');
+  const [showGuidedCapture, setShowGuidedCapture] = useState(false);
+  const [analysisConsent, setAnalysisConsent] = useState(false);
+  const [analysisBusy, setAnalysisBusy] = useState(false);
+  const [analysis, setAnalysis] = useState<PhotoJournalAnalysisResponse | null>(null);
   const input = useRef<HTMLInputElement>(null);
+  const drivePickerInput = useRef<HTMLInputElement>(null);
   const destinationInitialized = useRef(false);
   const session = useHub('/session');
   const scope = session.data?.client_image_scope || '';
   const testDriveEnabled = session.data?.client_image_drive_test_enabled === true;
   const signedIn = Boolean(session.data?.account);
+  const photoAnalysis = session.data?.photo_journal_analysis as PhotoJournalAnalysisStatus | undefined;
+  const destinationCount = destination === 'test-drive' ? driveImages.length : images.length;
+  const pickerDisabled = busy || loading || session.loading || session.error !== '' || !scope || (!testDriveEnabled && destination === 'test-drive') || (destination === 'test-drive' && (!signedIn || driveConnection !== 'ready' || !driveConsent)) || destinationCount >= CLIENT_IMAGE_LIMIT;
 
   const verifyDrive = useCallback(async () => {
     if (!testDriveEnabled) { setDriveConnection('unavailable'); return; }
@@ -93,14 +111,14 @@ export function ClientImageStudio({ compact = false }: { compact?: boolean }) {
     if (next === 'device') { setDriveConnection('idle'); setDriveMessage(''); }
   }
 
-  async function addFiles(files: FileList | null) {
+  async function addFiles(files: FileList | File[] | null, origin: ClientImageOrigin = 'personal_upload') {
     if (!files?.length) return;
     setBusy(true); setError(''); setMessage('');
     try {
       if (!scope) throw new Error('Wait for your portal session to finish loading before adding photos.');
       const currentCount = destination === 'test-drive' ? driveImages.length : images.length;
       if (currentCount + files.length > CLIENT_IMAGE_LIMIT) throw new Error(`Keep up to ${CLIENT_IMAGE_LIMIT} images in this library. Remove an image before adding more.`);
-      const prepared = await Promise.all(Array.from(files).map(file => prepareClientImage(file, category)));
+      const prepared = await Promise.all(Array.from(files).map(file => prepareClientImage(file, category, origin)));
       if (destination === 'test-drive') {
         if (!testDriveEnabled) throw new Error('Test Google Drive storage is not enabled for this environment.');
         if (!signedIn) throw new Error('Sign in before uploading to the Google Drive test library. Photos saved on this device remain private to this browser.');
@@ -113,9 +131,10 @@ export function ClientImageStudio({ compact = false }: { compact?: boolean }) {
       } else {
         for (const image of prepared) await saveClientImage(scope, image);
         setImages(await listClientImages(scope));
-        setMessage(`${prepared.length} ${prepared.length === 1 ? 'image is' : 'images are'} saved in this browser. They have not been uploaded to MGT or analyzed.`);
+        setMessage(`${prepared.length} ${prepared.length === 1 ? 'image is' : 'images are'} saved in this browser. They have not been uploaded to Team 47 Studio or analyzed.`);
       }
       if (input.current) input.current.value = '';
+      if (drivePickerInput.current) drivePickerInput.current.value = '';
     } catch (failure) {
       const name = (failure as Error).name;
       if (scope) {
@@ -123,7 +142,32 @@ export function ClientImageStudio({ compact = false }: { compact?: boolean }) {
         else void listClientImages(scope).then(setImages).catch(() => undefined);
       }
       setError(name === 'QuotaExceededError' ? 'This browser is out of storage space. Remove unused images or choose smaller files.' : (failure as Error).message);
-    } finally { if (input.current) input.current.value = ''; setBusy(false); }
+    } finally { if (input.current) input.current.value = ''; if (drivePickerInput.current) drivePickerInput.current.value = ''; setBusy(false); }
+  }
+
+  async function analyzeDeviceImage(image: ClientImage) {
+    if (!analysisConsent) { setError('Confirm the private cosmetic-note permission before choosing an image to analyze.'); return; }
+    setAnalysisBusy(true); setError(''); setMessage('');
+    try {
+      await hub('/account/consents', { consent_type: 'ai_disclosure', granted: true });
+      const result = await requestPhotoJournalCosmeticSummary(image.blob, image.origin || 'personal_upload');
+      setAnalysis(result); setMessage('Private cosmetic note prepared. No account, routine, retailer, or image-library change was made.');
+    } catch (failure) { setError((failure as Error).message); }
+    finally { setAnalysisBusy(false); }
+  }
+
+  async function analyzeDriveImage(image: TestDriveClientImage) {
+    if (!analysisConsent) { setError('Confirm the private cosmetic-note permission before choosing an image to analyze.'); return; }
+    setAnalysisBusy(true); setError(''); setMessage('');
+    try {
+      await hub('/account/consents', { consent_type: 'ai_disclosure', granted: true });
+      const response = await fetch(image.contentUrl, { credentials: 'same-origin', cache: 'no-store' });
+      if (!response.ok) throw new Error('The selected test Drive image could not be loaded for the private cosmetic note.');
+      const source = await response.blob();
+      const result = await requestPhotoJournalCosmeticSummary(new Blob([source], { type: 'image/jpeg' }), 'test_drive_library');
+      setAnalysis(result); setMessage('Private cosmetic note prepared. The analysis request did not add another test Drive copy.');
+    } catch (failure) { setError((failure as Error).message); }
+    finally { setAnalysisBusy(false); }
   }
 
   async function changeCategory(id: string, next: ClientImageCategory) {
@@ -151,7 +195,7 @@ export function ClientImageStudio({ compact = false }: { compact?: boolean }) {
   return <section className="panel client-image-studio" aria-labelledby="client-images-heading" aria-busy={loading || busy}>
     <span className="eyebrow">OPTIONAL · YOUR PHOTOS</span>
     <h2 id="client-images-heading">{compact ? 'Plan your skincare photos' : 'Your skincare image library'}</h2>
-    <p>Photos are optional. Clear, consistent pictures can help you keep a personal routine journal across your care goals. They are not needed for Skin Match and this feature does not diagnose skin or assess treatment results.</p>
+    <p>Photos are optional. Clear, consistent pictures can help you keep a personal routine journal across your care goals. They are not needed for Skin Match and this feature does not diagnose skin, assess treatment results, or identify anyone.</p>
     <details className="client-photo-guidance">
       <summary>How to take useful photos</summary>
       <div className="client-photo-guide-grid">
@@ -162,21 +206,32 @@ export function ClientImageStudio({ compact = false }: { compact?: boolean }) {
       </div>
       <p className="muted">Optional examples for your own organization: front and side views, a specific area you want to monitor, routine inspiration, or a product label to remember. Never include another person without their permission.</p>
     </details>
-    <div className="client-storage-choices" role="radiogroup" aria-label="Choose image storage location">
+    <div className="client-storage-choices" role="radiogroup" aria-label="Choose where prepared photo copies stay">
       <button type="button" role="radio" aria-checked={destination==='device'} className={`client-storage-choice${destination==='device'?' selected':''}`} disabled={busy || loading} onClick={()=>chooseDestination('device')}><span><strong>This device</strong><small>Private browser storage · no upload</small></span><b>{destination==='device'?'Selected':'Choose'}</b></button>
       <button type="button" role="radio" aria-checked={destination==='test-drive'} className={`client-storage-choice${destination==='test-drive'?' selected':''}`} disabled={busy || loading || !testDriveEnabled} onClick={()=>chooseDestination('test-drive')}><span><strong>Google Drive test storage</strong><small>{testDriveEnabled?signedIn?'Private folder · test environment only':'Sign in to upload · earlier test images can be removed':'Not configured in this environment'}</small></span><b>{destination==='test-drive'?'Selected':'Choose'}</b></button>
     </div>
     <div className="client-image-controls">
       <label className="field">Photo purpose<select value={category} disabled={busy} onChange={event => setCategory(event.target.value as ClientImageCategory)}>{CLIENT_IMAGE_CATEGORIES.map(item => <option key={item.id} value={item.id}>{item.label}</option>)}</select></label>
-      <label className="button primary client-image-select">{busy ? 'Preparing…' : 'Take or choose photos'}<input ref={input} type="file" accept="image/jpeg,image/png,image/webp" capture="user" multiple disabled={busy || loading || session.loading || session.error !== '' || !scope || !testDriveEnabled && destination === 'test-drive' || destination === 'test-drive' && (!signedIn || driveConnection !== 'ready') || (destination === 'test-drive' ? driveImages.length : images.length) >= CLIENT_IMAGE_LIMIT} onChange={event => void addFiles(event.currentTarget.files)} aria-label="Take or choose JPEG, PNG, or WebP photos"/></label>
-      <small>JPEG, PNG, or WebP · up to 8 MB each · max {CLIENT_IMAGE_LIMIT}. Saved copies are resized, converted to JPEG, and stripped of embedded metadata. Signed-in accounts open with the saved default destination.</small>
+      <div className="client-image-source-actions" role="group" aria-label="Choose a photo source">
+        <label className="button primary client-image-select">{busy ? 'Preparing…' : 'Choose from this device'}<input ref={input} type="file" accept="image/jpeg,image/png,image/webp" capture="user" multiple disabled={pickerDisabled} onChange={event => void addFiles(event.currentTarget.files, 'personal_upload')} aria-label="Choose JPEG, PNG, or WebP photos from this device"/></label>
+        <label className="button client-image-select">Choose from Google Drive<input ref={drivePickerInput} type="file" accept="image/jpeg,image/png,image/webp" multiple disabled={pickerDisabled} onChange={event => void addFiles(event.currentTarget.files, 'google_drive_picker')} aria-label="Choose JPEG, PNG, or WebP photos through the Google Drive file picker"/></label>
+        <button type="button" className="button" disabled={pickerDisabled} onClick={() => setShowGuidedCapture(true)}>Guided full-face capture</button>
+      </div>
+      <small>JPEG, PNG, or WebP · up to 8 MB each · max {CLIENT_IMAGE_LIMIT}. Saved copies are resized, converted to JPEG, and stripped of embedded metadata. “Choose from Google Drive” opens your device’s file picker: select Google Drive there if it is available. The portal does not receive ongoing Drive access from this choice.</small>
     </div>
+    {showGuidedCapture && <GuidedFaceCapture disabled={pickerDisabled} onCancel={() => setShowGuidedCapture(false)} onCapture={async file => { await addFiles([file], 'guided_face_camera'); setShowGuidedCapture(false); }}/>}
     {destination === 'test-drive' && <div className={`client-drive-status state-${driveConnection}`} aria-live="polite"><span>{driveConnection==='checking'?'Checking connection':driveConnection==='ready'?'Drive test storage ready':driveConnection==='unavailable'?'Drive test storage unavailable':'Drive test storage'}</span><p>{driveMessage||'Choose this destination to verify the private test connection.'}</p>{driveConnection==='unavailable'&&testDriveEnabled&&<button className="text-button" type="button" disabled={busy} onClick={()=>void verifyDrive()}>Check connection again</button>}</div>}
     {destination === 'test-drive' && <label className="studio-consent client-drive-consent"><input type="checkbox" checked={driveConsent} disabled={busy || driveConnection !== 'ready'} onChange={event=>setDriveConsent(event.target.checked)}/>I consent to upload the selected prepared image copies to the designated private test Drive folder for this upload only. Test storage is not production storage.</label>}
-    <p className="notice">{destination === 'test-drive' ? signedIn?'Test-only destination: chosen copies are sent to the designated private Google Drive folder through the portal. Do not use Drive test storage for customer or production data. Images are not analyzed or shared with retailers.':'Sign in to add new test Drive images. If you have earlier guest test images, you can view or remove them here before signing in; remaining copies will be linked to your account.' : 'Stored only in this browser profile on this device. Images are not sent to MGT, shared with retailers, synced to your account, or used for AI analysis. Android native image picking is not connected.'}</p>
+    <p className="notice">{destination === 'test-drive' ? signedIn?'Test-only destination: chosen copies are sent to the designated private Google Drive folder through the portal. Do not use Drive test storage for customer or production data. Images are not shared with retailers; private cosmetic analysis requires a separate permission each time.':'Sign in to add new test Drive images. If you have earlier guest test images, you can view or remove them here before signing in; remaining copies will be linked to your account.' : 'Stored only in this browser profile on this device. Images are not sent to Team 47 Studio, shared with retailers, or synced to your account unless you separately choose test Drive storage or request a private cosmetic note. Android native image picking is not connected.'}</p>
     {message && <p className="notice success" role="status">{message}</p>}
     {error && <p className="notice error" role="alert">{error}</p>}
-    {!loading && !error && !session.loading && !session.error && scope && (destination === 'test-drive' ? driveImages.length ? <div className="client-image-grid">{driveImages.map(image => <TestDriveImageCard key={image.id} image={image} onCategory={(item,next) => void changeDriveImageCategory(item,next)} onDelete={item => void removeDriveImage(item)}/>)}</div> : <p className="empty">No test images saved in Google Drive. This list shows only the test storage destination.</p> : images.length ? <div className="client-image-grid">{images.map(image => <ImageCard key={image.id} image={image} onCategory={(id, next) => void changeCategory(id, next)} onDelete={item => void removeImage(item)}/>)}</div> : <p className="empty">No images saved in this browser. Choose only photos you are comfortable keeping on this device.</p>)}
+    <section className="client-photo-analysis" aria-labelledby="photo-analysis-title">
+      <span className="eyebrow">OPTIONAL PRIVATE COSMETIC NOTE</span><h3 id="photo-analysis-title">Use one chosen photo with your saved priorities</h3>
+      <p>This is optional and separate from storage. If enabled, one selected prepared JPEG is sent only to the configured local vision service for this request. It is not sent to a hosted AI provider, saved by the analysis request, used for identity or facial recognition, or used to make routine, product, payment, or retailer decisions.</p>
+      {photoAnalysis?.enabled ? <label className="studio-consent client-analysis-consent"><input type="checkbox" checked={analysisConsent} disabled={analysisBusy} onChange={event => { setAnalysisConsent(event.target.checked); setError(''); }}/>I want the platform to process one photo for a private cosmetic journal note. This also records the platform-analysis permission in My Account, which I can revoke there.</label> : <p className="notice">{photoAnalysis?.message || 'Private photo-journal analysis is awaiting its privacy-reviewed local service configuration. Upload and guided capture remain available.'}</p>}
+      {analysis && <div className="client-analysis-result" aria-live="polite"><strong>Verified private cosmetic note</strong><p>{analysis.cosmetic_summary.summary}</p><div className="mini-tags">{analysis.cosmetic_summary.observation_tags.map(tag => <span key={tag}>{tag.replace(/_/g, ' ')}</span>)}</div><small>{analysis.cosmetic_summary.capture_feedback === 'ready_for_consistency' ? 'Capture feedback: ready to use as a consistent journal photo.' : 'Capture feedback: retake in more even, consistent light if you want a comparison photo.'} · Generated {new Date(analysis.output_trace.generated_at).toLocaleString()}</small></div>}
+    </section>
+    {!loading && !error && !session.loading && !session.error && scope && (destination === 'test-drive' ? driveImages.length ? <div className="client-image-grid">{driveImages.map(image => <TestDriveImageCard key={image.id} image={image} onCategory={(item,next) => void changeDriveImageCategory(item,next)} onDelete={item => void removeDriveImage(item)} onAnalyze={photoAnalysis?.enabled ? item => void analyzeDriveImage(item) : undefined} analysisDisabled={analysisBusy || !analysisConsent}/>)}</div> : <p className="empty">No test images saved in Google Drive. This list shows only the test storage destination.</p> : images.length ? <div className="client-image-grid">{images.map(image => <ImageCard key={image.id} image={image} onCategory={(id, next) => void changeCategory(id, next)} onDelete={item => void removeImage(item)} onAnalyze={photoAnalysis?.enabled ? item => void analyzeDeviceImage(item) : undefined} analysisDisabled={analysisBusy || !analysisConsent}/>)}</div> : <p className="empty">No images saved in this browser. Choose only photos you are comfortable keeping on this device.</p>)}
     <small>{destination === 'test-drive' ? driveImages.length : images.length} / {CLIENT_IMAGE_LIMIT} images · Each original file must be under {(CLIENT_IMAGE_MAX_BYTES / 1024 / 1024).toFixed(0)} MB.</small>
   </section>;
 }

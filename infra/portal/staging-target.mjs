@@ -1,9 +1,10 @@
 const SHA = /^[0-9a-f]{40}$/i;
 const DIGEST = /^[a-z0-9./_-]+@sha256:[a-f0-9]{64}$/;
+const CHECKSUM = /^sha256:[a-f0-9]{64}$/i;
 const PLACEHOLDER = /REPLACE_WITH|YOUR-|example\.com|localhost|127\.0\.0\.1/i;
 const SECRET_VALUE = /(?:sk_(?:live|test)_[A-Za-z0-9]+|whsec_[A-Za-z0-9]+|postgres(?:ql)?:\/\/[^\s:@]+:[^\s@]+@|(?:OPENAI|SUPABASE|STRIPE)_[A-Z_]*(?:KEY|SECRET)[A-Z_]*\s*=\s*\S+)/i;
 
-export const STAGING_TARGET_VERSION = "1.0";
+export const STAGING_TARGET_VERSION = "1.1";
 
 function text(value) {
   return String(value || "").trim();
@@ -23,7 +24,7 @@ function validOrigin(value) {
   }
 }
 
-export function createStagingTargetTemplate({ candidateCommit, images = {} } = {}) {
+export function createStagingTargetTemplate({ candidateCommit, images = {}, secretInjectionContractChecksums = {} } = {}) {
   return {
     version: STAGING_TARGET_VERSION,
     environment: "staging",
@@ -32,6 +33,10 @@ export function createStagingTargetTemplate({ candidateCommit, images = {} } = {
     deployment_reference: "work/staging/REPLACE_WITH_DEPLOYMENT_REPORT.md",
     isolation_reference: "work/staging/REPLACE_WITH_ISOLATION_REPORT.md",
     secret_injection_reference: "work/staging/REPLACE_WITH_SECRET_INJECTION_REPORT.md",
+    secret_injection_contract_checksums: {
+      staging: secretInjectionContractChecksums.staging || "sha256:REPLACE_WITH_64_HEX_CHECKSUM",
+      production: secretInjectionContractChecksums.production || "sha256:REPLACE_WITH_64_HEX_CHECKSUM"
+    },
     images: {
       node: images.node || "node@sha256:REPLACE_WITH_64_HEX_DIGEST",
       api: images.api || "ghcr.io/mgt/api@sha256:REPLACE_WITH_64_HEX_DIGEST",
@@ -51,6 +56,11 @@ export function validateStagingTarget(target, { candidateCommit, images = {} } =
   if (candidateCommit && SHA.test(text(candidateCommit)) && text(target.candidate_commit) !== text(candidateCommit)) errors.push("candidate_commit must match the ship candidate");
   if (!validOrigin(target.origin)) errors.push("origin must be a non-placeholder HTTPS origin");
   for (const field of ["deployment_reference", "isolation_reference", "secret_injection_reference"]) if (!validReference(target[field])) errors.push(`${field} must be a non-placeholder evidence reference`);
+  const contractChecksums = target.secret_injection_contract_checksums;
+  if (!contractChecksums || typeof contractChecksums !== "object" || Array.isArray(contractChecksums)
+    || Object.keys(contractChecksums).length !== 2 || !CHECKSUM.test(text(contractChecksums.staging)) || !CHECKSUM.test(text(contractChecksums.production))) {
+    errors.push("secret_injection_contract_checksums must contain staging and production sha256 checksums");
+  }
   for (const key of ["node", "api", "web", "ollama", "caddy"]) {
     if (!DIGEST.test(text(target.images?.[key]))) errors.push(`images.${key} must be an immutable @sha256 digest`);
     if (DIGEST.test(text(images[key])) && text(target.images?.[key]) !== text(images[key])) errors.push(`images.${key} must match the ship packet image`);

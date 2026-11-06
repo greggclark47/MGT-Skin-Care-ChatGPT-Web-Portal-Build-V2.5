@@ -1,11 +1,11 @@
-import type { ModelConfig, ProviderName, ProviderResponse } from '../types';
+import type { GatewayImageInput, ModelConfig, ProviderName, ProviderResponse } from '../types';
 
 // One adapter interface shared by local and hosted implementations (Section 0.2 row 1: keep Phase 1's adapter
 // abstraction — it was the only one of the three routers that had it). Adding a provider is
 // a new file here plus a config row; it is never a change to the router or to any caller.
 export interface ProviderAdapter {
   readonly name: ProviderName;
-  complete(config: ModelConfig, systemPrompt: string, userPrompt: string, signal: AbortSignal): Promise<ProviderResponse>;
+  complete(config: ModelConfig, systemPrompt: string, userPrompt: string, signal: AbortSignal, imageInputs?: readonly GatewayImageInput[]): Promise<ProviderResponse>;
 }
 
 // Per-million-token pricing, in CENTS, used for cost telemetry and budget enforcement.
@@ -32,6 +32,9 @@ const OPENAI_PRICING = 'https://developers.openai.com/api/docs/models';
 
 export const PRICING_PER_MTOK: Record<string, ModelPrice> = {
   'gpt-6-astra': { input_cents: 1000, output_cents: 5000, source: OPENAI_PRICING, verified_on: '2026-09-12' },
+  // Qualification candidates only; the active task registry is unchanged.
+  'gpt-6.1-sol': { input_cents: 200, output_cents: 1000, source: 'https://developers.openai.com/api/docs/pricing', verified_on: '2026-10-25' },
+  'gpt-6-luna': { input_cents: 10, output_cents: 50, source: 'https://developers.openai.com/api/docs/pricing', verified_on: '2026-10-25' },
   'gpt-5.6-sol': { input_cents: 400, output_cents: 2000, source: OPENAI_PRICING, verified_on: '2026-09-12' },
   'gpt-5.6-terra': { input_cents: 200, output_cents: 1200, source: OPENAI_PRICING, verified_on: '2026-09-12' },
   'gpt-5.6-luna': { input_cents: 20, output_cents: 120, source: OPENAI_PRICING, verified_on: '2026-09-12' },

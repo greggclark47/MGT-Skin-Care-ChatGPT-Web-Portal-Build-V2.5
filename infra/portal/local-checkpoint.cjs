@@ -38,12 +38,16 @@ for(const [name,commands] of checks){
  results.push({name,status:status===0&&!error?'PASS':'FAIL',exit_code:status,error,log:safe+'.log'});
 }
 
-const envFile=path.join(root,'infra','portal','.env');
-let preflight={status:'BLOCKED',reason:'infra/portal/.env is not present; production configuration was not supplied.'};
-if(fs.existsSync(envFile)){
- const run=spawnSync(process.execPath,['--env-file-if-exists=infra/portal/.env','infra/portal/preflight.mjs'],{cwd:root,encoding:'utf8',timeout:60000,windowsHide:true});
+const validationEnvironmentFile=String(process.env.MGT_DEPLOYMENT_VALIDATION_ENV_FILE||'').trim();
+let preflight={status:'BLOCKED',reason:'No aggregate deployment-validation context was supplied by the approved secret-manager workflow.'};
+let validationEnvironmentAvailable=false;
+try{validationEnvironmentAvailable=Boolean(validationEnvironmentFile)&&fs.statSync(validationEnvironmentFile).isFile();}catch{}
+if(validationEnvironmentAvailable){
+ const run=spawnSync(process.execPath,[`--env-file=${path.resolve(validationEnvironmentFile)}`,'infra/portal/preflight.mjs'],{cwd:root,encoding:'utf8',timeout:60000,windowsHide:true});
  const output=(run.stdout||'')+(run.stderr||'');fs.writeFileSync(path.join(outputDir,'production-preflight.log'),output);
  preflight={status:run.status===0&&!run.error?'PASS':'FAIL',exit_code:run.status,error:run.error?.message,log:'production-preflight.log'};
+}else if(validationEnvironmentFile){
+ preflight={status:'BLOCKED',reason:'The approved aggregate deployment-validation context was unavailable.'};
 }
 
 const git=(args)=>spawnSync('git',args,{cwd:root,encoding:'utf8',windowsHide:true}).stdout.trim();

@@ -2,11 +2,15 @@ import type {AccountProfile,AccountServiceId,AccountServiceInterest,AccountServi
 import type {Records} from './store';
 import {hash} from './security';
 import {customerOutputContext} from './account-profile';
+import {publicProfile} from './profiles';
+import {publicStyleProfile} from './style';
+import {publicExportImage} from './client-image-drive';
 
 type OverviewOptions={
  billingConfigured:boolean;
  testDriveEnabled:boolean;
  aiDisclosureVersion:string;
+ accountId:string;
  generatedAt?:string;
 };
 
@@ -16,28 +20,36 @@ function status(id:AccountServiceStatus['id'],label:string,state:AccountServiceS
 
 const INTEREST_SERVICES:Record<AccountServiceInterest,AccountServiceId>={skin_match:'skin_routine',routine_care:'skin_routine',anti_aging:'anti_aging',beauty_style:'beauty_style',retailer_discovery:'retail_discovery',premium_guidance:'billing'};
 const STEP_LABELS:Record<AccountServiceId,string>={account_profile:'Complete account profile',skin_routine:'Complete Skin Match',anti_aging:'Set up anti-aging progress',beauty_style:'Start beauty & style',retail_discovery:'Save a retailer',images:'Add an optional photo',billing:'Review Premium membership',support:'Review support requests',analysis_permission:'Review analysis permission',privacy_controls:'Review privacy status'};
+const isDate=(value:unknown)=>typeof value==='string'&&Number.isFinite(Date.parse(value));
+const validProgress=(item:any)=>!!item&&typeof item==='object'&&typeof item.entry_id==='string'&&['completed','skipped','irritation','no_change'].includes(item.status)&&isDate(item.completed_at);
+const validProgressReminder=(item:any)=>!!item&&typeof item==='object'&&typeof item.id==='string'&&typeof item.entry_id==='string'&&['daily','weekly'].includes(item.cadence)&&isDate(item.next_at)&&typeof item.paused==='boolean';
+const validRegimenCycle=(item:any)=>!!item&&typeof item==='object'&&typeof item.id==='string'&&['steady_routine','introduce_one_change','review_progress'].includes(item.focus)&&isDate(item.starts_at);
 
 export async function buildAccountServiceOverview(records:Records,actor:string,options:OverviewOptions):Promise<AccountServiceOverview>{
  const accountProfile=await records.get<AccountProfile>('account_profiles',actor);
  const skinProfile=await records.get<any>('profiles',actor);
+ const publicSkinProfile=publicProfile(skinProfile);
  const styleProfile=await records.get<any>('style_profiles',actor);
+ const publicStyle=publicStyleProfile(styleProfile);
  const routineReminders=await records.get<any[]>('reminders',actor)||[];
  const savedRetailers=await records.get<string[]>('saved_retailers',actor)||[];
- const progress=(await records.list<any>('anti_aging_progress')).filter(item=>item.actor===actor);
- const progressReminders=(await records.list<any>('anti_aging_reminders')).filter(item=>item.actor===actor);
- const images=(await records.list<any>('client_image_drive')).filter(item=>item.actor===hash(actor)&&['ready','deleting'].includes(item.status));
+ const progress=(await records.list<any>('anti_aging_progress')).filter(item=>item.actor===actor&&validProgress(item));
+ const progressReminders=(await records.list<any>('anti_aging_reminders')).filter(item=>item.actor===actor&&validProgressReminder(item));
+ const regimenCycles=(await records.list<any>('regimen_cycles')).filter(item=>item.actor===options.accountId&&validRegimenCycle(item));
+ const images=(await records.list<any>('client_image_drive')).filter(item=>item.actor===hash(actor)&&publicExportImage(item));
  const openSupport=(await records.list<any>('tickets')).filter(item=>item.actor===actor&&['open','in_review','waiting_customer'].includes(item.status));
  const subscription=await records.get<any>('subscriptions',actor+':consumer');
  const disclosure=await records.get<any>('consents',actor+':ai_disclosure');
  const deletion=await records.get<any>('deletion_requests',actor);
- const routineSteps=Array.isArray(skinProfile?.routine?.steps)?skinProfile.routine.steps.length:0;
- const antiAgingCount=progress.length+progressReminders.length;
+ const routine=publicSkinProfile&&publicSkinProfile.routine&&typeof publicSkinProfile.routine==='object'&&!Array.isArray(publicSkinProfile.routine)?publicSkinProfile.routine as {steps?:unknown[]}:null;
+ const routineSteps=routine&&Array.isArray(routine.steps)?routine.steps.length:0;
+ const antiAgingCount=progress.length+progressReminders.length+regimenCycles.length;
  const billingState:AccountServiceState=subscription&&['past_due','unpaid','incomplete'].includes(subscription.status)?'attention':subscription?.active===true||subscription?.status==='trialing'?'ready':options.billingConfigured?'setup':'unavailable';
  const baseServices:Omit<AccountServiceStatus,'selected'>[]=[
   status('account_profile','Account profile',accountProfile?'ready':'setup',accountProfile?'Identity and service preferences are saved.':'Add identity, regional, service and accessibility preferences.','/account#profile-settings'),
   status('skin_routine','Skin profile & routine',skinProfile?'ready':'setup',skinProfile?`${routineSteps} routine step${routineSteps===1?'':'s'} connected.`:'Complete Skin Match to connect a routine.','/my-skin',routineSteps),
-  status('anti_aging','Anti-aging progress',antiAgingCount?'ready':'setup',antiAgingCount?`${progress.length} progress entr${progress.length===1?'y':'ies'} and ${progressReminders.length} reminder${progressReminders.length===1?'':'s'}.`:'Optional progress and reminders are not set up.','/anti-aging',antiAgingCount),
-  status('beauty_style','Beauty & style',styleProfile?'ready':'setup',styleProfile?'A style profile is saved.':'Start the optional beauty and style profile.','/studio'),
+  status('anti_aging','Anti-aging progress',antiAgingCount?'ready':'setup',antiAgingCount?`${progress.length} progress entr${progress.length===1?'y':'ies'}, ${progressReminders.length} reminder${progressReminders.length===1?'':'s'}, and ${regimenCycles.length} regimen cycle${regimenCycles.length===1?'':'s'}.`:'Optional progress, reminders, and regimen cycles are not set up.','/anti-aging',antiAgingCount),
+  status('beauty_style','Beauty & style',publicStyle?'ready':'setup',publicStyle?'A style profile is saved.':'Start the optional beauty and style profile.','/studio'),
   status('retail_discovery','Retail discovery',savedRetailers.length?'ready':'setup',savedRetailers.length?`${savedRetailers.length} retailer${savedRetailers.length===1?'':'s'} saved.`:'Save retailers for quicker external purchase handoffs.','/shop',savedRetailers.length),
   status('images','Image library',!options.testDriveEnabled?'unavailable':images.length?'ready':'setup',!options.testDriveEnabled?'Test Drive storage is not enabled in this environment.':images.length?`${images.length} optional photo${images.length===1?'':'s'} saved in test storage.`:'No photos are saved in test storage.','/account#image-library',options.testDriveEnabled?images.length:undefined),
   status('billing','Payment & membership',billingState,billingState==='attention'?'Payment attention is required.':billingState==='ready'?'Premium membership status is confirmed.':billingState==='unavailable'?'Production billing setup is not enabled.':'Premium setup is available; no subscription is linked.','/account#payment-settings'),

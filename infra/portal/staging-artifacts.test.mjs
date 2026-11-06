@@ -7,6 +7,8 @@ import { buildStagingArtifacts, validateStagingArtifacts, verifyStagingArtifacts
 import { STAGING_EVIDENCE_GATES } from "./staging-evidence.mjs";
 import { reviewStagingEvidence, validateStagingEvidenceReview } from "./staging-evidence-review.mjs";
 import { buildStagingPromotionHandoff, validateStagingPromotionHandoff } from "./staging-promotion-handoff.mjs";
+import { buildSecretInjectionAdmission, REQUIRED_CONFIG_VARIABLES } from "./secret-injection-admission.mjs";
+import { SECRET_INJECTION_CONSUMERS, SECRET_INJECTION_VARIABLES, createSecretInjectionContractTemplate } from "./secret-injection-contract.mjs";
 
 const candidateCommit = "a".repeat(40);
 const images = {
@@ -23,24 +25,63 @@ function writeArtifact(root, reference, content) {
   fs.writeFileSync(destination, content);
 }
 
+function secretContract(environment) {
+  const namespace = `secret://approved/mgt/${environment}`;
+  const secretReferences = Object.fromEntries(SECRET_INJECTION_CONSUMERS.map((consumer) => [consumer, Object.fromEntries(SECRET_INJECTION_VARIABLES[consumer].map((name) => [name, null]))]));
+  for (const [consumer, names] of Object.entries({ edge: ["MGT_EDGE_TOKEN"], api: ["DATABASE_URL", "MGT_EDGE_TOKEN", "SUPABASE_ANON_KEY"], worker: ["DATABASE_URL", "SUPABASE_SERVICE_ROLE_KEY", "OPERATIONS_ALERT_WEBHOOK_TOKEN"] })) for (const name of names) secretReferences[consumer][name] = `${namespace}/${name.toLowerCase().replaceAll("_", "-")}`;
+  secretReferences.api.MGT_EDGE_TOKEN = secretReferences.edge.MGT_EDGE_TOKEN;
+  secretReferences.worker.DATABASE_URL = secretReferences.api.DATABASE_URL;
+  return createSecretInjectionContractTemplate({
+    environment,
+    candidateCommit,
+    providerReference: "secret-manager://approved/mgt",
+    namespaceReference: namespace,
+    workloadIdentities: { edge: `workload://mgt/${environment}/edge`, api: `workload://mgt/${environment}/api`, worker: `workload://mgt/${environment}/worker` },
+    secretReferences
+  });
+}
+
+function secretAdmissionFixture() {
+  const config = (consumer) => {
+    if (consumer === "edge") return { PORTAL_DOMAIN: "staging.mgtskincare.test" };
+    const values = Object.fromEntries(REQUIRED_CONFIG_VARIABLES[consumer].map((name) => [name, "configured"]));
+    values.NODE_ENV = "production"; values.DEMO_MODE = "false"; values.PORTAL_AUTO_MIGRATE = "false";
+    if (consumer === "api") { values.OLLAMA_ENABLED = "false"; values.OPENCLAW_ENABLED = "false"; values.HOSTED_OPENAI_ENABLED = "false"; values.BACKUP_ATTESTATION_ENABLED = "false"; values.SUBSCRIPTIONS_ENABLED = "false"; values.MGT_OMNI_RETAIL_ENABLED = "false"; values.MGT_RETAIL_PARTNER_AUTHORIZATION_REVIEWED = "false"; values.MGT_SPONSORED_CONTENT_ENABLED = "false"; values.MGT_SPONSORED_CONTENT_REVIEWED = "false"; }
+    if (consumer === "worker") values.NOTIFICATION_DELIVERY = "in_app";
+    return values;
+  };
+  const api = config("api"), worker = config("worker");
+  return buildSecretInjectionAdmission({
+    environment: "staging", composeProjectName: "mgt-skin-care-staging", candidateCommit,
+    stagingContract: secretContract("staging"), productionContract: secretContract("production"),
+    inventories: {
+      edge: { config_values: config("edge"), config_keys: ["PORTAL_DOMAIN"], secret_keys: ["MGT_EDGE_TOKEN"] },
+      api: { config_values: api, config_keys: Object.keys(api), secret_keys: ["DATABASE_URL", "MGT_EDGE_TOKEN", "SUPABASE_ANON_KEY"] },
+      worker: { config_values: worker, config_keys: Object.keys(worker), secret_keys: ["DATABASE_URL", "SUPABASE_SERVICE_ROLE_KEY", "OPERATIONS_ALERT_WEBHOOK_TOKEN"] }
+    },
+    privateFilesDistinct: true, fileSecurity: "verified", generatedAt: "2026-09-30T00:00:00.000Z"
+  });
+}
+
 function stagingFixture(root) {
   const references = {
     deployment: "work/staging/2026-09-30/deployment.md",
     isolation: "work/staging/2026-09-30/isolation.md",
-    secretInjection: "work/staging/2026-09-30/secret-injection.md",
+    secretInjection: "work/staging/2026-09-30/secret-injection-admission.json",
     preflight: "work/staging/2026-09-30/preflight.md",
     probe: "work/staging/2026-09-30/probe.json",
     rollback: "work/rollback/2026-09-30/staging.md"
   };
-  for (const [id, reference] of Object.entries(references)) writeArtifact(root, reference, id === "probe" ? '{"status":"ok"}\n' : `${id} evidence\n`);
+  for (const [id, reference] of Object.entries(references)) writeArtifact(root, reference, id === "probe" ? '{"status":"ok"}\n' : id === "secretInjection" ? `${JSON.stringify(secretAdmissionFixture(), null, 2)}\n` : `${id} evidence\n`);
   const target = {
-    version: "1.0",
+    version: "1.1",
     environment: "staging",
     candidate_commit: candidateCommit,
     origin: "https://staging.mgtskincare.test",
     deployment_reference: references.deployment,
     isolation_reference: references.isolation,
     secret_injection_reference: references.secretInjection,
+    secret_injection_contract_checksums: secretAdmissionFixture().contract_checksums,
     images
   };
   const records = STAGING_EVIDENCE_GATES.map((gate) => ({
@@ -114,6 +155,17 @@ test("fails closed when a staged artifact changes or contains credential-like te
 
     writeArtifact(root, references.secretInjection, "STRIPE_SECRET=not-for-evidence\n");
     assert.throws(() => buildStagingArtifacts({ root, target: ledger.target, attestation: ledger.attestation, records: ledger.records }), /credential-like/);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("binds staging secret-injection evidence to the contract pair declared by the staged target", () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "mgt-staging-artifacts-"));
+  try {
+    const { ledger } = stagingFixture(root);
+    ledger.target.secret_injection_contract_checksums.production = `sha256:${"9".repeat(64)}`;
+    assert.throws(() => buildStagingArtifacts({ root, target: ledger.target, attestation: ledger.attestation, records: ledger.records }), /candidate-bound admission report/);
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }

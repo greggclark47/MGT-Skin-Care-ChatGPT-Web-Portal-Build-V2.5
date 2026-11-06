@@ -1,11 +1,15 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
-import { validateEnvironment, validProductionDatabaseUrl, validProductionOrigin } from "./preflight.mjs";
+import { validateEnvironment, validatePreflightEnvironment, validateRuntimeEnvironment, validProductionDatabaseUrl, validProductionOrigin } from "./preflight.mjs";
 
 const production = {
   NODE_ENV: "production",
   DEMO_MODE: "false",
   PUBLIC_ORIGIN: "https://portal.mgtskincare.test",
+  PUBLIC_PRIVACY_NOTICE_URL: "https://policies.mgtskincare.test/privacy",
+  PUBLIC_TERMS_OF_USE_URL: "https://policies.mgtskincare.test/terms",
+  PUBLIC_AI_DISCLOSURE_URL: "https://policies.mgtskincare.test/ai-disclosure",
   DATABASE_URL: "postgresql://mgt:secure@db.internal:5432/mgt?sslmode=verify-full",
   PORTAL_AUTO_MIGRATE: "false",
   PORTAL_DOMAIN: "portal.mgtskincare.test",
@@ -17,6 +21,7 @@ const production = {
   OLLAMA_ENABLED: "true",
   OLLAMA_BASE_URL: "http://ollama:11434",
   OPENCLAW_ENABLED: "false",
+  HOSTED_OPENAI_ENABLED: "false",
   HOST: "0.0.0.0",
   PORT: "3100",
   WORKER_HEALTH_FILE: "/tmp/mgt-worker-health.json",
@@ -70,6 +75,10 @@ const production = {
   NOTIFICATION_MAX_ATTEMPTS: "3",
   SUBSCRIPTIONS_ENABLED: "false",
   SUBSCRIPTION_TERMS_APPROVED: "false",
+  MGT_OMNI_RETAIL_ENABLED: "false",
+  MGT_RETAIL_PARTNER_AUTHORIZATION_REVIEWED: "false",
+  MGT_SPONSORED_CONTENT_ENABLED: "false",
+  MGT_SPONSORED_CONTENT_REVIEWED: "false",
   NODE_IMAGE: `node@sha256:${"c".repeat(64)}`,
   API_IMAGE: `ghcr.io/mgt-skincare/api@sha256:${"d".repeat(64)}`,
   WEB_IMAGE: `ghcr.io/mgt-skincare/web@sha256:${"e".repeat(64)}`,
@@ -77,11 +86,88 @@ const production = {
   CADDY_IMAGE: `caddy@sha256:${"b".repeat(64)}`
 };
 
+test("the secret-free environment template declares every validated production control", () => {
+  const template = readFileSync(new URL("./env.example", import.meta.url), "utf8");
+  const declared = new Set(template.split(/\r?\n/).map(line => line.match(/^([A-Z][A-Z0-9_]*)=/)?.[1]).filter(Boolean));
+  assert.deepEqual(Object.keys(production).filter(key => !declared.has(key)), []);
+  for (const key of ["NOTIFICATION_WEBHOOK_URL", "NOTIFICATION_WEBHOOK_TOKEN", "NOTIFICATION_WEBHOOK_KEY_ID", "NOTIFICATION_WEBHOOK_TIMEOUT_MS", "STRIPE_PREMIUM_PRODUCT_ID", "STRIPE_PREMIUM_MONTHLY_PRICE_ID", "STRIPE_PREMIUM_ANNUAL_PRICE_ID", "MGT_SPONSORED_CONTENT_APPROVAL_REFERENCE", "MGT_SPONSORED_CONTENT_APPROVED_AT"]) assert.equal(declared.has(key), true, key);
+});
+
 test("accepts the proposed external database configuration without proving live readiness", () => {
   const result = validateEnvironment(production);
   assert.equal(result.ok, true);
   assert.deepEqual(result.errors, []);
   assert.ok(result.warnings.some((warning) => warning.includes("OpenAI")));
+});
+
+test("keeps full deployment validation separate from API and worker runtime preflight", () => {
+  const api = { ...production, PROCESS_ROLE: "api" };
+  delete api.SUPABASE_SERVICE_ROLE_KEY;
+  delete api.OPERATIONS_ALERT_WEBHOOK_TOKEN;
+  assert.equal(validateRuntimeEnvironment(api, "api").ok, true);
+  assert.equal(validatePreflightEnvironment(api).ok, true);
+  assert.equal(validateEnvironment(api).ok, false, "deployment validation still requires the complete release bundle");
+
+  const worker = { ...production, PROCESS_ROLE: "worker" };
+  delete worker.MGT_EDGE_TOKEN;
+  delete worker.SUPABASE_ANON_KEY;
+  assert.equal(validateRuntimeEnvironment(worker, "worker").ok, true);
+  assert.equal(validatePreflightEnvironment(worker).ok, true);
+  assert.equal(validateEnvironment(worker).ok, false, "worker startup does not require API-only credentials");
+
+  assert.equal(validateRuntimeEnvironment({ ...api, MGT_EDGE_TOKEN: "" }, "api").ok, false);
+  assert.equal(validateRuntimeEnvironment({ ...worker, OPERATIONS_ALERT_WEBHOOK_TOKEN: "" }, "worker").ok, false);
+  assert.equal(validatePreflightEnvironment({ ...production, PROCESS_ROLE: "deployment" }).ok, true);
+  assert.equal(validatePreflightEnvironment({ ...production, PROCESS_ROLE: "unexpected" }).ok, false);
+});
+
+test("keeps conditional API and worker secrets on their consuming runtime only", () => {
+  const api = {
+    ...production,
+    PROCESS_ROLE: "api",
+    NOTIFICATION_DELIVERY: "webhook",
+    NOTIFICATION_WEBHOOK_URL: "https://notifications.mgtskincare.test/events",
+    NOTIFICATION_WEBHOOK_KEY_ID: "primary",
+    NOTIFICATION_WEBHOOK_TIMEOUT_MS: "10000",
+    NOTIFICATION_WEBHOOK_TOKEN: undefined
+  };
+  delete api.SUPABASE_SERVICE_ROLE_KEY;
+  delete api.OPERATIONS_ALERT_WEBHOOK_TOKEN;
+  assert.equal(validateRuntimeEnvironment(api, "api").ok, true, "API does not deliver customer notifications");
+  assert.equal(validateEnvironment(api).ok, false, "aggregate deployment validation still requires the worker credential");
+
+  const worker = {
+    ...production,
+    PROCESS_ROLE: "worker",
+    SUBSCRIPTIONS_ENABLED: "true",
+    SUBSCRIPTION_TERMS_APPROVED: "true",
+    STRIPE_LIVE_MODE: "false",
+    STRIPE_SECRET_KEY: undefined,
+    STRIPE_SUBSCRIPTION_WEBHOOK_SECRET: undefined,
+    STRIPE_PREMIUM_PRODUCT_ID: undefined,
+    STRIPE_PREMIUM_MONTHLY_PRICE_ID: undefined,
+    STRIPE_PREMIUM_ANNUAL_PRICE_ID: undefined
+  };
+  delete worker.MGT_EDGE_TOKEN;
+  delete worker.SUPABASE_ANON_KEY;
+  assert.equal(validateRuntimeEnvironment(worker, "worker").ok, true, "worker does not handle subscription API traffic");
+  assert.equal(validateEnvironment(worker).ok, false, "aggregate deployment validation still requires API billing inputs");
+
+  const apiWithBackupAttestation = {
+    ...production,
+    PROCESS_ROLE: "api",
+    BACKUP_ATTESTATION_ENABLED: "true",
+    BACKUP_ATTESTATION_SECRET: undefined,
+    BACKUP_ATTESTATION_KEY_ID: "primary",
+    BACKUP_ATTESTATION_MAX_AGE_SECONDS: "300"
+  };
+  delete apiWithBackupAttestation.SUPABASE_SERVICE_ROLE_KEY;
+  delete apiWithBackupAttestation.OPERATIONS_ALERT_WEBHOOK_TOKEN;
+  assert.equal(validateRuntimeEnvironment(apiWithBackupAttestation, "api").ok, false, "API verifies backup attestation receipts");
+  const workerWithBackupAttestation = { ...worker, BACKUP_ATTESTATION_ENABLED: "true", BACKUP_ATTESTATION_SECRET: undefined, BACKUP_ATTESTATION_KEY_ID: "primary", BACKUP_ATTESTATION_MAX_AGE_SECONDS: "300" };
+  assert.equal(validateRuntimeEnvironment(workerWithBackupAttestation, "worker").ok, true, "worker does not verify inbound backup attestations");
+  assert.equal(validateRuntimeEnvironment({ ...api, SUPABASE_SERVICE_ROLE_KEY: "worker-only-secret" }, "api").ok, false, "API rejects a worker-only secret");
+  assert.equal(validateRuntimeEnvironment({ ...worker, MGT_EDGE_TOKEN: "api-only-secret" }, "worker").ok, false, "worker rejects an API-only secret");
 });
 
 test("keeps automated backup attestation disabled until its signed integration is configured", () => {
@@ -280,6 +366,33 @@ test("accepts a complete Stripe sandbox configuration for staging", () => {
   assert.equal(result.ok, true);
 });
 
+test("keeps Free-plan sponsored content disabled until its merchant and review controls are complete", () => {
+  assert.equal(validateEnvironment(production).ok, true);
+  const enabled = {
+    ...production,
+    MGT_OMNI_RETAIL_ENABLED: "true",
+    MGT_RETAIL_PARTNER_AUTHORIZATION_REVIEWED: "true",
+    MGT_SPONSORED_CONTENT_ENABLED: "true",
+    MGT_SPONSORED_CONTENT_REVIEWED: "true",
+    MGT_SPONSORED_CONTENT_APPROVAL_REFERENCE: "commercial-review-20261103",
+    MGT_SPONSORED_CONTENT_APPROVED_AT: "2026-11-03T00:00:00.000Z"
+  };
+  assert.equal(validateEnvironment(enabled).ok, true);
+  for (const changed of [
+    { MGT_SPONSORED_CONTENT_ENABLED: undefined },
+    { MGT_SPONSORED_CONTENT_REVIEWED: "TRUE" },
+    { MGT_SPONSORED_CONTENT_ENABLED: "true", MGT_SPONSORED_CONTENT_REVIEWED: "false" },
+    { MGT_SPONSORED_CONTENT_ENABLED: "true", MGT_OMNI_RETAIL_ENABLED: "false" },
+    { MGT_SPONSORED_CONTENT_ENABLED: "true", MGT_SPONSORED_CONTENT_APPROVAL_REFERENCE: "bad ref" },
+    { MGT_SPONSORED_CONTENT_ENABLED: "true", MGT_SPONSORED_CONTENT_APPROVED_AT: "2999-01-01T00:00:00.000Z" },
+    { MGT_SPONSORED_CONTENT_ENABLED: "false", MGT_SPONSORED_CONTENT_REVIEWED: "false", MGT_SPONSORED_CONTENT_APPROVAL_REFERENCE: "dormant-review-20261103" }
+  ]) {
+    const result = validateEnvironment({ ...enabled, ...changed });
+    assert.equal(result.ok, false, JSON.stringify(changed));
+    assert.ok(result.errors.some(error => /sponsored content|MGT_SPONSORED_CONTENT|omni-retail/i.test(error)));
+  }
+});
+
 test("rejects malformed or cross-wired production billing identifiers", () => {
   const result = validateEnvironment({
     ...production,
@@ -306,7 +419,7 @@ test("rejects secret references with whitespace or control characters", () => {
     ["OPERATIONS_ALERT_WEBHOOK_TOKEN", " configured-alert-token "],
     ["OPENAI_API_KEY", "configured\tkey"]
   ]) {
-    const result = validateEnvironment({ ...production, [key]: value });
+    const result = validateEnvironment({ ...production, [key]: value, ...(key === "OPENAI_API_KEY" ? { HOSTED_OPENAI_ENABLED: "true" } : {}) });
     assert.equal(result.ok, false, key);
     assert.ok(result.errors.some((error) => error.startsWith(key)), key);
   }
@@ -315,7 +428,7 @@ test("rejects secret references with whitespace or control characters", () => {
 test("keeps secret references distinct across integration roles", () => {
   for (const changed of [
     { OPERATIONS_ALERT_WEBHOOK_TOKEN: production.SUPABASE_SERVICE_ROLE_KEY },
-    { OPENAI_API_KEY: production.SUPABASE_ANON_KEY },
+    { HOSTED_OPENAI_ENABLED: "true", OPENAI_API_KEY: production.SUPABASE_ANON_KEY },
     { NOTIFICATION_DELIVERY: "webhook", NOTIFICATION_WEBHOOK_URL: "https://notify.mgtskincare.test/events", NOTIFICATION_WEBHOOK_TOKEN: production.OPERATIONS_ALERT_WEBHOOK_TOKEN }
   ]) {
     const result = validateEnvironment({ ...production, ...changed });
@@ -329,11 +442,12 @@ test("rejects active configuration retained by disabled features", () => {
     { NOTIFICATION_DELIVERY: "in_app", NOTIFICATION_WEBHOOK_TOKEN: "dormant-token" },
     { OLLAMA_ENABLED: "false", OLLAMA_BASE_URL: "http://ollama:11434" },
     { OPENCLAW_ENABLED: "false", OPENCLAW_API_MODE: "ollama" },
+    { HOSTED_OPENAI_ENABLED: "false", OPENAI_API_KEY: "dormant-hosted-key" },
     { SUBSCRIPTIONS_ENABLED: "false", STRIPE_SECRET_KEY: "sk_live_dormant" }
   ]) {
     const result = validateEnvironment({ ...production, ...changed });
     assert.equal(result.ok, false, JSON.stringify(changed));
-    assert.ok(result.errors.some((error) => /^(Disabled customer|Disabled Ollama|Disabled OpenClaw|Disabled subscriptions)/.test(error)));
+    assert.ok(result.errors.some((error) => /^(Disabled customer|Disabled Ollama|Disabled OpenClaw|Disabled hosted OpenAI|Disabled subscriptions)/.test(error)));
   }
 });
 
@@ -566,10 +680,26 @@ test("rejects hidden routing and whitespace on AI service URLs", () => {
 test("allows native Ollama mode without an OpenClaw key and gates proxy mode", () => {
   const native = validateEnvironment({ ...production, OPENCLAW_ENABLED: "true", OPENCLAW_BASE_URL: "http://ollama:11434", OPENCLAW_API_MODE: "ollama", OPENCLAW_API_KEY: "" });
   assert.equal(native.ok, true);
+  const nativeWithKey = validateEnvironment({ ...production, OPENCLAW_ENABLED: "true", OPENCLAW_BASE_URL: "http://ollama:11434", OPENCLAW_API_MODE: "ollama", OPENCLAW_API_KEY: "dormant-openclaw-key" });
+  assert.equal(nativeWithKey.ok, false);
+  assert.ok(nativeWithKey.errors.some((error) => error.startsWith("Native Ollama-mode OpenClaw")));
   const invalid = validateEnvironment({ ...production, OPENCLAW_ENABLED: "true", OPENCLAW_BASE_URL: "http://ollama:11434", OPENCLAW_API_MODE: "unsupported" });
   assert.equal(invalid.ok, false);
   assert.ok(invalid.errors.some((error) => error.includes("OPENCLAW_API_MODE")));
   const proxy = validateEnvironment({ ...production, OPENCLAW_ENABLED: "true", OPENCLAW_BASE_URL: "http://proxy.internal", OPENCLAW_API_MODE: "openai-completions", OPENCLAW_API_KEY: "" });
   assert.equal(proxy.ok, false);
   assert.ok(proxy.errors.some((error) => error.startsWith("OPENCLAW_API_KEY")));
+});
+
+test("requires explicit hosted OpenAI posture and its matching credential", () => {
+  const enabledWithoutKey = validateEnvironment({ ...production, HOSTED_OPENAI_ENABLED: "true", OPENAI_API_KEY: "" });
+  assert.equal(enabledWithoutKey.ok, false);
+  assert.ok(enabledWithoutKey.errors.some((error) => error.startsWith("OPENAI_API_KEY")));
+  const enabled = validateEnvironment({ ...production, HOSTED_OPENAI_ENABLED: "true", OPENAI_API_KEY: "hosted-openai-reference" });
+  assert.equal(enabled.ok, true);
+  for (const value of [undefined, "True", "1"]) {
+    const result = validateEnvironment({ ...production, HOSTED_OPENAI_ENABLED: value });
+    assert.equal(result.ok, false);
+    assert.ok(result.errors.some((error) => error.startsWith("HOSTED_OPENAI_ENABLED")));
+  }
 });

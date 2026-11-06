@@ -1,4 +1,4 @@
-import { reviewedProductionAdmissionAction } from '@mgt/shared';
+import { PRODUCTION_ADMISSION_ACTIONS, PRODUCTION_ADMISSION_CONTRACT_VERSION, reviewedProductionAdmissionAction } from '@mgt/shared';
 
 // Runtime admission is deliberately independent of the deployment CLI: direct
 // service execution must reject invalid declarations before opening a database.
@@ -44,6 +44,12 @@ export function validateProductionPortalBoundary(env:NodeJS.ProcessEnv):void{
  }catch{throw new Error('Production portal boundary is invalid.');}
 }
 
+export function validateProductionPolicyPublicationAdmission(env:NodeJS.ProcessEnv):void{
+ if(env.NODE_ENV!=='production')return;
+ const urls=[env.PUBLIC_PRIVACY_NOTICE_URL,env.PUBLIC_TERMS_OF_USE_URL,env.PUBLIC_AI_DISCLOSURE_URL];
+ if(!urls.every(productionHttpsUrl)||new Set(urls).size!==urls.length)throw new Error('Production policy publication admission is invalid.');
+}
+
 export function validateProductionEdgeToken(env:NodeJS.ProcessEnv):void{
  if(env.NODE_ENV!=='production')return;
  const value=env.MGT_EDGE_TOKEN;
@@ -84,7 +90,7 @@ function productionServiceUrl(value:unknown):boolean{
  }catch{return false;}
 }
 function configuredReference(value:unknown):value is string{return typeof value==='string'&&value.length>0&&value.length<=4096&&value===value.trim()&&!/[\u0000-\u001f\u007f]/.test(value)&&!productionPlaceholder.test(value);}
-function optionalReference(value:unknown):boolean{return value===undefined||value===''||configuredReference(value);}
+function productionApprovalReference(value:unknown):boolean{return typeof value==='string'&&value.length>=8&&value.length<=200&&/^[A-Za-z0-9][A-Za-z0-9._:/-]*$/.test(value)&&!productionPlaceholder.test(value);}
 function productionInteger(value:unknown,minimum:number,maximum:number,optional=false):boolean{
  if(optional&&(value===undefined||value===''))return true;
  return typeof value==='string'&&/^\d+$/.test(value)&&Number.isSafeInteger(Number(value))&&Number(value)>=minimum&&Number(value)<=maximum;
@@ -149,12 +155,23 @@ export function validateProductionNotificationAdmission(env:NodeJS.ProcessEnv):v
 }
 
 export function validateProductionIdentityAdmission(env:NodeJS.ProcessEnv):void{
+ validateProductionApiIdentityAdmission(env);
+ validateProductionWorkerIdentityAdmission(env);
+ const anonKey=env.SUPABASE_ANON_KEY,serviceRoleKey=env.SUPABASE_SERVICE_ROLE_KEY;
+ if(env.NODE_ENV==='production'&&typeof anonKey==='string'&&typeof serviceRoleKey==='string'&&sameText(anonKey,serviceRoleKey))throw new Error('Production identity admission is invalid.');
+}
+
+export function validateProductionApiIdentityAdmission(env:NodeJS.ProcessEnv):void{
  if(env.NODE_ENV!=='production')return;
  if(!productionHttpsOrigin(env.SUPABASE_URL))throw new Error('Production identity admission is invalid.');
  if(!configuredReference(env.SUPABASE_ANON_KEY))throw new Error('Production identity admission is invalid.');
- if(!configuredReference(env.SUPABASE_SERVICE_ROLE_KEY))throw new Error('Production identity admission is invalid.');
- if(sameText(env.SUPABASE_ANON_KEY,env.SUPABASE_SERVICE_ROLE_KEY))throw new Error('Production identity admission is invalid.');
  if(env.SUPABASE_GOOGLE_OAUTH_ENABLED!=='true'&&env.SUPABASE_GOOGLE_OAUTH_ENABLED!=='false')throw new Error('Production identity admission is invalid.');
+}
+
+export function validateProductionWorkerIdentityAdmission(env:NodeJS.ProcessEnv):void{
+ if(env.NODE_ENV!=='production')return;
+ if(!productionHttpsOrigin(env.SUPABASE_URL))throw new Error('Production identity admission is invalid.');
+ if(!configuredReference(env.SUPABASE_SERVICE_ROLE_KEY))throw new Error('Production identity admission is invalid.');
 }
 
 export function validateProductionBackupAdmission(env:NodeJS.ProcessEnv):void{
@@ -163,6 +180,11 @@ export function validateProductionBackupAdmission(env:NodeJS.ProcessEnv):void{
 }
 
 export function validateProductionBackupAttestationAdmission(env:NodeJS.ProcessEnv):void{
+ validateProductionApiBackupAttestationAdmission(env);
+ validateProductionWorkerBackupAttestationAdmission(env);
+}
+
+export function validateProductionApiBackupAttestationAdmission(env:NodeJS.ProcessEnv):void{
  if(env.NODE_ENV!=='production')return;
  if(env.BACKUP_ATTESTATION_ENABLED!=='true'&&env.BACKUP_ATTESTATION_ENABLED!=='false')throw new Error('Production backup attestation admission is invalid.');
  if(env.BACKUP_ATTESTATION_ENABLED==='true'){
@@ -170,14 +192,27 @@ export function validateProductionBackupAttestationAdmission(env:NodeJS.ProcessE
   if(!productionInteger(env.BACKUP_ATTESTATION_MAX_AGE_SECONDS,1,604800))throw new Error('Production backup attestation admission is invalid.');
  }
  if(env.BACKUP_ATTESTATION_ENABLED==='false'&&['BACKUP_ATTESTATION_SECRET','BACKUP_ATTESTATION_KEY_ID','BACKUP_ATTESTATION_MAX_AGE_SECONDS'].some(key=>env[key]!==undefined&&env[key]!==''))throw new Error('Production backup attestation admission is invalid.');
+}
+
+export function validateProductionWorkerBackupAttestationAdmission(env:NodeJS.ProcessEnv):void{
+ if(env.NODE_ENV!=='production')return;
  if(!productionInteger(env.OPERATIONS_BACKUP_ATTESTATION_RETENTION_DAYS,1,3650))throw new Error('Production backup attestation admission is invalid.');
 }
 
 export function validateProductionAntiAgingAdmission(env:NodeJS.ProcessEnv):void{
+ validateProductionApiAntiAgingAdmission(env);
+ validateProductionWorkerAntiAgingAdmission(env);
+}
+
+export function validateProductionApiAntiAgingAdmission(env:NodeJS.ProcessEnv):void{
  if(env.NODE_ENV!=='production')return;
  for(const key of ['ANTI_AGING_LIVE_AI','ANTI_AGING_CHECKOUT_ENABLED','ANTI_AGING_BOOKING_ENABLED','ANTI_AGING_IMAGE_ANALYSIS_ENABLED','ANTI_AGING_ACCESSIBILITY_VERIFIED','ANTI_AGING_RESTORE_VERIFIED','ANTI_AGING_PRIVACY_REVIEWED']){
   if(env[key]!=='true'&&env[key]!=='false')throw new Error('Production anti-aging admission is invalid.');
  }
+}
+
+export function validateProductionWorkerAntiAgingAdmission(env:NodeJS.ProcessEnv):void{
+ if(env.NODE_ENV!=='production')return;
  if(!productionInteger(env.OPERATIONS_ANTI_AGING_RETENTION_DAYS,30,3650))throw new Error('Production anti-aging admission is invalid.');
 }
 
@@ -198,6 +233,18 @@ export function validateProductionSubscriptionAdmission(env:NodeJS.ProcessEnv):v
  if(typeof env.STRIPE_PREMIUM_ANNUAL_PRICE_ID!=='string'||!/^price_[A-Za-z0-9_]+$/.test(env.STRIPE_PREMIUM_ANNUAL_PRICE_ID)||sameText(env.STRIPE_PREMIUM_MONTHLY_PRICE_ID,env.STRIPE_PREMIUM_ANNUAL_PRICE_ID))throw new Error('Production subscription admission is invalid.');
 }
 
+export function validateProductionSponsoredContentAdmission(env:NodeJS.ProcessEnv):void{
+ if(env.NODE_ENV!=='production')return;
+ if(env.MGT_SPONSORED_CONTENT_ENABLED!=='true'&&env.MGT_SPONSORED_CONTENT_ENABLED!=='false')throw new Error('Production sponsored-content admission is invalid.');
+ if(env.MGT_SPONSORED_CONTENT_REVIEWED!=='true'&&env.MGT_SPONSORED_CONTENT_REVIEWED!=='false')throw new Error('Production sponsored-content admission is invalid.');
+ const approvalFields=['MGT_SPONSORED_CONTENT_APPROVAL_REFERENCE','MGT_SPONSORED_CONTENT_APPROVED_AT'];
+ if(env.MGT_SPONSORED_CONTENT_ENABLED==='false'){
+  if(env.MGT_SPONSORED_CONTENT_REVIEWED!=='false'||approvalFields.some(key=>env[key]!==undefined&&env[key]!==''))throw new Error('Production sponsored-content admission is invalid.');
+  return;
+ }
+ if(env.MGT_SPONSORED_CONTENT_REVIEWED!=='true'||env.MGT_OMNI_RETAIL_ENABLED!=='true'||env.MGT_RETAIL_PARTNER_AUTHORIZATION_REVIEWED!=='true'||!productionApprovalReference(env.MGT_SPONSORED_CONTENT_APPROVAL_REFERENCE)||!productionPastIso(env.MGT_SPONSORED_CONTENT_APPROVED_AT))throw new Error('Production sponsored-content admission is invalid.');
+}
+
 export function validateProductionAiAdmission(env:NodeJS.ProcessEnv):void{
  if(env.NODE_ENV!=='production')return;
  if(env.OLLAMA_ENABLED!=='true'&&env.OLLAMA_ENABLED!=='false')throw new Error('Production AI admission is invalid.');
@@ -206,13 +253,25 @@ export function validateProductionAiAdmission(env:NodeJS.ProcessEnv):void{
  if(env.OPENCLAW_ENABLED==='true'){
   if(!productionServiceUrl(env.OPENCLAW_BASE_URL)||(env.OPENCLAW_API_MODE!=='ollama'&&env.OPENCLAW_API_MODE!=='openai-completions'))throw new Error('Production AI admission is invalid.');
   if(env.OPENCLAW_API_MODE==='openai-completions'&&!configuredReference(env.OPENCLAW_API_KEY))throw new Error('Production AI admission is invalid.');
+  if(env.OPENCLAW_API_MODE==='ollama'&&populatedSecret(env,'OPENCLAW_API_KEY'))throw new Error('Production AI admission is invalid.');
  }
- if(!optionalReference(env.OPENAI_API_KEY))throw new Error('Production AI admission is invalid.');
+ if(env.HOSTED_OPENAI_ENABLED!=='true'&&env.HOSTED_OPENAI_ENABLED!=='false')throw new Error('Production AI admission is invalid.');
+ if(env.HOSTED_OPENAI_ENABLED==='true'&&!configuredReference(env.OPENAI_API_KEY))throw new Error('Production AI admission is invalid.');
+ if(env.HOSTED_OPENAI_ENABLED==='false'&&populatedSecret(env,'OPENAI_API_KEY'))throw new Error('Production AI admission is invalid.');
 }
 
 export function validateProductionProcessSurfaceAdmission(env:NodeJS.ProcessEnv):void{
+ validateProductionApiProcessSurfaceAdmission(env);
+ validateProductionWorkerProcessSurfaceAdmission(env);
+}
+
+export function validateProductionApiProcessSurfaceAdmission(env:NodeJS.ProcessEnv):void{
  if(env.NODE_ENV!=='production')return;
  if((env.HOST!=='0.0.0.0'&&env.HOST!=='::')||!productionInteger(env.PORT,1024,65535))throw new Error('Production process surface admission is invalid.');
+}
+
+export function validateProductionWorkerProcessSurfaceAdmission(env:NodeJS.ProcessEnv):void{
+ if(env.NODE_ENV!=='production')return;
  const file=env.WORKER_HEALTH_FILE;
  if(typeof file!=='string'||!file.startsWith('/')||file.includes('\\')||file.split('/').includes('..')||file.length>240||!/^[A-Za-z0-9._/-]+\.json$/.test(file))throw new Error('Production process surface admission is invalid.');
 }
@@ -231,10 +290,39 @@ export function validateProductionSecretIsolation(env:NodeJS.ProcessEnv):void{
  const keys=['SUPABASE_ANON_KEY','SUPABASE_SERVICE_ROLE_KEY','OPERATIONS_ALERT_WEBHOOK_TOKEN','MGT_EDGE_TOKEN'];
  if(env.NOTIFICATION_DELIVERY==='webhook')keys.push('NOTIFICATION_WEBHOOK_TOKEN');
  if(env.OPENCLAW_ENABLED==='true'&&env.OPENCLAW_API_MODE==='openai-completions')keys.push('OPENCLAW_API_KEY');
- if(configuredReference(env.OPENAI_API_KEY))keys.push('OPENAI_API_KEY');
+ if(env.HOSTED_OPENAI_ENABLED==='true')keys.push('OPENAI_API_KEY');
  if(env.SUBSCRIPTIONS_ENABLED==='true')keys.push('STRIPE_SECRET_KEY','STRIPE_SUBSCRIPTION_WEBHOOK_SECRET');
  const references=keys.map(key=>env[key]).filter(configuredReference);
  if(new Set(references).size!==references.length)throw new Error('Production secret isolation is invalid.');
+}
+
+function populatedSecret(env:NodeJS.ProcessEnv,key:string):boolean{return env[key]!==undefined&&env[key]!=='';}
+function requireDistinctSecretReferences(env:NodeJS.ProcessEnv,keys:string[]):void{
+ const references=keys.map(key=>env[key]).filter(configuredReference);
+ if(new Set(references).size!==references.length)throw new Error('Production secret isolation is invalid.');
+}
+export function validateProductionApiSecretIsolation(env:NodeJS.ProcessEnv):void{
+ if(env.NODE_ENV!=='production')return;
+ const keys=['SUPABASE_ANON_KEY','MGT_EDGE_TOKEN'];
+ if(env.BACKUP_ATTESTATION_ENABLED==='true')keys.push('BACKUP_ATTESTATION_SECRET');
+ if(env.OPENCLAW_ENABLED==='true'&&env.OPENCLAW_API_MODE==='openai-completions')keys.push('OPENCLAW_API_KEY');
+ if(env.HOSTED_OPENAI_ENABLED==='true')keys.push('OPENAI_API_KEY');
+ if(env.SUBSCRIPTIONS_ENABLED==='true')keys.push('STRIPE_SECRET_KEY','STRIPE_SUBSCRIPTION_WEBHOOK_SECRET');
+ requireDistinctSecretReferences(env,keys);
+}
+export function validateProductionWorkerSecretIsolation(env:NodeJS.ProcessEnv):void{
+ if(env.NODE_ENV!=='production')return;
+ const keys=['SUPABASE_SERVICE_ROLE_KEY','OPERATIONS_ALERT_WEBHOOK_TOKEN'];
+ if(env.NOTIFICATION_DELIVERY==='webhook')keys.push('NOTIFICATION_WEBHOOK_TOKEN');
+ requireDistinctSecretReferences(env,keys);
+}
+export function validateProductionApiSecretBoundary(env:NodeJS.ProcessEnv):void{
+ if(env.NODE_ENV!=='production')return;
+ if(['SUPABASE_SERVICE_ROLE_KEY','OPERATIONS_ALERT_WEBHOOK_TOKEN','NOTIFICATION_WEBHOOK_TOKEN'].some(key=>populatedSecret(env,key)))throw new Error('Production API secret boundary is invalid.');
+}
+export function validateProductionWorkerSecretBoundary(env:NodeJS.ProcessEnv):void{
+ if(env.NODE_ENV!=='production')return;
+ if(['MGT_EDGE_TOKEN','SUPABASE_ANON_KEY','BACKUP_ATTESTATION_SECRET','STRIPE_SECRET_KEY','STRIPE_SUBSCRIPTION_WEBHOOK_SECRET','OPENAI_API_KEY','OPENCLAW_API_KEY'].some(key=>populatedSecret(env,key)))throw new Error('Production worker secret boundary is invalid.');
 }
 
 export function validateProductionEndpointIsolation(env:NodeJS.ProcessEnv):void{
@@ -244,16 +332,35 @@ export function validateProductionEndpointIsolation(env:NodeJS.ProcessEnv):void{
  const endpoints=keys.map(key=>env[key]).filter((value):value is string=>typeof value==='string'&&value.length>0);
  if(new Set(endpoints).size!==endpoints.length)throw new Error('Production endpoint isolation is invalid.');
 }
+export function validateProductionWorkerEndpointIsolation(env:NodeJS.ProcessEnv):void{
+ if(env.NODE_ENV!=='production')return;
+ const keys=['MONITORING_DASHBOARD_URL','INCIDENT_RUNBOOK_URL','OPERATIONS_ALERT_WEBHOOK_URL'];
+ if(env.NOTIFICATION_DELIVERY==='webhook')keys.push('NOTIFICATION_WEBHOOK_URL');
+ const endpoints=keys.map(key=>env[key]).filter((value):value is string=>typeof value==='string'&&value.length>0);
+ if(new Set(endpoints).size!==endpoints.length)throw new Error('Production endpoint isolation is invalid.');
+}
 
 export function validateProductionDisabledFeatureResidue(env:NodeJS.ProcessEnv):void{
+ validateProductionApiDisabledFeatureResidue(env);
+ validateProductionWorkerDisabledFeatureResidue(env);
+}
+
+export function validateProductionApiDisabledFeatureResidue(env:NodeJS.ProcessEnv):void{
  if(env.NODE_ENV!=='production')return;
  const populated=(keys:string[])=>keys.some(key=>env[key]!==undefined&&env[key]!=='');
- if(env.NOTIFICATION_DELIVERY==='in_app'&&populated(['NOTIFICATION_WEBHOOK_URL','NOTIFICATION_WEBHOOK_TOKEN','NOTIFICATION_WEBHOOK_KEY_ID','NOTIFICATION_WEBHOOK_TIMEOUT_MS']))throw new Error('Production disabled feature residue is invalid.');
  if(env.OLLAMA_ENABLED==='false'&&populated(['OLLAMA_BASE_URL']))throw new Error('Production disabled feature residue is invalid.');
  if(env.OPENCLAW_ENABLED==='false'&&populated(['OPENCLAW_BASE_URL','OPENCLAW_API_MODE','OPENCLAW_API_KEY']))throw new Error('Production disabled feature residue is invalid.');
+ if(env.OPENCLAW_ENABLED==='true'&&env.OPENCLAW_API_MODE==='ollama'&&populated(['OPENCLAW_API_KEY']))throw new Error('Production disabled feature residue is invalid.');
+ if(env.HOSTED_OPENAI_ENABLED==='false'&&populated(['OPENAI_API_KEY']))throw new Error('Production disabled feature residue is invalid.');
  if(env.CLIENT_IMAGE_DRIVE_TEST_ENABLED==='true'||populated(['TEST_GOOGLE_DRIVE_CLIENT_ID','TEST_GOOGLE_DRIVE_CLIENT_SECRET','TEST_GOOGLE_DRIVE_REFRESH_TOKEN','TEST_GOOGLE_DRIVE_FOLDER_ID']))throw new Error('Production disabled feature residue is invalid.');
  if(env.BACKUP_ATTESTATION_ENABLED==='false'&&populated(['BACKUP_ATTESTATION_SECRET','BACKUP_ATTESTATION_KEY_ID','BACKUP_ATTESTATION_MAX_AGE_SECONDS']))throw new Error('Production disabled feature residue is invalid.');
  if(env.SUBSCRIPTIONS_ENABLED==='false'&&populated(['STRIPE_LIVE_MODE','STRIPE_SECRET_KEY','STRIPE_SUBSCRIPTION_WEBHOOK_SECRET','STRIPE_PREMIUM_PRODUCT_ID','STRIPE_PREMIUM_MONTHLY_PRICE_ID','STRIPE_PREMIUM_ANNUAL_PRICE_ID']))throw new Error('Production disabled feature residue is invalid.');
+}
+
+export function validateProductionWorkerDisabledFeatureResidue(env:NodeJS.ProcessEnv):void{
+ if(env.NODE_ENV!=='production')return;
+ const populated=(keys:string[])=>keys.some(key=>env[key]!==undefined&&env[key]!=='');
+ if(env.NOTIFICATION_DELIVERY==='in_app'&&populated(['NOTIFICATION_WEBHOOK_URL','NOTIFICATION_WEBHOOK_TOKEN','NOTIFICATION_WEBHOOK_KEY_ID','NOTIFICATION_WEBHOOK_TIMEOUT_MS']))throw new Error('Production disabled feature residue is invalid.');
 }
 
 export function productionAdmissionProjection(env:NodeJS.ProcessEnv){
@@ -261,6 +368,7 @@ export function productionAdmissionProjection(env:NodeJS.ProcessEnv){
  const checks:[string,()=>void][]=[
   ['ownership',()=>validateRuntimeOwnership(env)],
   ['portal_boundary',()=>validateProductionPortalBoundary(env)],
+  ['policy_publication',()=>validateProductionPolicyPublicationAdmission(env)],
   ['edge_authentication',()=>validateProductionEdgeToken(env)],
   ['worker_timing',()=>{workerReadinessMaxAgeMs(env);}],
   ['database',()=>validateProductionDatabaseAdmission(env)],
@@ -272,6 +380,7 @@ export function productionAdmissionProjection(env:NodeJS.ProcessEnv){
   ['anti_aging',()=>validateProductionAntiAgingAdmission(env)],
   ['accessibility',()=>validateProductionAccessibilityAdmission(env)],
   ['subscriptions',()=>validateProductionSubscriptionAdmission(env)],
+  ['sponsored_content',()=>validateProductionSponsoredContentAdmission(env)],
   ['ai',()=>validateProductionAiAdmission(env)],
   ['process_surface',()=>validateProductionProcessSurfaceAdmission(env)],
   ['image',()=>validateProductionImageAdmission(env)],
@@ -279,10 +388,13 @@ export function productionAdmissionProjection(env:NodeJS.ProcessEnv){
   ['endpoint_isolation',()=>validateProductionEndpointIsolation(env)],
   ['disabled_feature_residue',()=>validateProductionDisabledFeatureResidue(env)]
  ];
+ const reviewedIds=Object.keys(PRODUCTION_ADMISSION_ACTIONS).sort();
+ const runtimeIds=checks.map(([id])=>id).sort();
+ if(runtimeIds.length!==reviewedIds.length||runtimeIds.some((id,index)=>id!==reviewedIds[index]))throw new Error('Production admission guidance is incomplete.');
  const results=checks.map(([id,validate])=>{try{validate();return{id,healthy:true};}catch{return{id,healthy:false};}});
  const issues=results.filter(check=>!check.healthy).map(check=>check.id);
  const next_actions=issues.map(id=>{const action=reviewedProductionAdmissionAction(id);if(!action)throw new Error('Production admission guidance is incomplete.');return action;});
- return {mode:'production' as const,healthy:issues.length===0,issues,checks:results,next_actions};
+ return {mode:'production' as const,admission_version:PRODUCTION_ADMISSION_CONTRACT_VERSION,healthy:issues.length===0,issues,checks:results,next_actions};
 }
 
 export function validateApiRuntimeAdmission(env:NodeJS.ProcessEnv):void{
@@ -295,40 +407,36 @@ export function validateApiRuntimeAdmission(env:NodeJS.ProcessEnv):void{
 
 export function validateApiProcessAdmission(env:NodeJS.ProcessEnv):void{
  validateApiRuntimeAdmission(env);
+ validateProductionPolicyPublicationAdmission(env);
  validateProductionEdgeToken(env);
  validateProductionDatabaseAdmission(env);
- validateProductionOperationsAdmission(env);
- validateProductionNotificationAdmission(env);
- validateProductionIdentityAdmission(env);
- validateProductionBackupAdmission(env);
- validateProductionBackupAttestationAdmission(env);
- validateProductionAntiAgingAdmission(env);
+ validateProductionApiIdentityAdmission(env);
+ validateProductionApiBackupAttestationAdmission(env);
+ validateProductionApiAntiAgingAdmission(env);
  validateProductionAccessibilityAdmission(env);
  validateProductionSubscriptionAdmission(env);
+ validateProductionSponsoredContentAdmission(env);
  validateProductionAiAdmission(env);
- validateProductionProcessSurfaceAdmission(env);
- validateProductionImageAdmission(env);
- validateProductionSecretIsolation(env);
- validateProductionEndpointIsolation(env);
- validateProductionDisabledFeatureResidue(env);
+ validateProductionApiProcessSurfaceAdmission(env);
+ validateProductionApiDisabledFeatureResidue(env);
+ validateProductionApiSecretBoundary(env);
+ validateProductionApiSecretIsolation(env);
 }
 
 export function validateWorkerRuntimeAdmission(env:NodeJS.ProcessEnv):number{
  validateRuntimeOwnership(env);
+ if(env.NODE_ENV==='production'&&env.DEMO_MODE!=='false')throw new Error('Production worker mode is invalid.');
  validateProductionDatabaseAdmission(env);
  validateProductionOperationsAdmission(env);
  validateProductionNotificationAdmission(env);
- validateProductionIdentityAdmission(env);
+ validateProductionWorkerIdentityAdmission(env);
  validateProductionBackupAdmission(env);
- validateProductionBackupAttestationAdmission(env);
- validateProductionAntiAgingAdmission(env);
- validateProductionAccessibilityAdmission(env);
- validateProductionSubscriptionAdmission(env);
- validateProductionAiAdmission(env);
- validateProductionProcessSurfaceAdmission(env);
- validateProductionImageAdmission(env);
- validateProductionSecretIsolation(env);
- validateProductionEndpointIsolation(env);
- validateProductionDisabledFeatureResidue(env);
+ validateProductionWorkerBackupAttestationAdmission(env);
+ validateProductionWorkerAntiAgingAdmission(env);
+ validateProductionWorkerProcessSurfaceAdmission(env);
+ validateProductionWorkerDisabledFeatureResidue(env);
+ validateProductionWorkerSecretBoundary(env);
+ validateProductionWorkerSecretIsolation(env);
+ validateProductionWorkerEndpointIsolation(env);
  return workerIntervalMs(env);
 }

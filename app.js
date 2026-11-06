@@ -151,19 +151,25 @@ const membershipPlans = [
     audience: "Core tools for a clear skincare starting point.",
     price: "$0",
     billing: "No recurring charge",
-    features: ["Skin Match and saved profile", "Core routine planning", "Reviewed skincare education"],
+    features: ["Skin Match and saved profile", "Core routine planning", "Reviewed skincare education", "Optional clearly labelled sponsor support"],
     action: "Explore Free",
     popular: false
   },
   {
-    id: "premium",
-    name: "Premium",
+    id: "guided",
+    name: "Guided",
     audience: "Connected guidance for an ongoing care routine.",
-    price: "Price pending approval",
-    billing: "One product · approved monthly or annual rate",
-    features: ["Personalized ongoing routine guidance", "Premium Skin Coach guidance with safeguards", "One trusted guest invitation"],
-    action: "Preview Premium",
+    monthly: "$14.99", annual: "$149.99",
+    features: ["Full routines and anti-aging education", "Progress, wardrobe, images and history", "Standard AI guidance and reminders"],
+    action: "Preview Guided",
     popular: true
+  },
+  {
+    id: "studio", name: "Studio",
+    audience: "More depth across your care and style journey.",
+    monthly: "$29.99", annual: "$299.99",
+    features: ["Higher AI allowance and cross-domain synthesis", "Advanced exports and priority support", "Guest access and early features"],
+    action: "Preview Studio", popular: false
   }
 ];
 
@@ -171,51 +177,83 @@ function renderPricing() {
   const grid = $("#pricingGrid");
   if (!grid) return;
   grid.innerHTML = membershipPlans.map((plan) => {
-    const billingNote = plan.id === "premium"
-      ? `${state.billing === "annual" ? "Annual" : "Monthly"} billing · ${plan.billing}`
+    const billingNote = plan.id !== "free"
+      ? `Suggested ${state.billing === "annual" ? "annual" : "monthly"} price · not available for enrollment`
       : plan.billing;
     return `<article class="pricing-card${plan.popular ? " popular" : ""}">
-      ${plan.popular ? '<span class="popular-badge">ONE PAID MEMBERSHIP</span>' : ""}
+      ${plan.popular ? '<span class="popular-badge">PROPOSED PLAN</span>' : ""}
       <p class="pricing-tier">${plan.name}</p>
       <h3>${plan.audience}</h3>
-      <p class="price"><span>${plan.price}</span></p>
+      <p class="price"><span>${plan.id === "free" ? plan.price : state.billing === "annual" ? plan.annual : plan.monthly}</span></p>
       <p class="billing-note">${billingNote}</p>
       <button class="${plan.popular ? "primary-button" : "secondary-button"} plan-button" data-pricing-action="select" data-tier="${plan.id}" type="button">${plan.action} <span>→</span></button>
       <ul class="plan-feature-list">${plan.features.map((feature) => `<li>${feature}</li>`).join("")}</ul>
-      <p class="upgrade-note"><b>${plan.id === "premium" ? "Enrollment gate:" : "Access boundary:"}</b> ${plan.id === "premium" ? "Disabled until approved pricing, terms, support, and signed-event verification are complete." : "No billing customer or subscription is created."}</p>
+      <p class="upgrade-note"><b>${plan.id !== "free" ? "Preview:" : "Access boundary:"}</b> ${plan.id !== "free" ? "Proposed features and prices; enrollment is not available in this demo." : "No billing customer or subscription is created."}</p>
     </article>`;
   }).join("");
 }
 
 const demoFlows = {
+  "Free plan sponsor": {
+    kicker: "FREE-PLAN SPONSORSHIP · SAMPLE CONTROL",
+    title: "Support the free plan without profiling people",
+    step: "Review-gated placement · Explainable non-personal rule · Preview only",
+    body: `
+      <p class="flow-intro">A sponsor can appear only after a merchant authorization, reviewed non-medical copy, an approved HTTPS destination, commercial, privacy, accessibility, disclosure, and support review, plus current merchant-authorization release evidence. The authorization is rechecked before display and before the external merchant link is opened, and it must match the record used to review the campaign. Merchant aggregate reports are also bound to current authorization and require a new report reference after replacement. The only retained event is a bounded daily aggregate outbound count. This sample creates no campaign, sends no merchant message, and records no advertising revenue.</p>
+      <div class="routine-preview">
+        <div><b>01</b><span>Approve the merchant</span><small>Written permission and permitted placement scope are recorded</small></div>
+        <div><b>02</b><span>Review the message</span><small>Visible Sponsored label, bounded copy, and external destination are checked</small></div>
+        <div><b>03</b><span>Rotate by placement</span><small>One approved campaign is selected from the placement inventory once per UTC day</small></div>
+        <div><b>04</b><span>Measure only aggregate opens</span><small>A daily placement count can inform operations without an individual activity trail</small></div>
+      </div>
+      <div class="flow-result"><span>SPONSOR INTELLIGENCE BOUNDARY</span><h3>Approved context, never personal data</h3><p>The explainable non-personal rule can use only the approved campaign record, requested Free-plan placement, and daily aggregate outbound count. It cannot read an account profile, Skin Match or complexion fields, photos or facial data, health information, location, contact information, payment data, or individual click and purchase history. It cannot personalize a campaign, change a routine, transmit customer data to a merchant, or record an order or payment.</p><div class="flow-meta"><span>VISIBLE SPONSORED LABEL</span><span>NO AD NETWORK</span><span>EXTERNAL CHECKOUT</span></div></div>
+    `
+  },
+  "Merchant partner program": {
+    kicker: "MERCHANT PARTNER PROGRAM · SAMPLE ROUTE",
+    title: "Feature products with clear terms",
+    step: "Authorization, disclosure and aggregate reporting · Preview only",
+    body: `
+      <p class="flow-intro">The partner path starts with permission to feature a merchant’s products, an approved scope, and a visible placement label. This preview sends no merchant message and opens no commercial connection.</p>
+      <div class="routine-preview">
+        <div><b>01</b><span>Written permission</span><small>Merchant confirms scope, destinations and approved materials</small></div>
+        <div><b>02</b><span>Placement review</span><small>Independent, Preferred partner, or Sponsored label is selected</small></div>
+        <div><b>03</b><span>External purchase</span><small>Merchant remains seller, payment processor and service owner</small></div>
+        <div><b>04</b><span>Aggregate signal</span><small>Approved merchant may submit period-level orders and routine-category units</small></div>
+      </div>
+      <div class="flow-result"><span>OMNI-RETAIL BOUNDARY</span><h3>Useful measurement without customer surveillance</h3><p>The platform may count an aggregate outbound action and accept bounded merchant reports. It does not accept customer identities, carts, payment records, itemized receipts, shipping data, returns, or merchant-site behavior. Aggregate reports never prove a personal purchase or change a routine automatically.</p><div class="flow-meta"><span>MERCHANT OF RECORD</span><span>VISIBLE DISCLOSURE</span><span>AGGREGATE ONLY</span></div></div>
+    `
+  },
   "Google account sign-in": {
     kicker: "SECURE ACCOUNT SIGN-IN · SAMPLE FLOW",
     title: "Use Google for identity, not storage",
     step: "Protected account connection · PKCE · Preview only",
     body: `
-      <p class="flow-intro">The production-ready path starts a one-time protected exchange with Google. It asks Google only for basic account identity and returns to MGT after the secure exchange.</p>
+      <p class="flow-intro">The production-ready path starts a one-time protected exchange with Google. It asks Google only for basic account identity and returns to 47 Team Studio after the secure exchange.</p>
       <div class="routine-preview">
         <div><b>01</b><span>Start sign-in</span><small>One-time state and PKCE verifier</small></div>
         <div><b>02</b><span>Confirm identity</span><small>Google identity scope only</small></div>
-        <div><b>03</b><span>Return to MGT</span><small>Server-side code exchange</small></div>
+        <div><b>03</b><span>Return to 47 Team Studio</span><small>Server-side code exchange</small></div>
         <div><b>04</b><span>Open account</span><small>No Drive token retained</small></div>
       </div>
       <div class="flow-result"><span>ACCOUNT BOUNDARY</span><h3>Google login is not Drive access</h3><p>This demo opens no provider page and creates no account. Google sign-in does not request Drive, photo, or file permissions. Private test-image storage is a separate server configuration and must never receive customer photos.</p><div class="flow-meta"><span>IDENTITY ONLY</span><span>NO DRIVE SCOPE</span><span>NO LIVE SIGN-IN</span></div></div>
     `
   },
   "Client photo journal": {
-    kicker: "OPTIONAL CLIENT PHOTOS · TEST STORAGE FLOW",
-    title: "A useful photo, on your terms",
-    step: "Sample only · Test Drive requires server OAuth setup",
+    kicker: "OPTIONAL CLIENT PHOTOS · CHOICE-LED FLOW",
+    title: "Choose how you add a photo",
+    step: "Sample only · Camera access starts only if you choose it",
     body: `
-      <p class="flow-intro">Choose a clear front view in soft, even light. Optional side views or a close-up can help keep your own routine journal consistent. A photo is never required for Skin Match.</p>
+      <p class="flow-intro">Choose a clear front view in soft, even light. You can use a personal upload, select a Drive file through your device picker, or start an optional circular full-face guide. A photo is never required for Skin Match.</p>
       <div class="routine-preview">
-        <div><b>01</b><span>Front view</span><small>Eye-level · neutral light</small></div>
-        <div><b>02</b><span>Side views</span><small>Optional · same distance</small></div>
-        <div><b>03</b><span>Area or product</span><small>Optional · label for your reference</small></div>
-        <div><b>04</b><span>Manage your library</span><small>Organize or remove at any time</small></div>
+        <label class="flow-option"><input type="radio" name="photo-source" value="Personal upload" checked> <b>Personal upload</b><small>Choose JPEG, PNG, or WebP from this device</small></label>
+        <label class="flow-option"><input type="radio" name="photo-source" value="Google Drive file picker"> <b>Google Drive file picker</b><small>Pick the file in your device browser or app picker; no ongoing Drive access</small></label>
+        <label class="flow-option"><input type="radio" name="photo-source" value="Guided full-face capture"> <b>Guided full-face capture</b><small>Optional circular framing guide; camera starts only after you tap it</small></label>
+        <div class="photo-guide-sample" aria-label="Sample circular face framing guide"><i></i><span>FULL FACE<br>IN FRAME</span></div>
       </div>
-      <div class="flow-result"><span>OPTIONAL STORAGE DESTINATION</span><h3>Device by default · Drive only in test</h3><p>The portal prepares supported images as resized JPEGs and removes embedded metadata. Device storage stays local. A separately selected Google Drive copy is available only in a configured non-production test environment, uses a private folder and remains actor-scoped. Do not upload customer photos to test storage. Images are not analyzed or shared with retailers. Android native picking and production cloud storage are not enabled.</p><div class="flow-meta"><span>DEVICE DEFAULT</span><span>TEST DRIVE OPTIONAL</span><span>NO IMAGE ANALYSIS</span></div></div>
+      <label class="flow-option"><input type="checkbox" id="photoAnalysisPermission"> Allow one selected sample photo to form a private cosmetic journal note after the privacy-reviewed local service is enabled</label>
+      <button class="flow-action" data-flow-action="photo-analysis" type="button">Preview the bounded photo note <span>→</span></button>
+      <div class="flow-result"><span>OPTIONAL STORAGE &amp; ANALYSIS BOUNDARY</span><h3>Device by default · Drive only in test</h3><p>The portal prepares supported images as resized JPEGs and removes embedded metadata. A Drive file picker choice does not grant the portal ongoing Google Drive access. A separately selected Google Drive storage copy remains non-production test-only. An opted-in private cosmetic note is local-model only, does not retain the submitted image, and never performs identity or facial recognition, health assessment, diagnosis, or automatic product and routine changes.</p><div class="flow-meta"><span>USER-CHOSEN SOURCE</span><span>LOCAL-ONLY VISION PATH</span><span>NO IDENTITY MATCHING</span></div></div>
     `
   },
   "Image library": {
@@ -223,14 +261,89 @@ const demoFlows = {
     title: "Choose where a photo stays",
     step: "Device first · Test Drive optional · Sample only",
     body: `
-      <p class="flow-intro">The image library makes the destination visible before you choose a file. Device storage is the default. Private Google Drive storage is available only in a configured non-production test environment.</p>
+      <p class="flow-intro">The image library makes both the photo source and storage destination visible before you choose a file. Device storage is the default. Private Google Drive storage is available only in a configured non-production test environment.</p>
       <div class="routine-preview">
-        <div><b>01</b><span>Choose a destination</span><small>Device or private Drive test storage</small></div>
-        <div><b>02</b><span>Verify test connection</span><small>Server checks authorization before upload</small></div>
+        <div><b>01</b><span>Choose a source</span><small>Device upload, Drive file picker, or guided capture</small></div>
+        <div><b>02</b><span>Choose a destination</span><small>Device or private Drive test storage</small></div>
         <div><b>03</b><span>Prepare the image</span><small>JPEG copy · embedded metadata removed</small></div>
-        <div><b>04</b><span>Manage the copy</span><small>Label, review, or remove at any time</small></div>
+        <div><b>04</b><span>Manage the copy</span><small>Label, review, remove, or request a separate private note</small></div>
       </div>
-      <div class="flow-result"><span>STORAGE BOUNDARY</span><h3>Clear destination, clear next step</h3><p>The test Drive upload remains unavailable until the server confirms its authorization. A failed check explains that no image was sent. Customer photos and production data must never use the Drive test destination.</p><div class="flow-meta"><span>VERIFY BEFORE UPLOAD</span><span>TEST ONLY</span><span>NO IMAGE ANALYSIS</span></div></div>
+      <div class="flow-result"><span>STORAGE BOUNDARY</span><h3>Clear source, destination, and consent</h3><p>The test Drive upload remains unavailable until the server confirms its authorization. A failed check explains that no image was sent. The optional cosmetic-note path remains unavailable until its separate privacy and local-service gates are configured. Customer photos and production data must never use the Drive test destination.</p><div class="flow-meta"><span>VERIFY BEFORE UPLOAD</span><span>TEST ONLY</span><span>SEPARATE ANALYSIS CONSENT</span></div></div>
+    `
+  },
+  "Account & customer care": {
+    kicker: "ACCOUNT & CUSTOMER CARE · SAMPLE ROUTING",
+    title: "Find the right next step",
+    step: "Account, billing and support routes · Preview only",
+    body: `
+      <p class="flow-intro">The Account & Customer Care hub organizes the most common needs so a customer can reach the right control without repeating their story.</p>
+      <div class="routine-preview">
+        <div><b>01</b><span>Account setup</span><small>Email code or approved identity provider</small></div>
+        <div><b>02</b><span>Premium billing</span><small>Secure payment service when enabled</small></div>
+        <div><b>03</b><span>Retailer purchase</span><small>Receipt directs payment, shipping and return help</small></div>
+        <div><b>04</b><span>Privacy or support</span><small>Save a portal request and track visible replies</small></div>
+      </div>
+      <div class="flow-result"><span>CARE BOUNDARY</span><h3>Customer controls stay connected</h3><p>Profile, images, subscription status, data export and deletion controls remain in the account. The support route keeps requests private to the signed-in account. External support delivery is not enabled in this demo.</p><div class="flow-meta"><span>ACCOUNT-SCOPED</span><span>NO LIVE BILLING</span><span>NO CUSTOMER MESSAGE SENT</span></div></div>
+    `
+  },
+  "Terms review": {
+    kicker: "TERMS OF USE · REVIEW DRAFT",
+    title: "Clear service boundaries before launch",
+    step: "Customer-readable draft · Legal review required",
+    body: `
+      <p class="flow-intro">The Terms draft covers the portal and Android app boundaries for accounts, cosmetic guidance, optional AI, photos, retailer links, Premium membership, privacy and customer support.</p>
+      <div class="routine-preview">
+        <div><b>01</b><span>Cosmetic guidance</span><small>Education and planning, not diagnosis or treatment</small></div>
+        <div><b>02</b><span>Independent retailers</span><small>Seller handles product payment, delivery and returns</small></div>
+        <div><b>03</b><span>Premium membership</span><small>Price, renewal and cancellation terms shown before payment</small></div>
+        <div><b>04</b><span>Privacy and rights</span><small>Export, permission and deletion controls in account</small></div>
+      </div>
+      <div class="flow-result"><span>PUBLICATION REQUIREMENTS</span><h3>Terms need final business details</h3><p>Before publication, counsel and the business owner must approve the legal entity, effective date, launch territories, support contact, final subscription offer, cancellation and refund terms, privacy notice, governing law and mandatory consumer rights.</p><div class="flow-meta"><span>REVIEW DRAFT</span><span>NO ACTIVE OFFER</span><span>APPROVAL REQUIRED</span></div></div>
+    `
+  },
+  "Trust & AI": {
+    kicker: "TRUST & AI · CUSTOMER NOTICE DRAFT",
+    title: "Clear guidance. Your choices.",
+    step: "Cosmetic education with defined limits",
+    body: `
+      <p class="flow-intro">47 Team Studio gives customers clear feature purpose, visible controls and a safe unavailable state when a required service is not ready.</p>
+      <div class="routine-preview">
+        <div><b>01</b><span>Cosmetic education</span><small>Routine, ingredient and style guidance</small></div>
+        <div><b>02</b><span>Optional suggestions</span><small>You choose whether to use an output</small></div>
+        <div><b>03</b><span>Reviewed fallback</span><small>Limited guidance when AI is unavailable</small></div>
+        <div><b>04</b><span>Support route</span><small>Flag unclear or concerning output for review</small></div>
+      </div>
+      <div class="flow-result"><span>TRUST BOUNDARY</span><h3>Guidance does not decide for you</h3><p>Automated features can organize a question, explain reviewed material or suggest cosmetic ideas. They do not diagnose, prescribe treatment, process a retailer purchase, select a provider or change a routine without your action.</p><div class="flow-meta"><span>NOT MEDICAL CARE</span><span>YOUR CHOICE</span><span>SUPPORT AVAILABLE</span></div></div>
+    `
+  },
+  "Privacy notice": {
+    kicker: "PRIVACY NOTICE · CUSTOMER DRAFT",
+    title: "Your information, explained plainly.",
+    step: "Feature data, purpose and account controls",
+    body: `
+      <p class="flow-intro">The portal and Android app use only the information needed for the features you choose. The final published notice will identify the legal entity, processors, regions, retention and effective date.</p>
+      <div class="routine-preview">
+        <div><b>01</b><span>Profile and routine</span><small>Private account preferences and cosmetic goals</small></div>
+        <div><b>02</b><span>Support and security</span><small>Requests, access protection and service operation</small></div>
+        <div><b>03</b><span>Retail boundary</span><small>Profile and photos are not sent to retailers</small></div>
+        <div><b>04</b><span>Account controls</span><small>Export, permission and deletion request</small></div>
+      </div>
+      <div class="flow-result"><span>PRIVACY BOUNDARY</span><h3>Controls stay in your account</h3><p>47 Team Studio does not ask you to enter full payment card numbers or security codes. An optional photo-journal cosmetic note is local-only and needs separate privacy and per-request consent; it does not retain an image or perform identity recognition. A deletion request has a 30 day cancellation period before processing begins, subject to final retention exceptions.</p><div class="flow-meta"><span>NO RETAILER PROFILE SHARING</span><span>EXPORT AVAILABLE</span><span>DELETION CONTROL</span></div></div>
+    `
+  },
+  "AI disclosure": {
+    kicker: "AI DISCLOSURE · CUSTOMER DRAFT",
+    title: "How automated features work.",
+    step: "Separate permission · Minimized inputs · Review path",
+    body: `
+      <p class="flow-intro">AI can organize a portal question, explain reviewed skincare information or draft cosmetic and style ideas. Output can be incomplete or unsuitable for your situation.</p>
+      <div class="routine-preview">
+        <div><b>01</b><span>Ask permission</span><small>Separate analysis permission in your account</small></div>
+        <div><b>02</b><span>Use only needed fields</span><small>Selected appearance and style details for color match</small></div>
+        <div><b>03</b><span>Keep boundaries</span><small>No photo analysis, diagnosis or payment decision</small></div>
+        <div><b>04</b><span>Review or withdraw</span><small>Change permission or ask for support review</small></div>
+      </div>
+      <div class="flow-result"><span>AI USE BOUNDARY</span><h3>Permission remains separate</h3><p>Wardrobe notes are excluded from a color match request. Customer content is not intentionally used to train a 47 Team Studio model. A hosted provider requires approved data fields, retention, security and contractual handling before activation.</p><div class="flow-meta"><span>CONSENT-SCOPED</span><span>NO PHOTO ANALYSIS</span><span>NO AUTO-CHANGE</span></div></div>
     `
   },
   "Bi-weekly regimen cycle": {
@@ -288,6 +401,23 @@ const demoFlows = {
       <button class="flow-action" data-flow-action="coach" type="button">Route sample question <span>→</span></button>
     `
   },
+  "Complexion intelligence": {
+    kicker: "COMPLEXION INTELLIGENCE · SAMPLE FLOW",
+    title: "Keep your saved context in the lead",
+    step: "Private profile output · Separate analysis permission · Sample only",
+    body: `
+      <p class="flow-intro">Choose the sample priorities that reflect a saved Skin Match. In production, deterministic profile rules organize the output first; a consented LLM/API service can explain that output without changing a routine.</p>
+      <div class="flow-options">
+        <label class="flow-option"><input type="checkbox" name="complexion-factor" value="Anti-blemish" checked> Anti-blemish</label>
+        <label class="flow-option"><input type="checkbox" name="complexion-factor" value="Acne" checked> Acne</label>
+        <label class="flow-option"><input type="checkbox" name="complexion-factor" value="Clogged pores"> Clogged pores</label>
+        <label class="flow-option"><input type="checkbox" name="complexion-factor" value="Dark marks" checked> Dark marks</label>
+        <label class="flow-option"><input type="checkbox" name="complexion-factor" value="Dark circles"> Dark circles</label>
+      </div>
+      <label class="flow-option"><input type="checkbox" id="complexionPermission"> Allow a private AI explanation of this sample profile output</label>
+      <button class="flow-action" data-flow-action="complexion" type="button">Create sample summary <span>→</span></button>
+    `
+  },
   "Anti-aging progress": {
     kicker: "ANTI-AGING · SAMPLE FLOW",
     title: "Keep the signal gentle",
@@ -308,7 +438,7 @@ const demoFlows = {
     kicker: "PROVIDER DISCOVERY · SAMPLE FLOW",
     title: "A referral, not a booking",
     step: "City-bounded · External confirmation required",
-    body: `<div class="flow-result"><span>INDEPENDENT HANDOFF</span><h3>Availability stays outside MGT</h3><p>The portal can show a reviewed provider in the selected city and prepare a consented handoff. You can withdraw the handoff from your account; it does not book, rank by sponsorship, or send your profile.</p><div class="flow-meta"><span>CITY ONLY</span><span>WITHDRAWABLE</span><span>BOOKING DISABLED</span></div></div>`
+    body: `<div class="flow-result"><span>INDEPENDENT HANDOFF</span><h3>Availability stays outside 47 Team Studio</h3><p>The portal can show a reviewed provider in the selected city and prepare a consented handoff. You can withdraw the handoff from your account; it does not book, rank by sponsorship, or send your profile.</p><div class="flow-meta"><span>CITY ONLY</span><span>WITHDRAWABLE</span><span>BOOKING DISABLED</span></div></div>`
   },
   "Moderation & evidence": {
     kicker: "ANTI-AGING · EVIDENCE VIEW",
@@ -691,6 +821,32 @@ function renderFlowResult(action) {
     body.innerHTML = '<div class="flow-result"><span>GUIDANCE REVIEW · SAMPLE OUTPUT</span><h3>Reduce variables for several days</h3><p>Pause optional actives, keep a gentle cleanser and familiar moisturizer, and continue sunscreen if tolerated. Seek professional guidance for persistent pain, swelling, or a severe reaction.</p><div class="flow-meta"><span>CONTEXT REVIEWED</span><span>SAFETY-AWARE</span><span>INCLUDED GUIDANCE</span></div></div>';
     return;
   }
+  if (action === "complexion") {
+    const choices = $$('input[name="complexion-factor"]:checked').map((input) => input.value);
+    const permission = $("#complexionPermission")?.checked;
+    if (!choices.length) {
+      showToast("Choose at least one sample complexion priority");
+      return;
+    }
+    if (!permission) {
+      showToast("Choose the sample analysis permission first");
+      return;
+    }
+    $("#demoDialogStep").textContent = "Verified profile explanation · Sample only";
+    body.innerHTML = '<div class="flow-result"><span>PRIVATE PROFILE OUTPUT · SAMPLE</span><h3>Review the selected priorities first</h3><p>Your sample profile organizes '+choices.join(", ").toLowerCase()+'. This cosmetic explanation does not identify a condition, assess severity, analyze a photo, select products, or change a routine.</p><div class="flow-meta"><span>PROFILE FIELDS ONLY</span><span>CONSENT GATED</span><span>NO AUTO-CHANGE</span></div></div>';
+    return;
+  }
+  if (action === "photo-analysis") {
+    const source = $('input[name="photo-source"]:checked')?.value;
+    const permission = $("#photoAnalysisPermission")?.checked;
+    if (!permission) {
+      showToast("Choose the sample photo-analysis permission first");
+      return;
+    }
+    $("#demoDialogStep").textContent = "Bounded cosmetic note · Sample only";
+    body.innerHTML = '<div class="flow-result"><span>PRIVATE COSMETIC NOTE · SAMPLE</span><h3>Your choice stays in control</h3><p>The sample would use the selected '+(source || 'photo source').toLowerCase()+' with your saved complexion priorities only after the privacy-reviewed local service and both permissions are present. It does not identify or recognize a face, estimate age or demographics, assess health or severity, diagnose, retain the submitted image, contact a retailer, select products, or change a routine.</p><div class="flow-meta"><span>LOCAL-ONLY VISION</span><span>NO FACE TEMPLATE</span><span>NO AUTO-CHANGE</span></div></div>';
+    return;
+  }
   if (action === "anti-aging") {
     $("#demoDialogStep").textContent = "Boundaries reviewed · Sample only";
     body.innerHTML = '<div class="flow-result"><span>ANTI-AGING SAFETY</span><h3>Useful without overreaching</h3><p>Reviewed records, optional progress notes, and independent referrals can support a calmer experience while keeping diagnosis, treatment decisions, checkout, image analysis, and live booking outside this preview.</p><div class="flow-meta"><span>REVIEWED CONTENT</span><span>OPTIONAL CONSENT</span><span>REFERRAL ONLY</span></div></div>';
@@ -720,7 +876,7 @@ document.addEventListener("click", (event) => {
   const planChoice = event.target.closest("[data-pricing-action='select']");
   if (planChoice) {
     const plan = membershipPlans.find((item) => item.id === planChoice.dataset.tier);
-    if (plan) showToast(plan.id === "premium" ? "Premium preview selected. Enrollment remains disabled until production readiness is approved." : "Free access preview selected. No billing record was created.");
+    if (plan) showToast(`${plan.name} preview selected. No billing record was created.`);
     return;
   }
 

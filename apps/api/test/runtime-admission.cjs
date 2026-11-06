@@ -2,10 +2,12 @@ const assert = require('node:assert/strict');
 const { test } = require('node:test');
 const { spawnSync } = require('node:child_process');
 const path = require('node:path');
-const { productionAdmissionProjection, validateRuntimeOwnership, validateProductionPortalBoundary, validateProductionEdgeToken, validateProductionDatabaseAdmission, validateProductionOperationsAdmission, validateProductionNotificationAdmission, validateProductionIdentityAdmission, validateProductionBackupAdmission, validateProductionBackupAttestationAdmission, validateProductionAntiAgingAdmission, validateProductionAccessibilityAdmission, validateProductionSubscriptionAdmission, validateProductionAiAdmission, validateProductionProcessSurfaceAdmission, validateProductionImageAdmission, validateProductionSecretIsolation, validateProductionEndpointIsolation, validateProductionDisabledFeatureResidue, workerIntervalMs, workerReadinessMaxAgeMs } = require('../dist/portal/runtime-admission');
+const { productionAdmissionProjection, validateApiProcessAdmission, validateProductionApiSecretBoundary, validateProductionWorkerSecretBoundary, validateRuntimeOwnership, validateProductionPortalBoundary, validateProductionPolicyPublicationAdmission, validateProductionEdgeToken, validateProductionDatabaseAdmission, validateProductionOperationsAdmission, validateProductionNotificationAdmission, validateProductionIdentityAdmission, validateProductionBackupAdmission, validateProductionBackupAttestationAdmission, validateProductionAntiAgingAdmission, validateProductionAccessibilityAdmission, validateProductionSubscriptionAdmission, validateProductionSponsoredContentAdmission, validateProductionAiAdmission, validateProductionProcessSurfaceAdmission, validateProductionImageAdmission, validateProductionSecretIsolation, validateProductionEndpointIsolation, validateProductionDisabledFeatureResidue, validateWorkerRuntimeAdmission, workerIntervalMs, workerReadinessMaxAgeMs } = require('../dist/portal/runtime-admission');
+const { PRODUCTION_ADMISSION_ACTIONS, PRODUCTION_ADMISSION_CONTRACT_VERSION } = require('../../../packages/shared/dist');
 const { createPortal } = require('../dist/portal/server');
 const owner = 'Gregg Clark of MGT';
-const valid = { NODE_ENV:'production', DEMO_MODE:'false', PUBLIC_ORIGIN:'https://portal.example', PORTAL_DOMAIN:'portal.example', MGT_EDGE_TOKEN:'runtime-test-edge-token-unique-123456789', RELEASE_OWNER_NAME:owner, SUPPORT_OWNER_NAME:owner, WORKER_INTERVAL_SECONDS:'60', WORKER_READINESS_MAX_AGE_SECONDS:'300' };
+const valid = { NODE_ENV:'production', DEMO_MODE:'false', PUBLIC_ORIGIN:'https://portal.example', PORTAL_DOMAIN:'portal.example', MGT_EDGE_TOKEN:'runtime-test-edge-token-unique-123456789', RELEASE_OWNER_NAME:owner, SUPPORT_OWNER_NAME:owner, WORKER_INTERVAL_SECONDS:'60', WORKER_READINESS_MAX_AGE_SECONDS:'300', HOSTED_OPENAI_ENABLED:'false' };
+const policy = {PUBLIC_PRIVACY_NOTICE_URL:'https://policies.mgtskincare.test/privacy',PUBLIC_TERMS_OF_USE_URL:'https://policies.mgtskincare.test/terms',PUBLIC_AI_DISCLOSURE_URL:'https://policies.mgtskincare.test/ai-disclosure'};
 
 test('production requires a private edge forwarding token without disclosing its value', () => {
  assert.doesNotThrow(()=>validateProductionEdgeToken(valid));
@@ -17,10 +19,32 @@ test('production requires a private edge forwarding token without disclosing its
  assert.equal(JSON.stringify(report).includes(valid.MGT_EDGE_TOKEN),false);
 });
 
+test('production policy publication admission matches preflight HTTPS and distinct-notice boundaries', async () => {
+ const {validateEnvironment}=await import('../../../infra/portal/preflight.mjs');
+ const processEnv={...valid,...policy};
+ assert.doesNotThrow(()=>validateProductionPolicyPublicationAdmission(processEnv));
+ for(const overrides of [
+  {PUBLIC_PRIVACY_NOTICE_URL:undefined},
+  {PUBLIC_PRIVACY_NOTICE_URL:'http://policies.mgtskincare.test/privacy'},
+  {PUBLIC_TERMS_OF_USE_URL:'https://operator@policies.mgtskincare.test/terms'},
+  {PUBLIC_AI_DISCLOSURE_URL:'https://policies.mgtskincare.test/ai-disclosure?preview=true'},
+  {PUBLIC_AI_DISCLOSURE_URL:policy.PUBLIC_TERMS_OF_USE_URL}
+ ]){
+  const env={...processEnv,...overrides};let runtimeAccepts=true;
+  try{validateProductionPolicyPublicationAdmission(env);}catch(error){runtimeAccepts=false;assert.equal(error.message,'Production policy publication admission is invalid.');}
+  const report=validateEnvironment(env);
+  const preflightAccepts=!report.errors.some(error=>error.startsWith('PUBLIC_PRIVACY_NOTICE_URL')||error.startsWith('PUBLIC_TERMS_OF_USE_URL')||error.startsWith('PUBLIC_AI_DISCLOSURE_URL'));
+  assert.equal(runtimeAccepts,preflightAccepts,JSON.stringify(overrides));
+ }
+ assert.doesNotThrow(()=>validateProductionPolicyPublicationAdmission({NODE_ENV:'test'}));
+});
+
 test('production admission projection exposes category outcomes without submitted values', () => {
   const projection=productionAdmissionProjection({...valid,PORTAL_AUTO_MIGRATE:'false'});
   assert.equal(projection.mode,'production');
+  assert.equal(projection.admission_version,PRODUCTION_ADMISSION_CONTRACT_VERSION);
   assert.equal(projection.healthy,false);
+  assert.deepEqual(projection.checks.map(check=>check.id).sort(),Object.keys(PRODUCTION_ADMISSION_ACTIONS).sort(),'runtime checks must cover the reviewed admission catalogue exactly');
   assert(projection.issues.includes('database'));
   assert(projection.next_actions.some(item=>item.id==='database'&&/reviewed PostgreSQL target/i.test(item.action)));
   assert.deepEqual(projection.next_actions.map(item=>item.id).sort(),projection.issues.slice().sort(),'every blocked category must have reviewed guidance');
@@ -168,9 +192,24 @@ const backup = {BACKUP_MAX_AGE_HOURS:'26',BACKUP_RESTORE_MAX_AGE_DAYS:'90',BACKU
 const antiAging = {ANTI_AGING_LIVE_AI:'false',ANTI_AGING_CHECKOUT_ENABLED:'false',ANTI_AGING_BOOKING_ENABLED:'false',ANTI_AGING_IMAGE_ANALYSIS_ENABLED:'false',ANTI_AGING_ACCESSIBILITY_VERIFIED:'false',ANTI_AGING_RESTORE_VERIFIED:'false',ANTI_AGING_PRIVACY_REVIEWED:'false',OPERATIONS_ANTI_AGING_RETENTION_DAYS:'365'};
 const accessibility = {ACCESSIBILITY_VALIDATION_REPORT_URL:'https://evidence.mgtskincare.test/accessibility',ACCESSIBILITY_VALIDATED_AT:'2026-01-01T00:00:00.000Z'};
 const subscription = {SUBSCRIPTIONS_ENABLED:'false'};
-const ai = {OLLAMA_ENABLED:'false',OPENCLAW_ENABLED:'false'};
+const sponsoredContent = {MGT_OMNI_RETAIL_ENABLED:'false',MGT_RETAIL_PARTNER_AUTHORIZATION_REVIEWED:'false',MGT_SPONSORED_CONTENT_ENABLED:'false',MGT_SPONSORED_CONTENT_REVIEWED:'false'};
+const ai = {OLLAMA_ENABLED:'false',OPENCLAW_ENABLED:'false',HOSTED_OPENAI_ENABLED:'false'};
 const processSurface = {HOST:'0.0.0.0',PORT:'3100',WORKER_HEALTH_FILE:'/tmp/mgt-worker-health.json'};
 const images = {NODE_IMAGE:'node@sha256:'+'a'.repeat(64),API_IMAGE:'ghcr.io/mgt/api@sha256:'+'b'.repeat(64),WEB_IMAGE:'ghcr.io/mgt/web@sha256:'+'c'.repeat(64),OLLAMA_IMAGE:'ollama/ollama@sha256:'+'d'.repeat(64),CADDY_IMAGE:'caddy@sha256:'+'e'.repeat(64)};
+
+test('a complete preflight-approved production environment reaches both API and worker admission', async () => {
+ const { validateEnvironment } = await import('../../../infra/portal/preflight.mjs');
+ const env = {...valid,...policy,...operational,...notification,...identity,...backup,...antiAging,...accessibility,...subscription,...sponsoredContent,...ai,...processSurface,...images,DATABASE_URL:'postgresql://db.portal.test/mgt?sslmode=verify-full',PORTAL_AUTO_MIGRATE:'false'};
+ assert.equal(validateEnvironment(env).ok,true);
+ const api={...env};delete api.SUPABASE_SERVICE_ROLE_KEY;delete api.OPERATIONS_ALERT_WEBHOOK_TOKEN;delete api.NOTIFICATION_WEBHOOK_TOKEN;
+ const worker={...env};for(const key of ['MGT_EDGE_TOKEN','SUPABASE_ANON_KEY','BACKUP_ATTESTATION_SECRET','STRIPE_SECRET_KEY','STRIPE_SUBSCRIPTION_WEBHOOK_SECRET','OPENAI_API_KEY','OPENCLAW_API_KEY'])delete worker[key];
+ assert.doesNotThrow(()=>validateApiProcessAdmission(api));
+ assert.equal(validateWorkerRuntimeAdmission(worker),60000);
+ assert.throws(()=>validateApiProcessAdmission({...api,SUPABASE_SERVICE_ROLE_KEY:'worker-only-secret'}),/Production API secret boundary is invalid/);
+ assert.throws(()=>validateWorkerRuntimeAdmission({...worker,MGT_EDGE_TOKEN:'runtime-test-edge-token-unique-123456789'}),/Production worker secret boundary is invalid/);
+ assert.doesNotThrow(()=>validateProductionApiSecretBoundary(api));
+ assert.doesNotThrow(()=>validateProductionWorkerSecretBoundary(worker));
+});
 
 test('production operations admission matches preflight support, monitoring, and alert boundaries', async () => {
   const {validateEnvironment}=await import('../../../infra/portal/preflight.mjs');
@@ -333,15 +372,37 @@ test('production subscription admission matches preflight billing boundaries', a
   }
 });
 
+test('production sponsored-content admission matches the review, merchant, and disabled-residue boundaries', async () => {
+  const {validateEnvironment}=await import('../../../infra/portal/preflight.mjs');
+  const processEnv={...valid,...operational,...notification,...identity,...backup,...antiAging,...accessibility,...subscription,...sponsoredContent};
+  assert.doesNotThrow(()=>validateProductionSponsoredContentAdmission(processEnv));
+  const enabled={...processEnv,MGT_OMNI_RETAIL_ENABLED:'true',MGT_RETAIL_PARTNER_AUTHORIZATION_REVIEWED:'true',MGT_SPONSORED_CONTENT_ENABLED:'true',MGT_SPONSORED_CONTENT_REVIEWED:'true',MGT_SPONSORED_CONTENT_APPROVAL_REFERENCE:'commercial-review-20261103',MGT_SPONSORED_CONTENT_APPROVED_AT:'2026-11-03T00:00:00.000Z'};
+  assert.doesNotThrow(()=>validateProductionSponsoredContentAdmission(enabled));
+  for(const overrides of [
+    {MGT_SPONSORED_CONTENT_ENABLED:undefined},{MGT_SPONSORED_CONTENT_REVIEWED:'TRUE'},
+    {MGT_SPONSORED_CONTENT_ENABLED:'true',MGT_SPONSORED_CONTENT_REVIEWED:'false'},
+    {MGT_SPONSORED_CONTENT_ENABLED:'true',MGT_OMNI_RETAIL_ENABLED:'false'},
+    {MGT_SPONSORED_CONTENT_ENABLED:'true',MGT_RETAIL_PARTNER_AUTHORIZATION_REVIEWED:'false'},
+    {MGT_SPONSORED_CONTENT_ENABLED:'true',MGT_SPONSORED_CONTENT_APPROVAL_REFERENCE:'bad ref'},
+    {MGT_SPONSORED_CONTENT_ENABLED:'true',MGT_SPONSORED_CONTENT_APPROVED_AT:'2999-01-01T00:00:00.000Z'},
+    {MGT_SPONSORED_CONTENT_ENABLED:'false',MGT_SPONSORED_CONTENT_REVIEWED:'true'},
+    {MGT_SPONSORED_CONTENT_ENABLED:'false',MGT_SPONSORED_CONTENT_APPROVAL_REFERENCE:'dormant-review-20261103'}
+  ]){
+    const env={...enabled,...overrides};
+    assert.throws(()=>validateProductionSponsoredContentAdmission(env),error=>error.message==='Production sponsored-content admission is invalid.');
+    assert.ok(validateEnvironment(env).errors.some(error=>/sponsored content|MGT_SPONSORED_CONTENT|omni-retail/i.test(error)),JSON.stringify(overrides));
+  }
+});
+
 test('production AI admission matches preflight provider boundaries', async () => {
   const {validateEnvironment}=await import('../../../infra/portal/preflight.mjs');
-  const enabled={OLLAMA_ENABLED:'true',OLLAMA_BASE_URL:'http://ollama:11434',OPENCLAW_ENABLED:'true',OPENCLAW_BASE_URL:'https://openclaw.mgtskincare.test',OPENCLAW_API_MODE:'ollama'};
+  const enabled={OLLAMA_ENABLED:'true',OLLAMA_BASE_URL:'http://ollama:11434',OPENCLAW_ENABLED:'true',OPENCLAW_BASE_URL:'https://openclaw.mgtskincare.test',OPENCLAW_API_MODE:'ollama',HOSTED_OPENAI_ENABLED:'false'};
   const processEnv={...valid,...operational,...notification,...identity,...backup,...accessibility,...subscription,...enabled};
   assert.doesNotThrow(()=>validateProductionAiAdmission(processEnv));
-  for(const overrides of [{OLLAMA_ENABLED:'True'},{OLLAMA_BASE_URL:'http://localhost:11434'},{OLLAMA_BASE_URL:'http://ollama.internal:11434'},{OLLAMA_BASE_URL:'http://192.0.2.10:11434'},{OLLAMA_BASE_URL:'https://operator@ollama.mgtskincare.test'},{OLLAMA_BASE_URL:'https://ollama.mgtskincare.test?model=other'},{OLLAMA_BASE_URL:' https://ollama.mgtskincare.test'},{OPENCLAW_ENABLED:'TRUE'},{OPENCLAW_BASE_URL:'http://localhost:8080'},{OPENCLAW_BASE_URL:'http://openclaw.internal:8080'},{OPENCLAW_BASE_URL:'https://openclaw_internal'},{OPENCLAW_BASE_URL:'https://openclaw.mgtskincare.test#alternate'},{OPENCLAW_BASE_URL:'https://openclaw.mgtskincare.test?tenant=other'},{OPENCLAW_API_MODE:undefined},{OPENCLAW_API_MODE:'invalid'},{OPENCLAW_API_MODE:'openai-completions',OPENCLAW_API_KEY:''},{OPENCLAW_API_MODE:'openai-completions',OPENCLAW_API_KEY:'change-me'},{OPENCLAW_API_MODE:'openai-completions',OPENCLAW_API_KEY:' configured-key '},{OPENAI_API_KEY:'change-me'},{OPENAI_API_KEY:'configured\nkey'}]){
+  for(const overrides of [{OLLAMA_ENABLED:'True'},{OLLAMA_BASE_URL:'http://localhost:11434'},{OLLAMA_BASE_URL:'http://ollama.internal:11434'},{OLLAMA_BASE_URL:'http://192.0.2.10:11434'},{OLLAMA_BASE_URL:'https://operator@ollama.mgtskincare.test'},{OLLAMA_BASE_URL:'https://ollama.mgtskincare.test?model=other'},{OLLAMA_BASE_URL:' https://ollama.mgtskincare.test'},{OPENCLAW_ENABLED:'TRUE'},{OPENCLAW_BASE_URL:'http://localhost:8080'},{OPENCLAW_BASE_URL:'http://openclaw.internal:8080'},{OPENCLAW_BASE_URL:'https://openclaw_internal'},{OPENCLAW_BASE_URL:'https://openclaw.mgtskincare.test#alternate'},{OPENCLAW_BASE_URL:'https://openclaw.mgtskincare.test?tenant=other'},{OPENCLAW_API_MODE:undefined},{OPENCLAW_API_MODE:'invalid'},{OPENCLAW_API_MODE:'ollama',OPENCLAW_API_KEY:'dormant-openclaw-key'},{OPENCLAW_API_MODE:'openai-completions',OPENCLAW_API_KEY:''},{OPENCLAW_API_MODE:'openai-completions',OPENCLAW_API_KEY:'change-me'},{OPENCLAW_API_MODE:'openai-completions',OPENCLAW_API_KEY:' configured-key '},{HOSTED_OPENAI_ENABLED:undefined},{HOSTED_OPENAI_ENABLED:'True'},{HOSTED_OPENAI_ENABLED:'true',OPENAI_API_KEY:''},{HOSTED_OPENAI_ENABLED:'true',OPENAI_API_KEY:'change-me'},{HOSTED_OPENAI_ENABLED:'true',OPENAI_API_KEY:'configured\nkey'}]){
     const env={...processEnv,...overrides};let runtimeAccepts=true;
     try{validateProductionAiAdmission(env);}catch(error){runtimeAccepts=false;assert.equal(error.message,'Production AI admission is invalid.');}
-    const report=validateEnvironment(env),preflightAccepts=!report.errors.some(error=>/^(OLLAMA_|OPENCLAW_|OPENAI_)/.test(error));
+    const report=validateEnvironment(env),preflightAccepts=!report.errors.some(error=>/^(OLLAMA_|OPENCLAW_|HOSTED_OPENAI_ENABLED|OPENAI_|Native Ollama-mode OpenClaw)/.test(error));
     assert.equal(runtimeAccepts,preflightAccepts,JSON.stringify(overrides));
   }
 });
@@ -377,7 +438,7 @@ test('production secret isolation matches preflight integration-role boundaries'
   for(const overrides of [
     {OPERATIONS_ALERT_WEBHOOK_TOKEN:identity.SUPABASE_SERVICE_ROLE_KEY},
     {NOTIFICATION_WEBHOOK_TOKEN:operational.OPERATIONS_ALERT_WEBHOOK_TOKEN},
-    {OPENAI_API_KEY:identity.SUPABASE_ANON_KEY}
+    {HOSTED_OPENAI_ENABLED:'true',OPENAI_API_KEY:identity.SUPABASE_ANON_KEY}
   ]){
     const env={...processEnv,...overrides};
     assert.throws(()=>validateProductionSecretIsolation(env),error=>error.message==='Production secret isolation is invalid.');
@@ -426,8 +487,21 @@ function probeStartup(entry, overrides = {}) {
   const storePath = require.resolve('../dist/portal/store');
   const entryPath = path.resolve(__dirname,`../dist/portal/${entry}.js`);
   const boot = `const Module=require('node:module');const store=require(${JSON.stringify(storePath)});store.PgStore=class{constructor(){process.stderr.write('DATABASE_OPENED');process.exit(77);}};Module.runMain(${JSON.stringify(entryPath)});`;
-  const env = {...process.env,...valid,...operational,...notification,...identity,...backup,...antiAging,...accessibility,...subscription,...ai,...processSurface,...images,PORTAL_AUTO_MIGRATE:'false',DATABASE_URL:'postgresql://db.invalid/mgt?sslmode=verify-full',...overrides};
+  const env = {...process.env,...valid,...policy,...operational,...notification,...identity,...backup,...antiAging,...accessibility,...subscription,...sponsoredContent,...ai,...processSurface,...images,PORTAL_AUTO_MIGRATE:'false',DATABASE_URL:'postgresql://db.invalid/mgt?sslmode=verify-full'};
+  const peerOnlySecrets = entry === 'server'
+    ? ['SUPABASE_SERVICE_ROLE_KEY','OPERATIONS_ALERT_WEBHOOK_TOKEN','NOTIFICATION_WEBHOOK_TOKEN']
+    : ['MGT_EDGE_TOKEN','SUPABASE_ANON_KEY','BACKUP_ATTESTATION_SECRET','STRIPE_SECRET_KEY','STRIPE_SUBSCRIPTION_WEBHOOK_SECRET','OPENAI_API_KEY','OPENCLAW_API_KEY'];
+  for (const key of peerOnlySecrets) delete env[key];
+  Object.assign(env, overrides);
   return spawnSync(process.execPath,['-e',boot],{env,encoding:'utf8',timeout:10000,windowsHide:true});
+}
+
+function assertStartupRejected(entry, overrides, prohibited = /DATABASE_OPENED/) {
+  const child=probeStartup(entry,overrides);
+  assert.equal(child.error,undefined);
+  assert.equal(child.status,1);
+  assert.doesNotMatch(child.stderr,prohibited);
+  assert.deepEqual(JSON.parse(child.stderr.trim()),entry==='server'?{event:'portal_startup_failed',code:'startup_failed'}:{worker:'portal-operations',event:'worker_startup_failed'});
 }
 
 for (const entry of ['server','worker']) test(`${entry} rejects invalid owners before database initialization`, () => {
@@ -480,7 +554,7 @@ for (const entry of ['server','worker']) test(`${entry} rejects unsafe database 
   }
 });
 
-for (const entry of ['server','worker']) test(`${entry} rejects unsafe operational controls before database initialization`, () => {
+test('worker rejects unsafe operational controls before database initialization', () => {
   for (const overrides of [
     {SUPPORT_OWNER_EMAIL:''},{ALERT_OWNER_EMAIL:'invalid'},{MONITORING_DASHBOARD_URL:'http://monitoring.mgtskincare.test'},
     {SUPPORT_RESPONSE_TARGET_HOURS:'24.0'},{OPERATIONS_ALERT_DELIVERY:'disabled'},
@@ -488,15 +562,11 @@ for (const entry of ['server','worker']) test(`${entry} rejects unsafe operation
     {OPERATIONS_ALERT_TIMEOUT_MS:'1e4'},{OPERATIONS_ALERT_LEASE_SECONDS:'9'},
     {OPERATIONS_ALERT_MAX_RETRY_DELAY_SECONDS:'299'},{OPERATIONS_ALERT_MAX_ATTEMPTS:'21'},{OPERATIONS_ALERT_KEY_ID:undefined},{OPERATIONS_ALERT_KEY_ID:''},{OPERATIONS_ALERT_KEY_ID:'not valid'}
   ]) {
-    const child=probeStartup(entry,overrides);
-    assert.equal(child.error,undefined);
-    assert.equal(child.status,1);
-    assert.doesNotMatch(child.stderr,/DATABASE_OPENED|mgtskincare\.test|change-me|not valid/);
-    assert.deepEqual(JSON.parse(child.stderr.trim()),entry==='server'?{event:'portal_startup_failed',code:'startup_failed'}:{worker:'portal-operations',event:'worker_startup_failed'});
+    assertStartupRejected('worker',overrides,/DATABASE_OPENED|mgtskincare\.test|change-me|not valid/);
   }
 });
 
-for (const entry of ['server','worker']) test(`${entry} rejects unsafe notification controls before database initialization`, () => {
+test('worker rejects unsafe notification controls before database initialization', () => {
   for (const overrides of [
     {NOTIFICATION_DELIVERY:'disabled'},{NOTIFICATION_WEBHOOK_URL:'http://notifications.mgtskincare.test/events'},{NOTIFICATION_WEBHOOK_URL:'https://notifications.mgtskincare.test/events#alternate'},
     {NOTIFICATION_WEBHOOK_TOKEN:'change-me'},{NOTIFICATION_WEBHOOK_TOKEN:' configured-notification-token '},{NOTIFICATION_WEBHOOK_TOKEN:'configured\tnotification-token'},{NOTIFICATION_WEBHOOK_KEY_ID:undefined},{NOTIFICATION_WEBHOOK_KEY_ID:''},{NOTIFICATION_WEBHOOK_KEY_ID:'not valid'},
@@ -504,88 +574,89 @@ for (const entry of ['server','worker']) test(`${entry} rejects unsafe notificat
     {NOTIFICATION_MAX_RETRY_DELAY_SECONDS:'299'},{NOTIFICATION_MAX_ATTEMPTS:'0'},
     {OPERATIONS_NOTIFICATION_RETENTION_DAYS:'90.0'}
   ]) {
-    const child=probeStartup(entry,overrides);
-    assert.equal(child.error,undefined);
-    assert.equal(child.status,1);
-    assert.doesNotMatch(child.stderr,/DATABASE_OPENED|mgtskincare\.test|change-me|not valid/);
-    assert.deepEqual(JSON.parse(child.stderr.trim()),entry==='server'?{event:'portal_startup_failed',code:'startup_failed'}:{worker:'portal-operations',event:'worker_startup_failed'});
+    assertStartupRejected('worker',overrides,/DATABASE_OPENED|mgtskincare\.test|change-me|not valid/);
   }
 });
 
-for (const entry of ['server','worker']) test(`${entry} rejects unsafe identity controls before database initialization`, () => {
-  for (const overrides of [
+test('server and worker reject unsafe identity controls for their assigned credential', () => {
+  const shared=[
     {SUPABASE_URL:''},{SUPABASE_URL:'http://identity.mgtskincare.test'},
     {SUPABASE_URL:'https://operator@identity.mgtskincare.test'},
-    {SUPABASE_URL:'https://identity.mgtskincare.test/auth'},{SUPABASE_URL:'https://identity.mgtskincare.test?tenant=other'},{SUPABASE_URL:'https://identity.mgtskincare.test#shadow'},
+    {SUPABASE_URL:'https://identity.mgtskincare.test/auth'},{SUPABASE_URL:'https://identity.mgtskincare.test?tenant=other'},{SUPABASE_URL:'https://identity.mgtskincare.test#shadow'}
+  ];
+  for(const entry of ['server','worker']) for(const overrides of shared) assertStartupRejected(entry,overrides,/DATABASE_OPENED|mgtskincare\.test|operator@/);
+  for(const overrides of [
     {SUPABASE_ANON_KEY:''},{SUPABASE_ANON_KEY:'change-me'},{SUPABASE_ANON_KEY:' anon'},{SUPABASE_ANON_KEY:'anon\nkey'},
-    {SUPABASE_SERVICE_ROLE_KEY:''},{SUPABASE_SERVICE_ROLE_KEY:'change-me'},{SUPABASE_SERVICE_ROLE_KEY:'service '},{SUPABASE_SERVICE_ROLE_KEY:'service\tkey'},
     {SUPABASE_SERVICE_ROLE_KEY:'anon'}
   ]) {
-    const child=probeStartup(entry,overrides);
-    assert.equal(child.error,undefined);
-    assert.equal(child.status,1);
-    assert.doesNotMatch(child.stderr,/DATABASE_OPENED|mgtskincare\.test|change-me|operator@/);
-    assert.deepEqual(JSON.parse(child.stderr.trim()),entry==='server'?{event:'portal_startup_failed',code:'startup_failed'}:{worker:'portal-operations',event:'worker_startup_failed'});
+    assertStartupRejected('server',overrides,/DATABASE_OPENED|mgtskincare\.test|change-me|operator@/);
   }
+  for(const overrides of [
+    {SUPABASE_SERVICE_ROLE_KEY:''},{SUPABASE_SERVICE_ROLE_KEY:'change-me'},{SUPABASE_SERVICE_ROLE_KEY:'service '},{SUPABASE_SERVICE_ROLE_KEY:'service\tkey'}
+  ]) assertStartupRejected('worker',overrides,/DATABASE_OPENED|mgtskincare\.test|change-me|operator@/);
 });
 
-for (const entry of ['server','worker']) test(`${entry} rejects unsafe backup controls before database initialization`, () => {
+test('worker rejects unsafe backup controls before database initialization', () => {
   for (const overrides of [{BACKUP_MAX_AGE_HOURS:''},{BACKUP_MAX_AGE_HOURS:'72.0'},{BACKUP_MAX_AGE_HOURS:'73'},{BACKUP_RESTORE_MAX_AGE_DAYS:'1e2'},{BACKUP_RESTORE_MAX_AGE_DAYS:'366'}]) {
-    const child=probeStartup(entry,overrides);assert.equal(child.error,undefined);assert.equal(child.status,1);assert.doesNotMatch(child.stderr,/DATABASE_OPENED|72\.0|1e2/);
+    assertStartupRejected('worker',overrides,/DATABASE_OPENED|72\.0|1e2/);
   }
 });
 
-for (const entry of ['server','worker']) test(`${entry} rejects enabled backup attestation without an explicit freshness window before database initialization`, () => {
-  const child=probeStartup(entry,{BACKUP_ATTESTATION_ENABLED:'true',BACKUP_ATTESTATION_SECRET:'backup-attestation-reference',BACKUP_ATTESTATION_KEY_ID:'primary',BACKUP_ATTESTATION_MAX_AGE_SECONDS:undefined});
-  assert.equal(child.error,undefined);
-  assert.equal(child.status,1);
-  assert.doesNotMatch(child.stderr,/DATABASE_OPENED|backup-attestation-reference/);
+test('server rejects enabled backup attestation without an explicit freshness window before database initialization', () => {
+  assertStartupRejected('server',{BACKUP_ATTESTATION_ENABLED:'true',BACKUP_ATTESTATION_SECRET:'backup-attestation-reference',BACKUP_ATTESTATION_KEY_ID:'primary',BACKUP_ATTESTATION_MAX_AGE_SECONDS:undefined},/DATABASE_OPENED|backup-attestation-reference/);
 });
 
-for (const entry of ['server','worker']) test(`${entry} rejects unsafe accessibility evidence before database initialization`, () => {
+test('worker rejects missing backup-attestation retention before database initialization', () => {
+  assertStartupRejected('worker',{OPERATIONS_BACKUP_ATTESTATION_RETENTION_DAYS:undefined});
+});
+
+test('server rejects unsafe accessibility evidence before database initialization', () => {
   for (const overrides of [{ACCESSIBILITY_VALIDATION_REPORT_URL:''},{ACCESSIBILITY_VALIDATION_REPORT_URL:'http://evidence.mgtskincare.test/a'},{ACCESSIBILITY_VALIDATION_REPORT_URL:'https://evidence.mgtskincare.test/a?token=hidden'},{ACCESSIBILITY_VALIDATION_REPORT_URL:'https://evidence.mgtskincare.test/a#alternate'},{ACCESSIBILITY_VALIDATED_AT:'2026-01-01T00:00:00Z'},{ACCESSIBILITY_VALIDATED_AT:'2999-01-01T00:00:00.000Z'}]) {
-    const child=probeStartup(entry,overrides);assert.equal(child.error,undefined);assert.equal(child.status,1);assert.doesNotMatch(child.stderr,/DATABASE_OPENED|mgtskincare\.test|2999/);
+    assertStartupRejected('server',overrides,/DATABASE_OPENED|mgtskincare\.test|2999/);
   }
 });
 
-for (const entry of ['server','worker']) test(`${entry} rejects unsafe subscription controls before database initialization`, () => {
+test('server rejects missing, unsafe, or duplicated public policy locations before database initialization', () => {
+  for (const overrides of [
+    {PUBLIC_PRIVACY_NOTICE_URL:''},
+    {PUBLIC_TERMS_OF_USE_URL:'http://policies.mgtskincare.test/terms'},
+    {PUBLIC_AI_DISCLOSURE_URL:'https://policies.mgtskincare.test/ai-disclosure?preview=true'},
+    {PUBLIC_AI_DISCLOSURE_URL:policy.PUBLIC_TERMS_OF_USE_URL}
+  ]) assertStartupRejected('server',overrides,/DATABASE_OPENED|mgtskincare\.test|preview/);
+});
+
+test('server rejects unsafe subscription controls before database initialization', () => {
   for (const overrides of [{SUBSCRIPTIONS_ENABLED:''},{SUBSCRIPTIONS_ENABLED:'False'},{SUBSCRIPTIONS_ENABLED:'true',SUBSCRIPTION_TERMS_APPROVED:'false'}]) {
-    const child=probeStartup(entry,overrides);assert.equal(child.error,undefined);assert.equal(child.status,1);assert.doesNotMatch(child.stderr,/DATABASE_OPENED|False/);
+    assertStartupRejected('server',overrides,/DATABASE_OPENED|False/);
   }
 });
 
-for (const entry of ['server','worker']) test(`${entry} rejects unsafe AI provider controls before database initialization`, () => {
+test('server rejects unsafe AI provider controls before database initialization', () => {
   for (const overrides of [{OLLAMA_ENABLED:'True'},{OLLAMA_ENABLED:'true',OLLAMA_BASE_URL:'http://localhost:11434'},{OLLAMA_ENABLED:'true',OLLAMA_BASE_URL:'http://ollama.internal:11434'},{OLLAMA_ENABLED:'true',OLLAMA_BASE_URL:'https://ollama.mgtskincare.test?model=other'},{OPENCLAW_ENABLED:'TRUE'},{OPENCLAW_ENABLED:'true',OPENCLAW_BASE_URL:'http://localhost:8080',OPENCLAW_API_MODE:'ollama'},{OPENCLAW_ENABLED:'true',OPENCLAW_BASE_URL:'http://openclaw.internal:8080',OPENCLAW_API_MODE:'ollama'},{OPENCLAW_ENABLED:'true',OPENCLAW_BASE_URL:'https://openclaw.mgtskincare.test#alternate',OPENCLAW_API_MODE:'ollama'},{OPENAI_API_KEY:'change-me'},{OPENAI_API_KEY:'configured\nkey'}]) {
-    const child=probeStartup(entry,overrides);assert.equal(child.error,undefined);assert.equal(child.status,1);assert.doesNotMatch(child.stderr,/DATABASE_OPENED|localhost|change-me/);
+    assertStartupRejected('server',overrides,/DATABASE_OPENED|localhost|change-me/);
   }
 });
 
-for (const entry of ['server','worker']) test(`${entry} rejects unsafe process surfaces before database initialization`, () => {
-  for (const overrides of [{HOST:'127.0.0.1'},{PORT:'3100.0'},{PORT:'80'},{WORKER_HEALTH_FILE:'relative.json'},{WORKER_HEALTH_FILE:'/tmp/../health.json'}]) {
-    const child=probeStartup(entry,overrides);assert.equal(child.error,undefined);assert.equal(child.status,1);assert.doesNotMatch(child.stderr,/DATABASE_OPENED|127\.0\.0\.1|relative\.json/);
-  }
-});
-
-for (const entry of ['server','worker']) test(`${entry} rejects mutable or malformed image references before database initialization`, () => {
-  for (const overrides of [{NODE_IMAGE:'node:latest'},{API_IMAGE:'ghcr.io/mgt/api:latest'},{WEB_IMAGE:''},{OLLAMA_IMAGE:'ollama/ollama@sha256:bad'},{CADDY_IMAGE:'caddy@sha256:'+'A'.repeat(64)},{WEB_IMAGE:images.API_IMAGE},{CADDY_IMAGE:images.NODE_IMAGE}]) {
-    const child=probeStartup(entry,overrides);assert.equal(child.error,undefined);assert.equal(child.status,1);assert.doesNotMatch(child.stderr,/DATABASE_OPENED|latest|sha256/);
-  }
+test('server and worker reject unsafe process surfaces before database initialization', () => {
+  for (const overrides of [{HOST:'127.0.0.1'},{PORT:'3100.0'},{PORT:'80'}]) assertStartupRejected('server',overrides,/DATABASE_OPENED|127\.0\.0\.1/);
+  for (const overrides of [{WORKER_HEALTH_FILE:'relative.json'},{WORKER_HEALTH_FILE:'/tmp/../health.json'}]) assertStartupRejected('worker',overrides,/DATABASE_OPENED|relative\.json/);
 });
 
 for (const entry of ['server','worker']) test(`${entry} rejects cross-wired integration secrets before database initialization`, () => {
   for (const overrides of [{OPERATIONS_ALERT_WEBHOOK_TOKEN:'service'},{NOTIFICATION_WEBHOOK_TOKEN:'configured-alert-token'},{OPENAI_API_KEY:'anon'}]) {
-    const child=probeStartup(entry,overrides);assert.equal(child.error,undefined);assert.equal(child.status,1);assert.doesNotMatch(child.stderr,/DATABASE_OPENED|configured-alert-token|service|anon/);
+    assertStartupRejected(entry,overrides,/DATABASE_OPENED|configured-alert-token|service|anon/);
   }
 });
 
-for (const entry of ['server','worker']) test(`${entry} rejects cross-wired control endpoints before database initialization`, () => {
-  for (const overrides of [{INCIDENT_RUNBOOK_URL:operational.MONITORING_DASHBOARD_URL},{ACCESSIBILITY_VALIDATION_REPORT_URL:operational.INCIDENT_RUNBOOK_URL},{NOTIFICATION_WEBHOOK_URL:operational.OPERATIONS_ALERT_WEBHOOK_URL}]) {
-    const child=probeStartup(entry,overrides);assert.equal(child.error,undefined);assert.equal(child.status,1);assert.doesNotMatch(child.stderr,/DATABASE_OPENED|mgtskincare\.test/);
+test('worker rejects colliding operational endpoints before database initialization', () => {
+  for (const overrides of [{INCIDENT_RUNBOOK_URL:operational.MONITORING_DASHBOARD_URL},{NOTIFICATION_WEBHOOK_URL:operational.OPERATIONS_ALERT_WEBHOOK_URL}]) {
+    assertStartupRejected('worker',overrides,/DATABASE_OPENED|mgtskincare\.test/);
   }
 });
 
-for (const entry of ['server','worker']) test(`${entry} rejects disabled-feature configuration residue before database initialization`, () => {
+test('server and worker reject disabled-feature configuration residue assigned to their workload', () => {
   for (const overrides of [{OLLAMA_ENABLED:'false',OLLAMA_BASE_URL:'http://ollama:11434'},{OPENCLAW_ENABLED:'false',OPENCLAW_API_MODE:'ollama'},{SUBSCRIPTIONS_ENABLED:'false',STRIPE_SECRET_KEY:'sk_live_dormant'}]) {
-    const child=probeStartup(entry,overrides);assert.equal(child.error,undefined);assert.equal(child.status,1);assert.doesNotMatch(child.stderr,/DATABASE_OPENED|dormant|ollama:11434/);
+    assertStartupRejected('server',overrides,/DATABASE_OPENED|dormant|ollama:11434/);
   }
+  assertStartupRejected('worker',{NOTIFICATION_DELIVERY:'in_app'},/DATABASE_OPENED|configured-notification-token/);
 });

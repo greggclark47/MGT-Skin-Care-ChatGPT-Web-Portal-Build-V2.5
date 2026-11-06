@@ -6,6 +6,9 @@ import path from 'node:path';
 import test from 'node:test';
 import { buildProductionPrerequisites, productionPrerequisitesChecksum, validateProductionPrerequisites } from './production-prerequisites.mjs';
 import { buildProductionPrerequisiteReview, productionPrerequisiteReviewChecksum, validateProductionPrerequisiteReview, verifyProductionPrerequisiteReview, PREREQUISITE_RECORD_IDS } from './production-prerequisite-review.mjs';
+import { buildSecretInjectionAdmission, REQUIRED_CONFIG_VARIABLES } from './secret-injection-admission.mjs';
+import { SECRET_INJECTION_CONSUMERS, SECRET_INJECTION_VARIABLES, createSecretInjectionContractTemplate } from './secret-injection-contract.mjs';
+import { recoveryDrillChecksum } from './recovery-drill-review.mjs';
 
 const now = '2026-10-08T12:00:00.000Z';
 function fixture() {
@@ -18,6 +21,8 @@ function fixture() {
   return document;
 }
 function seal(document) { document.prerequisite_review_checksum = productionPrerequisiteReviewChecksum(document); return document; }
+function secretContract(environment, candidateCommit) { const namespace = `secret://approved/mgt/${environment}`; const references = Object.fromEntries(SECRET_INJECTION_CONSUMERS.map((consumer) => [consumer, Object.fromEntries(SECRET_INJECTION_VARIABLES[consumer].map((name) => [name, null]))])); for (const [consumer, names] of Object.entries({ edge: ['MGT_EDGE_TOKEN'], api: ['DATABASE_URL', 'MGT_EDGE_TOKEN', 'SUPABASE_ANON_KEY'], worker: ['DATABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY', 'OPERATIONS_ALERT_WEBHOOK_TOKEN'] })) for (const name of names) references[consumer][name] = `${namespace}/${name.toLowerCase().replaceAll('_', '-')}`; references.api.MGT_EDGE_TOKEN = references.edge.MGT_EDGE_TOKEN; references.worker.DATABASE_URL = references.api.DATABASE_URL; return createSecretInjectionContractTemplate({ environment, candidateCommit, providerReference: 'secret-manager://approved/mgt', namespaceReference: namespace, workloadIdentities: { edge: `workload://mgt/${environment}/edge`, api: `workload://mgt/${environment}/api`, worker: `workload://mgt/${environment}/worker` }, secretReferences: references }); }
+function secretAdmission(candidateCommit) { const config = (consumer) => { if (consumer === 'edge') return { PORTAL_DOMAIN: 'portal.mgt-skin-care.test' }; const values = Object.fromEntries(REQUIRED_CONFIG_VARIABLES[consumer].map((name) => [name, 'configured'])); values.NODE_ENV = 'production'; values.DEMO_MODE = 'false'; values.PORTAL_AUTO_MIGRATE = 'false'; if (consumer === 'api') { values.OLLAMA_ENABLED = 'false'; values.OPENCLAW_ENABLED = 'false'; values.HOSTED_OPENAI_ENABLED = 'false'; values.BACKUP_ATTESTATION_ENABLED = 'false'; values.SUBSCRIPTIONS_ENABLED = 'false'; values.MGT_OMNI_RETAIL_ENABLED = 'false'; values.MGT_RETAIL_PARTNER_AUTHORIZATION_REVIEWED = 'false'; values.MGT_SPONSORED_CONTENT_ENABLED = 'false'; values.MGT_SPONSORED_CONTENT_REVIEWED = 'false'; } if (consumer === 'worker') values.NOTIFICATION_DELIVERY = 'in_app'; return values; }; const api = config('api'), worker = config('worker'); return buildSecretInjectionAdmission({ environment: 'production', composeProjectName: 'mgt-skin-care-production', candidateCommit, stagingContract: secretContract('staging', candidateCommit), productionContract: secretContract('production', candidateCommit), inventories: { edge: { config_values: config('edge'), config_keys: ['PORTAL_DOMAIN'], secret_keys: ['MGT_EDGE_TOKEN'] }, api: { config_values: api, config_keys: Object.keys(api), secret_keys: ['DATABASE_URL', 'MGT_EDGE_TOKEN', 'SUPABASE_ANON_KEY'] }, worker: { config_values: worker, config_keys: Object.keys(worker), secret_keys: ['DATABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY', 'OPERATIONS_ALERT_WEBHOOK_TOKEN'] } }, privateFilesDistinct: true, fileSecurity: 'verified', generatedAt: '2026-10-01T00:00:00.000Z' }); }
 
 const mutations = [];
 for (let index = 0; index < 10; index++) {
@@ -97,10 +102,17 @@ test('complete review verifies; incomplete or forged ready review fails even wit
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   fs.mkdirSync(path.join(root, 'work'));
   const prerequisites = fixture();
+  const admission = secretAdmission(prerequisites.candidate_commit);
+  fs.mkdirSync(path.join(root, 'work', 'recovery'), { recursive: true });
+  const recoveryEvidence = ['restore_transcript', 'rollback_plan', 'failed_restore_procedure'].map(id => { const reference = `work/recovery/${id}.md`; const content = `Synthetic ${id} evidence\n`; fs.writeFileSync(path.join(root, reference), content); return { id, reference, checksum: `sha256:${createHash('sha256').update(content).digest('hex')}`, bytes: Buffer.byteLength(content), owner: 'Gregg Clark of MGT', reviewed_at: now, status: 'pass' }; });
+  const recovery = { version: '1.0', candidate_commit: prerequisites.candidate_commit, generated_at: now, status: 'ready_for_recovery_review', target_seconds: { rto: 120, rpo: 300 }, measured_seconds: { rto: 90, rpo: 60 }, restored_migration_version: '0010_ingredient_rule_seed_alignment', evidence: recoveryEvidence, decision: { decider: 'Gregg Clark of MGT', decision: 'accepted', decided_at: now }, errors: [] };
+  recovery.recovery_drill_checksum = recoveryDrillChecksum(recovery);
   const records = Object.fromEntries(PREREQUISITE_RECORD_IDS.map(id => {
-    const reference = `work/${id}.md`;
-    fs.writeFileSync(path.join(root, reference), `Synthetic ${id} evidence\n`);
-    return [id, { reference, owner: 'Gregg Clark of MGT', reviewed_at: now, status: 'pass' }];
+    const policyApproval = { version: '1.0', candidate_commit: prerequisites.candidate_commit, status: 'approved', approved_at: now, approval_reference: 'governance://mgt/policy-publication/test', policy_urls: { privacy_notice: 'https://policies.mgt-skin-care.test/privacy', terms_of_use: 'https://policies.mgt-skin-care.test/terms', ai_disclosure: 'https://policies.mgt-skin-care.test/ai-disclosure' } };
+    const structured = id === 'secret_manager' || id === 'backup_restore' || id === 'policy_publication_approval';
+    const reference = `work/${id}${structured ? '.json' : '.md'}`;
+    fs.writeFileSync(path.join(root, reference), id === 'secret_manager' ? `${JSON.stringify(admission, null, 2)}\n` : id === 'backup_restore' ? `${JSON.stringify(recovery, null, 2)}\n` : id === 'policy_publication_approval' ? `${JSON.stringify(policyApproval, null, 2)}\n` : `Synthetic ${id} evidence\n`);
+    return [id, { reference, owner: 'Gregg Clark of MGT', reviewed_at: now, status: 'pass', ...(id === 'secret_manager' ? { contract_checksums: admission.contract_checksums } : {}) }];
   }));
   const complete = buildProductionPrerequisiteReview({ root, prerequisites, records, now });
   assert.equal(validateProductionPrerequisiteReview(complete, { prerequisites, now }).ok, true);

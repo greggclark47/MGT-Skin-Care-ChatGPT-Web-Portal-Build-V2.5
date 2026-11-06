@@ -132,7 +132,7 @@ approval remain open.
 
 ### 3B. OpenClaw and hosted escalation
 
-**Environment:** keep `OPENCLAW_ENABLED=false` until native `/api/chat` is tested. Configure `OPENAI_API_KEY` only for an approved server-side escalation path.
+**Environment:** keep `OPENCLAW_ENABLED=false` until native `/api/chat` is tested. Set `HOSTED_OPENAI_ENABLED=true` and inject `OPENAI_API_KEY` together only for an approved server-side escalation path; native Ollama OpenClaw mode must not receive an OpenClaw key.
 
 **Tests:** live staging calls for premium consultation, deep routine review and operator analysis; verify entitlement, reservation, settlement, timeout holds, provider-model mismatch and reconciliation.
 
@@ -167,11 +167,12 @@ Choose in-app-only, transactional email or an HTTPS webhook. Configure retries, 
 ## Phase 5 — deployment and edge (Critical)
 
 1. Resolve approved immutable `NODE_IMAGE`, `OLLAMA_IMAGE` and `CADDY_IMAGE` digests.
-2. Populate `infra/portal/.env` outside source control and run `pnpm infra:preflight`.
-3. Build API, worker, web and edge images with Docker Compose.
-4. Verify Caddy HTTPS, same-origin API routing, security headers, compression, access logs and signed webhook routing.
-5. Verify API `/healthz`, production `/readyz`, web health, graceful shutdown and log rotation.
-6. Run the staging proxy journey through the edge rather than directly against the API.
+2. Create a candidate-bound staging/production secret-injection contract pair plus three private non-secret configuration files and three distinct secret-manager materialization files. Validate their key inventories, contract checksums and stage-scoped Compose name with `pnpm infra:secret-injection-admission`; bind the emitted checksum pair into the staging target or production secret-manager record, and attach redacted provider ACL evidence whenever local permissions are reported as unverified. Do not create a shared `infra/portal/.env`.
+3. Have the approved deployment controller inject the short-lived aggregate validation context, then run `pnpm infra:preflight` and the API/worker role-scoped startup preflights.
+4. Build API, worker, web and edge images with Docker Compose using `mgt-skin-care-staging` or `mgt-skin-care-production` as the matching project name.
+5. Verify Caddy HTTPS, same-origin API routing, security headers, compression, access logs and signed webhook routing.
+6. Verify API `/healthz`, production `/readyz`, web health, graceful shutdown and log rotation.
+7. Run the staging proxy journey through the edge rather than directly against the API.
 
 **Exit evidence:** image digest record, preflight output, container logs, health transition report and edge journey report.
 
@@ -267,8 +268,9 @@ pnpm release:checkpoint -- --require-production
 ```
 
 The newest checkpoint is authoritative for the current candidate and passes every local gate.
-Production preflight remains blocked when `infra/portal/.env` is absent, so the release decision
-is intentionally `NOT READY` until staging or production configuration is supplied and validated.
+Production preflight remains blocked until an approved secret-manager workflow supplies an
+ephemeral aggregate deployment-validation context, so the release decision is intentionally
+`NOT READY` until staging or production configuration is supplied and validated.
 
 ## Phase 8 — analytics and data-point contract
 
@@ -282,7 +284,7 @@ Evidence: `pnpm test:analytics` and the `analytics SDK contract` row in `work/ch
 
 Commit `8444aa7` adds a server-side assistant role contract without changing existing pages or the MGT mark. `POST /api/hub/assistant` supports deterministic onboarding/customer-care navigation and payment/account/medical handoffs. Routine and product education requests require a verified account and explicit AI consent, then reuse the reviewed Coach path. The assistant does not create support tickets, confirm payments, edit routines, or enable OpenClaw.
 
-The API build, focused portal and Coach checks, and full local verification passed. Evidence: `work/verification/2026-09-23T01-18-44-476Z/report.md`. Commit `518274b` then added a customer-facing guidance panel within the existing Support layout, with next-step links and reviewed-source display. General onboarding and retailer discovery work without an AI provider; reviewed skincare responses still require sign-in, consent, and available approved knowledge. API compilation, portal integration checks, web production build, 28-page proxy journey, and focused browser checks passed. Next, complete the reviewed role/evaluation set and validate accessibility, catalog, human support ownership, and optional OpenClaw staging behavior. Production remains **NOT READY** while `infra/portal/.env` and live service gates are open.
+The API build, focused portal and Coach checks, and full local verification passed. Evidence: `work/verification/2026-09-23T01-18-44-476Z/report.md`. Commit `518274b` then added a customer-facing guidance panel within the existing Support layout, with next-step links and reviewed-source display. General onboarding and retailer discovery work without an AI provider; reviewed skincare responses still require sign-in, consent, and available approved knowledge. API compilation, portal integration checks, web production build, 28-page proxy journey, and focused browser checks passed. Next, complete the reviewed role/evaluation set and validate accessibility, catalog, human support ownership, and optional OpenClaw staging behavior. Production remains **NOT READY** while stage-specific secret-manager bindings and live service gates are open.
 
 ## Phase 10 — assistant policy and fallback quality
 

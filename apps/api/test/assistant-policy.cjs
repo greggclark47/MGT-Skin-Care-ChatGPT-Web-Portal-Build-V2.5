@@ -17,6 +17,14 @@ test('assistant candidate policy cases stay bounded before model and payment rou
   modelCalls++;
   const input=JSON.parse(prompt);
   assert(input.documents.length<=8);
+  if(input.question.includes('knowledge changes')){
+   await db.tx(async r=>{const article=await r.get('knowledge','moisturizer_approved');await r.put('knowledge','moisturizer_approved',{...article,version:article.version+1});});
+   return JSON.stringify({excerpts:[{knowledge_id:'moisturizer_approved',quote}]});
+  }
+  if(input.question.includes('context changes')){
+   await db.tx(async r=>{const saved=(await r.entries('account_profiles'))[0];await r.put('account_profiles',saved.id,{...saved.value,revision:'changed-during-answer'});});
+   return JSON.stringify({excerpts:[{knowledge_id:'moisturizer_approved',quote}]});
+  }
   if(input.question.includes('bad quote'))return JSON.stringify({excerpts:[{knowledge_id:'moisturizer_approved',quote:'An invented treatment claim that was never reviewed.'}]});
   return JSON.stringify({excerpts:[{knowledge_id:'moisturizer_approved',quote}]});
  }};
@@ -59,6 +67,7 @@ test('assistant candidate policy cases stay bounded before model and payment rou
   const withoutConsent=await call('/assistant',{role:'routine_guidance',message:'What does a moisturizer do?',ai_consent:true});
   assert.equal(withoutConsent.status,403);assert.equal(withoutConsent.data.error.code,'consent_required');
   assert.equal((await call('/account/consents',{consent_type:'ai_disclosure',granted:true})).status,200);
+  const accountProfile=(await call('/account/profile',{preferred_name:'Review User',locale:'en-US',timezone:'America/New_York',measurement_system:'us',service_interests:['routine_care'],communication_preferences:{routine_reminders:false,service_announcements:false},accessibility:{reduced_motion:false,high_contrast:false},default_image_storage:'device',expected_revision:null})).data;
   const unavailable=await call('/assistant',{role:'routine_guidance',message:'What does a moisturizer do?',ai_consent:true});
   assert.equal(unavailable.status,200);assert.equal(unavailable.data.category,'reviewed_unavailable');assert.equal(unavailable.data.next_step.path,'/support');assert.equal(modelCalls,0);
   await db.tx(r=>r.put('knowledge','moisturizer_approved',{id:'moisturizer_approved',title:'Moisturizer',body:quote,source_url:'https://example.test/reviewed',status:'approved',approved_by:'fixture-reviewer',version:1}));
@@ -66,8 +75,17 @@ test('assistant candidate policy cases stay bounded before model and payment rou
   assert.equal(noMatch.status,200);assert.equal(noMatch.data.kind,'no_match');assert.equal(noMatch.data.next_step.path,'/support');assert.equal(modelCalls,0);
   const reviewed=await call('/assistant',{role:'routine_guidance',message:'What does a moisturizer do?',ai_consent:true});
   assert.equal(reviewed.status,200);assert.equal(reviewed.data.kind,'reviewed_excerpts');assert.equal(reviewed.data.citations[0].text,quote);assert.equal(modelCalls,1);
+  assert.equal(reviewed.data.output_trace.profile_revision,accountProfile.revision);assert.match(reviewed.data.output_trace.consent_revision,/^2026-09-29:/);assert.equal(reviewed.data.output_trace.prompt_version,'prompt-v2.1');assert.equal(reviewed.data.output_trace.safety_policy_version,'reviewed-excerpts-v1');assert.equal(reviewed.data.output_trace.profile_context_used,false);assert.equal(reviewed.data.output_trace.stale,false);assert(Date.parse(reviewed.data.output_trace.expires_at)>Date.parse(reviewed.data.output_trace.generated_at));
+  const storedTrace=await db.tx(r=>r.get('ai_output_events',reviewed.data.output_trace.trace_id));assert.equal(storedTrace.actor.startsWith('guest_'),true);assert.equal(storedTrace.user_id,'assistant-review-user');assert.deepEqual(storedTrace.citation_revisions,['moisturizer_approved:1']);assert.equal('message' in storedTrace,false);assert.equal('text' in storedTrace,false);
   const rejected=await call('/assistant',{role:'routine_guidance',message:'Give me a moisturizer bad quote',ai_consent:true});
   assert.equal(rejected.status,200);assert.equal(rejected.data.category,'reviewed_unavailable');assert.equal(rejected.data.next_step.path,'/support');assert.equal(modelCalls,2);
+  const traceCountBeforeRace=(await db.tx(r=>r.entries('ai_output_events'))).length;
+  const changedDuringAnswer=await call('/assistant',{role:'routine_guidance',message:'What happens when moisturizer context changes?',ai_consent:true});
+  assert.equal(changedDuringAnswer.status,409);assert.equal(changedDuringAnswer.data.error.code,'guidance_context_changed');assert.equal(modelCalls,3);assert.equal((await db.tx(r=>r.entries('ai_output_events'))).length,traceCountBeforeRace);
+  const changedKnowledge=await call('/assistant',{role:'routine_guidance',message:'What happens when moisturizer knowledge changes?',ai_consent:true});
+  assert.equal(changedKnowledge.status,409);assert.equal(changedKnowledge.data.error.code,'guidance_context_changed');assert.equal(modelCalls,4);assert.equal((await db.tx(r=>r.entries('ai_output_events'))).length,traceCountBeforeRace);
+  assert.equal((await call('/account/consents',{consent_type:'ai_disclosure',granted:false})).status,200);
+  const revokedTrace=await db.tx(r=>r.get('ai_output_events',reviewed.data.output_trace.trace_id));assert.equal(revokedTrace.stale,true);assert.deepEqual(revokedTrace.stale_reasons,['consent_revision_changed']);
   assert.equal(paymentCalls,0);
   assert.equal((await call('/support')).data.tickets.length,0);
   assert(!JSON.stringify(rejected.data).includes('invented treatment claim'));

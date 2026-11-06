@@ -39,6 +39,11 @@ function validSecretReference(value) {
     && value === value.trim() && !/[\u0000-\u001f\u007f]/.test(value) && !placeholder.test(value);
 }
 
+function validApprovalReference(value) {
+  return typeof value === "string" && value.length >= 8 && value.length <= 200
+    && /^[A-Za-z0-9][A-Za-z0-9._:/-]*$/.test(value) && !placeholder.test(value);
+}
+
 function validControlUrl(value) {
   try {
     const url = new URL(value);
@@ -75,6 +80,24 @@ function validIsoDate(value) {
   const text = String(value || "").trim();
   const time = Date.parse(text);
   return Number.isFinite(time) && new Date(time).toISOString() === text && time <= Date.now();
+}
+
+function validateSponsoredContentConfiguration(env, errors, warnings) {
+  if (!["true", "false"].includes(env.MGT_SPONSORED_CONTENT_ENABLED)) errors.push("MGT_SPONSORED_CONTENT_ENABLED must be exactly true or false.");
+  if (!["true", "false"].includes(env.MGT_SPONSORED_CONTENT_REVIEWED)) errors.push("MGT_SPONSORED_CONTENT_REVIEWED must be exactly true or false.");
+  if (env.MGT_SPONSORED_CONTENT_ENABLED === "true") {
+    if (env.MGT_SPONSORED_CONTENT_REVIEWED !== "true") errors.push("MGT_SPONSORED_CONTENT_REVIEWED must be exactly true before sponsored content is enabled.");
+    if (env.MGT_OMNI_RETAIL_ENABLED !== "true" || env.MGT_RETAIL_PARTNER_AUTHORIZATION_REVIEWED !== "true") errors.push("Sponsored content requires approved omni-retail merchant authorization controls.");
+    if (!validApprovalReference(env.MGT_SPONSORED_CONTENT_APPROVAL_REFERENCE)) errors.push("MGT_SPONSORED_CONTENT_APPROVAL_REFERENCE must be a bounded reviewed approval reference.");
+    if (!validIsoDate(env.MGT_SPONSORED_CONTENT_APPROVED_AT)) errors.push("MGT_SPONSORED_CONTENT_APPROVED_AT must be a past ISO timestamp.");
+  } else if (env.MGT_SPONSORED_CONTENT_ENABLED === "false") {
+    if (env.MGT_SPONSORED_CONTENT_REVIEWED !== "false") errors.push("Disabled sponsored content must not retain an approved review state.");
+    if (
+      (env.MGT_SPONSORED_CONTENT_APPROVAL_REFERENCE !== undefined && env.MGT_SPONSORED_CONTENT_APPROVAL_REFERENCE !== "")
+      || (env.MGT_SPONSORED_CONTENT_APPROVED_AT !== undefined && env.MGT_SPONSORED_CONTENT_APPROVED_AT !== "")
+    ) errors.push("Disabled sponsored content must not retain approval configuration.");
+    warnings.push("Sponsored content is disabled.");
+  }
 }
 
 function validProductionHostname(value) {
@@ -134,6 +157,9 @@ export function validateEnvironment(env) {
     errors.push("PORTAL_DOMAIN must be a canonical lowercase production DNS hostname.");
   }
   if (publicOrigin && portalDomain && !validProductionOrigin(publicOrigin, portalDomain)) errors.push("PUBLIC_ORIGIN must be the exact HTTPS origin for PORTAL_DOMAIN, without credentials, port, path, query, or fragment.");
+  const policyUrls = ["PUBLIC_PRIVACY_NOTICE_URL", "PUBLIC_TERMS_OF_USE_URL", "PUBLIC_AI_DISCLOSURE_URL"].map(requireValue);
+  for (const [index, key] of ["PUBLIC_PRIVACY_NOTICE_URL", "PUBLIC_TERMS_OF_USE_URL", "PUBLIC_AI_DISCLOSURE_URL"].entries()) if (policyUrls[index] && !validControlUrl(policyUrls[index])) errors.push(`${key} must be an approved HTTPS public notice URL without embedded credentials, query, or fragment.`);
+  if (policyUrls.every(Boolean) && new Set(policyUrls).size !== policyUrls.length) errors.push("PUBLIC_PRIVACY_NOTICE_URL, PUBLIC_TERMS_OF_USE_URL, and PUBLIC_AI_DISCLOSURE_URL must be distinct approved public notice URLs.");
   if (typeof env.MGT_EDGE_TOKEN !== "string" || !/^[A-Za-z0-9_-]{32,256}$/.test(env.MGT_EDGE_TOKEN)) errors.push("MGT_EDGE_TOKEN must be an injected 32-256 character private edge authentication token.");
 
   if (!digestImage(env.NODE_IMAGE)) errors.push("NODE_IMAGE must use an approved immutable @sha256 image digest.");
@@ -296,8 +322,13 @@ export function validateEnvironment(env) {
     warnings.push("Subscriptions are disabled.");
   }
 
-  if (!String(env.OPENAI_API_KEY || "").trim()) warnings.push("Hosted OpenAI escalation is disabled; local routes remain available.");
-  else if (!validSecretReference(env.OPENAI_API_KEY)) errors.push("OPENAI_API_KEY must be injected as a bounded non-placeholder reference without whitespace or control characters.");
+  validateSponsoredContentConfiguration(env, errors, warnings);
+
+  if (!["true", "false"].includes(env.HOSTED_OPENAI_ENABLED)) errors.push("HOSTED_OPENAI_ENABLED must be exactly true or false.");
+  if (env.HOSTED_OPENAI_ENABLED === "true") {
+    const hostedOpenAiKey = requireValue("OPENAI_API_KEY");
+    if (hostedOpenAiKey && !validSecretReference(env.OPENAI_API_KEY)) errors.push("OPENAI_API_KEY must be injected as a bounded non-placeholder reference without whitespace or control characters.");
+  } else if (env.HOSTED_OPENAI_ENABLED === "false") warnings.push("Hosted OpenAI escalation is disabled; local routes remain available.");
 
   for (const key of ["ANTI_AGING_LIVE_AI", "ANTI_AGING_CHECKOUT_ENABLED", "ANTI_AGING_BOOKING_ENABLED", "ANTI_AGING_IMAGE_ANALYSIS_ENABLED", "ANTI_AGING_ACCESSIBILITY_VERIFIED", "ANTI_AGING_RESTORE_VERIFIED", "ANTI_AGING_PRIVACY_REVIEWED"]) {
     if (!["true", "false"].includes(env[key])) errors.push(`${key} must be explicitly true or false.`);
@@ -309,7 +340,7 @@ export function validateEnvironment(env) {
   if (backupAttestationEnabled === "true") secretKeys.push("BACKUP_ATTESTATION_SECRET");
   if (env.NOTIFICATION_DELIVERY === "webhook") secretKeys.push("NOTIFICATION_WEBHOOK_TOKEN");
   if (env.OPENCLAW_ENABLED === "true" && env.OPENCLAW_API_MODE === "openai-completions") secretKeys.push("OPENCLAW_API_KEY");
-  if (validSecretReference(env.OPENAI_API_KEY)) secretKeys.push("OPENAI_API_KEY");
+  if (env.HOSTED_OPENAI_ENABLED === "true") secretKeys.push("OPENAI_API_KEY");
   if (env.SUBSCRIPTIONS_ENABLED === "true") secretKeys.push("STRIPE_SECRET_KEY", "STRIPE_SUBSCRIPTION_WEBHOOK_SECRET");
   const secretReferences = secretKeys.map((key) => env[key]).filter(validSecretReference);
   if (new Set(secretReferences).size !== secretReferences.length) errors.push("Production secret references must remain distinct across integration roles.");
@@ -323,6 +354,8 @@ export function validateEnvironment(env) {
   if (env.NOTIFICATION_DELIVERY === "in_app" && populated(["NOTIFICATION_WEBHOOK_URL", "NOTIFICATION_WEBHOOK_TOKEN", "NOTIFICATION_WEBHOOK_KEY_ID", "NOTIFICATION_WEBHOOK_TIMEOUT_MS"])) errors.push("Disabled customer webhook delivery must not retain webhook configuration.");
   if (env.OLLAMA_ENABLED === "false" && populated(["OLLAMA_BASE_URL"])) errors.push("Disabled Ollama must not retain an endpoint.");
   if (env.OPENCLAW_ENABLED === "false" && populated(["OPENCLAW_BASE_URL", "OPENCLAW_API_MODE", "OPENCLAW_API_KEY"])) errors.push("Disabled OpenClaw must not retain endpoint, mode, or credential configuration.");
+  if (env.OPENCLAW_ENABLED === "true" && env.OPENCLAW_API_MODE === "ollama" && populated(["OPENCLAW_API_KEY"])) errors.push("Native Ollama-mode OpenClaw must not retain a credential.");
+  if (env.HOSTED_OPENAI_ENABLED === "false" && populated(["OPENAI_API_KEY"])) errors.push("Disabled hosted OpenAI must not retain a credential.");
   if (env.NODE_ENV === "production" && (env.CLIENT_IMAGE_DRIVE_TEST_ENABLED === "true" || populated(["TEST_GOOGLE_DRIVE_CLIENT_ID", "TEST_GOOGLE_DRIVE_CLIENT_SECRET", "TEST_GOOGLE_DRIVE_REFRESH_TOKEN", "TEST_GOOGLE_DRIVE_FOLDER_ID"]))) errors.push("Production test Google Drive image storage must remain disabled and must not retain test credentials or folder configuration.");
   if (backupAttestationEnabled === "false" && populated(["BACKUP_ATTESTATION_SECRET", "BACKUP_ATTESTATION_KEY_ID", "BACKUP_ATTESTATION_MAX_AGE_SECONDS"])) errors.push("Disabled backup attestation must not retain signing configuration.");
   if (env.SUBSCRIPTIONS_ENABLED === "false" && populated(["STRIPE_LIVE_MODE", "STRIPE_SECRET_KEY", "STRIPE_SUBSCRIPTION_WEBHOOK_SECRET", "STRIPE_PREMIUM_PRODUCT_ID", "STRIPE_PREMIUM_MONTHLY_PRICE_ID", "STRIPE_PREMIUM_ANNUAL_PRICE_ID"])) errors.push("Disabled subscriptions must not retain Stripe configuration.");
@@ -330,9 +363,187 @@ export function validateEnvironment(env) {
   return { ok: errors.length === 0, errors, warnings };
 }
 
+// Deployment validation above deliberately evaluates the complete release
+// bundle. Process startup is narrower: a service must validate everything it
+// consumes, but must not require credentials assigned only to its peer.
+function runtimeContext(env) {
+  const errors = [...validateOwnershipEnvironment(env).errors];
+  const warnings = [];
+  const requireValue = (key) => {
+    const value = String(env[key] || "").trim();
+    if (!value || placeholder.test(value)) errors.push(`${key} must be set to a production value.`);
+    return value;
+  };
+  if (env.NODE_ENV !== "production") errors.push("NODE_ENV must be production.");
+  if (env.DEMO_MODE !== "false") errors.push("DEMO_MODE must be exactly false.");
+  return { env, errors, warnings, requireValue };
+}
+
+function validateRuntimeDatabase(context) {
+  const databaseUrl = context.requireValue("DATABASE_URL");
+  if (databaseUrl && !validUrl(databaseUrl, ["postgres:", "postgresql:"])) context.errors.push("DATABASE_URL must be a production PostgreSQL URL.");
+  if (databaseUrl && !validProductionDatabaseUrl(databaseUrl)) context.errors.push("DATABASE_URL must name a single production host and require verified TLS (one sslmode=verify-full, without target overrides).");
+  if (context.env.PORTAL_AUTO_MIGRATE !== "false") context.errors.push("PORTAL_AUTO_MIGRATE must be false; review and apply database changes separately.");
+}
+
+function rejectPeerSecretResidue(context, role, keys) {
+  for (const key of keys) {
+    const value = context.env[key];
+    if (value !== undefined && value !== "") context.errors.push(`${role} runtime must not receive ${key}.`);
+  }
+}
+
+function validateRuntimeWorkerTiming(context) {
+  const interval = context.env.WORKER_INTERVAL_SECONDS;
+  const readiness = context.env.WORKER_READINESS_MAX_AGE_SECONDS;
+  if (typeof interval !== "string" || !/^\d+$/.test(interval) || !wholeNumber(interval, 15, 3600)) context.errors.push("WORKER_INTERVAL_SECONDS must be a whole number between 15 and 3600.");
+  if (typeof readiness !== "string" || !/^\d+$/.test(readiness) || !wholeNumber(readiness, 60, 86400)) context.errors.push("WORKER_READINESS_MAX_AGE_SECONDS must be a whole number between 60 and 86400.");
+  if (wholeNumber(interval, 15, 3600) && wholeNumber(readiness, 60, 86400) && Number(readiness) < Number(interval) * 2) context.errors.push("WORKER_READINESS_MAX_AGE_SECONDS must be at least twice WORKER_INTERVAL_SECONDS.");
+}
+
+function validateApiRuntimeEnvironment(context) {
+  const { env, errors, warnings, requireValue } = context;
+  rejectPeerSecretResidue(context, "API", ["SUPABASE_SERVICE_ROLE_KEY", "OPERATIONS_ALERT_WEBHOOK_TOKEN", "NOTIFICATION_WEBHOOK_TOKEN"]);
+  const publicOrigin = requireValue("PUBLIC_ORIGIN");
+  const portalDomain = requireValue("PORTAL_DOMAIN");
+  if (publicOrigin && !validUrl(publicOrigin, ["https:"])) errors.push("PUBLIC_ORIGIN must be a valid HTTPS origin.");
+  if (portalDomain && (!validProductionHostname(portalDomain) || placeholder.test(portalDomain))) errors.push("PORTAL_DOMAIN must be a canonical lowercase production DNS hostname.");
+  if (publicOrigin && portalDomain && !validProductionOrigin(publicOrigin, portalDomain)) errors.push("PUBLIC_ORIGIN must be the exact HTTPS origin for PORTAL_DOMAIN, without credentials, port, path, query, or fragment.");
+  const policyUrls = ["PUBLIC_PRIVACY_NOTICE_URL", "PUBLIC_TERMS_OF_USE_URL", "PUBLIC_AI_DISCLOSURE_URL"].map(requireValue);
+  for (const [index, key] of ["PUBLIC_PRIVACY_NOTICE_URL", "PUBLIC_TERMS_OF_USE_URL", "PUBLIC_AI_DISCLOSURE_URL"].entries()) if (policyUrls[index] && !validControlUrl(policyUrls[index])) errors.push(`${key} must be an approved HTTPS public notice URL without embedded credentials, query, or fragment.`);
+  if (policyUrls.every(Boolean) && new Set(policyUrls).size !== policyUrls.length) errors.push("PUBLIC_PRIVACY_NOTICE_URL, PUBLIC_TERMS_OF_USE_URL, and PUBLIC_AI_DISCLOSURE_URL must be distinct approved public notice URLs.");
+  if (typeof env.MGT_EDGE_TOKEN !== "string" || !/^[A-Za-z0-9_-]{32,256}$/.test(env.MGT_EDGE_TOKEN)) errors.push("MGT_EDGE_TOKEN must be an injected 32-256 character private edge authentication token.");
+  validateRuntimeDatabase(context);
+  validateRuntimeWorkerTiming(context);
+
+  const supabaseUrl = requireValue("SUPABASE_URL");
+  if (supabaseUrl && !validServiceOrigin(supabaseUrl)) errors.push("SUPABASE_URL must be an exact production HTTPS origin without credentials, port, path, query, or fragment.");
+  const anonKey = requireValue("SUPABASE_ANON_KEY");
+  if (anonKey && !validSecretReference(env.SUPABASE_ANON_KEY)) errors.push("SUPABASE_ANON_KEY must be a bounded injected reference without whitespace or control characters.");
+  if (!["true", "false"].includes(env.SUPABASE_GOOGLE_OAUTH_ENABLED)) errors.push("SUPABASE_GOOGLE_OAUTH_ENABLED must be explicitly true or false.");
+
+  if (!["true", "false"].includes(env.OLLAMA_ENABLED)) errors.push("OLLAMA_ENABLED must be exactly true or false.");
+  if (env.OLLAMA_ENABLED === "true" && !validAiServiceUrl(env.OLLAMA_BASE_URL)) errors.push("OLLAMA_BASE_URL must use HTTPS or a canonical single-label private HTTP service without credentials, query, or fragment.");
+  if (!["true", "false"].includes(env.OPENCLAW_ENABLED)) errors.push("OPENCLAW_ENABLED must be exactly true or false.");
+  if (env.OPENCLAW_ENABLED === "true") {
+    if (!validAiServiceUrl(env.OPENCLAW_BASE_URL)) errors.push("OPENCLAW_BASE_URL must use HTTPS or a canonical single-label private HTTP service without credentials, query, or fragment.");
+    if (!["ollama", "openai-completions"].includes(env.OPENCLAW_API_MODE)) errors.push("OPENCLAW_API_MODE must be ollama or openai-completions.");
+    if (env.OPENCLAW_API_MODE === "openai-completions") {
+      const key = requireValue("OPENCLAW_API_KEY");
+      if (key && !validSecretReference(env.OPENCLAW_API_KEY)) errors.push("OPENCLAW_API_KEY must be a bounded injected reference without whitespace or control characters.");
+    }
+  } else warnings.push("OpenClaw orchestration is disabled.");
+  if (!["true", "false"].includes(env.HOSTED_OPENAI_ENABLED)) errors.push("HOSTED_OPENAI_ENABLED must be exactly true or false.");
+  if (env.HOSTED_OPENAI_ENABLED === "true") {
+    const hostedOpenAiKey = requireValue("OPENAI_API_KEY");
+    if (hostedOpenAiKey && !validSecretReference(env.OPENAI_API_KEY)) errors.push("OPENAI_API_KEY must be injected as a bounded non-placeholder reference without whitespace or control characters.");
+  } else if (env.HOSTED_OPENAI_ENABLED === "false") warnings.push("Hosted OpenAI escalation is disabled; local routes remain available.");
+
+  if (!["0.0.0.0", "::"].includes(env.HOST)) errors.push("HOST must bind the production container on 0.0.0.0 or ::.");
+  if (typeof env.PORT !== "string" || !/^\d+$/.test(env.PORT) || !wholeNumber(env.PORT, 1024, 65535)) errors.push("PORT must be a whole number between 1024 and 65535.");
+  const attestation = env.BACKUP_ATTESTATION_ENABLED;
+  if (!["true", "false"].includes(attestation)) errors.push("BACKUP_ATTESTATION_ENABLED must be explicitly true or false.");
+  if (attestation === "true") {
+    const secret = requireValue("BACKUP_ATTESTATION_SECRET");
+    if (secret && !validSecretReference(env.BACKUP_ATTESTATION_SECRET)) errors.push("BACKUP_ATTESTATION_SECRET must be a bounded injected reference without whitespace or control characters.");
+    if (!/^[A-Za-z0-9_-]{1,64}$/.test(env.BACKUP_ATTESTATION_KEY_ID || "")) errors.push("BACKUP_ATTESTATION_KEY_ID must identify the active backup signing key using letters, numbers, underscores or hyphens.");
+    if (typeof env.BACKUP_ATTESTATION_MAX_AGE_SECONDS !== "string" || !/^\d+$/.test(env.BACKUP_ATTESTATION_MAX_AGE_SECONDS) || !wholeNumber(env.BACKUP_ATTESTATION_MAX_AGE_SECONDS, 1, 604800)) errors.push("BACKUP_ATTESTATION_MAX_AGE_SECONDS must be explicitly configured as a whole number between 1 and 604800 when backup attestation is enabled.");
+  }
+
+  const accessibilityReport = requireValue("ACCESSIBILITY_VALIDATION_REPORT_URL");
+  const accessibilityAt = requireValue("ACCESSIBILITY_VALIDATED_AT");
+  if (accessibilityReport && !validControlUrl(accessibilityReport)) errors.push("ACCESSIBILITY_VALIDATION_REPORT_URL must be a production HTTPS evidence URL without embedded credentials.");
+  if (accessibilityAt && !validIsoDate(accessibilityAt)) errors.push("ACCESSIBILITY_VALIDATED_AT must be a past ISO timestamp.");
+  if (!["true", "false"].includes(env.SUBSCRIPTIONS_ENABLED)) errors.push("SUBSCRIPTIONS_ENABLED must be exactly true or false.");
+  if (env.SUBSCRIPTIONS_ENABLED === "true") {
+    if (env.SUBSCRIPTION_TERMS_APPROVED !== "true") errors.push("SUBSCRIPTION_TERMS_APPROVED must be exactly true before subscriptions are enabled.");
+    for (const key of ["STRIPE_LIVE_MODE", "STRIPE_SECRET_KEY", "STRIPE_SUBSCRIPTION_WEBHOOK_SECRET", "STRIPE_PREMIUM_PRODUCT_ID", "STRIPE_PREMIUM_MONTHLY_PRICE_ID", "STRIPE_PREMIUM_ANNUAL_PRICE_ID"]) requireValue(key);
+    const pattern = env.STRIPE_LIVE_MODE === "true" ? /^sk_live_[A-Za-z0-9_]+$/ : /^sk_test_[A-Za-z0-9_]+$/;
+    if (!["true", "false"].includes(env.STRIPE_LIVE_MODE)) errors.push("STRIPE_LIVE_MODE must be true or false when subscriptions are enabled.");
+    if (!pattern.test(String(env.STRIPE_SECRET_KEY || ""))) errors.push("STRIPE_SECRET_KEY must match the configured Stripe mode.");
+    if (!/^whsec_[A-Za-z0-9_]+$/.test(String(env.STRIPE_SUBSCRIPTION_WEBHOOK_SECRET || ""))) errors.push("STRIPE_SUBSCRIPTION_WEBHOOK_SECRET must be a Stripe signing secret.");
+    if (!/^prod_[A-Za-z0-9_]+$/.test(String(env.STRIPE_PREMIUM_PRODUCT_ID || ""))) errors.push("STRIPE_PREMIUM_PRODUCT_ID must identify the approved Premium product.");
+    const monthly = String(env.STRIPE_PREMIUM_MONTHLY_PRICE_ID || ""), annual = String(env.STRIPE_PREMIUM_ANNUAL_PRICE_ID || "");
+    if (!/^price_[A-Za-z0-9_]+$/.test(monthly)) errors.push("STRIPE_PREMIUM_MONTHLY_PRICE_ID must be a Stripe Price ID.");
+    if (!/^price_[A-Za-z0-9_]+$/.test(annual)) errors.push("STRIPE_PREMIUM_ANNUAL_PRICE_ID must be a Stripe Price ID.");
+    if (monthly && monthly === annual) errors.push("Monthly and annual Premium prices must use different Stripe Price IDs.");
+  } else warnings.push("Subscriptions are disabled.");
+  validateSponsoredContentConfiguration(env, errors, warnings);
+  for (const key of ["ANTI_AGING_LIVE_AI", "ANTI_AGING_CHECKOUT_ENABLED", "ANTI_AGING_BOOKING_ENABLED", "ANTI_AGING_IMAGE_ANALYSIS_ENABLED", "ANTI_AGING_ACCESSIBILITY_VERIFIED", "ANTI_AGING_RESTORE_VERIFIED", "ANTI_AGING_PRIVACY_REVIEWED"]) if (!["true", "false"].includes(env[key])) errors.push(`${key} must be explicitly true or false.`);
+  const populated = (keys) => keys.some((key) => env[key] !== undefined && env[key] !== "");
+  if (env.OLLAMA_ENABLED === "false" && populated(["OLLAMA_BASE_URL"])) errors.push("Disabled Ollama must not retain an endpoint.");
+  if (env.OPENCLAW_ENABLED === "false" && populated(["OPENCLAW_BASE_URL", "OPENCLAW_API_MODE", "OPENCLAW_API_KEY"])) errors.push("Disabled OpenClaw must not retain endpoint, mode, or credential configuration.");
+  if (env.OPENCLAW_ENABLED === "true" && env.OPENCLAW_API_MODE === "ollama" && populated(["OPENCLAW_API_KEY"])) errors.push("Native Ollama-mode OpenClaw must not retain a credential.");
+  if (env.HOSTED_OPENAI_ENABLED === "false" && populated(["OPENAI_API_KEY"])) errors.push("Disabled hosted OpenAI must not retain a credential.");
+  if (env.NODE_ENV === "production" && (env.CLIENT_IMAGE_DRIVE_TEST_ENABLED === "true" || populated(["TEST_GOOGLE_DRIVE_CLIENT_ID", "TEST_GOOGLE_DRIVE_CLIENT_SECRET", "TEST_GOOGLE_DRIVE_REFRESH_TOKEN", "TEST_GOOGLE_DRIVE_FOLDER_ID"]))) errors.push("Production test Google Drive image storage must remain disabled and must not retain test credentials or folder configuration.");
+  if (attestation === "false" && populated(["BACKUP_ATTESTATION_SECRET", "BACKUP_ATTESTATION_KEY_ID", "BACKUP_ATTESTATION_MAX_AGE_SECONDS"])) errors.push("Disabled backup attestation must not retain signing configuration.");
+  if (env.SUBSCRIPTIONS_ENABLED === "false" && populated(["STRIPE_LIVE_MODE", "STRIPE_SECRET_KEY", "STRIPE_SUBSCRIPTION_WEBHOOK_SECRET", "STRIPE_PREMIUM_PRODUCT_ID", "STRIPE_PREMIUM_MONTHLY_PRICE_ID", "STRIPE_PREMIUM_ANNUAL_PRICE_ID"])) errors.push("Disabled subscriptions must not retain Stripe configuration.");
+}
+
+function validateWorkerRuntimeEnvironment(context) {
+  const { env, errors, requireValue } = context;
+  rejectPeerSecretResidue(context, "Worker", ["MGT_EDGE_TOKEN", "SUPABASE_ANON_KEY", "BACKUP_ATTESTATION_SECRET", "STRIPE_SECRET_KEY", "STRIPE_SUBSCRIPTION_WEBHOOK_SECRET", "OPENAI_API_KEY", "OPENCLAW_API_KEY"]);
+  validateRuntimeDatabase(context);
+  validateRuntimeWorkerTiming(context);
+  const healthFile = env.WORKER_HEALTH_FILE;
+  if (typeof healthFile !== "string" || !healthFile.startsWith("/") || healthFile.includes("\\") || healthFile.split("/").includes("..") || healthFile.length > 240 || !/^[A-Za-z0-9._/-]+\.json$/.test(healthFile)) errors.push("WORKER_HEALTH_FILE must be a bounded absolute JSON path without traversal.");
+  const supabaseUrl = requireValue("SUPABASE_URL");
+  const serviceRole = requireValue("SUPABASE_SERVICE_ROLE_KEY");
+  if (supabaseUrl && !validServiceOrigin(supabaseUrl)) errors.push("SUPABASE_URL must be an exact production HTTPS origin without credentials, port, path, query, or fragment.");
+  if (serviceRole && !validSecretReference(env.SUPABASE_SERVICE_ROLE_KEY)) errors.push("SUPABASE_SERVICE_ROLE_KEY must be a bounded injected reference without whitespace or control characters.");
+  if (typeof env.BACKUP_MAX_AGE_HOURS !== "string" || !/^\d+$/.test(env.BACKUP_MAX_AGE_HOURS) || !wholeNumber(env.BACKUP_MAX_AGE_HOURS, 1, 72)) errors.push("BACKUP_MAX_AGE_HOURS must be a whole number between 1 and 72.");
+  if (typeof env.BACKUP_RESTORE_MAX_AGE_DAYS !== "string" || !/^\d+$/.test(env.BACKUP_RESTORE_MAX_AGE_DAYS) || !wholeNumber(env.BACKUP_RESTORE_MAX_AGE_DAYS, 1, 365)) errors.push("BACKUP_RESTORE_MAX_AGE_DAYS must be a whole number between 1 and 365.");
+  if (typeof env.OPERATIONS_BACKUP_ATTESTATION_RETENTION_DAYS !== "string" || !/^\d+$/.test(env.OPERATIONS_BACKUP_ATTESTATION_RETENTION_DAYS) || !wholeNumber(env.OPERATIONS_BACKUP_ATTESTATION_RETENTION_DAYS, 1, 3650)) errors.push("OPERATIONS_BACKUP_ATTESTATION_RETENTION_DAYS must be a whole number between 1 and 3650.");
+  if (typeof env.OPERATIONS_ANTI_AGING_RETENTION_DAYS !== "string" || !/^\d+$/.test(env.OPERATIONS_ANTI_AGING_RETENTION_DAYS) || !wholeNumber(env.OPERATIONS_ANTI_AGING_RETENTION_DAYS, 30, 3650)) errors.push("OPERATIONS_ANTI_AGING_RETENTION_DAYS must be a whole number between 30 and 3650.");
+
+  const delivery = String(env.NOTIFICATION_DELIVERY || "");
+  if (!["in_app", "webhook"].includes(delivery)) errors.push("NOTIFICATION_DELIVERY must be in_app or webhook.");
+  if (delivery === "webhook") {
+    if (!validControlUrl(env.NOTIFICATION_WEBHOOK_URL)) errors.push("NOTIFICATION_WEBHOOK_URL must be HTTPS without embedded credentials for webhook delivery.");
+    const token = requireValue("NOTIFICATION_WEBHOOK_TOKEN");
+    if (token && !validSecretReference(env.NOTIFICATION_WEBHOOK_TOKEN)) errors.push("NOTIFICATION_WEBHOOK_TOKEN must be a bounded injected reference without whitespace or control characters.");
+    if (!/^[A-Za-z0-9_-]{1,64}$/.test(env.NOTIFICATION_WEBHOOK_KEY_ID || "")) errors.push("NOTIFICATION_WEBHOOK_KEY_ID must identify the active signing key using letters, numbers, underscores or hyphens.");
+    if (env.NOTIFICATION_WEBHOOK_TIMEOUT_MS !== undefined && (typeof env.NOTIFICATION_WEBHOOK_TIMEOUT_MS !== "string" || !/^\d+$/.test(env.NOTIFICATION_WEBHOOK_TIMEOUT_MS) || !wholeNumber(env.NOTIFICATION_WEBHOOK_TIMEOUT_MS, 1000, 30000))) errors.push("NOTIFICATION_WEBHOOK_TIMEOUT_MS must be a whole number between 1000 and 30000.");
+  }
+  for (const [key, minimum, maximum] of [["NOTIFICATION_RETRY_COOLDOWN_SECONDS", 10, 3600], ["NOTIFICATION_MAX_RETRY_DELAY_SECONDS", 10, 86400], ["NOTIFICATION_MAX_ATTEMPTS", 1, 20], ["OPERATIONS_NOTIFICATION_RETENTION_DAYS", 1, 3650]]) if (typeof env[key] !== "string" || !/^\d+$/.test(env[key]) || !wholeNumber(env[key], minimum, maximum)) errors.push(`${key} must be a whole number within its production range.`);
+  if (wholeNumber(env.NOTIFICATION_RETRY_COOLDOWN_SECONDS, 10, 3600) && wholeNumber(env.NOTIFICATION_MAX_RETRY_DELAY_SECONDS, 10, 86400) && Number(env.NOTIFICATION_MAX_RETRY_DELAY_SECONDS) < Number(env.NOTIFICATION_RETRY_COOLDOWN_SECONDS)) errors.push("NOTIFICATION_MAX_RETRY_DELAY_SECONDS must be at least NOTIFICATION_RETRY_COOLDOWN_SECONDS.");
+
+  for (const [key, validator, message] of [
+    ["SUPPORT_OWNER_EMAIL", validEmail, "SUPPORT_OWNER_EMAIL must be a valid production support owner email."],
+    ["MONITORING_DASHBOARD_URL", validControlUrl, "MONITORING_DASHBOARD_URL must be a production HTTPS URL without embedded credentials."],
+    ["INCIDENT_RUNBOOK_URL", validControlUrl, "INCIDENT_RUNBOOK_URL must be a production HTTPS URL without embedded credentials."],
+    ["ALERT_OWNER_EMAIL", validEmail, "ALERT_OWNER_EMAIL must identify the production alert owner."],
+    ["OPERATIONS_ALERT_WEBHOOK_URL", validControlUrl, "OPERATIONS_ALERT_WEBHOOK_URL must be a production HTTPS URL without embedded credentials."]
+  ]) { const value = requireValue(key); if (value && !validator(value)) errors.push(message); }
+  if (typeof env.SUPPORT_RESPONSE_TARGET_HOURS !== "string" || !/^\d+$/.test(env.SUPPORT_RESPONSE_TARGET_HOURS) || !wholeNumber(env.SUPPORT_RESPONSE_TARGET_HOURS, 1, 168)) errors.push("SUPPORT_RESPONSE_TARGET_HOURS must be a whole number between 1 and 168.");
+  if (env.OPERATIONS_ALERT_DELIVERY !== "webhook") errors.push("OPERATIONS_ALERT_DELIVERY must be webhook in production.");
+  const alertToken = requireValue("OPERATIONS_ALERT_WEBHOOK_TOKEN");
+  if (alertToken && !validSecretReference(env.OPERATIONS_ALERT_WEBHOOK_TOKEN)) errors.push("OPERATIONS_ALERT_WEBHOOK_TOKEN must be a bounded injected reference without whitespace or control characters.");
+  if (!/^[A-Za-z0-9_-]{1,64}$/.test(env.OPERATIONS_ALERT_KEY_ID || "")) errors.push("OPERATIONS_ALERT_KEY_ID must identify the active signing key using letters, numbers, underscores or hyphens.");
+  const operationRanges = [["OPERATIONS_ALERT_TIMEOUT_MS", 1000, 30000], ["OPERATIONS_ALERT_LEASE_SECONDS", 10, 600], ["OPERATIONS_ALERT_RETRY_COOLDOWN_SECONDS", 10, 3600], ["OPERATIONS_ALERT_MAX_RETRY_DELAY_SECONDS", 10, 86400], ["OPERATIONS_ALERT_MAX_ATTEMPTS", 1, 20], ["OPERATIONS_ALERT_EVENT_RETENTION_DAYS", 1, 3650], ["OPERATIONS_FOLLOW_UP_OVERDUE_GRACE_SECONDS", 60, 86400], ["OPERATIONS_FOLLOW_UP_RETRY_DELAY_SECONDS", 10, 86400], ["OPERATIONS_FOLLOW_UP_MAX_ATTEMPTS", 1, 20], ["OPERATIONS_FOLLOW_UP_RETENTION_DAYS", 30, 3650], ["OPERATIONS_AI_LOG_RETENTION_DAYS", 1, 3650], ["OPERATIONS_BILLING_RETENTION_DAYS", 30, 3650], ["OPERATIONS_WEBHOOK_RECEIPT_RETENTION_DAYS", 7, 3650], ["OPERATIONS_AGGREGATE_METRIC_RETENTION_DAYS", 30, 3650], ["OPERATIONS_DELETION_PROOF_RETENTION_DAYS", 30, 3650], ["OPERATIONS_RUN_RETENTION_DAYS", 1, 3650]];
+  for (const [key, minimum, maximum] of operationRanges) if (typeof env[key] !== "string" || !/^\d+$/.test(env[key]) || !wholeNumber(env[key], minimum, maximum)) errors.push(`${key} must be a whole number within its production range.`);
+  if (wholeNumber(env.OPERATIONS_ALERT_RETRY_COOLDOWN_SECONDS, 10, 3600) && wholeNumber(env.OPERATIONS_ALERT_MAX_RETRY_DELAY_SECONDS, 10, 86400) && Number(env.OPERATIONS_ALERT_MAX_RETRY_DELAY_SECONDS) < Number(env.OPERATIONS_ALERT_RETRY_COOLDOWN_SECONDS)) errors.push("OPERATIONS_ALERT_MAX_RETRY_DELAY_SECONDS must be at least OPERATIONS_ALERT_RETRY_COOLDOWN_SECONDS.");
+  if (wholeNumber(env.OPERATIONS_ALERT_TIMEOUT_MS, 1000, 30000) && wholeNumber(env.OPERATIONS_ALERT_LEASE_SECONDS, 10, 600) && Number(env.OPERATIONS_ALERT_LEASE_SECONDS) * 1000 < Number(env.OPERATIONS_ALERT_TIMEOUT_MS) + 5000) errors.push("OPERATIONS_ALERT_LEASE_SECONDS must exceed OPERATIONS_ALERT_TIMEOUT_MS by at least five seconds.");
+  const populated = (keys) => keys.some((key) => env[key] !== undefined && env[key] !== "");
+  if (delivery === "in_app" && populated(["NOTIFICATION_WEBHOOK_URL", "NOTIFICATION_WEBHOOK_TOKEN", "NOTIFICATION_WEBHOOK_KEY_ID", "NOTIFICATION_WEBHOOK_TIMEOUT_MS"])) errors.push("Disabled customer webhook delivery must not retain webhook configuration.");
+}
+
+export function validateRuntimeEnvironment(env, role) {
+  if (role !== "api" && role !== "worker") return { ok: false, errors: ["PROCESS_ROLE must be api or worker for runtime preflight."], warnings: [] };
+  const context = runtimeContext(env);
+  if (role === "api") validateApiRuntimeEnvironment(context);
+  else validateWorkerRuntimeEnvironment(context);
+  return { ok: context.errors.length === 0, errors: context.errors, warnings: context.warnings };
+}
+
+export function validatePreflightEnvironment(env) {
+  if (env.PROCESS_ROLE === undefined || env.PROCESS_ROLE === "deployment") return validateEnvironment(env);
+  return validateRuntimeEnvironment(env, env.PROCESS_ROLE);
+}
+
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  const result = validateEnvironment(process.env);
-  console.log("MGT portal production preflight");
+  const result = validatePreflightEnvironment(process.env);
+  console.log(`MGT portal production preflight${process.env.PROCESS_ROLE ? ` (${process.env.PROCESS_ROLE})` : ""}`);
   for (const warning of result.warnings) console.log(`WARN  ${warning}`);
   for (const error of result.errors) console.error(`ERROR ${error}`);
   console.log(result.ok ? "PASS  Environment is ready for build/deployment checks." : `FAIL  ${result.errors.length} blocking configuration issue(s).`);

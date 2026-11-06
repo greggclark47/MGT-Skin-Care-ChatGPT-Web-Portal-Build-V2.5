@@ -8,7 +8,12 @@ const WARDROBE_CATEGORIES=['top','bottom','dress or jumpsuit','outer layer','hea
 type WardrobeItem={id:string;name:string;category:typeof WARDROBE_CATEGORIES[number];color:string;notes:string;created_at:string};
 type WardrobeState={items:WardrobeItem[];revision:string;updated_at:string};
 type SavedStyleProfile={input:StyleProfile;updated_at:string;consent_version:string;revision?:string};
-export function wardrobeItems(value:unknown):WardrobeItem[]{return Array.isArray(value)?value:Array.isArray((value as any)?.items)?(value as any).items:[];}
+function publicWardrobeItem(value:unknown):WardrobeItem|null{
+ const item=value&&typeof value==='object'&&!Array.isArray(value)?value as Partial<WardrobeItem>:null;
+ if(!item||typeof item.id!=='string'||!/^[a-f0-9-]{1,64}$/i.test(item.id)||typeof item.name!=='string'||!item.name.trim()||typeof item.category!=='string'||!(WARDROBE_CATEGORIES as readonly string[]).includes(item.category)||typeof item.color!=='string'||typeof item.notes!=='string'||typeof item.created_at!=='string'||!Number.isFinite(Date.parse(item.created_at)))return null;
+ return{id:item.id,name:item.name.trim(),category:item.category as WardrobeItem['category'],color:item.color.trim(),notes:item.notes.trim(),created_at:item.created_at};
+}
+export function wardrobeItems(value:unknown):WardrobeItem[]{const raw:unknown[]=Array.isArray(value)?value:Array.isArray((value as any)?.items)?(value as any).items:[];return raw.map(publicWardrobeItem).filter((item:WardrobeItem|null):item is WardrobeItem=>!!item).slice(0,50);}
 function wardrobeState(value:unknown):{items:WardrobeItem[];revision:string|null;updated_at:string|null}{
  const record=value&&typeof value==='object'&&!Array.isArray(value)?value as Partial<WardrobeState>:null;
  return{items:wardrobeItems(value),revision:typeof record?.revision==='string'?record.revision:Array.isArray(value)?'legacy':null,updated_at:typeof record?.updated_at==='string'?record.updated_at:null};
@@ -20,7 +25,7 @@ function styleProfileRevision(value:unknown):string|null{
 export function publicStyleProfile(value:unknown){
  if(!value||typeof value!=='object'||Array.isArray(value))return null;
  const profile=value as SavedStyleProfile;
- return {...profile,input:normalizeStyle(profile.input),revision:styleProfileRevision(profile)};
+ return {input:normalizeStyle(profile.input),updated_at:typeof profile.updated_at==='string'&&Number.isFinite(Date.parse(profile.updated_at))?profile.updated_at:null,consent_version:typeof profile.consent_version==='string'?profile.consent_version:null,revision:styleProfileRevision(profile)};
 }
 export function exportedStyleProfile(value:unknown){
  const profile=publicStyleProfile(value);if(!profile)return null;

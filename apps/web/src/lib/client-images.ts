@@ -3,6 +3,7 @@ export const CLIENT_IMAGE_MAX_BYTES = 8 * 1024 * 1024;
 export const CLIENT_IMAGE_STORED_MAX_BYTES = 5 * 1024 * 1024;
 export const CLIENT_IMAGE_LIBRARY_MAX_BYTES = 40 * 1024 * 1024;
 export const TEST_IMAGE_UPLOAD_CONSENT_VERSION = 'client-image-drive-test-1';
+export const PHOTO_JOURNAL_COSMETIC_ANALYSIS_CONSENT_VERSION = 'photo-journal-cosmetic-analysis-1';
 
 export const CLIENT_IMAGE_CATEGORIES = [
   { id: 'front', label: 'Front view' },
@@ -16,6 +17,7 @@ export const CLIENT_IMAGE_CATEGORIES = [
 ] as const;
 
 export type ClientImageCategory = typeof CLIENT_IMAGE_CATEGORIES[number]['id'];
+export type ClientImageOrigin = 'personal_upload' | 'google_drive_picker' | 'guided_face_camera' | 'test_drive_library';
 export type ClientImage = {
   id: string;
   category: ClientImageCategory;
@@ -23,10 +25,14 @@ export type ClientImage = {
   mimeType: 'image/jpeg';
   size: number;
   createdAt: string;
+  origin?: ClientImageOrigin;
   blob: Blob;
 };
 export type TestDriveClientImage = Omit<ClientImage,'blob'|'mimeType'> & { contentUrl:string; removalPending?:boolean };
 export type TestDriveConnection={enabled:boolean;environment:'test'|'unavailable';folder:'configured'|'created_on_first_upload'|'unavailable';connection:'ready'|'unavailable';message:string};
+export type PhotoJournalAnalysisStatus={enabled:boolean;requested:boolean;privacy_reviewed:boolean;local_only:true;uses_face_recognition:false;consent_version:string;message:string};
+export type PhotoJournalCosmeticSummary={summary:string;focus_ids:string[];observation_tags:string[];capture_feedback:'ready_for_consistency'|'retake_for_consistency'};
+export type PhotoJournalAnalysisResponse={cosmetic_summary:PhotoJournalCosmeticSummary;output_trace:{generated_at:string};limitations:string[]};
 
 const DB_NAME = 'mgt-client-image-library-v1-';
 const STORE_NAME = 'images';
@@ -58,6 +64,18 @@ export async function updateTestDriveClientImageCategory(id:string,category:Clie
 }
 export async function deleteTestDriveClientImage(id:string):Promise<void>{await testDriveRequest('/'+encodeURIComponent(id),{method:'DELETE'});}
 
+export async function requestPhotoJournalCosmeticSummary(image:Blob, source:ClientImageOrigin):Promise<PhotoJournalAnalysisResponse>{
+  if (image.type !== 'image/jpeg' || image.size <= 0 || image.size > CLIENT_IMAGE_STORED_MAX_BYTES) throw new Error('Choose one prepared JPEG image under 5 MB for the private cosmetic note.');
+  const sessionResponse=await fetch('/api/hub/session',{credentials:'same-origin',cache:'no-store'});
+  if(!sessionResponse.ok)throw new Error('The portal session could not be checked. Refresh and try again.');
+  const portalSession=await sessionResponse.json() as {csrf?:string;photo_journal_analysis?:PhotoJournalAnalysisStatus};
+  if(portalSession.photo_journal_analysis?.enabled!==true)throw new Error(portalSession.photo_journal_analysis?.message||'Private photo-journal analysis is not enabled in this environment.');
+  const response=await fetch('/api/hub/photo-analysis',{method:'POST',credentials:'same-origin',cache:'no-store',headers:{'content-type':'application/octet-stream','x-csrf-token':portalSession.csrf||'','x-photo-analysis-consent':PHOTO_JOURNAL_COSMETIC_ANALYSIS_CONSENT_VERSION,'x-photo-analysis-source':source},body:image});
+  const data=await response.json().catch(()=>({}));
+  if(!response.ok)throw new Error(data.error?.message||'The private cosmetic note could not be prepared.');
+  return data as PhotoJournalAnalysisResponse;
+}
+
 function database(scope: string): Promise<IDBDatabase> {
   if (!/^[a-f0-9]{64}$/.test(scope)) return Promise.reject(new Error('The image library needs an active portal session.'));
   if (typeof indexedDB === 'undefined') return Promise.reject(new Error('This browser does not support the private image library.'));
@@ -69,7 +87,7 @@ function database(scope: string): Promise<IDBDatabase> {
     };
     request.onsuccess = () => resolve(request.result);
     request.onerror = () => reject(new Error('The private image library could not be opened.'));
-    request.onblocked = () => reject(new Error('Close another MGT tab to finish updating the private image library.'));
+    request.onblocked = () => reject(new Error('Close another Team 47 Studio tab to finish updating the private image library.'));
   });
 }
 
@@ -134,7 +152,7 @@ export function deleteClientImage(scope: string, id: string): Promise<undefined>
   return transact(scope, 'readwrite', store => store.delete(id));
 }
 
-export async function prepareClientImage(file: File, category: ClientImageCategory): Promise<ClientImage> {
+export async function prepareClientImage(file: File, category: ClientImageCategory, origin: ClientImageOrigin = 'personal_upload'): Promise<ClientImage> {
   const supported = ['image/jpeg', 'image/png', 'image/webp'];
   if (!supported.includes(file.type)) throw new Error('Choose a JPEG, PNG, or WebP image. HEIC and other formats are not supported yet.');
   if (file.size <= 0 || file.size > CLIENT_IMAGE_MAX_BYTES) throw new Error('Each image must be between 1 byte and 8 MB.');
@@ -155,6 +173,6 @@ export async function prepareClientImage(file: File, category: ClientImageCatego
     const blob = await new Promise<Blob>((resolve, reject) => canvas.toBlob(value => value ? resolve(value) : reject(new Error('This image could not be prepared.')), 'image/jpeg', 0.86));
     if (blob.size > CLIENT_IMAGE_STORED_MAX_BYTES) throw new Error('The prepared image is over 5 MB. Choose a smaller image.');
     const id = typeof crypto.randomUUID === 'function' ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-    return { id, category, name: file.name.replace(/[\u0000-\u001f\\/]/g, '_').slice(0, 120) || 'skincare-photo.jpg', mimeType: 'image/jpeg', size: blob.size, createdAt: new Date().toISOString(), blob };
+    return { id, category, name: file.name.replace(/[\u0000-\u001f\\/]/g, '_').slice(0, 120) || 'skincare-photo.jpg', mimeType: 'image/jpeg', size: blob.size, createdAt: new Date().toISOString(), origin, blob };
   } finally { bitmap.close(); }
 }

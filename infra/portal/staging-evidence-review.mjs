@@ -72,7 +72,13 @@ export function reviewStagingEvidence({ root = process.cwd(), ledger, now = new 
     images: target.images,
     owners: {}
   });
-  const artifacts = verifyStagingArtifacts({ root, artifacts: ledger?.artifacts });
+  const artifacts = verifyStagingArtifacts({
+    root,
+    artifacts: ledger?.artifacts,
+    candidateCommit: target.candidate_commit,
+    environment: "staging",
+    expectedContractChecksums: target.secret_injection_contract_checksums
+  });
   const checks = [
     { id: "ledger_contract", status: evidence.ok ? "pass" : "fail", error_count: evidence.errors.length },
     { id: "local_artifact_integrity", status: artifacts.ok ? "pass" : "fail", error_count: artifacts.errors.length }

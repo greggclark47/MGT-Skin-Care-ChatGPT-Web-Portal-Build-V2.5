@@ -1,4 +1,4 @@
-import express, { type Express, type Request } from 'express';
+import express, { type Express, type Request, type Response } from 'express';
 import { Pool } from 'pg';
 import { requestId, errorHandler } from './middleware/error';
 import { skinMatchRouter } from './modules/skin-match/router';
@@ -51,6 +51,23 @@ function adminUserIdFromHeader(req: Request): string | null {
   return Array.isArray(raw) ? raw[0] : raw;
 }
 
+// The deployed portal is intentionally referral-only: external retailers remain the
+// merchant of record for products, fulfillment, returns, shipping, and tax. The older
+// direct-cart routes stay available for local verification, but must never create a
+// production charge while that product-operation model is not implemented.
+export function isDirectRetailCheckoutAvailable(env: NodeJS.ProcessEnv = process.env): boolean {
+  return env.NODE_ENV !== 'production';
+}
+
+function retiredRetailCheckoutResponse(_req: Request, res: Response): void {
+  res.status(503).set('Cache-Control', 'no-store').json({
+    error: {
+      code: 'retail_checkout_unavailable',
+      message: 'Direct product checkout is not available. Continue with an approved external retailer.',
+    },
+  });
+}
+
 export function createApp(deps: AppDeps): Express {
   const app = express();
   app.use(requestId);
@@ -95,17 +112,24 @@ export function createApp(deps: AppDeps): Express {
   // --- Skin Match (SC-P2) ---
   app.use('/api/skin-match', skinMatchRouter(catalog));
 
-  // --- Cart (SC-P3) — carts are keyed by the same session_id as the Skin Match session ---
-  app.use('/api/cart', cartRouter(catalog));
+  if (isDirectRetailCheckoutAvailable()) {
+    // --- Cart (SC-P3) — carts are keyed by the same session_id as the Skin Match session ---
+    app.use('/api/cart', cartRouter(catalog));
 
-  // --- Checkout (SC-P3) — pending-order-first pattern; payment provider and order storage
-  // are both injected so the module under test never learns which backend is in play ---
-  app.use('/api/checkout', checkoutRouter(
-    getCart,
-    (cart) => cart.items.reduce((sum, i) => sum + i.unit_price_cents * i.quantity, 0),
-    payments,
-    deps.orders,
-  ));
+    // --- Checkout (SC-P3) — pending-order-first pattern; payment provider and order storage
+    // are both injected so the module under test never learns which backend is in play ---
+    app.use('/api/checkout', checkoutRouter(
+      getCart,
+      (cart) => cart.items.reduce((sum, i) => sum + i.unit_price_cents * i.quantity, 0),
+      payments,
+      deps.orders,
+    ));
+  } else {
+    // Do not expose the legacy direct-cart surface in a production process. Its fixed
+    // shipping/tax calculation is deliberately not an order-payment implementation.
+    app.use('/api/cart', retiredRetailCheckoutResponse);
+    app.use('/api/checkout', retiredRetailCheckoutResponse);
+  }
 
   // --- Coach routine commands (SC-P3) — deterministic, see routine-commands.ts ---
   app.use('/api/coach', coachRouter(

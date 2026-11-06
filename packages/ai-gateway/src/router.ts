@@ -71,6 +71,18 @@ export class AiGateway {
       return fail('premium_required', 0);
     }
 
+    // Photos must never enter a task with a hosted candidate. It is not enough for the
+    // current primary to be local: a later fallback edit must fail closed as well.
+    if (request.image_inputs?.length) {
+      const validImages = request.image_inputs.length === 1 && request.image_inputs.every(image =>
+        image?.mime_type === 'image/jpeg' && typeof image.base64 === 'string' && image.base64.length > 0
+        && image.base64.length <= 7_000_000 && /^[A-Za-z0-9+/]+={0,2}$/.test(image.base64),
+      );
+      const localOnly = [config.primary, ...config.fallbacks].every(model => model.provider === 'ollama');
+      if (!validImages) return fail('invalid_image_input', 0);
+      if (!localOnly) return fail('image_input_local_only', 0);
+    }
+
     // 2. Budget — checked before spending, never after.
     if (!(await isWithinBudget(this.budgetStore, this.budgetCaps, request.user_id, config.budget_class))) {
       return fail('budget_exceeded', 0);
@@ -123,7 +135,7 @@ export class AiGateway {
         const controller = new AbortController();
         const timer = setTimeout(() => controller.abort(), config.timeout_ms);
         try {
-          const providerResponse = await adapter.complete(modelConfig, request.system_prompt, request.user_prompt, controller.signal);
+          const providerResponse = await adapter.complete(modelConfig, request.system_prompt, request.user_prompt, controller.signal, request.image_inputs);
           receivedResponse = true;
           clearTimeout(timer);
 

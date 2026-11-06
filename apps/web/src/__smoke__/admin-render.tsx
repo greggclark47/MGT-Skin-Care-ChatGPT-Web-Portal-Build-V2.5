@@ -5,6 +5,7 @@ import { KnowledgeConsole } from '../components/admin/KnowledgeConsole';
 import { AuditTable, DataTable, MetricSummary, ProductionAdmissionGuidance, SupportTicketEditor } from '../components/ConnectedAdmin';
 import { AuditTrail } from '../components/admin/AdminPrimitives';
 import type { KnowledgeObject, VersionedIngredientRule } from '@mgt/domain';
+import { PRODUCTION_ADMISSION_ACTIONS, PRODUCTION_ADMISSION_CONTRACT_VERSION } from '@mgt/shared';
 
 // These assert the admin console's SAFETY-RELEVANT claims, not its layout. Each check below
 // corresponds to a way the console could mislead an SME into thinking a safety change is in
@@ -196,15 +197,22 @@ console.log('\n== 13. Audit evidence uses machine-readable dates ==');
 
 console.log('\n== 14. Production admission shows only reviewed category-level guidance ==');
 {
-  const blocked = renderToStaticMarkup(<ProductionAdmissionGuidance admission={{ mode: 'production', healthy: false, next_actions: [{ id: 'database', action: 'Provide the reviewed PostgreSQL target with full TLS verification and migrations disabled at runtime.' }] }}/>);
+  const checks = (blocked: string[] = []) => Object.keys(PRODUCTION_ADMISSION_ACTIONS).map(id => ({ id, healthy: !blocked.includes(id) }));
+  const blocked = renderToStaticMarkup(<ProductionAdmissionGuidance admission={{ mode: 'production', admission_version: PRODUCTION_ADMISSION_CONTRACT_VERSION, healthy: false, issues: ['database'], checks: checks(['database']), next_actions: [{ id: 'database', action: 'Provide the reviewed PostgreSQL target with full TLS verification and migrations disabled at runtime.' }] }}/>);
   check('production admission is clearly labelled', blocked.includes('Production admission') && blocked.includes('Blocked'));
   check('reviewed remediation is shown', blocked.includes('reviewed PostgreSQL target'));
   check('guidance declares the safe display boundary', blocked.includes('does not show configuration values, credentials'));
 
-  const unsafe = renderToStaticMarkup(<ProductionAdmissionGuidance admission={{ mode: 'production', healthy: false, next_actions: [{ id: 'database', action: 'DATABASE_URL=do-not-render-this' }] }}/>);
+  const unsafe = renderToStaticMarkup(<ProductionAdmissionGuidance admission={{ mode: 'production', admission_version: PRODUCTION_ADMISSION_CONTRACT_VERSION, healthy: false, issues: ['database'], checks: checks(['database']), next_actions: [{ id: 'database', action: 'DATABASE_URL=do-not-render-this' }] }}/>);
   check('unexpected response text is not echoed', !unsafe.includes('DATABASE_URL=do-not-render-this') && unsafe.includes('no unrecognized response details'));
 
-  const reordered = renderToStaticMarkup(<ProductionAdmissionGuidance admission={{ mode: 'production', healthy: false, next_actions: [{ id: 'database', action: 'Provide the reviewed PostgreSQL target with full TLS verification and migrations disabled at runtime.' }, { id: 'ownership', action: 'Confirm the approved release and support owner declarations.' }, { id: 'database', action: 'Provide the reviewed PostgreSQL target with full TLS verification and migrations disabled at runtime.' }] }}/>);
+  const inconsistentReady = renderToStaticMarkup(<ProductionAdmissionGuidance admission={{ mode: 'production', admission_version: PRODUCTION_ADMISSION_CONTRACT_VERSION, healthy: true, issues: [], checks: checks(), next_actions: [{ id: 'database', action: 'Provide the reviewed PostgreSQL target with full TLS verification and migrations disabled at runtime.' }] }}/>);
+  check('inconsistent ready response fails closed', inconsistentReady.includes('Blocked') && !inconsistentReady.includes('All runtime admission categories are currently satisfied'));
+
+  const mismatchedBlocked = renderToStaticMarkup(<ProductionAdmissionGuidance admission={{ mode: 'production', admission_version: PRODUCTION_ADMISSION_CONTRACT_VERSION, healthy: false, issues: ['ownership'], checks: checks(['ownership']), next_actions: [{ id: 'database', action: 'Provide the reviewed PostgreSQL target with full TLS verification and migrations disabled at runtime.' }] }}/>);
+  check('mismatched blocked response fails closed', mismatchedBlocked.includes('no unrecognized response details') && !mismatchedBlocked.includes('reviewed PostgreSQL target'));
+
+  const reordered = renderToStaticMarkup(<ProductionAdmissionGuidance admission={{ mode: 'production', admission_version: PRODUCTION_ADMISSION_CONTRACT_VERSION, healthy: false, issues: ['database', 'ownership'], checks: checks(['database', 'ownership']), next_actions: [{ id: 'database', action: 'Provide the reviewed PostgreSQL target with full TLS verification and migrations disabled at runtime.' }, { id: 'ownership', action: 'Confirm the approved release and support owner declarations.' }, { id: 'database', action: 'Provide the reviewed PostgreSQL target with full TLS verification and migrations disabled at runtime.' }] }}/>);
   check('reviewed guidance has stable order and no duplicates', reordered.indexOf('approved release and support owner') < reordered.indexOf('reviewed PostgreSQL target') && (reordered.match(/reviewed PostgreSQL target/g) || []).length === 1);
 
   const nonProduction = renderToStaticMarkup(<ProductionAdmissionGuidance admission={{ mode: 'non_production', healthy: true }}/>);

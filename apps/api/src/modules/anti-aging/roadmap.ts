@@ -17,13 +17,71 @@ function missingStore(store: Store | undefined): asserts store is Store {
 }
 
 function publicRegimenSummary(summary: RegimenCycleSummary) {
-  const { actor: _actor, consent_version: _consentVersion, ...cycle } = summary.cycle;
-  return { ...summary, cycle };
+  return {
+    cycle: {
+      id: summary.cycle.id,
+      focus: summary.cycle.focus,
+      starts_at: summary.cycle.starts_at,
+      ends_at: summary.cycle.ends_at,
+      status: summary.cycle.status,
+      cycle_days: summary.cycle.cycle_days,
+      created_at: summary.cycle.created_at,
+      policy_version: summary.cycle.policy_version,
+      data_shared: [],
+    },
+    check_ins: summary.check_ins,
+    comfortable: summary.comfortable,
+    no_change: summary.no_change,
+    needs_review: summary.needs_review,
+    days_remaining: summary.days_remaining,
+    rotation_state: summary.rotation_state,
+    deterministic_guidance: {
+      mode: 'explain_only',
+      next_step: summary.deterministic_guidance.next_step,
+      routine_changes: 'never_automatic',
+      note: summary.deterministic_guidance.note,
+    },
+    ai_boundary: {
+      enabled: 'configuration_dependent',
+      input: 'cycle_metadata_only',
+      can_change_routine: false,
+      note: summary.ai_boundary.note,
+    },
+    data_shared: [],
+  };
 }
 
 function publicRegimenCheckIn(checkIn: RegimenCycleCheckIn) {
-  const { actor: _actor, ...entry } = checkIn;
-  return entry;
+  return {
+    id: checkIn.id,
+    cycle_id: checkIn.cycle_id,
+    status: checkIn.status,
+    completed_at: checkIn.completed_at,
+    created_at: checkIn.created_at,
+    policy_version: checkIn.policy_version,
+    data_shared: [],
+  };
+}
+
+const validDate=(value:unknown)=>typeof value==='string'&&Number.isFinite(Date.parse(value));
+const validText=(value:unknown,max=80)=>typeof value==='string'&&value.length>0&&value.length<=max;
+
+export function publicProgressEntry(value: unknown) {
+  const entry=value&&typeof value==='object'&&!Array.isArray(value)?value as Partial<ProgressEntry>:null;
+  if(!entry||typeof entry.entry_id!=='string'||!isCanonicalId(entry.entry_id)||!isProgressStatus(entry.status)||!validDate(entry.completed_at)||!validText(entry.consent_version)||!validDate(entry.created_at)||!validText(entry.policy_version))return null;
+  return{entry_id:entry.entry_id,status:entry.status,completed_at:entry.completed_at,consent_version:entry.consent_version,created_at:entry.created_at,policy_version:entry.policy_version};
+}
+
+export function publicProgressReminder(value: unknown) {
+  const reminder=value&&typeof value==='object'&&!Array.isArray(value)?value as Partial<ProgressReminder>:null;
+  if(!reminder||typeof reminder.id!=='string'||!isCanonicalId(reminder.id)||typeof reminder.entry_id!=='string'||!isCanonicalId(reminder.entry_id)||!isProgressReminderCadence(reminder.cadence)||!validDate(reminder.next_at)||typeof reminder.paused!=='boolean'||!validText(reminder.consent_version)||!validDate(reminder.created_at)||!validDate(reminder.updated_at)||!validText(reminder.policy_version))return null;
+  return{id:reminder.id,entry_id:reminder.entry_id,cadence:reminder.cadence,next_at:reminder.next_at,paused:reminder.paused,consent_version:reminder.consent_version,created_at:reminder.created_at,updated_at:reminder.updated_at,policy_version:reminder.policy_version};
+}
+
+export function publicAppointmentRequest(value: unknown) {
+  const request=value&&typeof value==='object'&&!Array.isArray(value)?value as Record<string,any>:null;
+  if(!request||typeof request.id!=='string'||!isCanonicalId(request.id)||typeof request.provider_id!=='string'||!isCanonicalId(request.provider_id)||!['handoff_pending','partner_acknowledged','uncertain','closed'].includes(request.status)||request.consent!=='provider_handoff'||(request.requested_window!==null&&request.requested_window!==undefined&&typeof request.requested_window!=='string')||!validText(request.uncertainty,500)||!validDate(request.created_at)||!validDate(request.updated_at)||!validText(request.policy_version))return null;
+  return{id:request.id,provider_id:request.provider_id,status:request.status,consent:'provider_handoff',requested_window:request.requested_window??null,data_shared:[],booking_supported:false,uncertainty:request.uncertainty,created_at:request.created_at,updated_at:request.updated_at,policy_version:request.policy_version};
 }
 
 export function antiAgingRoadmapRouter(catalog: AntiAgingCatalog, store?: Store): Router {
@@ -114,55 +172,56 @@ export function antiAgingRoadmapRouter(catalog: AntiAgingCatalog, store?: Store)
       await records.put('anti_aging_progress', actor + ':' + input.entry_id, entry);
       return entry;
     });
-    res.status(202).json({ data: saved, note: 'Aggregate adherence only; no diagnostic inference is made.' });
+    const projected=publicProgressEntry(saved);check(projected,500,'record_unavailable','The progress record could not be returned safely.');
+    res.status(202).json({ data: projected, note: 'Aggregate adherence only; no diagnostic inference is made.' });
   }));
 
   router.get('/progress', wrap(async (req, res) => {
     missingStore(store);
     const actor = actorOf(req);
-    const entries = await store.tx(async records => (await records.entries<ProgressEntry>('anti_aging_progress')).map(item => item.value).filter(item => item.actor === actor));
-    res.json({ data: { entries, aggregate: aggregateProgress(entries), consent_scope: 'progress_tracking' } });
+    const entries = await store.tx(async records => (await records.entries<ProgressEntry>('anti_aging_progress')).map(item => item.value).filter(item => item.actor === actor).map(publicProgressEntry).filter(Boolean));
+    res.json({ data: { entries, aggregate: aggregateProgress(entries as ProgressEntry[]), consent_scope: 'progress_tracking' } });
   }));
 
   router.get('/progress/export', wrap(async (req, res) => {
     missingStore(store);
     const actor = actorOf(req);
     const bundle = await store.tx(async records => ({
-      entries: (await records.entries<ProgressEntry>('anti_aging_progress')).map(item => item.value).filter(item => item.actor === actor),
-      reminders: (await records.entries<ProgressReminder>('anti_aging_reminders')).map(item => item.value).filter(item => item.actor === actor),
+      entries: (await records.entries<ProgressEntry>('anti_aging_progress')).map(item => item.value).filter(item => item.actor === actor).map(publicProgressEntry).filter(Boolean),
+      reminders: (await records.entries<ProgressReminder>('anti_aging_reminders')).map(item => item.value).filter(item => item.actor === actor).map(publicProgressReminder).filter(Boolean),
     }));
     res.setHeader('Content-Disposition', 'attachment; filename="mgt-skin-care-progress-export.json"');
-    res.json({ data: { ...bundle, summary: summarizeProgressExport(bundle.entries, bundle.reminders), manifest: buildProgressExportManifest(bundle.entries, bundle.reminders), export_format: 'json', data_shared: [], note: 'Portable personal copy; not a diagnosis or treatment record.' } });
+    res.json({ data: { entries:bundle.entries,reminders:bundle.reminders, summary: summarizeProgressExport(bundle.entries as ProgressEntry[], bundle.reminders as ProgressReminder[]), manifest: buildProgressExportManifest(bundle.entries as ProgressEntry[], bundle.reminders as ProgressReminder[]), export_format: 'json', data_shared: [], note: 'Portable personal copy; not a diagnosis or treatment record.' } });
   }));
 
   router.get('/progress/export/manifest', wrap(async (req, res) => {
     missingStore(store);
     const actor = actorOf(req);
     const bundle = await store.tx(async records => ({
-      entries: (await records.entries<ProgressEntry>('anti_aging_progress')).map(item => item.value).filter(item => item.actor === actor),
-      reminders: (await records.entries<ProgressReminder>('anti_aging_reminders')).map(item => item.value).filter(item => item.actor === actor),
+      entries: (await records.entries<ProgressEntry>('anti_aging_progress')).map(item => item.value).filter(item => item.actor === actor).map(publicProgressEntry).filter(Boolean),
+      reminders: (await records.entries<ProgressReminder>('anti_aging_reminders')).map(item => item.value).filter(item => item.actor === actor).map(publicProgressReminder).filter(Boolean),
     }));
-    res.json({ data: buildProgressExportManifest(bundle.entries, bundle.reminders) });
+    res.json({ data: buildProgressExportManifest(bundle.entries as ProgressEntry[], bundle.reminders as ProgressReminder[]) });
   }));
 
   router.get('/progress/export/summary', wrap(async (req, res) => {
     missingStore(store);
     const actor = actorOf(req);
     const bundle = await store.tx(async records => ({
-      entries: (await records.entries<ProgressEntry>('anti_aging_progress')).map(item => item.value).filter(item => item.actor === actor),
-      reminders: (await records.entries<ProgressReminder>('anti_aging_reminders')).map(item => item.value).filter(item => item.actor === actor),
+      entries: (await records.entries<ProgressEntry>('anti_aging_progress')).map(item => item.value).filter(item => item.actor === actor).map(publicProgressEntry).filter(Boolean),
+      reminders: (await records.entries<ProgressReminder>('anti_aging_reminders')).map(item => item.value).filter(item => item.actor === actor).map(publicProgressReminder).filter(Boolean),
     }));
-    res.json({ data: summarizeProgressExport(bundle.entries, bundle.reminders), consent_scope: ['progress_tracking', 'reminders'] });
+    res.json({ data: summarizeProgressExport(bundle.entries as ProgressEntry[], bundle.reminders as ProgressReminder[] ,), consent_scope: ['progress_tracking', 'reminders'] });
   }));
 
   router.get('/progress/control-summary', wrap(async (req, res) => {
     missingStore(store);
     const actor = actorOf(req);
     const bundle = await store.tx(async records => ({
-      entries: (await records.entries<ProgressEntry>('anti_aging_progress')).map(item => item.value).filter(item => item.actor === actor),
-      reminders: (await records.entries<ProgressReminder>('anti_aging_reminders')).map(item => item.value).filter(item => item.actor === actor),
+      entries: (await records.entries<ProgressEntry>('anti_aging_progress')).map(item => item.value).filter(item => item.actor === actor).map(publicProgressEntry).filter(Boolean),
+      reminders: (await records.entries<ProgressReminder>('anti_aging_reminders')).map(item => item.value).filter(item => item.actor === actor).map(publicProgressReminder).filter(Boolean),
     }));
-    res.json({ data: buildProgressControlSummary(bundle.entries, bundle.reminders) });
+    res.json({ data: buildProgressControlSummary(bundle.entries as ProgressEntry[], bundle.reminders as ProgressReminder[]) });
   }));
 
   router.delete('/progress', wrap(async (req, res) => {
@@ -176,15 +235,15 @@ export function antiAgingRoadmapRouter(catalog: AntiAgingCatalog, store?: Store)
   router.get('/progress/reminders', wrap(async (req, res) => {
     missingStore(store);
     const actor = actorOf(req);
-    const reminders = await store.tx(async records => (await records.entries<ProgressReminder>('anti_aging_reminders')).map(item => item.value).filter(item => item.actor === actor));
-    res.json({ data: { reminders, states: reminders.reduce((summary, reminder) => { const state = progressReminderState(reminder); summary[state]++; return summary; }, { paused: 0, due: 0, scheduled: 0 } as Record<string, number>), consent_scope: 'reminders' } });
+    const reminders = await store.tx(async records => (await records.entries<ProgressReminder>('anti_aging_reminders')).map(item => item.value).filter(item => item.actor === actor).map(publicProgressReminder).filter(Boolean));
+    res.json({ data: { reminders, states: reminders.reduce((summary, reminder) => { const state = progressReminderState(reminder as ProgressReminder); summary[state]++; return summary; }, { paused: 0, due: 0, scheduled: 0 } as Record<string, number>), consent_scope: 'reminders' } });
   }));
 
   router.get('/progress/reminders/preview', wrap(async (req, res) => {
     missingStore(store);
     const actor = actorOf(req);
-    const reminders = await store.tx(async records => (await records.entries<ProgressReminder>('anti_aging_reminders')).map(item => item.value).filter(item => item.actor === actor));
-    res.json({ data: { items: reminders.map(reminder => previewProgressReminder(reminder)), delivery: 'in_app_only', data_shared: [], consent_scope: 'reminders' } });
+    const reminders = await store.tx(async records => (await records.entries<ProgressReminder>('anti_aging_reminders')).map(item => item.value).filter(item => item.actor === actor).map(publicProgressReminder).filter(Boolean));
+    res.json({ data: { items: reminders.map(reminder => previewProgressReminder(reminder as ProgressReminder)), delivery: 'in_app_only', data_shared: [], consent_scope: 'reminders' } });
   }));
 
   router.post('/progress/reminders', wrap(async (req, res) => {
@@ -198,7 +257,8 @@ export function antiAgingRoadmapRouter(catalog: AntiAgingCatalog, store?: Store)
     check(isCanonicalId(entryId) && isProgressReminderCadence(cadence) && Number.isInteger(days) && days >= 1 && days <= 365 && consentVersion.length > 0, 400, 'invalid_reminder', 'Choose a supported cadence, date window, and consent version.');
     const id = 'aa_rem_' + hash(actor + ':' + entryId + ':' + cadence).slice(0, 56);
     const reminder = await store.tx(async records => { await records.lock('anti-aging-reminder:' + hash(id)); const saved = buildProgressReminder({ entry_id: entryId, cadence, days_from_now: days, consent_version: consentVersion }, actor, id); await records.put('anti_aging_reminders', id, saved); return saved; });
-    res.status(202).json({ data: reminder });
+    const projected=publicProgressReminder(reminder);check(projected,500,'record_unavailable','The reminder could not be returned safely.');
+    res.status(202).json({ data: projected });
   }));
 
   router.post('/progress/reminders/:id', wrap(async (req, res) => {
@@ -209,7 +269,8 @@ export function antiAgingRoadmapRouter(catalog: AntiAgingCatalog, store?: Store)
     check(isCanonicalId(id) && (action === 'pause' || action === 'resume' || action === 'snooze'), 400, 'invalid_reminder', 'Choose pause, resume, or snooze for this reminder.');
     if (action === 'snooze') check(Number.isInteger(Number(req.body?.days)) && Number(req.body.days) >= 1 && Number(req.body.days) <= 30, 400, 'invalid_reminder', 'Choose a snooze window from 1 to 30 days.');
     const saved = await store.tx(async records => { await records.lock('anti-aging-reminder:' + hash(id)); const reminder = await records.get<ProgressReminder>('anti_aging_reminders', id); check(reminder?.actor === actor, 404, 'reminder_not_found', 'Reminder not found.'); const next = action === 'snooze' ? snoozeProgressReminder(reminder, Number(req.body?.days || 1)) : { ...reminder, paused: action === 'pause', updated_at: new Date().toISOString() }; await records.put('anti_aging_reminders', id, next); return next; });
-    res.json({ data: saved });
+    const projected=publicProgressReminder(saved);check(projected,500,'record_unavailable','The reminder could not be returned safely.');
+    res.json({ data: projected });
   }));
 
   router.delete('/progress/reminders/:id', wrap(async (req, res) => {
@@ -236,13 +297,14 @@ export function antiAgingRoadmapRouter(catalog: AntiAgingCatalog, store?: Store)
       await records.put('anti_aging_appointment_requests', id, request);
       return request;
     });
-    res.status(202).json({ data: result });
+    const projected=publicAppointmentRequest(result);check(projected,500,'record_unavailable','The appointment handoff could not be returned safely.');
+    res.status(202).json({ data: projected });
   }));
 
   router.get('/appointment-requests', wrap(async (req, res) => {
     missingStore(store);
     const actor = actorOf(req);
-    const requests = await store.tx(async records => (await records.entries<any>('anti_aging_appointment_requests')).map(item => item.value).filter(item => item.actor === actor));
+    const requests = await store.tx(async records => (await records.entries<any>('anti_aging_appointment_requests')).map(item => item.value).filter(item => item.actor === actor).map(publicAppointmentRequest).filter(Boolean));
     res.json({ data: { items: requests, data_shared: [], booking_supported: false, note: 'These are handoff requests only; no appointment is booked in this portal.' } });
   }));
 
@@ -253,7 +315,8 @@ export function antiAgingRoadmapRouter(catalog: AntiAgingCatalog, store?: Store)
     check(isCanonicalId(id), 400, 'invalid_request', 'Use a valid appointment request reference.');
     const request = await store.tx(records => records.get<any>('anti_aging_appointment_requests', id));
     check(request?.actor === actor, 404, 'request_not_found', 'No appointment handoff request was found.');
-    res.json({ data: request });
+    const projected=publicAppointmentRequest(request);check(projected,500,'record_unavailable','The appointment handoff could not be returned safely.');
+    res.json({ data: projected });
   }));
 
   router.delete('/appointment-requests/:id', wrap(async (req, res) => {
@@ -265,7 +328,8 @@ export function antiAgingRoadmapRouter(catalog: AntiAgingCatalog, store?: Store)
     check(request?.actor === actor, 404, 'request_not_found', 'No appointment handoff request was found.');
     const withdrawn = withdrawAppointmentRequest(request);
     await store.tx(records => records.put('anti_aging_appointment_requests', id, withdrawn));
-    res.json({ data: { ...withdrawn, withdrawn: true } });
+    const projected=publicAppointmentRequest(withdrawn);check(projected,500,'record_unavailable','The appointment handoff could not be returned safely.');
+    res.json({ data: { ...projected, withdrawn: true } });
   }));
 
   return router;

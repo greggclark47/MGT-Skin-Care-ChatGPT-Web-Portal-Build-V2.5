@@ -7,7 +7,7 @@ const DRIVE_UPLOAD = 'https://www.googleapis.com/upload/drive/v3/files';
 const IMAGE_LIMIT = 12;
 const IMAGE_BYTES_LIMIT = 5 * 1024 * 1024;
 const LIBRARY_BYTES_LIMIT = 40 * 1024 * 1024;
-export const TEST_IMAGE_FOLDER_NAME = 'MGT Skin Care Client Image Test Storage';
+export const TEST_IMAGE_FOLDER_NAME = 'Team 47 Studio Client Image Test Storage';
 export const TEST_IMAGE_UPLOAD_CONSENT_VERSION = 'client-image-drive-test-1';
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const CATEGORIES = new Set(['front','left','right','concern','routine','progress','product','other']);
@@ -77,6 +77,12 @@ export class TestDriveImageStorage {
 }
 
 function publicImage(record:DriveRecord):ClientDriveImage{return{id:record.id,category:record.category,name:record.name,size:record.size,createdAt:record.createdAt,contentUrl:`/api/hub/client-images/${record.id}/content`,removalPending:record.status==='deleting'};}
+export function publicExportImage(value:unknown):{id:string;category:string;name:string;size:number;created_at:string;removal_pending?:true}|null{
+ const record=value&&typeof value==='object'&&!Array.isArray(value)?value as Partial<DriveRecord>:null;
+ const size=record?.size;
+ if(!record||typeof record.id!=='string'||!UUID.test(record.id)||typeof record.category!=='string'||!CATEGORIES.has(record.category)||typeof record.name!=='string'||record.name.length<1||record.name.length>120||typeof size!=='number'||!Number.isInteger(size)||size<0||size>IMAGE_BYTES_LIMIT||typeof record.createdAt!=='string'||!Number.isFinite(Date.parse(record.createdAt))||!['ready','deleting'].includes(record.status||''))return null;
+ return{id:record.id,category:record.category,name:record.name,size,created_at:record.createdAt,...(record.status==='deleting'?{removal_pending:true as const}:{})};
+}
 // Preserve historical guest test images when the guest becomes an account. New guest uploads are
 // refused at the route, so a pending legacy upload is the only in-flight handoff to handle.
 export async function transferGuestTestDriveImages(records:Records,guestActor:string,accountActor:string,at=Date.now()):Promise<number>{

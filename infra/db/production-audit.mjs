@@ -4,6 +4,7 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
+const SHA = /^[a-f0-9]{40}$/i;
 
 export const OWNER_READ_TABLES = Object.freeze([
   "ai_budgets",
@@ -79,7 +80,7 @@ function migrationNames(directory) {
     .sort();
 }
 
-export function buildProductionDatabaseAudit(snapshot, expectedPortalMigrations = []) {
+export function buildProductionDatabaseAudit(snapshot, expectedPortalMigrations = [], candidateCommit = "") {
   const allRlsTables = [...OWNER_READ_TABLES, ...SERVICE_ONLY_TABLES];
   const tables = new Map((snapshot.tables || []).map((row) => [String(row.table), row]));
   const policies = snapshot.policies || [];
@@ -118,8 +119,10 @@ export function buildProductionDatabaseAudit(snapshot, expectedPortalMigrations 
   const missingPortalMigrations = expectedPortalMigrations.filter((name) => !appliedMigrations.has(name));
   const unexpectedPortalMigrations = sorted([...appliedMigrations].filter((name) => !expectedPortalMigrations.includes(name)));
   const serverVersion = Number(snapshot.serverVersion || 0);
+  const candidate = String(candidateCommit || "").trim();
 
   const checks = [
+    { id: "release_candidate_binding", status: pass(SHA.test(candidate)), expected: "40-character commit SHA", observed: SHA.test(candidate) ? "bound" : "missing_or_invalid" },
     { id: "read_only_session", status: pass(snapshot.readOnly === true), expected: true, observed: snapshot.readOnly === true },
     { id: "application_connection_rls_authority", status: pass(snapshot.connectionCanBypassRls === true), expected: true, observed: snapshot.connectionCanBypassRls === true },
     { id: "postgres_16_or_newer", status: pass(serverVersion >= 160000), expected_minimum: 160000, observed: serverVersion || null },
@@ -139,6 +142,7 @@ export function buildProductionDatabaseAudit(snapshot, expectedPortalMigrations 
 
   return {
     schema: "mgt.production-database-audit.v1",
+    candidate_commit: SHA.test(candidate) ? candidate : null,
     generated_at: new Date().toISOString(),
     status: blocked.length ? "blocked" : "pass",
     scope: "Read-only structural audit. It does not replace authenticated cross-account isolation, identity lifecycle, concurrency, retention, backup/restore, or destructive-operation tests.",
@@ -217,8 +221,15 @@ async function cli() {
   const args = process.argv.slice(2);
   const outputIndex = args.indexOf("--output");
   const outputPath = outputIndex >= 0 ? args[outputIndex + 1] : null;
+  const candidateIndex = args.indexOf("--candidate-commit");
+  const candidateCommit = candidateIndex >= 0 ? args[candidateIndex + 1] : "";
   if (outputIndex >= 0 && !outputPath) {
     console.error("--output requires a new report path.");
+    process.exitCode = 2;
+    return;
+  }
+  if (!SHA.test(String(candidateCommit || "").trim())) {
+    console.error("--candidate-commit requires a 40-character commit SHA.");
     process.exitCode = 2;
     return;
   }
@@ -231,6 +242,7 @@ async function cli() {
   if (!process.env.DATABASE_URL) {
     const report = {
       schema: "mgt.production-database-audit.v1",
+      candidate_commit: candidateCommit,
       generated_at: new Date().toISOString(),
       status: "blocked",
       scope: "No connection was attempted.",
@@ -245,11 +257,12 @@ async function cli() {
   let connectionFailed = false;
   try {
     const snapshot = await captureSnapshot(process.env.DATABASE_URL);
-    report = buildProductionDatabaseAudit(snapshot, expectedPortalMigrations);
+    report = buildProductionDatabaseAudit(snapshot, expectedPortalMigrations, candidateCommit);
   } catch {
     connectionFailed = true;
     report = {
       schema: "mgt.production-database-audit.v1",
+      candidate_commit: candidateCommit,
       generated_at: new Date().toISOString(),
       status: "blocked",
       scope: "Connection or metadata query failed; error details are intentionally omitted to avoid leaking target identifiers.",

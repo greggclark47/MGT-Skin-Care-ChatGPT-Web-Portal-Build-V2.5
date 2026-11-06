@@ -10,6 +10,8 @@ import {
   SERVICE_ONLY_TABLES
 } from "./production-audit.mjs";
 
+const COMMIT = "0123456789abcdef0123456789abcdef01234567";
+
 const completeSnapshot = () => ({
   serverVersion: 160004,
   readOnly: true,
@@ -24,8 +26,9 @@ const completeSnapshot = () => ({
 });
 
 test("production database audit passes a complete redacted structural snapshot", () => {
-  const report = buildProductionDatabaseAudit(completeSnapshot(), ["0001_portal_operations.sql", "0002_hub_records_rls.sql"]);
+  const report = buildProductionDatabaseAudit(completeSnapshot(), ["0001_portal_operations.sql", "0002_hub_records_rls.sql"], COMMIT);
   assert.equal(report.status, "pass");
+  assert.equal(report.candidate_commit, COMMIT);
   assert.equal(report.summary.blocked, 0);
   assert.equal(JSON.stringify(report).includes("postgresql://"), false);
   assert.match(report.scope, /does not replace authenticated cross-account isolation/i);
@@ -44,7 +47,7 @@ test("production database audit fails closed on RLS, policy, extension, trigger,
   snapshot.nonPublicPolicies.push({ relation: "knowledge.objects", roles: ["anon"], command: "SELECT" });
   snapshot.triggers = snapshot.triggers.filter((row) => row.table !== "admin_audit_log");
   snapshot.portalMigrations = ["9999_unknown.sql"];
-  const report = buildProductionDatabaseAudit(snapshot, ["0001_portal_operations.sql", "0002_hub_records_rls.sql"]);
+  const report = buildProductionDatabaseAudit(snapshot, ["0001_portal_operations.sql", "0002_hub_records_rls.sql"], COMMIT);
   assert.equal(report.status, "blocked");
   assert.ok(report.summary.blocked >= 7);
   assert.deepEqual(report.checks.find((check) => check.id === "customer_tables_present").missing, ["orders"]);
@@ -60,11 +63,18 @@ test("production database audit rejects a non-read-only or obsolete server sessi
   snapshot.readOnly = false;
   snapshot.connectionCanBypassRls = false;
   snapshot.serverVersion = 150012;
-  const report = buildProductionDatabaseAudit(snapshot, ["0001_portal_operations.sql", "0002_hub_records_rls.sql"]);
+  const report = buildProductionDatabaseAudit(snapshot, ["0001_portal_operations.sql", "0002_hub_records_rls.sql"], COMMIT);
   assert.equal(report.status, "blocked");
   assert.equal(report.checks.find((check) => check.id === "read_only_session").status, "blocked");
   assert.equal(report.checks.find((check) => check.id === "application_connection_rls_authority").status, "blocked");
   assert.equal(report.checks.find((check) => check.id === "postgres_16_or_newer").status, "blocked");
+});
+
+test("production database audit fails closed without an exact candidate binding", () => {
+  const report = buildProductionDatabaseAudit(completeSnapshot(), ["0001_portal_operations.sql", "0002_hub_records_rls.sql"]);
+  assert.equal(report.status, "blocked");
+  assert.equal(report.candidate_commit, null);
+  assert.equal(report.checks.find((check) => check.id === "release_candidate_binding").status, "blocked");
 });
 
 test("checked-in migrations cover every audited RLS table and immutable trigger", () => {

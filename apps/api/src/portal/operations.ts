@@ -422,7 +422,9 @@ export class OperationalWorker{
    ['sessions',0,(v:any)=>Number(v?.expires)],
    ['rate',0,(v:any)=>Number(v?.reset)],
    ['profile_merge_pending',0,(v:any)=>timestamp(v?.expires_at)],
+   ['supabase_google_oauth_flows',0,(v:any)=>Number(v?.expires_at)],
    ['ai_routing_log',int(this.env.OPERATIONS_AI_LOG_RETENTION_DAYS,30,1,3650),(v:any)=>timestamp(v?.at||v?.created_at||v?.timestamp)],
+   ['ai_output_events',int(this.env.OPERATIONS_AI_LOG_RETENTION_DAYS,30,1,3650),(v:any)=>timestamp(v?.created_at)],
    ['anti_aging_ai_events',int(this.env.OPERATIONS_AI_LOG_RETENTION_DAYS,30,1,3650),(v:any)=>timestamp(v?.created_at)],
    ['anti_aging_ai_feedback',int(this.env.OPERATIONS_AI_LOG_RETENTION_DAYS,30,1,3650),(v:any)=>timestamp(v?.created_at)],
    ['anti_aging_referral_clicks',int(this.env.OPERATIONS_ANTI_AGING_RETENTION_DAYS,365,30,3650),(v:any)=>timestamp(v?.day)],
@@ -435,6 +437,7 @@ export class OperationalWorker{
    ['subscription_webhook_receipts',int(this.env.OPERATIONS_WEBHOOK_RECEIPT_RETENTION_DAYS,90,7,3650),(v:any)=>timestamp(v?.last_received_at||v?.first_received_at)],
    ['support_metrics',int(this.env.OPERATIONS_AGGREGATE_METRIC_RETENTION_DAYS,180,30,3650),(v:any)=>timestamp(v?.updated_at||v?.date)],
    ['referral_metrics',int(this.env.OPERATIONS_AGGREGATE_METRIC_RETENTION_DAYS,180,30,3650),(v:any)=>timestamp(v?.updated_at||v?.date)],
+   ['sponsored_content_metrics',int(this.env.OPERATIONS_AGGREGATE_METRIC_RETENTION_DAYS,180,30,3650),(v:any)=>timestamp(v?.updated_at||v?.date)],
    ['deletion_completions',int(this.env.OPERATIONS_DELETION_PROOF_RETENTION_DAYS,730,30,3650),(v:any)=>timestamp(v?.completed_at)],
    ['operation_runs',int(this.env.OPERATIONS_RUN_RETENTION_DAYS,90,1,3650),(v:any)=>timestamp(v?.completed_at||v?.started_at)],
    ['follow_up_tasks',int(this.env.OPERATIONS_FOLLOW_UP_RETENTION_DAYS,365,30,3650),(v:any)=>['completed','blocked'].includes(v?.status)?timestamp(v?.completed_at||v?.blocked_at||v?.updated_at):undefined],
@@ -443,6 +446,9 @@ export class OperationalWorker{
   ] as const;
   let removed=0;
   for(const [scope,days,date] of policies){for(const entry of await records.entries(scope)){const then=date(entry.value);if(then!==undefined&&then<at-days*86400000){await records.remove(scope,entry.id);removed++;}}}
+  for(const entry of await records.entries<any>('guest_invitations')){const expires=timestamp(entry.value?.expires_at);if(expires!==undefined&&expires<at){await records.remove('guest_invitations',entry.id);removed++;}}
+  const invitationIds=new Set((await records.entries('guest_invitations')).map(entry=>entry.id));
+  for(const entry of await records.entries<any>('guest_memberships'))if(!invitationIds.has(entry.value?.invitation_id)){await records.remove('guest_memberships',entry.id);removed++;}
   return removed;
  }
  private async enqueueDueReminders(records:Records,at:number){
@@ -549,12 +555,12 @@ export class OperationalWorker{
   const actor=request.actor,userId=request.user_id,tombstone=`deleted_${request.request_id}`;
   const account=await records.get<any>('accounts',userId);
   for(const item of await records.entries<any>('profile_merge_pending'))if(item.value?.account_id===userId||item.value?.guest_actor===actor)await records.remove('profile_merge_pending',item.id);
-  for(const item of await records.entries<any>('guest_invitations'))if(item.value.owner_actor===actor||item.value.guest_actor===actor||item.value.email===account?.email)await records.remove('guest_invitations',item.id);
-  await records.remove('guest_memberships',actor);
+  const removedInvitations=new Set<string>();for(const item of await records.entries<any>('guest_invitations'))if(item.value.owner_actor===actor||item.value.guest_actor===actor||item.value.email===account?.email){removedInvitations.add(item.id);await records.remove('guest_invitations',item.id);}
+  for(const item of await records.entries<any>('guest_memberships'))if(item.id===actor||removedInvitations.has(item.value?.invitation_id))await records.remove('guest_memberships',item.id);
   for(const scope of ['account_profiles','profiles','profile_revisions','style_profiles','wardrobes','reminders','anti_aging_reminders','saved_retailers','carts','memberships'])await records.remove(scope,actor);
   await records.remove('checkout_requests','premium_'+actor);
   for(const scope of ['subscriptions','billing_attempts'])await records.remove(scope,`${actor}:consumer`);
-  for(const scope of ['sessions','notifications','tickets','ai_routing_log','anti_aging_ai_events','anti_aging_ai_feedback','anti_aging_progress','anti_aging_reminders','anti_aging_appointment_requests','regimen_cycles','regimen_cycle_check_ins','ai_budget','ai_budget_reservations','ai_budget_reconciliations','rate','subscription_commands','subscription_pending']){
+  for(const scope of ['sessions','supabase_google_oauth_flows','notifications','tickets','consents','ai_routing_log','ai_output_events','anti_aging_ai_events','anti_aging_ai_feedback','anti_aging_progress','anti_aging_reminders','anti_aging_appointment_requests','regimen_cycles','regimen_cycle_check_ins','ai_budget','ai_budget_reservations','ai_budget_reconciliations','rate','subscription_commands','subscription_pending']){
    for(const item of await records.entries<any>(scope)){
     const value=item.value;
     const owned=value?.actor===actor||value?.actor===userId||value?.userId===userId||value?.user_id===actor||value?.user_id===userId||this.belongsToUser(item.id,actor,userId)||this.belongsToUser(value?.budget_key,actor,userId);

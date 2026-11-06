@@ -1,4 +1,4 @@
-import type { ModelConfig, ProviderName, ProviderResponse } from '../types';
+import type { GatewayImageInput, ModelConfig, ProviderName, ProviderResponse } from '../types';
 import type { ProviderAdapter } from './index';
 
 // HTTP transport is injected so adapters are testable without network access and so the
@@ -16,7 +16,8 @@ export class OpenAiAdapter implements ProviderAdapter {
   constructor(protected apiKey: string, protected baseUrl = 'https://api.openai.com/v1', protected post: HttpPost = defaultHttpPost, name: ProviderName = 'openai') {
     this.name = name;
   }
-  async complete(config: ModelConfig, systemPrompt: string, userPrompt: string, signal: AbortSignal): Promise<ProviderResponse> {
+  async complete(config: ModelConfig, systemPrompt: string, userPrompt: string, signal: AbortSignal, imageInputs?: readonly GatewayImageInput[]): Promise<ProviderResponse> {
+    if (imageInputs?.length) throw new Error('image_input_local_only');
     const json = await this.post(`${this.baseUrl.replace(/\/$/, '')}/responses`, {
       authorization: `Bearer ${this.apiKey}`,
     }, {
@@ -42,11 +43,11 @@ export class OpenAiAdapter implements ProviderAdapter {
 export class OllamaAdapter implements ProviderAdapter {
   readonly name: ProviderName = 'ollama';
   constructor(private baseUrl = 'http://127.0.0.1:11434', private post: HttpPost = defaultHttpPost) {}
-  async complete(config: ModelConfig, systemPrompt: string, userPrompt: string, signal: AbortSignal): Promise<ProviderResponse> {
+  async complete(config: ModelConfig, systemPrompt: string, userPrompt: string, signal: AbortSignal, imageInputs?: readonly GatewayImageInput[]): Promise<ProviderResponse> {
     const json = await this.post(`${this.baseUrl.replace(/\/$/, '')}/api/chat`, {},
       {
         model: config.model,
-        messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userPrompt }],
+        messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userPrompt, ...(imageInputs?.length ? { images: imageInputs.map(input => input.base64) } : {}) }],
         stream: false,
         keep_alive: '10m',
         options: { num_predict: config.max_tokens, temperature: config.temperature },
@@ -75,11 +76,11 @@ export class OpenClawAdapter extends OpenAiAdapter {
   ) {
     super(apiKey, baseUrl, post, 'openclaw');
   }
-  async complete(config: ModelConfig, systemPrompt: string, userPrompt: string, signal: AbortSignal): Promise<ProviderResponse> {
+  async complete(config: ModelConfig, systemPrompt: string, userPrompt: string, signal: AbortSignal, imageInputs?: readonly GatewayImageInput[]): Promise<ProviderResponse> {
     if (this.apiMode === 'ollama') {
       const json = await this.post(`${this.baseUrl.replace(/\/$/, '')}/api/chat`, {}, {
         model: config.model,
-        messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userPrompt }],
+        messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userPrompt, ...(imageInputs?.length ? { images: imageInputs.map(input => input.base64) } : {}) }],
         stream: false,
         keep_alive: '10m',
         options: { num_predict: config.max_tokens, temperature: config.temperature },
@@ -91,6 +92,7 @@ export class OpenClawAdapter extends OpenAiAdapter {
         model: config.model, provider: this.name,
       };
     }
+    if (imageInputs?.length) throw new Error('image_input_local_only');
     const json = await this.post(`${this.baseUrl.replace(/\/$/, '')}/chat/completions`, {
       authorization: `Bearer ${this.apiKey}`,
     }, {

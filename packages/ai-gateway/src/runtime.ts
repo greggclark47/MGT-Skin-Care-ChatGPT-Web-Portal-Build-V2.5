@@ -26,13 +26,13 @@ export function adaptersFromEnv(env: NodeJS.ProcessEnv): Partial<Record<Provider
     const apiMode: OpenClawApiMode = env.OPENCLAW_API_MODE === 'openai-completions' ? 'openai-completions' : 'ollama';
     adapters.openclaw = new OpenClawAdapter(
       baseUrl(env.OPENCLAW_BASE_URL, ollama),
-      env.OPENCLAW_API_KEY || 'ollama',
+      apiMode === 'openai-completions' ? env.OPENCLAW_API_KEY || '' : 'ollama',
       undefined,
       apiMode,
     );
   }
 
-  if (env.OPENAI_API_KEY) {
+  if (env.HOSTED_OPENAI_ENABLED === 'true' && env.OPENAI_API_KEY) {
     adapters.openai = new OpenAiAdapter(env.OPENAI_API_KEY, env.OPENAI_BASE_URL || 'https://api.openai.com/v1');
   }
 

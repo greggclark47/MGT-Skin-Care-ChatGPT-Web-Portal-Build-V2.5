@@ -7,6 +7,11 @@ const apiDockerfile = readFileSync(new URL("./Dockerfile.api", import.meta.url),
 const webDockerfile = readFileSync(new URL("./Dockerfile.web", import.meta.url), "utf8");
 const caddyfile = readFileSync(new URL("./Caddyfile", import.meta.url), "utf8");
 
+test("qualification compose uses an environment-isolated default project name", () => {
+  assert.match(compose, /^name: mgt-skin-care-qualification$/m);
+  assert.match(compose, /Local image qualification and development only/);
+});
+
 test("compose keeps container images immutable and configurable", () => {
   assert.match(compose, /image: \$\{OLLAMA_IMAGE:\?Set the approved Ollama image digest\}/);
   assert.match(compose, /image: \$\{CADDY_IMAGE:\?Set the approved Caddy image digest\}/);

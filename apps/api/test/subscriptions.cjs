@@ -59,6 +59,10 @@ test('subscriptions: malformed flags, idempotency conflicts, CSRF, ownership, an
  assert.equal((await f.owner.call(url,'DELETE',{cancel_at_period_end:true},{'idempotency-key':'test-12345'})).data.error.code,'platform_managed');
  assert.equal((await f.owner.call(url,'PUT',{})).data.error.code,'platform_managed');
 });
+test('subscriptions: malformed stored records are excluded from ownership and entitlement projections',async t=>{
+ const f=await fixture(t);await f.db.tx(r=>r.put('subscriptions','user_owner:consumer',{subscription_id:{private:'hidden-subscription-id'},customer_id:'cus_private',active:true,status:'active',current_period_end:'not-a-number',cancel_at_period_end:false,private_note:'hidden-subscription-note'}));
+ const listed=await f.owner.call('/api/v1/subscriptions');assert.equal(listed.status,200);assert.deepEqual(listed.data.subscriptions,[]);assert.deepEqual(listed.data.entitlement,{premium:false,valid_until:null});assert.equal((await f.owner.call('/api/v1/subscriptions/'+f.id)).status,404);assert(!JSON.stringify(listed.data).includes('hidden-subscription'));
+});
 test('subscriptions: upstream errors reveal no details and commit no command or changed entitlement',async t=>{
  const f=await fixture(t);f.fail();
  const result=await f.owner.call('/api/v1/subscriptions/'+f.id,'DELETE',{cancel_at_period_end:true},{'idempotency-key':'failure-12345'});

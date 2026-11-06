@@ -1,7 +1,7 @@
 import { Router, type Response } from 'express';
 import {
   isCanonicalId, isAntiAgingGoal, isAntiAgingSensitivity, isAntiAgingAiTask, isFeedbackReason, isFeedbackRating,
-  providerMatchesCity, type AntiAgingResponseMeta,
+  providerMatchesCity, type AntiAgingResponseMeta, type IngredientRecord, type ProductRecord, type TreatmentRecord, type ProviderRecord,
 } from '@mgt/domain';
 import { wrap } from '../../portal/security';
 import type { Store } from '../../portal/store';
@@ -12,6 +12,27 @@ import type { AntiAgingAiTelemetry } from './telemetry';
 const POLICY_VERSION = 'anti-aging-read-only-1';
 const DISCLAIMER = 'Educational discovery only. This portal does not diagnose, prescribe, book care, process purchases, or replace professional advice.';
 const meta: AntiAgingResponseMeta = { api_version: 'v1', policy_version: POLICY_VERSION, mode: 'read_only_referral', disclaimer: DISCLAIMER };
+
+function publicProvenance(value: { provenance: IngredientRecord['provenance'] }) {
+  const provenance = value.provenance;
+  return { source_type: provenance.source_type, source_url: provenance.source_url, observed_at: provenance.observed_at, freshness_until: provenance.freshness_until || null, reviewed_status: provenance.reviewed_status };
+}
+
+function publicIngredient(item: IngredientRecord) {
+  return { id: item.id, slug: item.slug, name: item.name, provenance: publicProvenance(item), evidence_level: item.evidence_level, commercial_label: item.commercial_label, professional_assessment_required: item.professional_assessment_required, updated_at: item.updated_at, category: item.category, aliases: item.aliases, educational_summary: item.educational_summary, compatibility_notes: item.compatibility_notes, ...(item.avoid_for_sensitivity === undefined ? {} : { avoid_for_sensitivity: item.avoid_for_sensitivity }) };
+}
+
+function publicProduct(item: ProductRecord) {
+  return { id: item.id, slug: item.slug, name: item.name, provenance: publicProvenance(item), evidence_level: item.evidence_level, commercial_label: item.commercial_label, professional_assessment_required: item.professional_assessment_required, updated_at: item.updated_at, brand: item.brand, merchant_name: item.merchant_name, category: item.category, ingredient_ids: item.ingredient_ids, concern_tags: item.concern_tags, external_url: item.external_url, price_band: item.price_band, sample_only: item.sample_only };
+}
+
+function publicTreatment(item: TreatmentRecord) {
+  return { id: item.id, slug: item.slug, name: item.name, provenance: publicProvenance(item), evidence_level: item.evidence_level, commercial_label: item.commercial_label, professional_assessment_required: item.professional_assessment_required, updated_at: item.updated_at, category: item.category, description: item.description, expected_questions: item.expected_questions, aftercare_note: item.aftercare_note };
+}
+
+function publicProvider(item: ProviderRecord) {
+  return { id: item.id, slug: item.slug, name: item.name, provenance: publicProvenance(item), evidence_level: item.evidence_level, commercial_label: item.commercial_label, professional_assessment_required: item.professional_assessment_required, updated_at: item.updated_at, provider_type: item.provider_type, city: item.city, region: item.region, services: item.services, website_url: item.website_url, independent_provider: item.independent_provider };
+}
 
 function fail(res: Response, status: number, code: string, message: string) {
   res.status(status).json({ error: { code, message } });
@@ -49,8 +70,8 @@ function csvQuery(value: unknown, max = 6): string[] | null {
   return values.length <= max ? [...new Set(values)] : null;
 }
 
-function pageResponse<T>(res: Response, page: { items: T[]; next_cursor: string | null }) {
-  res.json({ data: page, meta });
+function pageResponse<T>(res: Response, page: { items: T[]; next_cursor: string | null }, project: (item: T) => unknown) {
+  res.json({ data: { items: page.items.map(project), next_cursor: page.next_cursor }, meta });
 }
 
 export function antiAgingRouter(catalog: AntiAgingCatalog = new SeedAntiAgingCatalog(), telemetry?: AntiAgingAiTelemetry, store?: Store): Router {
@@ -128,7 +149,7 @@ export function antiAgingRouter(catalog: AntiAgingCatalog = new SeedAntiAgingCat
 
   router.get('/ingredients', (req, res) => {
     const query = listQuery(req); if (!query) return fail(res, 400, 'invalid_query', 'Use one short value per supported query parameter.');
-    return pageResponse(res, catalog.listIngredients(query));
+    return pageResponse(res, catalog.listIngredients(query), publicIngredient);
   });
   router.get('/ingredients/:id/compatibility', (req, res) => {
     const id = idParam(req.params.id); if (!id) return fail(res, 400, 'invalid_id', 'Use a valid record identifier.');
@@ -139,7 +160,7 @@ export function antiAgingRouter(catalog: AntiAgingCatalog = new SeedAntiAgingCat
   router.get('/ingredients/:id', (req, res) => {
     const id = idParam(req.params.id); if (!id) return fail(res, 400, 'invalid_id', 'Use a valid record identifier.');
     const item = catalog.getIngredient(id); if (!item) return fail(res, 404, 'not_found', 'Ingredient not found.');
-    return res.json({ data: item, meta });
+    return res.json({ data: publicIngredient(item), meta });
   });
 
   router.get('/products/compare', (req, res) => {
@@ -149,37 +170,37 @@ export function antiAgingRouter(catalog: AntiAgingCatalog = new SeedAntiAgingCat
     if (ids.length < 1 || ids.length > 4 || ids.some(id => !isCanonicalId(id))) return fail(res, 400, 'invalid_ids', 'Provide one to four valid product identifiers.');
     const products = ids.map(id => catalog.getProduct(id)).filter((item): item is NonNullable<typeof item> => !!item);
     if (products.length !== ids.length) return fail(res, 404, 'not_found', 'One or more products were not found.');
-    return res.json({ data: { items: products, comparison_scope: 'educational_metadata_only' }, meta });
+    return res.json({ data: { items: products.map(publicProduct), comparison_scope: 'educational_metadata_only' }, meta });
   });
   router.get('/products', (req, res) => {
     const query = listQuery(req); if (!query) return fail(res, 400, 'invalid_query', 'Use one short value per supported query parameter.');
-    return pageResponse(res, catalog.listProducts(query));
+    return pageResponse(res, catalog.listProducts(query), publicProduct);
   });
   router.get('/products/:id', (req, res) => {
     const id = idParam(req.params.id); if (!id) return fail(res, 400, 'invalid_id', 'Use a valid record identifier.');
     const item = catalog.getProduct(id); if (!item) return fail(res, 404, 'not_found', 'Product not found.');
-    return res.json({ data: item, meta });
+    return res.json({ data: publicProduct(item), meta });
   });
 
   router.get('/treatments', (req, res) => {
     const query = listQuery(req); if (!query) return fail(res, 400, 'invalid_query', 'Use one short value per supported query parameter.');
-    return pageResponse(res, catalog.listTreatments(query));
+    return pageResponse(res, catalog.listTreatments(query), publicTreatment);
   });
   router.get('/treatments/:id', (req, res) => {
     const id = idParam(req.params.id); if (!id) return fail(res, 400, 'invalid_id', 'Use a valid record identifier.');
     const item = catalog.getTreatment(id); if (!item) return fail(res, 404, 'not_found', 'Treatment not found.');
-    return res.json({ data: item, meta });
+    return res.json({ data: publicTreatment(item), meta });
   });
 
   router.get('/providers', (req, res) => {
     const query = listQuery(req); if (!query) return fail(res, 400, 'invalid_query', 'Use one short value per supported query parameter.');
-    return pageResponse(res, catalog.listProviders(query));
+    return pageResponse(res, catalog.listProviders(query), publicProvider);
   });
   router.get('/providers/:id/handoff', (req, res) => {
     const id = idParam(req.params.id); if (!id) return fail(res, 400, 'invalid_id', 'Use a valid record identifier.');
     const item = catalog.getProvider(id); if (!item) return fail(res, 404, 'not_found', 'Provider not found.');
     return res.json({ data: { provider_id: item.id, handoff_type: 'external_referral', handoff_url: item.website_url,
-      data_shared: [], booking_supported: false, disclosure: 'You are leaving MGT Skin Care for an independent provider destination.' }, meta });
+      data_shared: [], booking_supported: false, disclosure: 'You are leaving Team 47 Studio for an independent provider destination.' }, meta });
   });
   router.get('/providers/nearby', wrap(async (req, res) => {
     const started = Date.now();
@@ -189,12 +210,12 @@ export function antiAgingRouter(catalog: AntiAgingCatalog = new SeedAntiAgingCat
     if (!city || city.length > 80 || !Number.isFinite(radius) || radius < 0 || radius > 50 || !Number.isInteger(limit) || limit < 1 || limit > 50) return fail(res, 400, 'invalid_location_query', 'Use a city and a bounded radius from zero to fifty kilometres.');
     const providers = catalog.listProviders({ city, limit: 50 }).items.filter(item => providerMatchesCity(item, city)).slice(0, limit);
     if (store) await store.tx(async records => { const day = new Date().toISOString().slice(0, 10); const key = `city:${day}`; await records.lock('anti-aging-search:' + day); const current = await records.get<any>('anti_aging_search_metrics', key) || { day, requests: 0, empty_results: 0, latencies: [] }; const latencies = Array.isArray(current.latencies) ? current.latencies.filter((item: unknown) => typeof item === 'number').slice(-199) : []; latencies.push(Date.now() - started); await records.put('anti_aging_search_metrics', key, { day, requests: current.requests + 1, empty_results: current.empty_results + (providers.length ? 0 : 1), latencies }); });
-    return res.json({ data: { items: providers, radius_km: radius, location_precision: 'city', geocoding: 'disabled', uncertainty: 'Results use reviewed city records only; no precise location is inferred.' }, meta });
+    return res.json({ data: { items: providers.map(publicProvider), radius_km: radius, location_precision: 'city', geocoding: 'disabled', uncertainty: 'Results use reviewed city records only; no precise location is inferred.' }, meta });
   }));
   router.get('/providers/:id', (req, res) => {
     const id = idParam(req.params.id); if (!id) return fail(res, 400, 'invalid_id', 'Use a valid record identifier.');
     const item = catalog.getProvider(id); if (!item) return fail(res, 404, 'not_found', 'Provider not found.');
-    return res.json({ data: item, meta });
+    return res.json({ data: publicProvider(item), meta });
   });
 
   return router;

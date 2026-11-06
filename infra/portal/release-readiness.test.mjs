@@ -20,6 +20,7 @@ const base = {
   OLLAMA_ENABLED: "true",
   OLLAMA_BASE_URL: "http://ollama:11434",
   OPENCLAW_ENABLED: "false",
+  HOSTED_OPENAI_ENABLED: "false",
   WORKER_INTERVAL_SECONDS: "60",
   WORKER_READINESS_MAX_AGE_SECONDS: "300",
   BACKUP_MAX_AGE_HOURS: "26",
@@ -70,12 +71,17 @@ const base = {
   NOTIFICATION_MAX_ATTEMPTS: "3",
   SUBSCRIPTIONS_ENABLED: "false",
   SUBSCRIPTION_TERMS_APPROVED: "false",
+  MGT_OMNI_RETAIL_ENABLED: "false",
+  MGT_RETAIL_PARTNER_AUTHORIZATION_REVIEWED: "false",
+  MGT_SPONSORED_CONTENT_ENABLED: "false",
+  MGT_SPONSORED_CONTENT_REVIEWED: "false",
   NODE_IMAGE: `node@sha256:${"c".repeat(64)}`,
   API_IMAGE: `ghcr.io/mgt/api@sha256:${"d".repeat(64)}`,
   WEB_IMAGE: `ghcr.io/mgt/web@sha256:${"e".repeat(64)}`,
   OLLAMA_IMAGE: `ollama/ollama@sha256:${"a".repeat(64)}`,
   CADDY_IMAGE: `caddy@sha256:${"b".repeat(64)}`
 };
+Object.assign(base, { PUBLIC_PRIVACY_NOTICE_URL: "https://policies.mgtskincare.test/privacy", PUBLIC_TERMS_OF_USE_URL: "https://policies.mgtskincare.test/terms", PUBLIC_AI_DISCLOSURE_URL: "https://policies.mgtskincare.test/ai-disclosure" });
 
 test("no preflight failure can be omitted from release readiness", () => {
   const evidence = Object.fromEntries(['support_workflow','accessibility_deployed','database_rls','backup_restore','stripe_sandbox','container_startup','ai_provider'].map(key => [key, true]));
@@ -117,6 +123,20 @@ test("marks disabled subscriptions as not applicable and blocks incomplete setup
   assert.equal(enabled.phases.find((item) => item.id === "F77").status, "blocked");
 });
 
+test("requires merchant-authorization evidence before sponsored content can ship", () => {
+  const env = {
+    ...base,
+    MGT_OMNI_RETAIL_ENABLED: "true",
+    MGT_RETAIL_PARTNER_AUTHORIZATION_REVIEWED: "true",
+    MGT_SPONSORED_CONTENT_ENABLED: "true",
+    MGT_SPONSORED_CONTENT_REVIEWED: "true",
+    MGT_SPONSORED_CONTENT_APPROVAL_REFERENCE: "merchant-review-20261103",
+    MGT_SPONSORED_CONTENT_APPROVED_AT: "2026-11-03T00:00:00.000Z"
+  };
+  assert.equal(buildReleaseReadiness({ env, localGates: true }).phases.find((item) => item.id === "F77").status, "pending");
+  assert.equal(buildReleaseReadiness({ env, localGates: true, liveEvidence: { sponsored_content_authorization: true } }).phases.find((item) => item.id === "F77").status, "pass");
+});
+
 test("reaches a ready packet only with local gates and every required live evidence item", () => {
   const packet = buildReleaseReadiness({
     env: base,
@@ -148,5 +168,6 @@ test("maps only explicit non-secret evidence flags from the environment", () => 
   assert.equal(evidence.support_workflow, true);
   assert.equal(evidence.database_rls, true);
   assert.equal(evidence.ai_provider, false);
+  assert.equal(evidence.sponsored_content_authorization, false);
   assert.equal(evidence.container_startup, false);
 });

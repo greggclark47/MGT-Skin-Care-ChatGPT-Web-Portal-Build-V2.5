@@ -13,7 +13,10 @@ test("Path B source controls remain internally consistent", () => {
 
 test("a reviewed route cannot lose durable disclosure enforcement", () => {
   const sources = readComplianceSources(root);
-  sources.server = sources.server.replace("await requireAiDisclosure(r,req.actor);", "");
+  const start = sources.server.indexOf("const reviewedAnswer");
+  const end = sources.server.indexOf("post('/coach'", start);
+  const reviewed = sources.server.slice(start, end).replace(/requireAiDisclosure\(r,req\.actor\)/, "Promise.resolve({version:AI_DISCLOSURE_VERSION,captured_at:'fixture'})");
+  sources.server = sources.server.slice(0, start) + reviewed + sources.server.slice(end);
   const result = validateComplianceContract(sources);
   assert.equal(result.ok, false);
   assert.ok(result.errors.some((error) => error.startsWith("durable_ai_disclosure:")));

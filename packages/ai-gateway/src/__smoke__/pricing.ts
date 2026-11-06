@@ -16,6 +16,9 @@ function check(label: string, cond: boolean, detail?: unknown) {
 
 // dollars-per-MTok, as published.
 const ANCHORS: Record<string, { input_usd: number; output_usd: number }> = {
+  'gpt-6-astra': { input_usd: 10, output_usd: 50 },
+  'gpt-6.1-sol': { input_usd: 2, output_usd: 10 },
+  'gpt-6-luna': { input_usd: .1, output_usd: .5 },
   'gpt-5.6-sol':   { input_usd: 4, output_usd: 20 },
   'gpt-5.6-terra': { input_usd: 2, output_usd: 12 },
   'gpt-5.6-luna':  { input_usd: .2, output_usd: 1.2 },

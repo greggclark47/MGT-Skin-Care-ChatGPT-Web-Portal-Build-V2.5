@@ -7,23 +7,31 @@ const root=path.resolve(__dirname,'..');
 const read=file=>fs.readFileSync(path.join(root,file),'utf8');
 const app=JSON.parse(read('app.json')).expo;
 const eas=JSON.parse(read('eas.json'));
+const manifest=JSON.parse(read('package.json'));
 const entry=read('App.tsx');
 const screen=read('src/screens/SkinMatchScreen.tsx');
 const step=read('src/components/SkinMatchStep.tsx');
 
 test('mobile app has a reproducible Expo identity and API configuration seam',()=>{
- assert.equal(app.name,'MGT Skin Care');
- assert.equal(app.slug,'mgt-skin-care');
- assert.equal(app.scheme,'mgtskincare');
+ assert.equal(app.name,'Team 47 Studio');
+ assert.equal(app.slug,'team-47-studio');
+ assert.equal(app.scheme,'team47studio');
+ assert.equal(app.icon,'./assets/team47studio-app-icon-1024.png');
+ assert.equal(app.ios.bundleIdentifier,'com.team47studio.app');
  assert.equal(app.orientation,'portrait');
  assert.match(entry,/process\.env\.EXPO_PUBLIC_API_URL/);
  assert.match(entry,/new ApiClient\(/);
+ assert.match(entry,/\[apiBaseUrl, portalUrl, privacyUrl, termsUrl, aiDisclosureUrl\]\.every\(isHttpsUrl\)/);
  assert.equal(app.android.versionCode,1);
  assert.deepEqual(app.android.permissions,[]);
  assert.equal(app.android.usesCleartextTraffic,false);
+ assert.equal(app.android.package,'com.team47studio.app');
+ assert.equal(app.android.adaptiveIcon.foregroundImage,'./assets/team47studio-adaptive-icon-foreground.png');
+ assert.equal(app.android.adaptiveIcon.backgroundColor,'#090D18');
  assert.equal(eas.build.production.android.buildType,'app-bundle');
  assert.equal(eas.build.production.distribution,'store');
  assert.equal(eas.submit.production.android.track,'internal');
+ assert.equal(manifest.scripts['android:production'],'pnpm run validate:production-config && eas build --platform android --profile production');
 });
 
 test('mobile Skin Match consumes shared questionnaire and profile contracts',()=>{
@@ -43,15 +51,27 @@ test('mobile Skin Match consumes shared questionnaire and profile contracts',()=
  assert.match(entry,/Review full match details/);
  assert.match(entry,/EXPO_PUBLIC_PRIVACY_URL/);
  assert.match(entry,/EXPO_PUBLIC_TERMS_URL/);
+ assert.match(entry,/EXPO_PUBLIC_AI_DISCLOSURE_URL/);
+ assert.match(entry,/AI disclosure/);
+ assert.match(entry,/privacy, terms and AI disclosure links/);
+ assert.match(entry,/new URL\(value\)/);
+ assert.match(entry,/productionPlaceholder/);
+ assert.match(entry,/!url\.username && !url\.password/);
+ assert.match(entry,/!url\.search && !url\.hash/);
  assert.match(entry,/ACCOUNT_PORTAL_PATHS\.overview/);
  assert.match(entry,/ACCOUNT_PORTAL_PATHS\.billing/);
  assert.match(entry,/ACCOUNT_PORTAL_PATHS\.images/);
  assert.match(entry,/ACCOUNT_PORTAL_PATHS\.regimen/);
+ assert.match(entry,/ACCOUNT_PORTAL_PATHS\.privacy/);
  assert.match(entry,/Connected setup checklist/);
  assert.match(entry,/Profile and preferences/);
  assert.match(entry,/two-week regimen cycle/);
- assert.match(entry,/missing its API configuration/);
+ assert.match(entry,/Privacy, data export and account deletion/);
+ assert.match(entry,/public HTTPS API, portal, privacy, terms and AI disclosure links/);
+ assert.match(entry,/needs public HTTPS API, portal, privacy, terms and AI disclosure links/);
  assert.doesNotMatch(entry,/OPENAI_API_KEY|SUPABASE_SERVICE_ROLE_KEY|STRIPE_SECRET_KEY/);
+ assert.match(entry,/team47studio-stacked-light-surface\.png/);
+ assert.match(entry,/TEAM 47 STUDIO/);
 });
 
 test('mobile controls preserve the shared accessibility and tap-target contract',()=>{

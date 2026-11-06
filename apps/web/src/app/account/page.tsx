@@ -66,7 +66,7 @@ export default function Account(){
    <AccountProfileForm testDriveEnabled={state.data.client_image_drive_test_enabled===true}/>
    <AccountBillingPanel configured={state.data.subscription_billing_configured===true}/>
    <div id="image-library"><ClientImageStudio/></div>
-   <div className="actions"><Link className="button" href="/subscription">Your subscription details</Link><Link className="button" href="/membership">Plans &amp; Billing</Link></div>
+   <div className="actions"><Link className="button" href="/subscription">Your subscription details</Link><Link className="button" href="/membership">Plans &amp; Billing</Link><Link className="button" href="/care">Account &amp; customer care</Link></div>
    <section className="account-tools" aria-label="Account tools"><a href="/api/hub/account/export"><strong>Download my data <span aria-hidden="true">↓</span></strong><span>Export the information saved to your account.</span></a><Link href="/orders"><strong>Retailer purchase help <span aria-hidden="true">→</span></strong><span>Find where to ask about payments, delivery and returns.</span></Link></section>
    <AiDisclosureControls/>
    <div id="privacy-controls"><AccountDeletionPanel deletion={deletion} busy={busy} onRequest={()=>setPrivacyAction('request')} onCancel={()=>setPrivacyAction('cancel')}/></div>

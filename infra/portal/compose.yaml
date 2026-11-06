@@ -1,3 +1,7 @@
+# Local image qualification and development only. Production and staging must
+# use compose.production.yaml with a stage-scoped private deployment control.
+name: mgt-skin-care-qualification
+
 x-logging: &default-logging
   driver: json-file
   options:

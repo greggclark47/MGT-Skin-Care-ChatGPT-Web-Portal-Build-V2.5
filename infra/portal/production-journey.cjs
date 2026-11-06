@@ -26,11 +26,13 @@ async function main(){
   webServer=http.createServer(web.getRequestHandler());await listen(webServer,webPort);
   let cookie='',csrf='';
   async function call(route,body){const response=await fetch(webOrigin+route,{method:body===undefined?'GET':'POST',headers:{cookie,origin:webOrigin,'content-type':'application/json','x-csrf-token':csrf},body:body===undefined?undefined:JSON.stringify(body),signal:AbortSignal.timeout(15000)});if(response.headers.get('set-cookie'))cookie=response.headers.get('set-cookie').split(';')[0];const data=await response.json();if(data.csrf)csrf=data.csrf;return{status:response.status,data};}
-  const browserRoutes=['/','/account','/skin-match','/skin-match/results','/my-skin','/routine','/coach','/shop','/saved','/replenishment','/membership','/subscription','/orders','/support','/learn','/company','/trust','/privacy','/terms','/shipping','/partners','/studio','/studio/personal-color','/studio/makeup','/studio/haircare','/studio/hair-color','/studio/style','/studio/clothing','/admin'];
+  const browserRoutes=['/','/account','/skin-match','/skin-match/results','/my-skin','/routine','/coach','/anti-aging','/shop','/saved','/replenishment','/membership','/subscription','/orders','/cart','/support','/learn','/company','/trust','/privacy','/terms','/ai-disclosure','/shipping','/partners','/studio','/studio/personal-color','/studio/makeup','/studio/haircare','/studio/hair-color','/studio/style','/studio/clothing','/wardrobe','/admin','/admin/analysis','/admin/ingredient-rules','/admin/knowledge','/admin/operators'];
   for(const route of browserRoutes){
    const response=await fetch(webOrigin+route);assert.equal(response.status,200,route);const html=await response.text();
    assert.match(html,/<html/,route+' document');
-   assert.match(html,/mgt-mark\.svg/,route+' shared logo');
+   assert.match(html,/team47studio-horizontal-light-surface\.png/,route+' shared light-surface logo');
+   assert.match(html,/team47studio-horizontal-dark-surface\.png/,route+' shared dark-surface logo');
+   assert.match(html,/aria-label="Team 47 Studio home"/,route+' accessible brand name');
    // This is a server-rendered accessibility markup contract. It deliberately
    // checks every route, but does not claim a substitute for assistive-tech QA.
    assert.match(html,/class="skip" href="#main"/,route+' skip link');
@@ -51,11 +53,34 @@ async function main(){
   assert.equal((await call('/api/hub/profile',{...input,expected_revision:created.data.revision})).status,409);
   assert.deepEqual((await call('/api/hub/account/export')).data.profile,updated.data.profile);
   assert.equal((await call('/api/v1/subscriptions')).status,200);
+  const antiAging=await call('/api/v1/onboarding/preview?goals=texture,brightening&sensitivity=mild&consent=personalization');
+  assert.equal(antiAging.status,200);assert.equal(antiAging.data.data.status,'ready');
+  const antiAgingProducts=await call('/api/v1/products?limit=2');
+  assert.equal(antiAgingProducts.status,200);assert(antiAgingProducts.data.data.items.length>0);
+  const antiAgingPreview=await call('/api/v1/routines/preview?product_ids='+encodeURIComponent(antiAgingProducts.data.data.items[0].id)+'&sensitivity=mild');
+  assert.equal(antiAgingPreview.status,200);assert.equal(antiAgingPreview.data.meta.mode,'read_only_referral');
+  const accountInput={preferred_name:'Journey member',locale:'en-US',timezone:'America/New_York',measurement_system:'us',service_interests:['skin_match','routine_care','anti_aging'],communication_preferences:{routine_reminders:true,service_announcements:false},accessibility:{reduced_motion:false,high_contrast:false},default_image_storage:'device',expected_revision:null};
+  const accountProfile=await call('/api/hub/account/profile',accountInput);assert.equal(accountProfile.status,200);
+  assert.equal((await call('/api/hub/account/overview')).status,200);
+  const style=await call('/api/hub/style-profile',{consent:true,expected_revision:null});assert.equal(style.status,200);
+  const color=await call('/api/hub/style-match',{ai_consent:true});assert.equal(color.status,200);assert(['warm','cool','balanced'].includes(color.data.palette));
+  const wardrobeItem={id:'b25258b7-a236-488a-bc6a-f74c95d9232c',name:'Blue jacket',category:'outer layer',color:'blue',notes:'test garment',created_at:'2026-10-25T00:00:00.000Z'};
+  const wardrobe=await call('/api/hub/wardrobe',{consent:true,expected_revision:null,items:[wardrobeItem]});assert.equal(wardrobe.status,200);
+  assert.equal((await call('/api/hub/wardrobe')).data.items[0].name,'Blue jacket');
+  assert.equal((await call('/api/hub/wardrobe',{consent:true,expected_revision:null,items:[]})).status,409);
+  const plans=await call('/api/hub/billing/plans');assert.equal(plans.status,200);assert.equal(plans.data.catalog_status,'release_pending');
+  assert.equal((await call('/api/hub/billing/checkout',{plan:'premium',cycle:'monthly',recurring_consent:true})).status,503);
+  assert.equal((await call('/api/hub/client-images/status')).status,200);
+  assert.equal((await call('/api/hub/client-images')).status,404);
   const retailers=(await call('/api/hub/retailers')).data.retailers;assert.equal((await call('/api/hub/saved-retailers',{id:retailers[0].id,saved:true})).status,200);
+  assert.equal((await call('/api/hub/retailers/outbound',{id:retailers[0].id,segment:'all'})).status,200);
   assert((await call('/api/hub/saved-retailers')).data.ids.includes(retailers[0].id));
+  const exportData=(await call('/api/hub/account/export')).data;
+  assert.equal(exportData.account_profile.preferred_name,'Journey member');
+  assert.equal(exportData.wardrobe[0].name,'Blue jacket');
   assert.equal((await call('/api/hub/profile/remove',{confirm:true,expected_revision:updated.data.revision})).status,200);
   assert.equal((await call('/api/hub/profile')).data.profile,null);
-  console.log('PASS production web proxy: auth, CSRF cookie forwarding, profile create/read/update/delete, stale edit rejection, export consistency, subscription reads, saved retailer');
+  console.log('PASS production web proxy: auth, CSRF, skin profile, anti-aging preview, account, style/color, wardrobe, retailer, billing fail-closed, image fail-closed, export and deletion');
  }finally{await close(webServer);await web?.close();await close(apiServer);await close(reservedWebServer);await store.close();}
 }
 main().catch(error=>{console.error(error);process.exitCode=1;});

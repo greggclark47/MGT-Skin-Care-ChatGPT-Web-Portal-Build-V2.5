@@ -2,22 +2,10 @@ import { createHash } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { productionPrerequisitesChecksum } from "./production-prerequisites.mjs";
+import { PRODUCTION_EXTERNAL_REQUIREMENTS, productionPrerequisitesChecksum } from "./production-prerequisites.mjs";
 
 const VERSION = "1.0";
 const SHA = /^[a-f0-9]{40}$/i;
-const EXTERNAL_REQUIREMENTS = Object.freeze([
-  ["hosting_target", "Production hosting account, domain, TLS, and edge routing"],
-  ["database_target", "Production PostgreSQL/Supabase target with migration and RLS evidence"],
-  ["secret_manager", "Approved secret-manager injection and rotation evidence"],
-  ["backup_restore", "Encrypted off-host backup and verified restore transcript"],
-  ["support_owner", "Named support owner, backup, route, and coverage window"],
-  ["accessibility_report", "Deployed accessibility report for the production origin"],
-  ["rollback_authority", "Named rollback authority and immutable rollback target"],
-  ["launch_approval", "Named go/no-go decision and launch window"],
-  ["github_receipt", "Observed GitHub destination receipt for the candidate"],
-  ["drive_receipt", "Observed Google Drive destination receipt for the candidate"]
-]);
 const IMPLEMENTATION_NOW = Object.freeze([
   ["release_images", "Build, attest, and publish the immutable API and web candidate images", "GitHub Actions release-image manifest and image attestations"],
   ["runtime_package", "Prepare the locked API, worker, web, and Caddy runtime package", "Pinned production compose package and image-digest record"],
@@ -41,8 +29,8 @@ function canonicalChecksum(document) {
 }
 function boundedCodes(value) { return Array.isArray(value) && value.every((item) => /^[A-Z_]+$/.test(text(item))) ? [...new Set(value)].sort() : null; }
 function expectedExternal(external) {
-  if (!Array.isArray(external) || external.length !== EXTERNAL_REQUIREMENTS.length) return false;
-  return EXTERNAL_REQUIREMENTS.every(([id, requirement]) => external.filter((entry) => entry?.id === id && entry?.requirement === requirement && entry?.status === "pending_external_evidence").length === 1);
+  if (!Array.isArray(external) || external.length !== PRODUCTION_EXTERNAL_REQUIREMENTS.length) return false;
+  return PRODUCTION_EXTERNAL_REQUIREMENTS.every(([id, requirement]) => external.filter((entry) => entry?.id === id && entry?.requirement === requirement && entry?.status === "pending_external_evidence").length === 1);
 }
 
 export function productionBuildSubmissionChecksum(document) { return canonicalChecksum(document); }
@@ -63,7 +51,7 @@ export function validateProductionBuildSubmission(document, { now = Date.now() }
     if (matches.length !== 1 || matches[0].work !== work || matches[0].expected_evidence !== evidence || matches[0].status !== "repository_ready") errors.push(`${id} must retain its repository-ready work definition`);
   }
   if (!Array.isArray(document.on_hold)) errors.push("submission on_hold must be an array");
-  for (const [id, requirement] of EXTERNAL_REQUIREMENTS) {
+  for (const [id, requirement] of PRODUCTION_EXTERNAL_REQUIREMENTS) {
     const matches = (document.on_hold || []).filter((entry) => entry?.id === id);
     if (matches.length !== 1 || matches[0].requirement !== requirement || matches[0].status !== "pending_external_evidence") errors.push(`${id} must retain its external-evidence hold`);
   }
@@ -86,7 +74,7 @@ export function buildProductionBuildSubmission({ prerequisites, now = new Date()
   const codes = boundedCodes(configuration.error_codes);
   if (!codes) throw new Error("prerequisites configuration error_codes must be bounded");
   const onHold = [
-    ...EXTERNAL_REQUIREMENTS.map(([id, requirement]) => ({ id, requirement, status: "pending_external_evidence" }))
+    ...PRODUCTION_EXTERNAL_REQUIREMENTS.map(([id, requirement]) => ({ id, requirement, status: "pending_external_evidence" }))
   ];
   if (configuration.status === "blocked") onHold.unshift({ id: "production_configuration", requirement: "Reviewed production configuration must pass preflight before live validation.", status: "blocked_on_configuration", error_codes: codes });
   const document = {

@@ -80,8 +80,16 @@ export function validateRecoveryDrillReview(document, { manifest, now = Date.now
   if (!validPastIso(document.generated_at, now)) errors.push("generated_at must be a past ISO timestamp");
   if (!CHECKSUM.test(text(document.recovery_drill_checksum)) || text(document.recovery_drill_checksum) !== recoveryDrillChecksum(document)) errors.push("recovery_drill_checksum must match the canonical review");
   if (!Number.isSafeInteger(document.target_seconds?.rto) || document.target_seconds.rto !== rtoTargetSeconds || !Number.isSafeInteger(document.target_seconds?.rpo) || document.target_seconds.rpo !== rpoTargetSeconds) errors.push("target_seconds must match the accepted recovery targets");
-  if (!Number.isSafeInteger(document.measured_seconds?.rto) || !Number.isSafeInteger(document.measured_seconds?.rpo)) errors.push("measured_seconds must contain bounded measurements");
+  if (!Number.isSafeInteger(document.measured_seconds?.rto) || document.measured_seconds.rto < 1 || document.measured_seconds.rto > rtoTargetSeconds || !Number.isSafeInteger(document.measured_seconds?.rpo) || document.measured_seconds.rpo < 0 || document.measured_seconds.rpo > rpoTargetSeconds) errors.push("measured_seconds must contain bounded measurements within the accepted targets");
+  if (!boundedIdentifier(document.restored_migration_version)) errors.push("restored_migration_version is required");
   if (!Array.isArray(document.evidence) || EVIDENCE_IDS.some((id) => document.evidence.filter((entry) => entry?.id === id).length !== 1)) errors.push("recovery evidence must contain each required record exactly once");
+  for (const entry of Array.isArray(document.evidence) ? document.evidence : []) {
+    if (!entry || !EVIDENCE_IDS.includes(entry.id)) { errors.push("recovery evidence contains an unknown record"); continue; }
+    if (!safeReference(entry.reference) || !CHECKSUM.test(text(entry.checksum)) || !Number.isSafeInteger(entry.bytes) || entry.bytes < 1 || text(entry.owner) !== OWNER || text(entry.status) !== "pass" || !validPastIso(entry.reviewed_at, now)) errors.push(`${entry.id} must retain a safe, verified recovery-evidence record`);
+  }
+  const decision = document.decision;
+  if (!decision || typeof decision !== "object" || Array.isArray(decision) || text(decision.decider) !== OWNER || text(decision.decision) !== "accepted" || !validPastIso(decision.decided_at, now)) errors.push("decision must retain the accepted accountable-owner recovery decision");
+  if (SECRET.test(canonicalize(document))) errors.push("recovery review must not contain credential-like values");
   if (!["blocked", "ready_for_recovery_review"].includes(document.status)) errors.push("status must be known");
   if (document.status === "ready_for_recovery_review" && document.errors?.length) errors.push("ready_for_recovery_review cannot contain errors");
   return { ok: errors.length === 0, errors: [...new Set(errors)] };

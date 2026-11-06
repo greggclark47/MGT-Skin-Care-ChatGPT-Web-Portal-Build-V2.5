@@ -40,7 +40,15 @@ export function validateComplianceContract(sources) {
   );
 
   const server = source("server");
-  const disclosureCalls = (server.match(/requireAiDisclosure\(/g) || []).length;
+  const reviewedStart = server.indexOf("const reviewedAnswer");
+  const reviewedEnd = server.indexOf("post('/coach'", reviewedStart);
+  const reviewedRoute = reviewedStart >= 0 && reviewedEnd > reviewedStart ? server.slice(reviewedStart, reviewedEnd) : "";
+  const answerCall = reviewedRoute.indexOf("coach.answer(");
+  const disclosureBeforeAnswer = reviewedRoute.indexOf("requireAiDisclosure(");
+  const disclosureAfterAnswer = reviewedRoute.indexOf("requireAiDisclosure(", answerCall + 1);
+  const operatorStart = server.indexOf("post('/admin/ai/analyze'");
+  const operatorEnd = server.indexOf("get('/admin/ai/reservations'", operatorStart);
+  const operatorRoute = operatorStart >= 0 && operatorEnd > operatorStart ? server.slice(operatorStart, operatorEnd) : "";
   add(
     "durable_ai_disclosure",
     server.includes("AI_DISCLOSURE_VERSION")
@@ -49,9 +57,12 @@ export function validateComplianceContract(sources) {
       && server.includes("version===AI_DISCLOSURE_VERSION")
       && server.includes("granted===true")
       && server.includes("!disclosure.revoked_at")
-      && disclosureCalls >= 3
+      && disclosureBeforeAnswer >= 0
+      && answerCall > disclosureBeforeAnswer
+      && disclosureAfterAnswer > answerCall
+      && operatorRoute.includes("requireAiDisclosure(")
       && !server.includes("ai_consent"),
-    "Reviewed customer and operator analysis must require a current, durable AI disclosure; request-body consent cannot bypass it.",
+    "Reviewed customer analysis must check durable disclosure before and after generation, operator analysis must check it before use, and request-body consent cannot bypass it.",
   );
   add(
     "deferred_partner_surface",

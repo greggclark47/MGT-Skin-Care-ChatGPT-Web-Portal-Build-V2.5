@@ -8,6 +8,19 @@ import {BILLING_CYCLES,FREE_ACCESS,PLAN_COMPARISON_ROWS,PLAN_DEFINITIONS,default
 
 type PublicPrice={amount:number;currency:string;interval:string;interval_count:number};
 const productId=(price:Stripe.Price)=>typeof price.product==='string'?price.product:price.product.id;
+const BILLING_STATUSES=['active','trialing','past_due','canceled','incomplete','incomplete_expired','unpaid','paused'] as const;
+const publicBillingSubscription=(record:any)=>{
+ if(!record||typeof record!=='object'||Array.isArray(record))return null;
+ const status=record.status===undefined?null:typeof record.status==='string'&&BILLING_STATUSES.includes(record.status as typeof BILLING_STATUSES[number])?record.status:null;
+ const epoch=(value:unknown)=>value===undefined||value===null?null:typeof value==='number'&&Number.isFinite(value)&&value>=0?value:null;
+ const trial_end=epoch(record.trial_end),current_period_end=epoch(record.current_period_end);
+ if(status===null||(record.active!==undefined&&typeof record.active!=='boolean')||(record.cancel_at_period_end!==undefined&&typeof record.cancel_at_period_end!=='boolean')||(record.trial_end!==undefined&&trial_end===null)||(record.current_period_end!==undefined&&current_period_end===null)||(record.cycle!==undefined&&record.cycle!==null&&!['monthly','annual'].includes(record.cycle))||(record.plan_id!==undefined&&record.plan_id!==null&&!planById(record.plan_id)))return null;
+ return {status,active:record.active===true,cancel_at_period_end:record.cancel_at_period_end===true,trial_end,current_period_end,cycle:['monthly','annual'].includes(record.cycle)?record.cycle:null,plan_id:planById(record.plan_id)?.id||null};
+};
+const publicBillingActivity=(event:any)=>{
+ if(!event||typeof event!=='object'||Array.isArray(event)||typeof event.id!=='string'||event.id.length<1||event.id.length>200||typeof event.at!=='string'||!Number.isFinite(Date.parse(event.at))||typeof event.status!=='string'||!BILLING_STATUSES.includes(event.status as typeof BILLING_STATUSES[number])||(event.cycle!==undefined&&event.cycle!==null&&!['monthly','annual'].includes(event.cycle))||(event.plan_id!==undefined&&event.plan_id!==null&&!planById(event.plan_id))||typeof event.cancel_at_period_end!=='boolean')return null;
+ return {id:event.id,at:event.at,status:event.status,cycle:event.cycle===null?null:event.cycle,plan_id:planById(event.plan_id)?.id||null,cancel_at_period_end:event.cancel_at_period_end};
+};
 
 export function subscriptionBillingConfigured(stripe:Stripe|undefined,env:NodeJS.ProcessEnv){
  return env.SUBSCRIPTIONS_ENABLED==='true'&&!!stripe&&['true','false'].includes(String(env.STRIPE_LIVE_MODE).toLowerCase())&&!!env.STRIPE_SECRET_KEY&&!!env.STRIPE_SUBSCRIPTION_WEBHOOK_SECRET&&!!env.STRIPE_PREMIUM_PRODUCT_ID&&BILLING_CYCLES.every(cycle=>!!priceIdFor(env,defaultPlan(),cycle));
@@ -37,13 +50,14 @@ export function installBilling(app:express.Express,db:Store,stripe:Stripe|undefi
  app.get('/api/hub/billing',wrap(async(req,res)=>{
   const selection=selectedPlan(req.query.plan,req.query.audience),audience='consumer';
   const membership=await db.tx(r=>r.get('subscriptions',req.actor+':'+audience));
-  let trialEligible=!membership?.trial_used;let pendingCheckout=false;
-  if(configured()&&membership?.customer_id){const history=await stripe!.subscriptions.list({customer:membership.customer_id,status:'all',limit:100});trialEligible=trialEligible&&!history.has_more&&!history.data.some(s=>s.trial_start);const attempt=await db.tx(r=>r.get('billing_attempts',req.actor+':'+audience));if(attempt?.session_id){const checkout=await stripe!.checkout.sessions.retrieve(attempt.session_id);pendingCheckout=checkout.status==='open';}}
+  const publicMembership=publicBillingSubscription(membership);let trialEligible=membership?.trial_used===true?false:true;let pendingCheckout=false;
+  const customerId=typeof membership?.customer_id==='string'&&membership.customer_id.length>0&&membership.customer_id.length<=200&&!/[\u0000\u007f]/.test(membership.customer_id)?membership.customer_id:null;
+  if(configured()&&customerId){const history=await stripe!.subscriptions.list({customer:customerId,status:'all',limit:100});trialEligible=trialEligible&&!history.has_more&&!history.data.some(s=>s.trial_start);const attempt=await db.tx(r=>r.get('billing_attempts',req.actor+':'+audience));if(attempt?.session_id){const checkout=await stripe!.checkout.sessions.retrieve(attempt.session_id);pendingCheckout=checkout.status==='open';}}
   const cycle=selectedCycle(req.query.cycle);let plan=null;
   if(configured()&&priceId(selection,cycle)){const p=await stripe!.prices.retrieve(priceId(selection,cycle)!);validatePrice(p,cycle);plan={amount:p.unit_amount,currency:p.currency,interval:p.recurring!.interval,interval_count:p.recurring!.interval_count};}
-  res.json({configured:configured()&&!!priceId(selection,cycle),plan_id:selection.id,offer:{id:selection.id,name:selection.name,provisional:false},audience,cycle,trial_days:14,trial_eligible:trialEligible,pending_checkout:pendingCheckout,plan,subscription:membership?{status:membership.status,active:membership.active,cancel_at_period_end:membership.cancel_at_period_end,trial_end:membership.trial_end,current_period_end:membership.current_period_end,cycle:membership.cycle,plan_id:membership.plan_id||null}:null,can_manage:!!membership?.customer_id});
+  res.json({configured:configured()&&!!priceId(selection,cycle),plan_id:selection.id,offer:{id:selection.id,name:selection.name,provisional:false},audience,cycle,trial_days:14,trial_eligible:trialEligible,pending_checkout:pendingCheckout,plan,subscription:publicMembership,can_manage:!!customerId});
  }));
- app.get('/api/hub/billing/activity',wrap(async(req,res)=>{account(req);check(req.query.audience===undefined||req.query.audience==='consumer',400,'invalid_audience','Premium membership activity is consumer-only.');const audience='consumer';const events=await db.tx(async r=>(await r.list('billing_activity')).filter(e=>e.actor===req.actor+':'+audience).sort((a,b)=>b.at.localeCompare(a.at)).slice(0,30));res.json({audience,events:events.map(({id,at,status,cycle,plan_id,cancel_at_period_end})=>({id,at,status,cycle,plan_id:planById(plan_id)?.id||null,cancel_at_period_end}))});}));
+ app.get('/api/hub/billing/activity',wrap(async(req,res)=>{account(req);check(req.query.audience===undefined||req.query.audience==='consumer',400,'invalid_audience','Premium membership activity is consumer-only.');const audience='consumer';const events=await db.tx(async r=>(await r.list('billing_activity')).filter(e=>e.actor===req.actor+':'+audience).sort((a,b)=>String(b.at||'').localeCompare(String(a.at||''))).slice(0,30));res.json({audience,events:events.map(publicBillingActivity).filter(Boolean)});}));
  app.post('/api/hub/billing/checkout',wrap(async(req,res)=>{
   const user=account(req);ready();const selection=selectedPlan(req.body.plan,req.body.audience),audience='consumer',cycle=selectedCycle(req.body.cycle);check(priceId(selection,cycle),400,'plan_missing','This plan is not configured yet.');check(req.body.recurring_consent===true,400,'consent_required','Confirm the recurring subscription.');
   const company=await db.tx(r=>r.get('settings','company'));check(company?.policies_published&&company.legal_name&&company.support_email&&env.SUBSCRIPTION_TERMS_APPROVED==='true',503,'terms_pending','Subscription details and terms must be finalized first.');

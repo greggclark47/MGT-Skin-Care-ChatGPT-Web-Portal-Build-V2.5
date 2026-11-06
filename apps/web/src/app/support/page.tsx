@@ -19,6 +19,7 @@ export default function Support(){
  const state=useHub('/support'),session=useHub('/session');
  const [subject,setSubject]=useState(''),[message,setMessage]=useState(''),[feedback,setFeedback]=useState(''),[error,setError]=useState(''),[busy,setBusy]=useState(false);
  const [requestType,setRequestType]=useState<RequestType>('portal_help'),[requestSource,setRequestSource]=useState<'support_form'|'guided_handoff'>('support_form');
+ useEffect(()=>{const requested=new URLSearchParams(window.location.search).get('type');if(requestTypes.some(([value])=>value===requested))setRequestType(requested as RequestType);},[]);
  const [role,setRole]=useState<GuideRole>('customer_care'),[question,setQuestion]=useState(''),[consent,setConsent]=useState(false);
  const [guide,setGuide]=useState<GuideResult|null>(null),[guideQuestion,setGuideQuestion]=useState(''),[guideHistory,setGuideHistory]=useState<string[]>([]),[guideError,setGuideError]=useState(''),[guideBusy,setGuideBusy]=useState(false);
  const guideResultRef=useRef<HTMLDivElement>(null),guideErrorRef=useRef<HTMLParagraphElement>(null),requestFormRef=useRef<HTMLFormElement>(null),requestSubjectRef=useRef<HTMLInputElement>(null);
@@ -40,14 +41,15 @@ export default function Support(){
  async function submit(e:React.FormEvent){
   e.preventDefault();if(busy||!subject.trim()||!message.trim())return;
   setBusy(true);setError('');setFeedback('');
-  try{const saved=await hub('/support',{subject:subject.trim(),message:message.trim(),request_type:requestType,source:requestSource});setSubject('');setMessage('');setGuideQuestion('');setRequestType('portal_help');setRequestSource('support_form');setFeedback('Saved in your portal requests. Reference: '+saved.request.id+'. External delivery is not enabled.');}
+  try{const saved=await hub('/support',{subject:subject.trim(),message:message.trim(),request_type:requestType,source:requestSource});setSubject('');setMessage('');setGuideQuestion('');setRequestType('portal_help');setRequestSource('support_form');setFeedback('Saved in your portal requests. Reference: '+saved.request.id+'. External delivery is not enabled.');await state.reload();}
   catch(e){setError((e as Error).message);}
   finally{setBusy(false);}
  }
 
  return <AppFrame title="Portal Support">
   <p className="lead">Keep track of help with your portal.</p>
-  <div className="notice">For purchases, billing, shipping or returns, contact the vendor shown on your retailer receipt. <Link className="text-link" href="/orders">Retailer purchase help →</Link></div>
+  <div className="actions"><Link className="button" href="/care">Account &amp; customer care</Link><Link className="button" href="/account">My account</Link></div>
+  <div className="notice">For retailer purchases, shipping or returns, contact the vendor shown on your retailer receipt. For a Team 47 Studio Premium subscription, use <Link className="text-link" href="/account#payment-settings">payment settings</Link> or save an account request below. <Link className="text-link" href="/orders">Retailer purchase help →</Link></div>
   <p>This development preview stores requests locally. External support delivery and response times are not enabled.</p>
 
   <section className="panel stack" aria-labelledby="guide-heading">
@@ -77,7 +79,7 @@ export default function Support(){
    <label className="field">Request type<select disabled={busy} value={requestType} onChange={e=>{setRequestType(e.target.value as RequestType);setRequestSource('support_form');}}>{requestTypes.map(([value,title])=><option key={value} value={value}>{title}</option>)}</select></label>
    <label className="field">Subject<input ref={requestSubjectRef} required maxLength={150} disabled={busy} value={subject} placeholder="A short summary of the issue" aria-describedby="support-subject-count" onChange={e=>setSubject(e.target.value)}/></label>
    <CharacterCount id="support-subject-count" current={subject.length} max={150}/>
-   <label className="field">Details<textarea required maxLength={4000} disabled={busy} value={message} placeholder="Describe what happened and which portal page you were using." aria-describedby="support-count" onChange={e=>setMessage(e.target.value)}/></label>
+   <label className="field">Details<textarea required maxLength={4000} disabled={busy} value={message} placeholder="Describe what happened and which portal page you were using." aria-describedby="support-count support-sensitive-help" onChange={e=>setMessage(e.target.value)}/></label><small id="support-sensitive-help" className="muted">Do not include passwords, verification codes, card numbers or medical records.</small>
    <CharacterCount id="support-count" current={message.length} max={4000}/>
    <button className="button primary" type="submit" disabled={busy||!subject.trim()||!message.trim()}>{busy?'Saving…':'Save request'}</button>
   </form>

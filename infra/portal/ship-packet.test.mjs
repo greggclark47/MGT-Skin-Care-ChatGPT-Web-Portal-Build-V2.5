@@ -28,13 +28,17 @@ const stagingEvidence = {
   version: "1.2",
   environment: "staging",
   target: {
-    version: "1.0",
+    version: "1.1",
     environment: "staging",
     candidate_commit: "a".repeat(40),
     origin: "https://staging.mgtskincare.test",
     deployment_reference: "work/staging/2026-09-20/deployment.md",
     isolation_reference: "work/staging/2026-09-20/isolation.md",
     secret_injection_reference: "work/staging/2026-09-20/secret-injection.md",
+    secret_injection_contract_checksums: {
+      staging: `sha256:${"1".repeat(64)}`,
+      production: `sha256:${"2".repeat(64)}`
+    },
     images
   },
   health_probe: {

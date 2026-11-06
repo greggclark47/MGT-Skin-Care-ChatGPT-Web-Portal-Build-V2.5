@@ -4,10 +4,14 @@ const root=path.resolve(__dirname,'../..');
 const stamp=new Date().toISOString().replace(/[:.]/g,'-');
 const out=path.join(root,'work/verification',stamp);fs.mkdirSync(out,{recursive:true});
 const results=[];
+// The aggregate regression suite intentionally runs server-backed checks one at a
+// time. Production-admission checks alone can take more than one minute on a
+// constrained workstation, so keep a bounded but realistic suite-wide limit.
+const REGRESSION_TIMEOUT_MS=5*60*1000;
 async function run(name,cwd,args){
  const started=new Date().toISOString();
- const result=await new Promise(resolve=>{let stdout='',stderr='';const child=spawn(process.execPath,args,{cwd:path.join(root,cwd),timeout:120000,windowsHide:true,
-  env:{...process.env,DATABASE_URL:'',SUPABASE_URL:'',SUPABASE_ANON_KEY:'',SUPABASE_SERVICE_ROLE_KEY:'',STRIPE_SECRET_KEY:'',OPENAI_API_KEY:'',OLLAMA_ENABLED:'false',OPENCLAW_ENABLED:'false',NODE_ENV:name==='web production build'?'production':'test',NEXT_TELEMETRY_DISABLED:'1'}});
+ const result=await new Promise(resolve=>{let stdout='',stderr='';const child=spawn(process.execPath,args,{cwd:path.join(root,cwd),timeout:REGRESSION_TIMEOUT_MS,windowsHide:true,
+  env:{...process.env,DATABASE_URL:'',SUPABASE_URL:'',SUPABASE_ANON_KEY:'',SUPABASE_SERVICE_ROLE_KEY:'',STRIPE_SECRET_KEY:'',OPENAI_API_KEY:'',OLLAMA_ENABLED:'false',OPENCLAW_ENABLED:'false',HOSTED_OPENAI_ENABLED:'false',NODE_ENV:name==='web production build'?'production':'test',NEXT_TELEMETRY_DISABLED:'1'}});
   child.stdout.on('data',chunk=>{stdout+=chunk;});child.stderr.on('data',chunk=>{stderr+=chunk;});child.once('error',error=>resolve({stdout,stderr,error,status:null}));child.once('close',status=>resolve({stdout,stderr,status}));});
  const output=(result.stdout||'')+(result.stderr||'')+(result.error?'\n'+result.error.message:'');
  const log=name.replace(/[^a-z0-9-]/gi,'-')+'.log';fs.writeFileSync(path.join(out,log),output);
@@ -37,10 +41,10 @@ const webBuilt=await run('web production build','apps/web',['node_modules/next/d
 if(webBuilt)await run('production web proxy journey','',['infra/portal/production-journey.cjs']);
 else results.push({name:'production web proxy journey',status:'UNTESTED',reason:'The required production build failed.'});
 const staticBuilt=await run('root static build','',['infra/portal/build-static.cjs']);
-const pattern=/gemini|sonnet|ollama|openai|deepseek|langchain|supabase|revenuecat|stripe|gpt-[0-9]|anthropic|claude/i;
+const {scanPublicArtifact}=require('./public-artifact-vendor-scan.cjs');
 function files(dir){return fs.existsSync(dir)?fs.readdirSync(dir,{withFileTypes:true}).flatMap(item=>item.isDirectory()?files(path.join(dir,item.name)):[path.join(dir,item.name)]):[];}
 const artifactRoots=['apps/web/.next/static','dist'];
-const hits=artifactRoots.flatMap(dir=>files(path.join(root,dir))).filter(f=>/\.(js|html|css|json|map)$/i.test(f)&&pattern.test(fs.readFileSync(f,'utf8'))).map(f=>path.relative(root,f));
+const hits=artifactRoots.flatMap(dir=>files(path.join(root,dir))).filter(f=>/\.(js|html|css|json|map)$/i.test(f)&&scanPublicArtifact(path.relative(root,f),fs.readFileSync(f,'utf8')).blocked).map(f=>path.relative(root,f));
 const artifactReady=webBuilt&&staticBuilt&&artifactRoots.every(dir=>files(path.join(root,dir)).some(f=>/\.(js|html)$/i.test(f)));
 const artifactStatus=artifactReady?(hits.length?'FAILED':'PASSED'):'UNTESTED';
 results.push({name:'generated public artifact vendor scan',status:artifactStatus,hits,reason:artifactReady?undefined:'Missing or unsuccessful build; zero matches cannot establish a pass.'});

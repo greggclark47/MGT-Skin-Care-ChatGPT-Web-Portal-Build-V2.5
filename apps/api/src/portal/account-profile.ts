@@ -15,6 +15,15 @@ export function customerOutputContext(profile:AccountProfile|null|undefined):Cus
  };
 }
 
+export function publicAccountProfile(value:unknown):AccountProfile|null{
+ if(!value||typeof value!=='object'||Array.isArray(value))return null;
+ const profile=value as Partial<AccountProfile>;
+ const communication=profile.communication_preferences,accessibility=profile.accessibility;
+ if(typeof profile.preferred_name!=='string'||typeof profile.locale!=='string'||!ACCOUNT_LOCALES.includes(profile.locale as any)||typeof profile.timezone!=='string'||typeof profile.measurement_system!=='string'||!MEASUREMENT_SYSTEMS.includes(profile.measurement_system as any)||!Array.isArray(profile.service_interests)||profile.service_interests.length<1||profile.service_interests.length>ACCOUNT_SERVICE_INTERESTS.length||!profile.service_interests.every(value=>typeof value==='string'&&ACCOUNT_SERVICE_INTERESTS.includes(value as any))||new Set(profile.service_interests).size!==profile.service_interests.length||!exactBooleans(communication,['routine_reminders','service_announcements'])||!exactBooleans(accessibility,['reduced_motion','high_contrast'])||typeof profile.default_image_storage!=='string'||!IMAGE_STORAGE_PREFERENCES.includes(profile.default_image_storage as any)||profile.profile_version!==1||typeof profile.created_at!=='string'||typeof profile.updated_at!=='string'||typeof profile.revision!=='string')return null;
+ const safeCommunication=communication as AccountProfile['communication_preferences'],safeAccessibility=accessibility as AccountProfile['accessibility'];
+ return{preferred_name:profile.preferred_name,locale:profile.locale as AccountProfile['locale'],timezone:profile.timezone,measurement_system:profile.measurement_system as AccountProfile['measurement_system'],service_interests:[...profile.service_interests] as AccountProfile['service_interests'],communication_preferences:{routine_reminders:safeCommunication.routine_reminders,service_announcements:safeCommunication.service_announcements},accessibility:{reduced_motion:safeAccessibility.reduced_motion,high_contrast:safeAccessibility.high_contrast},default_image_storage:profile.default_image_storage as AccountProfile['default_image_storage'],profile_version:1,created_at:profile.created_at,updated_at:profile.updated_at,revision:profile.revision};
+}
+
 function validTimezone(value:string){
  try{new Intl.DateTimeFormat('en-US',{timeZone:value}).format();return true;}catch{return false;}
 }
@@ -48,7 +57,7 @@ export function accountProfileInput(body:any,testDriveEnabled:boolean):AccountPr
 
 export async function readAccountProfile(records:Records,actor:string){
  const profile=await records.get<AccountProfile>('account_profiles',actor)||null;
- return{profile,revision:profile?.revision||null};
+ return{profile:publicAccountProfile(profile),revision:profile?.revision||null};
 }
 
 export async function saveAccountProfile(records:Records,actor:string,expected:unknown,input:AccountProfileInput){
@@ -60,5 +69,5 @@ export async function saveAccountProfile(records:Records,actor:string,expected:u
  const profile:AccountProfile={...input,profile_version:1,created_at:current?.created_at||changed_at,updated_at:changed_at,revision};
  await records.put('account_profiles',actor,profile);
  const id=randomUUID();await records.put('audit',id,{id,actor,action:'account_profile.saved',target:'self',at:changed_at});
- return{profile,revision};
+ return{profile:publicAccountProfile(profile),revision};
 }

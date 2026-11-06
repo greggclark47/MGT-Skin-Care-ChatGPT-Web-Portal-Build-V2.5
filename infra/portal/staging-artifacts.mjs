@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
+import { validateSecretInjectionAdmission } from "./secret-injection-admission.mjs";
 
 const SHA = /^[0-9a-f]{40}$/i;
 const CHECKSUM = /^sha256:[a-f0-9]{64}$/i;
@@ -113,12 +114,25 @@ export function buildStagingArtifacts({ root = process.cwd(), target, attestatio
   const references = expectedReferences({ target, attestation, records });
   const missing = STAGING_ARTIFACT_IDS.filter((id) => !validLocalReference(references[id]));
   if (missing.length) throw new Error(`Artifact references are missing, unsafe, or not locally inspectable: ${missing.join(", ")}.`);
+  const entries = STAGING_ARTIFACT_IDS.map((id) => {
+    const inspection = inspectStagingArtifact({ root, reference: references[id] });
+    if (id === "secret_injection") {
+      const { value } = readStagingJsonArtifact({ root, reference: references[id] });
+      const validation = validateSecretInjectionAdmission(value, {
+        environment: "staging",
+        candidateCommit,
+        expectedContractChecksums: target?.secret_injection_contract_checksums
+      });
+      if (!validation.ok) throw new Error("secret-injection evidence must be a passing, candidate-bound admission report.");
+    }
+    return { id, ...inspection };
+  });
   return {
     version: STAGING_ARTIFACTS_VERSION,
     candidate_commit: candidateCommit,
     generated_at: new Date(now).toISOString(),
     status: "pass",
-    entries: STAGING_ARTIFACT_IDS.map((id) => ({ id, ...inspectStagingArtifact({ root, reference: references[id] }) }))
+    entries
   };
 }
 
@@ -157,7 +171,7 @@ export function validateStagingArtifacts(artifacts, { candidateCommit, target, a
   return { ok: errors.length === 0, errors };
 }
 
-export function verifyStagingArtifacts({ root = process.cwd(), artifacts } = {}) {
+export function verifyStagingArtifacts({ root = process.cwd(), artifacts, candidateCommit = "", environment = "staging", expectedContractChecksums } = {}) {
   const errors = [];
   const verified = [];
   const entries = Array.isArray(artifacts?.entries) ? artifacts.entries : [];
@@ -171,6 +185,15 @@ export function verifyStagingArtifacts({ root = process.cwd(), artifacts } = {})
       const inspected = inspectStagingArtifact({ root, reference: entry.reference });
       if (inspected.checksum !== text(entry.checksum)) errors.push(`${id} checksum does not match its local artifact`);
       if (inspected.bytes !== entry.bytes) errors.push(`${id} byte count does not match its local artifact`);
+      if (id === "secret_injection" && inspected.checksum === text(entry.checksum) && inspected.bytes === entry.bytes) {
+        const { value } = readStagingJsonArtifact({ root, reference: entry.reference });
+        const validation = validateSecretInjectionAdmission(value, {
+          environment,
+          candidateCommit: candidateCommit || undefined,
+          expectedContractChecksums
+        });
+        if (!validation.ok) errors.push("secret_injection must be a passing, candidate-bound admission report");
+      }
       if (inspected.checksum === text(entry.checksum) && inspected.bytes === entry.bytes) verified.push(id);
     } catch (error) {
       errors.push(`${id} could not be verified: ${error.message}`);

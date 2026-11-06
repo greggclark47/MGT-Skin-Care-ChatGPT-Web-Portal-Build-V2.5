@@ -1,6 +1,6 @@
 export interface RetailerListing {
  id:string;name:string;url:string;region:'South Korea'|'US'|'EU';focus:string;description:string;
- type:'Multi-brand retailer'|'Brand store';relationship:'independent';source_url:string;checked_at:string;
+ type:'Multi-brand retailer'|'Brand store';relationship:'independent'|'approved_partner'|'sponsored';source_url:string;checked_at:string;
  segments?:string[];specialty?:string;
 }
 const ORIGINAL_RETAILERS:RetailerListing[]=[
@@ -29,4 +29,4 @@ export const RETAILERS:RetailerListing[]=[
  {id:'universal-standard',name:'Universal Standard',url:'https://www.universalstandard.com/',region:'US',focus:'Clothing',specialty:'Extended clothing sizes',segments:['clothing','style','wardrobe'],description:'Clothing collections with an extended size range. Check each item’s measurements, sizing and availability on the retailer’s site.',type:'Brand store',relationship:'independent',source_url:'https://www.universalstandard.com/',checked_at:'2026-09-07'},
  {id:'haute-hijab',name:'Haute Hijab',url:'https://www.hautehijab.com/',region:'US',focus:'Headwear',specialty:'Hijabs & accessories',segments:['clothing','style','personal-color','wardrobe'],description:'A specialist destination for hijabs and accessories in a range of fabrics and colors, for people who choose to wear them.',type:'Brand store',relationship:'independent',source_url:'https://www.hautehijab.com/',checked_at:'2026-09-07'},
 ];
-export const COMMERCE_MODEL={mode:'external_referral',consumer_checkout:false,merchant_of_record:'external_vendor',billing:'external_vendor',shipping:'external_vendor',returns:'external_vendor',mgt_fee_rates:null,commercial_agreements:'pending'};
+export const COMMERCE_MODEL={mode:'external_referral',consumer_checkout:false,merchant_of_record:'external_vendor',billing:'external_vendor',shipping:'external_vendor',returns:'external_vendor',mgt_fee_rates:null,commercial_agreements:'pending',omni_retail:'opt_in_partner_framework',sponsored_content:'free_plan_opt_in_review_gated',customer_purchase_tracking:false,placement_disclosure_required:true,personalized_ad_targeting:false};

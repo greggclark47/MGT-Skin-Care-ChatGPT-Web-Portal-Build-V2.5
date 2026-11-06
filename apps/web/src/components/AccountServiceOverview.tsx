@@ -13,7 +13,7 @@ export function AccountServiceOverview(){
  const overview=state.data as Overview|null;
  return <section className="panel account-overview" id="service-overview" aria-labelledby="service-overview-heading" aria-busy={state.loading}>
   <div className="row"><div><span className="eyebrow">CONNECTED SERVICES</span><h2 id="service-overview-heading">Your account at a glance</h2></div>{overview&&<span className="pill">{overview.summary.ready} of {overview.summary.total} ready</span>}</div>
-  <p>See what is connected, what needs setup and where attention is needed across your MGT experience.</p>
+  <p>See what is connected, what needs setup and where attention is needed across your Team 47 Studio experience.</p>
   <LoadState {...state} retry={state.reload}/>
   {overview&&<>
    {overview.customer_context.profile_ready&&<p className="muted">This checklist is synced to {overview.customer_context.preferred_name||'your'} account profile and remains private to your signed-in account.</p>}

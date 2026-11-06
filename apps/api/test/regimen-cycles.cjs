@@ -44,6 +44,13 @@ const { LocalStore } = require('../dist/portal/store');
     assert.equal(repeated.status, 202);
     assert.equal(repeated.data.data.id, checkIn.data.data.id);
 
+    await store.tx(async records => {
+      const cycle = await records.get('regimen_cycles', id);
+      const entry = await records.get('regimen_cycle_check_ins', checkIn.data.data.id);
+      await records.put('regimen_cycles', id, { ...cycle, private_note: 'hidden-cycle-route-field' });
+      await records.put('regimen_cycle_check_ins', checkIn.data.data.id, { ...entry, private_note: 'hidden-check-in-route-field' });
+    });
+
     const listed = await call('/api/v1/regimen-cycles');
     assert.equal(listed.status, 200);
     assert.equal(listed.data.data.sync_scope, 'signed_in_account');
@@ -52,12 +59,16 @@ const { LocalStore } = require('../dist/portal/store');
     assert.equal(summary.status, 200);
     assert.equal(summary.data.data.comfortable, 1);
     assert.equal(summary.data.data.deterministic_guidance.next_step, 'keep_current_routine');
+    assert.equal(JSON.stringify(listed.data).includes('hidden-cycle-route-field'), false);
+    assert.equal(JSON.stringify(summary.data).includes('hidden-cycle-route-field'), false);
     const exported = await call('/api/v1/regimen-cycles/export');
     assert.equal(exported.status, 200);
     assert.equal(exported.data.data.cycles.length, 1);
     assert.equal(exported.data.data.check_ins.length, 1);
     assert.deepEqual(exported.data.data.manifest, { export_format: 'json', retention: 'user_controlled', deletion_supported: true, external_delivery: 'disabled', data_shared: [] });
     assert.equal(JSON.stringify(exported.data).includes('regimen-account'), false);
+    assert.equal(JSON.stringify(exported.data).includes('hidden-cycle-route-field'), false);
+    assert.equal(JSON.stringify(exported.data).includes('hidden-check-in-route-field'), false);
     assert.equal((await call('/api/v1/regimen-cycles', 'DELETE', { confirm: false })).status, 400);
     const removed = await call('/api/v1/regimen-cycles', 'DELETE', { confirm: true });
     assert.equal(removed.status, 200);

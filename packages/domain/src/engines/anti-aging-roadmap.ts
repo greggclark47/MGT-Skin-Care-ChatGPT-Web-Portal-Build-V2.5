@@ -395,7 +395,7 @@ export function buildMerchantReferral(record: { id: string; external_url: string
   if (!allowedHosts.includes(target.hostname.toLowerCase()) || target.username || target.password || target.hash) throw new Error('referral_destination_not_allowlisted');
   target.search = '';
   return { record_id: record.id, destination_url: target.toString(), commercial_label: record.commercial_label, data_shared: [],
-    disclosure: 'You are leaving MGT Skin Care for an independent retailer destination. MGT does not receive or send your profile in this link.',
+    disclosure: 'You are leaving Team 47 Studio for an independent retailer destination. MGT does not receive or send your profile in this link.',
     measurement: 'aggregate_click_only', policy_version: MERCHANT_REFERRAL_POLICY_VERSION };
 }
 

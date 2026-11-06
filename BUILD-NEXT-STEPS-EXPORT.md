@@ -34,7 +34,7 @@ Complete the phases in order. Do not enable production traffic before Phase 3 ev
 | Migration lineage | Setup + review | Export target migration history and compare it with `infra/db/migrations` and `infra/portal/migrations` | Reconciliation map; no automatic production migration |
 | Identity mapping | Setup + decision | Map existing Auth users to portal accounts and guest invitations; define duplicate-email handling | Approved mapping report with counts |
 | Staging environment | Setup | Create a non-production database, Auth tenant, isolated storage, and test email channel | Staging URLs and credentials stored outside source |
-| Secrets and origins | Setup | Populate `infra/portal/.env` outside source control; use HTTPS origins and server-only secrets | `pnpm infra:preflight` passes |
+| Secrets and origins | Setup | Use the approved secret manager to materialize six separate private role inputs (edge/API/worker configuration plus secret materialization), bind the candidate to the staging/production contract pair, and use HTTPS origins with server-only secrets. An ephemeral aggregate validation context may be injected only for preflight. | Redacted `pnpm infra:secret-injection-admission` evidence and `pnpm infra:preflight` pass |
 | Backup and restore | Setup | Select encrypted off-host backup provider and schedule a restore rehearsal | Successful restore log and checksum proof |
 | Initial operator | Setup + manual control | Provision the first superadmin outside the public portal | Two-person confirmation or equivalent audit record |
 

@@ -42,9 +42,9 @@ export const RELEASE_PHASES = Object.freeze([
   },
   {
     id: "F77",
-    name: "Stripe sandbox and webhook evidence",
-    owner: "billing",
-    evidence: "The approved Premium offer, signed sandbox events, reconciliation, cancellation, and entitlement tests pass."
+    name: "Commercial offer and sponsored-content evidence",
+    owner: "commercial-operations",
+    evidence: "Enabled Premium offers have signed sandbox and entitlement evidence; enabled sponsored content has current merchant authorization and disclosure evidence."
   },
   {
     id: "F78",
@@ -71,8 +71,8 @@ const ERROR_PREFIXES = Object.freeze({
   accessibility: ["ACCESSIBILITY_VALIDATION_REPORT_URL", "ACCESSIBILITY_VALIDATED_AT"],
   database: ["DATABASE_URL", "SUPABASE_URL", "SUPABASE_ANON_KEY", "SUPABASE_SERVICE_ROLE_KEY"],
   backup: ["BACKUP_MAX_AGE_HOURS", "BACKUP_RESTORE_MAX_AGE_DAYS", "WORKER_INTERVAL_SECONDS", "WORKER_READINESS_MAX_AGE_SECONDS"],
-  billing: ["SUBSCRIPTIONS_ENABLED", "SUBSCRIPTION_TERMS_APPROVED", "STRIPE_"],
-  runtime: ["OLLAMA_ENABLED", "OLLAMA_BASE_URL", "OPENCLAW_ENABLED", "OPENCLAW_BASE_URL", "OPENCLAW_API_MODE", "OPENCLAW_API_KEY"]
+  commercial: ["SUBSCRIPTIONS_ENABLED", "SUBSCRIPTION_TERMS_APPROVED", "STRIPE_", "MGT_SPONSORED_CONTENT", "Sponsored content", "Disabled sponsored content"],
+  runtime: ["OLLAMA_ENABLED", "OLLAMA_BASE_URL", "OPENCLAW_ENABLED", "OPENCLAW_BASE_URL", "OPENCLAW_API_MODE", "OPENCLAW_API_KEY", "HOSTED_OPENAI_ENABLED", "OPENAI_API_KEY", "Disabled hosted OpenAI", "Native Ollama-mode OpenClaw"]
 });
 
 function hasError(errors, prefixes) {
@@ -90,6 +90,7 @@ export function liveEvidenceFromEnvironment(env = {}) {
     database_rls: String(env.RELEASE_EVIDENCE_DATABASE_RLS).toLowerCase() === "true",
     backup_restore: String(env.RELEASE_EVIDENCE_BACKUP_RESTORE).toLowerCase() === "true",
     stripe_sandbox: String(env.RELEASE_EVIDENCE_STRIPE_SANDBOX).toLowerCase() === "true",
+    sponsored_content_authorization: String(env.RELEASE_EVIDENCE_SPONSORED_CONTENT_AUTHORIZATION).toLowerCase() === "true",
     container_startup: String(env.RELEASE_EVIDENCE_CONTAINER_STARTUP).toLowerCase() === "true",
     ai_provider: String(env.RELEASE_EVIDENCE_AI_PROVIDER).toLowerCase() === "true"
   };
@@ -111,8 +112,10 @@ export function buildReleaseReadiness({ env = {}, localGates = false, liveEviden
   const accessibilityBlocked = hasError(preflight.errors, ERROR_PREFIXES.accessibility);
   const databaseBlocked = hasError(preflight.errors, ERROR_PREFIXES.database);
   const backupBlocked = hasError(preflight.errors, ERROR_PREFIXES.backup);
-  const billingEnabled = String(env.SUBSCRIPTIONS_ENABLED).toLowerCase() === "true";
-  const billingBlocked = hasError(preflight.errors, ERROR_PREFIXES.billing);
+  const subscriptionsEnabled = String(env.SUBSCRIPTIONS_ENABLED).toLowerCase() === "true";
+  const sponsoredContentEnabled = String(env.MGT_SPONSORED_CONTENT_ENABLED).toLowerCase() === "true";
+  const commercialEnabled = subscriptionsEnabled || sponsoredContentEnabled;
+  const commercialBlocked = hasError(preflight.errors, ERROR_PREFIXES.commercial);
   const runtimeBlocked = hasError(preflight.errors, ERROR_PREFIXES.runtime);
 
   phases.push(phase("F72", configurationBlocked ? "blocked" : localGates ? "pass" : "pending", configurationBlocked ? "Production configuration preflight has blocking errors." : localGates ? "Production configuration and local gates are recorded." : "Run the local release gates before treating configuration as release evidence."));
@@ -120,9 +123,11 @@ export function buildReleaseReadiness({ env = {}, localGates = false, liveEviden
   phases.push(phase("F74", accessibilityBlocked ? "blocked" : liveEvidence(evidence, "accessibility_deployed") ? "pass" : "pending", accessibilityBlocked ? "Deployed accessibility evidence is missing or invalid." : liveEvidence(evidence, "accessibility_deployed") ? "Deployed accessibility evidence is recorded." : "Run and link the deployed accessibility validation set."));
   phases.push(phase("F75", databaseBlocked ? "blocked" : liveEvidence(evidence, "database_rls") ? "pass" : "pending", databaseBlocked ? "Database or Supabase configuration is incomplete." : liveEvidence(evidence, "database_rls") ? "Live database, migration, and RLS evidence is recorded." : "Validate the target database, migrations, RLS, and account lifecycle against the deployed project."));
   phases.push(phase("F76", backupBlocked ? "blocked" : liveEvidence(evidence, "backup_restore") ? "pass" : "pending", backupBlocked ? "Worker or backup readiness configuration is invalid." : liveEvidence(evidence, "backup_restore") ? "Restore drill and readiness evidence are recorded." : "Complete an encrypted off-host restore drill and verify /readyz."));
-  phases.push(phase("F77", !billingEnabled ? "not_applicable" : billingBlocked ? "blocked" : liveEvidence(evidence, "stripe_sandbox") ? "pass" : "pending", !billingEnabled ? "Subscriptions are disabled for this release." : billingBlocked ? "Enabled Premium configuration is incomplete." : liveEvidence(evidence, "stripe_sandbox") ? "Premium sandbox, signatures, and reconciliation evidence are recorded." : "Keep enrollment closed until sandbox webhook and entitlement evidence is complete."));
+  const commercialEvidenceComplete = (!subscriptionsEnabled || liveEvidence(evidence, "stripe_sandbox"))
+    && (!sponsoredContentEnabled || liveEvidence(evidence, "sponsored_content_authorization"));
+  phases.push(phase("F77", !commercialEnabled ? "not_applicable" : commercialBlocked ? "blocked" : commercialEvidenceComplete ? "pass" : "pending", !commercialEnabled ? "Subscriptions and sponsored content are disabled for this release." : commercialBlocked ? "Enabled Premium or sponsored-content configuration is incomplete." : commercialEvidenceComplete ? "Required Premium and sponsored-content authorization evidence is recorded." : "Keep paid enrollment and sponsored placement closed until their required evidence is complete."));
   phases.push(phase("F78", configurationBlocked ? "blocked" : liveEvidence(evidence, "container_startup") ? "pass" : "pending", configurationBlocked ? "Immutable image or production configuration checks are incomplete." : liveEvidence(evidence, "container_startup") ? "Immutable images and startup probes are verified." : "Start the approved images and verify health, readiness, and edge routing."));
-  const runtimeConfigured = !runtimeBlocked && (String(env.OLLAMA_ENABLED).toLowerCase() === "true" || String(env.OPENAI_API_KEY || "").trim());
+  const runtimeConfigured = !runtimeBlocked && (String(env.OLLAMA_ENABLED).toLowerCase() === "true" || String(env.HOSTED_OPENAI_ENABLED).toLowerCase() === "true");
   phases.push(phase("F79", runtimeBlocked || !runtimeConfigured ? "blocked" : liveEvidence(evidence, "ai_provider") ? "pass" : "pending", runtimeBlocked || !runtimeConfigured ? "No complete enabled AI runtime configuration is available." : liveEvidence(evidence, "ai_provider") ? "Provider, model, fallback, and spend evidence are recorded." : "Verify enabled models/providers, fallback behavior, spend controls, and hosted billing reconciliation."));
 
   const predecessorReady = phases.every((item) => item.status === "pass" || item.status === "not_applicable");

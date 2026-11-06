@@ -24,6 +24,8 @@ export type TaskType =
   | 'anti_aging_search'
   | 'anti_aging_comparison'
   | 'anti_aging_provider_summary'
+  | 'complexion_profile_summary'
+  | 'photo_journal_cosmetic_summary'
   | 'style_color_match'
   | 'embed';
 
@@ -57,6 +59,13 @@ export interface JsonSchema {
   properties: Record<string, { type: 'string' | 'number' | 'boolean' | 'array' | 'object' }>;
 }
 
+// Images are an opt-in, caller-owned input. The router verifies that an image task is
+// local-only before an adapter sees the bytes.
+export interface GatewayImageInput {
+  mime_type: 'image/jpeg';
+  base64: string;
+}
+
 export interface GatewayRequest {
   task_type: TaskType;
   user_id: string | null;          // null for pre-account Skin Match sessions
@@ -66,6 +75,7 @@ export interface GatewayRequest {
   has_premium_entitlement?: boolean;
   has_operator_authorization?: boolean;
   metadata?: Record<string, string>;
+  image_inputs?: GatewayImageInput[];
   // Optional caller-owned validation for contracts that depend on retrieved records, such as
   // exact reviewed excerpts. A failure moves the request to the next configured candidate.
   output_validator?: (text: string) => { ok: boolean; reason?: string };

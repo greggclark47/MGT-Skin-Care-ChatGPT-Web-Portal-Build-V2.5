@@ -11,6 +11,7 @@ const tests = fs.readdirSync(apiDirectory)
   .sort()
   .map((name) => path.join("apps", "api", "test", name));
 tests.push(path.join("apps", "mobile", "test", "contract.cjs"));
+tests.push(path.join("apps", "mobile", "test", "production-config.cjs"));
 
 if (!tests.length) {
   console.error("No application tests were found.");

@@ -28,11 +28,11 @@ function renderStep(stepIndex: number, answers: AnswerState) {
   );
 }
 
-console.log('\n== 0. Shared MGT brand shell ==');
+console.log('\n== 0. Shared Team 47 Studio brand shell ==');
 {
   const html = renderToStaticMarkup(<Brand />);
-  check('shared brand uses the MGT mark asset', html.includes('src="/mgt-mark.svg"') && html.includes('class="brand-mark-image"'));
-  check('brand remains an accessible home link', html.includes('aria-label="MGT Skin Care home"') && html.includes('href="/"'));
+  check('shared brand uses responsive Team 47 Studio assets', html.includes('team47studio-horizontal-light-surface.png') && html.includes('team47studio-horizontal-dark-surface.png') && html.includes('class="brand-logo-image brand-logo-light"'));
+  check('brand remains an accessible home link', html.includes('aria-label="Team 47 Studio home"') && html.includes('href="/"'));
 }
 
 console.log('\n== 1. Questionnaire covers the C9 inputs Phase 9 dropped ==');

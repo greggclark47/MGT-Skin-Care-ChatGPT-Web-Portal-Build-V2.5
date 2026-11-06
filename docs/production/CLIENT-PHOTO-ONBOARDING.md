@@ -20,6 +20,41 @@ Each Drive upload batch also requires a request-scoped consent confirmation in t
 confirmation resets after a successful batch; choosing the Drive destination alone never grants
 upload consent.
 
+## Photo source choices and guided full-face capture
+
+Before choosing storage, a customer can select one of three optional sources:
+
+- **Personal upload:** choose a supported image from the device.
+- **Google Drive file picker:** open the device/browser file picker and choose Google Drive when it
+  is offered by that device. This is a customer-controlled file choice; it does not add a Google
+  OAuth scope, give the portal ongoing access to the customer's Drive, or expose other Drive files.
+- **Guided full-face capture:** start the front-facing camera only after tapping the camera control.
+  A circular overlay helps the customer center one full face in consistent light. Where the browser
+  supports a local `FaceDetector`, it reports only broad framing feedback (one face centered,
+  multiple faces, or retake guidance). It does not create, save, compare, or transmit a face
+  template; it is not identity or facial recognition.
+
+The customer can use ordinary upload instead of guided capture at any time. The guide is a
+consistency aid, not an account requirement and not a quality, attractiveness, demographic, or
+health assessment.
+
+## Private cosmetic photo-journal note (disabled by default)
+
+An optional image-informed cosmetic note is implemented behind two server-side gates:
+`MGT_PHOTO_ANALYSIS_ENABLED=true` and `MGT_PHOTO_ANALYSIS_PRIVACY_REVIEWED=true`. It also requires
+the existing platform-analysis permission plus a separate confirmation for the selected photo.
+The request accepts exactly one prepared JPEG under 5 MB and routes it only to the local Ollama
+vision task (`llava:latest`); that task has no hosted fallback. A request does not save the image,
+filename, Drive path, image bytes, or model text in the account trace. Only minimal task metadata
+is retained so it can be invalidated if the saved profile or AI permission changes.
+
+The output is constrained to broad cosmetic journal tags and the existing saved complexion
+priorities. It must not identify or recognize a person; infer age, gender, race, ethnicity, skin
+color/depth, facial shape, or attractiveness; diagnose, assess health or severity; recommend
+treatment; select products; or modify a routine. It is not a production authorization. Keep both
+gates false until privacy, model qualification, service isolation, retention, deletion, and
+customer-support review are complete.
+
 ## Image guidance
 
 - Front view in soft, even light, camera at eye level, neutral background, and no filter.
@@ -103,12 +138,13 @@ Drive restore/recovery exercise before accepting any new storage workflow.
 The production default remains local-device storage. The test Drive adapter is hard-disabled when
 `NODE_ENV=production` and is not a production image service. Production photos do not yet sync
 across browsers, devices, accounts, the Android app, or retailer pages. Android links to the portal
-and does not currently have native image picking. Do not claim production cloud backup, account
-retention, AI analysis, or cross-device availability.
+and does not currently have native image picking. The privacy-gated local cosmetic-note path is
+code-complete but disabled by default and is not approved for production activation. Do not claim
+production cloud backup, account retention, production AI analysis, or cross-device availability.
 
 To enable real production uploads, use a reviewed private object-storage or Drive architecture with
 production-specific OAuth/data ownership, short-lived authorization, per-account quotas, retention,
 deletion, restore and privacy controls; validate authorization, content safety, backup restore,
 account deletion, and consent withdrawal. Add native Android image picking only after the same
-authenticated production storage API is approved. Keep photo analysis disabled unless a separate,
-informed consent and reviewed safety flow is implemented.
+authenticated production storage API is approved. Keep photo analysis disabled unless the separate
+informed-consent, local-only model, and reviewed safety flow above have all been approved.

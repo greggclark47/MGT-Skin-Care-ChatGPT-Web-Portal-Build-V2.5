@@ -95,3 +95,19 @@ test("detects changed evidence and rejects a fabricated ready state", () => {
   blocked.status = "ready_for_recovery_review";
   assert.equal(validateRecoveryDrillReview(blocked, { manifest: value, now: Date.parse("2026-01-02T01:00:00.000Z") }).ok, false);
 });
+
+test("rejects a checksum-resealed ready review with altered decision or evidence details", () => {
+  const root = rootFixture();
+  const value = manifest();
+  for (const change of [
+    (review) => { review.decision.decision = "held"; },
+    (review) => { review.evidence[0].status = "pending"; },
+    (review) => { review.measured_seconds.rto = 121; },
+    (review) => { review.restored_migration_version = ""; }
+  ]) {
+    const review = buildRecoveryDrillReview({ root, manifest: value, drill: drill(root), now: "2026-01-02T00:00:00.000Z" });
+    change(review);
+    review.recovery_drill_checksum = recoveryDrillChecksum(review);
+    assert.equal(validateRecoveryDrillReview(review, { manifest: value, now: Date.parse("2026-01-02T01:00:00.000Z") }).ok, false);
+  }
+});

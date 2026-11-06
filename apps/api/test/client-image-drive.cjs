@@ -19,7 +19,7 @@ test('test Drive configuration stays disabled in production and fails closed whe
  assert.equal(clientImageDriveTestEnabled({...enabled,CLIENT_IMAGE_DRIVE_TEST_ENABLED:'false'}),false);
  assert.deepEqual(clientImageDriveTestStatus({...enabled,TEST_GOOGLE_DRIVE_FOLDER_ID:'folder-1'}),{enabled:true,environment:'test',folder:'configured',message:'Private test storage is available to verify before an upload.'});
  assert.equal(clientImageDriveTestStatus({...enabled,TEST_GOOGLE_DRIVE_REFRESH_TOKEN:''}).enabled,false);
- assert.equal(TEST_IMAGE_FOLDER_NAME,'MGT Skin Care Client Image Test Storage');
+ assert.equal(TEST_IMAGE_FOLDER_NAME,'Team 47 Studio Client Image Test Storage');
  assert.equal(TEST_IMAGE_UPLOAD_CONSENT_VERSION,'client-image-drive-test-1');
 });
 
@@ -200,6 +200,8 @@ test('account export includes safe test image metadata without Drive identifiers
  await call('/session');assert.equal((await call('/auth/verify',{email:'images@example.test',code:'123456'})).status,200);await call('/session');
  const status=await call('/client-images/status');assert.equal(status.status,200);assert.deepEqual(status.data,{enabled:false,environment:'unavailable',folder:'unavailable',connection:'unavailable',message:'Private Google Drive test storage has not been configured for this environment.'});
  const actor='user_image-export',imageActor=createHash('sha256').update(actor).digest('hex'),id='123e4567-e89b-42d3-a456-426614174003';
- await db.tx(records=>records.put('client_image_drive',`${imageActor}:${id}`,{id,actor:imageActor,fileId:'must-not-export',category:'progress',name:'Skincare photo.jpg',size:1234,createdAt:'2026-10-14T00:00:00.000Z',status:'ready'}));
+ await db.tx(records=>records.put('client_image_drive',`${imageActor}:${id}`,{id,actor:imageActor,fileId:'must-not-export',category:'progress',name:'Skincare photo.jpg',size:1234,createdAt:'2026-10-14T00:00:00.000Z',status:'ready',private_note:'hidden-image-note',provider_reference:'hidden-drive-reference'}));
+ await db.tx(records=>records.put('client_image_drive',`${imageActor}:123e4567-e89b-42d3-a456-426614174099`,{id:'123e4567-e89b-42d3-a456-426614174099',actor:imageActor,fileId:'invalid-image',category:'private-category',name:'invalid.jpg',size:1234,createdAt:'2026-10-14T00:00:00.000Z',status:'ready'}));
  const exported=await call('/account/export');assert.equal(exported.status,200);assert.deepEqual(exported.data.test_drive_images,[{id,category:'progress',name:'Skincare photo.jpg',size:1234,created_at:'2026-10-14T00:00:00.000Z'}]);assert.equal(JSON.stringify(exported.data).includes('must-not-export'),false);
+ assert.equal(JSON.stringify(exported.data).includes('hidden-image-note'),false);assert.equal(JSON.stringify(exported.data).includes('hidden-drive-reference'),false);assert.equal(JSON.stringify(exported.data).includes('invalid-image'),false);
 });

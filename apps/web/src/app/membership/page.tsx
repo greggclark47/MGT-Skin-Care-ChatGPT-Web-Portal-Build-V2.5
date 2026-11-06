@@ -3,6 +3,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { BillingActivity } from '../../components/BillingActivity';
+import { FreePlanSponsor } from '../../components/FreePlanSponsor';
 import { hub, useHub } from '../../lib/hub';
 import { AppFrame, LoadState, Timestamp } from '../../components/HubFrames';
 import styles from './membership.module.css';
@@ -115,12 +116,13 @@ export default function Membership() {
             {cycle === 'annual' && pricingOptions?.annual_savings && <p className={styles.planMatch}>Save {formatMoney(pricingOptions.annual_savings.amount, pricingOptions.annual_savings.currency)} ({pricingOptions.annual_savings.percent}%) compared with 12 monthly payments</p>}
           </article>)}
         </div>
+        <FreePlanSponsor />
       </section>
       {recommendation && <p className="notice" role="status"><strong>Premium membership.</strong> {recommendation.reason} It does not enroll you automatically.</p>}
       <section className="panel" aria-labelledby="comparison-heading">
         <h2 id="comparison-heading">Free and Premium comparison</h2>
         <p>Free remains available without a subscription. Premium adds the services listed below, subject to the displayed terms and account safeguards.</p>
-        <div className="table-wrap"><table><caption className="sr-only">MGT Free and Premium membership comparison</caption><thead><tr><th scope="col">Capability</th>{baseline && <th scope="col">{baseline.name}</th>}{catalog.data.plans.map((plan: Plan) => <th scope="col" key={plan.id}>{plan.name}</th>)}</tr></thead><tbody>{catalog.data.comparison_rows.map((row: { id: string; label: string }) => <tr key={row.id}><th scope="row">{row.label}</th>{baseline && <td>{baseline.comparison[row.id]}</td>}{catalog.data.plans.map((plan: Plan) => <td key={plan.id}>{plan.comparison[row.id]}</td>)}</tr>)}</tbody></table></div>
+        <div className="table-wrap"><table><caption className="sr-only">Team 47 Studio Free and Premium membership comparison</caption><thead><tr><th scope="col">Capability</th>{baseline && <th scope="col">{baseline.name}</th>}{catalog.data.plans.map((plan: Plan) => <th scope="col" key={plan.id}>{plan.name}</th>)}</tr></thead><tbody>{catalog.data.comparison_rows.map((row: { id: string; label: string }) => <tr key={row.id}><th scope="row">{row.label}</th>{baseline && <td>{baseline.comparison[row.id]}</td>}{catalog.data.plans.map((plan: Plan) => <td key={plan.id}>{plan.comparison[row.id]}</td>)}</tr>)}</tbody></table></div>
       </section>
     </>}
 

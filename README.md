@@ -1,10 +1,17 @@
-# MGT Skin Care v2
+# Team 47 Studio platform
+
+Primary production URL: `https://team47studio.com`
+
+This repository is the continuing code history of the MGT Skin Care v2 build. The public
+web portal and application name is now **Team 47 Studio**; internal `@mgt/*` package names
+remain temporarily stable to avoid an unrelated dependency and migration risk during the
+production-readiness phase.
 
 Current production gap and end-to-end flow analysis: [PRODUCTION-GAP-AND-FLOW-ANALYSIS-2026-10-07.md](PRODUCTION-GAP-AND-FLOW-ANALYSIS-2026-10-07.md).
 
 Consumer skincare application (web + iOS + Android) — personalized routine matching,
 explainable AI-assisted guidance, external-retailer discovery, and an optional Premium
-portal membership. MGT product checkout and vendor payouts are outside the initial scope.
+portal membership. Team 47 Studio product checkout and vendor payouts are outside the initial scope.
 
 ## Source of truth
 `claude/skincare-master-blueprint-v2.md` (v2.0.2) is the canonical build specification:

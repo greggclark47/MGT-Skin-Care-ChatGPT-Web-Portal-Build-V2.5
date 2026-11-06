@@ -14,13 +14,14 @@ const owners = { release: "Gregg Clark of MGT", platform: "Gregg Clark of MGT" }
 
 function validLedger() {
   const target = {
-    version: "1.0",
+    version: "1.1",
     environment: "staging",
     candidate_commit: candidateCommit,
     origin: "https://staging.mgtskincare.test",
     deployment_reference: "work/staging/2026-09-30/deployment.md",
     isolation_reference: "work/staging/2026-09-30/isolation.md",
     secret_injection_reference: "work/staging/2026-09-30/secret-injection.md",
+    secret_injection_contract_checksums: { staging: `sha256:${"1".repeat(64)}`, production: `sha256:${"2".repeat(64)}` },
     images
   };
   const healthProbe = {

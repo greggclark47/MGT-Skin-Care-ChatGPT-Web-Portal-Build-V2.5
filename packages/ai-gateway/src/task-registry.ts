@@ -89,6 +89,23 @@ export const TASK_REGISTRY: Record<TaskType, TaskConfig> = {
     type: 'object', required: ['summary', 'limitations', 'citation'], properties: { summary: { type: 'string' }, limitations: { type: 'array' }, citation: { type: 'object' } },
   }),
 
+  complexion_profile_summary: tier1('complexion_profile_summary', 'v1.0.0', false, {
+    type: 'object', required: ['summary', 'focus_ids', 'next_step'], properties: {
+      summary: { type: 'string' }, focus_ids: { type: 'array' }, next_step: { type: 'string' },
+    },
+  }),
+
+  // The only image-informed task is intentionally local-only: it uses the self-hosted
+  // Ollama vision model, has no fallback chain, and is separately privacy-gated by the API.
+  photo_journal_cosmetic_summary: {
+    task_type: 'photo_journal_cosmetic_summary', primary: OLLAMA_VISION, fallbacks: [],
+    budget_class: 'tier2_vision', requires_entitlement: false,
+    prompt_version: 'v1.0.0', timeout_ms: 15000, grounded: false,
+    response_schema: { type: 'object', required: ['summary', 'focus_ids', 'observation_tags', 'capture_feedback'], properties: {
+      summary: { type: 'string' }, focus_ids: { type: 'array' }, observation_tags: { type: 'array' }, capture_feedback: { type: 'string' },
+    } },
+  },
+
   style_color_match: tier1('style_color_match', 'v1.0.0', false, {
     type: 'object', required: ['palette', 'reason', 'wardrobe_ideas'], properties: { palette: { type: 'string' }, reason: { type: 'string' }, wardrobe_ideas: { type: 'array' } },
   }),

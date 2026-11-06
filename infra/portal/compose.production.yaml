@@ -1,3 +1,8 @@
+# This name is supplied only by the private deployment-control file. It keeps
+# staging and production networks, containers, and named volumes disjoint even
+# when they run on the same approved host.
+name: ${MGT_COMPOSE_PROJECT_NAME:?Set a unique stage-scoped Compose project identifier}
+
 x-logging: &default-logging
   driver: json-file
   options:
@@ -5,7 +10,6 @@ x-logging: &default-logging
     max-file: "3"
 
 x-application-runtime: &application-runtime
-  env_file: .env
   init: true
   restart: unless-stopped
   read_only: true
@@ -16,9 +20,28 @@ x-application-runtime: &application-runtime
   pids_limit: 256
   logging: *default-logging
 
+# Each workload receives two separate private deployment inputs: reviewed
+# non-secret configuration and secret-manager materialization. Neither input is
+# a repository file or shared between services. The later secret file wins if a
+# key is accidentally repeated, while runtime admission rejects peer secrets.
+x-api-runtime-input: &api-runtime-input
+  env_file:
+    - ${API_RUNTIME_CONFIG_FILE:?Set the noncommitted API non-secret runtime configuration path}
+    - ${API_RUNTIME_SECRETS_FILE:?Set the noncommitted API secret materialization path from the approved secret manager}
+
+x-worker-runtime-input: &worker-runtime-input
+  env_file:
+    - ${WORKER_RUNTIME_CONFIG_FILE:?Set the noncommitted worker non-secret runtime configuration path}
+    - ${WORKER_RUNTIME_SECRETS_FILE:?Set the noncommitted worker secret materialization path from the approved secret manager}
+
+x-edge-runtime-input: &edge-runtime-input
+  env_file:
+    - ${EDGE_RUNTIME_CONFIG_FILE:?Set the noncommitted edge non-secret runtime configuration path}
+    - ${EDGE_RUNTIME_SECRETS_FILE:?Set the noncommitted edge secret materialization path from the approved secret manager}
+
 services:
   api:
-    <<: *application-runtime
+    <<: [*application-runtime, *api-runtime-input]
     image: ${API_IMAGE:?Set the approved immutable API image digest}
     pull_policy: always
     environment:
@@ -27,16 +50,7 @@ services:
       HOST: 0.0.0.0
       PORT: 3100
       PROCESS_ROLE: api
-      MGT_EDGE_TOKEN: ${MGT_EDGE_TOKEN:?Set the private edge-to-API authentication token}
-      DATABASE_URL: ${DATABASE_URL:?Set the reviewed production database connection}
       PORTAL_AUTO_MIGRATE: "false"
-      WORKER_INTERVAL_SECONDS: ${WORKER_INTERVAL_SECONDS:?Set the reviewed worker interval}
-      WORKER_READINESS_MAX_AGE_SECONDS: ${WORKER_READINESS_MAX_AGE_SECONDS:?Set the reviewed worker readiness age}
-      OLLAMA_ENABLED: ${OLLAMA_ENABLED:?Set the reviewed Ollama enablement}
-      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-}
-      OPENCLAW_ENABLED: ${OPENCLAW_ENABLED:?Set the reviewed OpenClaw enablement}
-      OPENCLAW_BASE_URL: ${OPENCLAW_BASE_URL:-}
-      OPENCLAW_API_MODE: ${OPENCLAW_API_MODE:-}
     expose:
       - "3100"
     tmpfs:
@@ -52,7 +66,7 @@ services:
     mem_limit: 2g
 
   worker:
-    <<: *application-runtime
+    <<: [*application-runtime, *worker-runtime-input]
     image: ${API_IMAGE:?Set the approved immutable API image digest}
     pull_policy: always
     command: ["sh", "-c", "node /app/infra/portal/preflight.mjs && exec node dist/portal/worker.js"]
@@ -60,10 +74,7 @@ services:
       NODE_ENV: production
       DEMO_MODE: "false"
       PROCESS_ROLE: worker
-      DATABASE_URL: ${DATABASE_URL:?Set the reviewed production database connection}
       PORTAL_AUTO_MIGRATE: "false"
-      WORKER_INTERVAL_SECONDS: ${WORKER_INTERVAL_SECONDS:?Set the reviewed worker interval}
-      WORKER_READINESS_MAX_AGE_SECONDS: ${WORKER_READINESS_MAX_AGE_SECONDS:?Set the reviewed worker readiness age}
       WORKER_HEALTH_FILE: /tmp/mgt-worker-health.json
     tmpfs:
       - /tmp:rw,noexec,nosuid,size=64m
@@ -81,6 +92,10 @@ services:
     <<: *application-runtime
     image: ${WEB_IMAGE:?Set the approved immutable web image digest}
     pull_policy: always
+    # The browser service gets only its private upstream address. This is a
+    # non-secret runtime setting, deliberately separate from manager output.
+    environment:
+      PORTAL_API_ORIGIN: http://api:3100
     depends_on:
       api:
         condition: service_healthy
@@ -99,15 +114,14 @@ services:
     mem_limit: 1g
 
   edge:
+    <<: *edge-runtime-input
     image: ${CADDY_IMAGE:?Set the approved immutable Caddy image digest}
     pull_policy: always
     ports:
-      - "80:80"
-      - "443:443"
+      - "${MGT_EDGE_HTTP_PORT:?Set the stage-scoped edge HTTP host port}:80"
+      - "${MGT_EDGE_HTTPS_PORT:?Set the stage-scoped edge HTTPS host port}:443"
     environment:
       NODE_ENV: production
-      PORTAL_DOMAIN: ${PORTAL_DOMAIN:?Set the approved portal domain}
-      MGT_EDGE_TOKEN: ${MGT_EDGE_TOKEN:?Set the private edge-to-API authentication token}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - certificates:/data

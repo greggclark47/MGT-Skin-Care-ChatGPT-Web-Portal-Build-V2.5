@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useId, useState } from 'react';
-import { reviewedProductionAdmissionActions } from '@mgt/shared';
+import { hasReviewedHealthyProductionAdmission, reviewedProductionAdmissionBlock } from '@mgt/shared';
 import { hub, useHub } from '../lib/hub';
 import { CharacterCount, LoadState, Timestamp } from './HubFrames';
 
@@ -33,18 +33,22 @@ function RefreshButton({ children, loading, onClick }: { children: React.ReactNo
 }
 
 type ProductionAdmission = {
+  admission_version?: number;
   mode?: string;
   healthy?: boolean;
+  issues?: string[];
+  checks?: Array<{ id?: string; healthy?: boolean }>;
   next_actions?: Array<{ id?: string; action?: string }>;
 };
 
 export function ProductionAdmissionGuidance({ admission }: { admission?: ProductionAdmission }) {
   if (admission?.mode !== 'production') return null;
-  const actions = reviewedProductionAdmissionActions(admission.next_actions);
+  const actions = reviewedProductionAdmissionBlock(admission);
+  const admitted = hasReviewedHealthyProductionAdmission(admission);
   return <section className="readiness-phase" aria-labelledby="production-admission-heading">
-    <div className="row"><h3 id="production-admission-heading">Production admission</h3><span className={'pill '+(admission.healthy ? 'success' : '')}>{admission.healthy ? 'Ready' : 'Blocked'}</span></div>
+    <div className="row"><h3 id="production-admission-heading">Production admission</h3><span className={'pill '+(admitted ? 'success' : '')}>{admitted ? 'Ready' : 'Blocked'}</span></div>
     <p className="muted">This guidance is category-level only. It does not show configuration values, credentials, service locations, or deployment evidence.</p>
-    {admission.healthy ? <p className="notice success">All runtime admission categories are currently satisfied. Separate external evidence and human approval are still required before launch.</p> : actions.length ? <ol className="compact-list">{actions.map(({ id, action }) => <li key={id}>{action}</li>)}</ol> : <p className="notice error">Admission is blocked. Refresh this page; no unrecognized response details are displayed here.</p>}
+    {admitted ? <p className="notice success">All runtime admission categories are currently satisfied. Separate external evidence and human approval are still required before launch.</p> : actions.length ? <ol className="compact-list">{actions.map(({ id, action }) => <li key={id}>{action}</li>)}</ol> : <p className="notice error">Admission is blocked. Refresh this page; no unrecognized response details are displayed here.</p>}
   </section>;
 }
 
@@ -53,7 +57,7 @@ function Readiness() {
   const phaseName = (value: string) => ({data_identity:'Data & identity',operations_recovery:'Operations & recovery',ai_quality:'AI & quality',billing_commercial:'Billing & commercial',support_accessibility:'Support & accessibility'} as Record<string,string>)[value] || label(value);
   return <><section className="panel" aria-labelledby="launch-setup-heading" aria-busy={state.loading}>
     <h2 id="launch-setup-heading">Production phase readiness</h2><LoadState {...state} retry={state.reload}/>
-    {state.data && <><p>{state.data.note}</p><ProductionAdmissionGuidance admission={state.data.production_admission}/>{state.data.phases?.map((phase:any)=><section className="readiness-phase" key={phase.id} aria-labelledby={'readiness-'+phase.id}><div className="row"><h3 id={'readiness-'+phase.id}>{phaseName(phase.id)}</h3><span className={'pill '+(phase.status==='ready'?'success':'')}>{phase.status==='ready'?'Ready':'Blocked'} · {phase.ready}/{phase.total}</span></div>{phase.blockers.length?<ul className="compact-list">{phase.blockers.map((blocker:string)=><li key={blocker}>{blocker}</li>)}</ul>:<p className="muted">All repository-visible checks in this phase are currently satisfied.</p>}</section>)}<details><summary>View individual checks</summary><dl className="profile-details">{state.data.checks.map((c: any) => <div key={c.name}><dt>{c.name}<small className="muted"> · {c.evidence}</small></dt><dd>{c.configured ? 'Ready' : 'Blocked'}</dd></div>)}</dl></details><RefreshButton loading={state.loading} onClick={state.reload}>Refresh phase readiness</RefreshButton></>}
+    {state.data && <><p>{state.data.note}</p><ProductionAdmissionGuidance admission={state.data.production_admission}/>{state.data.phases?.map((phase:any)=>{const statusLabel=phase.status==='ready'?'Ready':phase.status==='not_applicable'?'Not applicable':'Blocked';return <section className="readiness-phase" key={phase.id} aria-labelledby={'readiness-'+phase.id}><div className="row"><h3 id={'readiness-'+phase.id}>{phaseName(phase.id)}</h3><span className={'pill '+(phase.status!=='blocked'?'success':'')}>{statusLabel} · {phase.ready}/{phase.total}{phase.not_applicable?` · ${phase.not_applicable} n/a`:''}</span></div>{phase.blockers.length?<ul className="compact-list">{phase.blockers.map((blocker:string)=><li key={blocker}>{blocker}</li>)}</ul>:<p className="muted">{phase.status==='not_applicable'?'This optional phase is disabled for the selected release scope.':'All repository-visible checks in this phase are currently satisfied.'}</p>}</section>})}<details><summary>View individual checks</summary><dl className="profile-details">{state.data.checks.map((c: any) => <div key={c.name}><dt>{c.name}<small className="muted"> · {c.evidence}</small></dt><dd>{c.required===false?'Not applicable':c.configured?'Ready':'Blocked'}</dd></div>)}</dl></details><RefreshButton loading={state.loading} onClick={state.reload}>Refresh phase readiness</RefreshButton></>}
   </section><CatalogHealth/></>;
 }
 
@@ -69,8 +73,8 @@ function OperationsHealth() {
 function CatalogHealth() {
   const state = useHub('/admin/catalog-health');
   return <section className="panel" aria-labelledby="catalog-health-heading" aria-busy={state.loading}><div className="section-heading"><div><span className="eyebrow">DATA QUALITY</span><h2 id="catalog-health-heading">Catalog readiness</h2></div></div><LoadState {...state} retry={state.reload}/>{state.data && <><p>{state.data.note}</p>{state.data.ready ? <p className="notice success">Catalog metadata meets the current readiness checks.</p> : <ul className="notice error">{state.data.warnings.map((warning: string) => <li key={warning}>{warning}</li>)}</ul>}
-    <MetricSummary label="Catalog readiness totals" items={[["Products", state.data.products.total], ["Active", state.data.products.active], ["Approved", state.data.products.approved], ["Sample", state.data.products.sample], ["Approved rules", state.data.rules.approved]]}/>
-    <DataTable label="Required catalog slot coverage" caption="Required catalog slots and their active, approved and sample product coverage"><thead><tr><th scope="col">Required slot</th><th scope="col">Active</th><th scope="col">Approved</th><th scope="col">Sample</th></tr></thead><tbody>{state.data.slot_coverage.map((row: any) => <tr key={row.slot}><th scope="row">{label(row.slot)}</th><td>{row.active}</td><td>{row.approved}</td><td>{row.sample}</td></tr>)}</tbody></DataTable>
+    <MetricSummary label="Catalog readiness totals" items={[["Products", state.data.products.total], ["Active", state.data.products.active], ["Eligible", state.data.products.eligible], ["Approved", state.data.products.approved], ["Sample", state.data.products.sample], ["Approved rules", state.data.rules.approved], ["Unreviewed ingredients", state.data.rules.unreviewed_ingredient_count], ["Invalid approved rules", state.data.rules.invalid_approved]]}/>
+    <DataTable label="Required catalog slot coverage" caption="Required catalog slots and their active, approved, eligible and sample product coverage"><thead><tr><th scope="col">Required slot</th><th scope="col">Active</th><th scope="col">Approved</th><th scope="col">Eligible</th><th scope="col">Sample</th></tr></thead><tbody>{state.data.slot_coverage.map((row: any) => <tr key={row.slot}><th scope="row">{label(row.slot)}</th><td>{row.active}</td><td>{row.approved}</td><td>{row.eligible}</td><td>{row.sample}</td></tr>)}</tbody></DataTable>
     {state.data.rules.unreviewed_ingredients.length > 0 && <p className="muted">Unreviewed ingredient keys: {state.data.rules.unreviewed_ingredients.join(', ')}</p>}<RefreshButton loading={state.loading} onClick={state.reload}>Refresh catalog health</RefreshButton></>}
   </section>;
 }
@@ -122,6 +126,26 @@ function ReferralMetrics() {
     <MetricSummary label="Retailer engagement totals" items={[["Outbound opens", state.data.summary.outbound], ["Saved", state.data.summary.saved], ["Unsaved", state.data.summary.unsaved]]}/>
     {state.data.by_retailer.length ? <DataTable label="Retailer engagement by destination" caption="Outbound opens and saved-list changes by retailer destination"><thead><tr><th scope="col">Retailer</th><th scope="col">Outbound</th><th scope="col">Saved</th><th scope="col">Unsaved</th></tr></thead><tbody>{state.data.by_retailer.map((row: any) => <tr key={row.retailer_id}><th scope="row">{row.name}</th><td>{row.outbound}</td><td>{row.saved}</td><td>{row.unsaved}</td></tr>)}</tbody></DataTable> : <p className="muted">No retailer engagement has been recorded in this window.</p>}
     <p className="notice">Commercial agreements: {state.data.commercial_agreements}. Do not interpret these actions as retailer orders or revenue.</p><RefreshButton loading={state.loading} onClick={state.reload}>Refresh referral engagement</RefreshButton></>}
+  </section>;
+}
+
+function OmniRetailOperations() {
+  const state = useHub('/admin/retail/operations');
+  return <section className="panel" aria-labelledby="omni-retail-heading" aria-busy={state.loading}><div className="section-heading"><div><span className="eyebrow">OMNI-RETAIL OPERATIONS</span><h2 id="omni-retail-heading">Merchant authorization and aggregate volume</h2></div></div><LoadState {...state} retry={state.reload}/>{state.data && <><p>{state.data.commerce?.omni_retail?.message}</p><p className="muted">{state.data.merchant_data_boundary}</p>
+    <MetricSummary label="Merchant aggregate reports" items={[["Reports", state.data.conversion_volume.reports], ["Attributed orders", state.data.conversion_volume.attributed_orders], ["Attributed units", state.data.conversion_volume.attributed_units], ["Approved partners", state.data.partners.filter((item: any) => item.status === 'approved').length]]}/>
+    {state.data.partners.length ? <DataTable label="Merchant authorization records" caption="Merchant status and customer-visible placement treatment"><thead><tr><th scope="col">Merchant</th><th scope="col">Status</th><th scope="col">Placement</th><th scope="col">Authorization</th></tr></thead><tbody>{state.data.partners.map((item: any) => <tr key={item.retailer_id}><th scope="row">{item.merchant_name}</th><td>{label(item.status)}</td><td>{label(item.placement_mode)}</td><td>{item.authorization_recorded ? 'Recorded' : 'Not recorded'}</td></tr>)}</tbody></DataTable> : <p className="muted">No merchant authorization records are stored.</p>}
+    {state.data.conversion_volume.by_retailer.length ? <DataTable label="Aggregate merchant volume" caption="Merchant-submitted aggregate reports by retailer"><thead><tr><th scope="col">Retailer</th><th scope="col">Reports</th><th scope="col">Orders</th><th scope="col">Units</th></tr></thead><tbody>{state.data.conversion_volume.by_retailer.map((item: any) => <tr key={item.retailer_id}><th scope="row">{item.retailer_id}</th><td>{item.reports}</td><td>{item.orders}</td><td>{item.units}</td></tr>)}</tbody></DataTable> : <p className="muted">No aggregate merchant conversion reports are recorded.</p>}
+    <p className="notice">{state.data.placement_policy}</p><RefreshButton loading={state.loading} onClick={state.reload}>Refresh retail operations</RefreshButton></>}
+  </section>;
+}
+
+function SponsoredContentOperations() {
+  const state = useHub('/admin/sponsored-content/operations');
+  return <section className="panel" aria-labelledby="sponsored-content-heading" aria-busy={state.loading}><div className="section-heading"><div><span className="eyebrow">FREE-PLAN SPONSORSHIP</span><h2 id="sponsored-content-heading">Review-gated sponsored placements</h2></div></div><LoadState {...state} retry={state.reload}/>{state.data && <><p>{state.data.sponsored_content?.message}</p><p className="muted">{state.data.data_boundary}</p>
+    <MetricSummary label="Sponsored content totals" items={[["Approved campaigns", state.data.intelligence.active_campaign_count], ["Campaign records", state.data.intelligence.campaign_count], ["Aggregate outbound opens", state.data.intelligence.aggregate_outbound_events], ["Personal targeting", state.data.sponsored_content?.personal_targeting ? 'Enabled' : 'Disabled'], ["Advertiser billing", state.data.sponsored_content?.advertiser_billing ? 'Enabled' : 'Not implemented']]}/>
+    <p className="notice"><strong>Selection rule:</strong> {state.data.intelligence.selection_rule}</p>
+    {state.data.campaigns.length ? <DataTable label="Sponsored campaign records" caption="Approved sponsored campaign customer-facing content"><thead><tr><th scope="col">Merchant</th><th scope="col">Placement</th><th scope="col">Category</th><th scope="col">Status</th></tr></thead><tbody>{state.data.campaigns.map((item: any) => <tr key={item.id}><th scope="row">{item.merchant_name}</th><td>{label(item.placement)}</td><td>{label(item.category)}</td><td>{label(item.status)}</td></tr>)}</tbody></DataTable> : <p className="muted">No sponsored campaign records are active or stored.</p>}
+    <p className="muted">Prohibited inputs: {state.data.intelligence.prohibited_inputs.join(', ')}.</p><RefreshButton loading={state.loading} onClick={state.reload}>Refresh sponsored content</RefreshButton></>}
   </section>;
 }
 
@@ -192,7 +216,7 @@ export function ConnectedAdmin({ kind }: { kind: 'knowledge' | 'rule' | 'operati
     <p>Access uses your signed-in account and assigned roles.</p><LoadState {...state} retry={state.reload}/>
     {error && <p id="admin-save-error" role="alert" className="notice error">{error}</p>}{message && <p id="admin-save-message" role="status" className="notice success">{message}</p>}
     {data && <>{kind === 'operations' ? <>
-      {supportOperator && <><Readiness/><OperationsHealth/><SupportMetrics/><ReferralMetrics/><PrivacyOperations/><SubscriptionWebhooks/><AiEconomics/><AiRouting/></>}
+      {supportOperator && <><Readiness/><OperationsHealth/><SupportMetrics/><ReferralMetrics/><OmniRetailOperations/><SponsoredContentOperations/><PrivacyOperations/><SubscriptionWebhooks/><AiEconomics/><AiRouting/></>}
       <MetricSummary label="Portal content and support totals" items={[["Products", data.products.length], ["Articles", data.knowledge.length], ["Support requests", data.tickets.length]]}/>
       <section aria-labelledby="support-requests-heading"><div className="row"><h2 id="support-requests-heading">Support requests</h2><span className="pill">{data.tickets.length} saved</span></div>
         {data.tickets.length ? data.tickets.map((ticket: SupportTicket) => <SupportTicketCard key={ticket.id} ticket={ticket} accountId={session.data?.account?.id} canOperate={supportOperator} onSaved={state.reload}/>) : <div className="empty"><h3>No support requests yet.</h3><p>New customer requests will appear here for review.</p></div>}

@@ -27,6 +27,9 @@ const { LocalStore } = require('../dist/portal/store');
     assert.equal(ingredients.data.data.items[0].category, 'antioxidant');
     assert.equal(ingredients.data.data.items[0].provenance.reviewed_status, 'approved');
     assert.equal(ingredients.data.data.items[0].provenance.source_url.startsWith('https://'), true);
+    assert.deepEqual(Object.keys(ingredients.data.data.items[0].provenance).sort(), ['freshness_until', 'observed_at', 'reviewed_status', 'source_type', 'source_url']);
+    assert.equal(JSON.stringify(ingredients.data).includes('anti-aging-seed-v1'), false);
+    assert.equal(JSON.stringify(ingredients.data).includes('content-review'), false);
 
     const compatibility = await get('/api/v1/ingredients/ingredient-retinol/compatibility');
     assert.equal(compatibility.status, 200);
@@ -66,11 +69,14 @@ const { LocalStore } = require('../dist/portal/store');
     assert.equal(products.data.data.items.length, 1);
     assert.equal(products.data.data.items[0].sample_only, true);
     assert.equal(products.data.data.items[0].commercial_label, 'none');
+    assert.equal('import_run_id' in products.data.data.items[0].provenance, false);
+    assert.equal('reviewed_by' in products.data.data.items[0].provenance, false);
 
     const compare = await get('/api/v1/products/compare?ids=product-c-brightening-serum,product-night-renewal-serum');
     assert.equal(compare.status, 200);
     assert.equal(compare.data.data.items.length, 2);
     assert.equal(compare.data.data.comparison_scope, 'educational_metadata_only');
+    assert.equal('imported_at' in compare.data.data.items[0].provenance, false);
 
     const routinePreview = await get('/api/v1/routines/preview?product_ids=product-c-brightening-serum,product-night-renewal-serum&avoid_ingredient_ids=ingredient-retinol&sensitivity=mild');
     assert.equal(routinePreview.status, 200);
@@ -86,6 +92,8 @@ const { LocalStore } = require('../dist/portal/store');
     assert.equal(provider.status, 200);
     assert.equal(provider.data.data.items[0].independent_provider, true);
     assert.equal(provider.data.data.items[0].website_url.startsWith('https://'), true);
+    assert.equal('import_run_id' in provider.data.data.items[0].provenance, false);
+    assert.equal('reviewed_by' in provider.data.data.items[0].provenance, false);
     const handoff = await get('/api/v1/providers/provider-example-dermatology/handoff');
     assert.equal(handoff.status, 200);
     assert.deepEqual(handoff.data.data.data_shared, []);

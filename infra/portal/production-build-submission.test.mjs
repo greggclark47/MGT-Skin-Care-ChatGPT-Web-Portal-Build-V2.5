@@ -8,7 +8,7 @@ import { productionPrerequisitesChecksum } from "./production-prerequisites.mjs"
 import { buildProductionBuildSubmission, validateProductionBuildSubmission } from "./production-build-submission.mjs";
 
 const COMMIT = "0123456789abcdef0123456789abcdef01234567";
-const EXTERNAL = [["hosting_target", "Production hosting account, domain, TLS, and edge routing"], ["database_target", "Production PostgreSQL/Supabase target with migration and RLS evidence"], ["secret_manager", "Approved secret-manager injection and rotation evidence"], ["backup_restore", "Encrypted off-host backup and verified restore transcript"], ["support_owner", "Named support owner, backup, route, and coverage window"], ["accessibility_report", "Deployed accessibility report for the production origin"], ["rollback_authority", "Named rollback authority and immutable rollback target"], ["launch_approval", "Named go/no-go decision and launch window"], ["github_receipt", "Observed GitHub destination receipt for the candidate"], ["drive_receipt", "Observed Google Drive destination receipt for the candidate"]];
+const EXTERNAL = [["hosting_target", "Production hosting account, domain, TLS, and edge routing"], ["database_target", "Production PostgreSQL/Supabase target with migration and RLS evidence"], ["secret_manager", "Approved secret-manager injection and rotation evidence"], ["backup_restore", "Encrypted off-host backup and verified restore transcript"], ["support_owner", "Named support owner, backup, route, and coverage window"], ["accessibility_report", "Deployed accessibility report for the production origin"], ["policy_publication_approval", "Approved Privacy Notice, Terms of Use, and AI Disclosure publication record for the production origin"], ["rollback_authority", "Named rollback authority and immutable rollback target"], ["launch_approval", "Named go/no-go decision and launch window"], ["github_receipt", "Observed GitHub destination receipt for the candidate"], ["drive_receipt", "Observed Google Drive destination receipt for the candidate"]];
 function prerequisites(configuration = "blocked") {
   const document = { version: "1.0", candidate_commit: COMMIT, generated_at: "2026-01-01T00:00:00.000Z", status: configuration === "blocked" ? "blocked_on_configuration" : "blocked_on_external_prerequisites", local: { configuration: { status: configuration, error_codes: configuration === "blocked" ? ["PRODUCTION_FIELD_INVALID"] : [] } }, external: EXTERNAL.map(([id, requirement]) => ({ id, requirement, status: "pending_external_evidence" })) };
   return { ...document, prerequisites_checksum: productionPrerequisitesChecksum(document) };
@@ -24,7 +24,7 @@ test("creates a redacted, candidate-bound submission for blocked configuration",
 test("does not put ready configuration on hold", () => {
   const result = buildProductionBuildSubmission({ prerequisites: prerequisites("ready_for_live_validation"), now: "2026-01-02T00:00:00.000Z" });
   assert.equal(result.on_hold.some((item) => item.id === "production_configuration"), false);
-  assert.equal(result.on_hold.length, 10);
+  assert.equal(result.on_hold.length, 11);
 });
 test("rejects a tampered prerequisite packet or submission", () => {
   const packet = prerequisites(); packet.external[0].requirement = "unsafe replacement";

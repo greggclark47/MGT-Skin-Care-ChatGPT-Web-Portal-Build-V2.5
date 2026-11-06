@@ -194,6 +194,36 @@ function renderPricing() {
 }
 
 const demoFlows = {
+  "Secure billing controls": {
+    kicker: "SECURE BILLING · CONTROLLED PREVIEW",
+    title: "Keep payment data with the payment provider",
+    step: "Hosted checkout · Signed events · Fail-closed access",
+    body: `
+      <p class="flow-intro">The customer starts in a hosted payment surface and returns only after a signed server event is reconciled. Team 47 Studio never asks the customer to enter a full card number or security code into this application.</p>
+      <div class="routine-preview">
+        <div><b>01</b><span>Choose a plan</span><small>Monthly or annual offer is confirmed before leaving the portal</small></div>
+        <div><b>02</b><span>Open hosted checkout</span><small>The payment provider collects and protects payment credentials</small></div>
+        <div><b>03</b><span>Verify the event</span><small>Signed webhook and idempotent record update access</small></div>
+        <div><b>04</b><span>Manage in Account</span><small>Plan, payment method, invoices and cancellation stay discoverable</small></div>
+      </div>
+      <div class="flow-result"><span>COMMERCIAL BOUNDARY</span><h3>Prepared, not activated</h3><p>Usage-meter records reject duplicate conflicts, and B2B invoices remain drafts with automatic advancement disabled. Live products, prices, meters, webhook secrets, business verification and bank details are external activation inputs and are not stored in this demo.</p><div class="flow-meta"><span>NO RAW CARD DATA</span><span>DRAFT-ONLY B2B</span><span>NO LIVE CHARGE</span></div></div>
+    `
+  },
+  "Agent review center": {
+    kicker: "AI AGENT OPERATIONS · HUMAN REVIEW",
+    title: "Draft first. Review before action.",
+    step: "Bounded request · Model route · Approval queue",
+    body: `
+      <p class="flow-intro">Each operational agent has a named purpose, bounded model route and explicit external-action policy. Outputs begin as drafts and cannot publish, send, scrape, charge, or write to an external lead system.</p>
+      <div class="routine-preview">
+        <div><b>01</b><span>Customer care</span><small>The fast local model prepares account and support guidance</small></div>
+        <div><b>02</b><span>Social + partnerships</span><small>The local reasoning model drafts analysis and outreach with an approved local fallback</small></div>
+        <div><b>03</b><span>Marketing promotions</span><small>Draft content stays separate from Gmail sending authority</small></div>
+        <div><b>04</b><span>Human review</span><small>Approve or reject the exact draft before a later authorized integration</small></div>
+      </div>
+      <div class="flow-result"><span>AGENT BOUNDARY</span><h3>External side effects remain off</h3><p>The requested hosted GTM route stays visibly blocked pending approval of a supported replacement. Social publishing, campaign sending, lead scraping, retailer outreach and external lead-list writes are not enabled by this checkpoint.</p><div class="flow-meta"><span>DRAFT ONLY</span><span>REVIEW GATED</span><span>NO AUTONOMOUS OUTREACH</span></div></div>
+    `
+  },
   "Free plan sponsor": {
     kicker: "FREE-PLAN SPONSORSHIP · SAMPLE CONTROL",
     title: "Support the free plan without profiling people",

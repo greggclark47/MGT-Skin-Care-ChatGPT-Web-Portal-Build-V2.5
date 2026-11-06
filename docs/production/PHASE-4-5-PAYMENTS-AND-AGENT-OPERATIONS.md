@@ -28,12 +28,12 @@
 SUBSCRIPTIONS_ENABLED=true
 SUBSCRIPTION_TERMS_APPROVED=true
 STRIPE_LIVE_MODE=true
-STRIPE_SECRET_KEY=<Google Secret Manager reference>
-STRIPE_SUBSCRIPTION_WEBHOOK_SECRET=<Google Secret Manager reference>
 STRIPE_USAGE_BILLING_ENABLED=true
 STRIPE_API_METER_EVENT_NAME=<approved Stripe meter event name>
 STRIPE_B2B_INVOICING_ENABLED=true
 ```
+
+Inject the Stripe API credential and subscription-webhook signing credential from Google Secret Manager at deployment time; do not express either secret as a retained configuration assignment.
 
 Product and Price IDs remain required as documented in `infra/portal/env.example`.
 

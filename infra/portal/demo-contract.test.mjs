@@ -8,7 +8,7 @@ const styles = readFileSync(new URL("../../styles.css", import.meta.url), "utf8"
 
 test("static demo exposes the current release and ship-packet surface", () => {
   assert.match(html, /F435/);
-  assert.match(html, /v4\.416 local pass · 19\/19 gates · 1,370\/1,370/);
+  assert.match(html, /v4\.418 local verification \(19\/19 gates; 1,376\/1,376 regression checks\)/);
   assert.match(html, /fresh GitHub and Drive backup confirmation is required before they can be relabeled current/);
   assert.match(html, /data-panel="packet"/);
   assert.match(html, /id="packetPanel"/);
@@ -72,7 +72,7 @@ test("static demo exposes the current release and ship-packet surface", () => {
   assert.match(html, /Ship authorization: blocked/);
   assert.match(html, /aria-label="Team 47 Studio home"/);
   assert.match(html, /class="brand-logo-image logo-on-dark" src="assets\/brand\/team47studio-logo-dark-surface-clean\.png"/);
-  assert.match(html, /<small class="build-version">v4\.416<\/small>/);
+  assert.match(html, /<small class="build-version">v4\.418<\/small>/);
   assert.match(html, /rel="canonical" href="https:\/\/team47studio\.com\/"/);
   assert.match(html, /Complexion Intelligence/);
   assert.match(html, /Anti-blemish/);
@@ -87,7 +87,14 @@ test("static demo exposes the current release and ship-packet surface", () => {
   assert.match(html, /identity-bound account continuity/);
   assert.match(html, /verified-email session protection/);
   assert.match(html, /CI-runnable application regression coverage/);
-  assert.match(html, /candidate-bound database audit and v4\.416 local verification \(19\/19 gates; 1,370\/1,370 regression checks\)/);
+  assert.match(html, /candidate-bound database audit and v4\.418 local verification \(19\/19 gates; 1,376\/1,376 regression checks\)/);
+  assert.match(html, /PHASES 4–5 · CONTROLLED COMMERCIAL \+ AGENT OPERATIONS/);
+  assert.match(html, /data-demo="Secure billing controls"/);
+  assert.match(html, /Idempotent usage-meter events/);
+  assert.match(html, /Draft-only B2B invoices/);
+  assert.match(html, /data-demo="Agent review center"/);
+  assert.match(html, /Draft → review → approve or reject/);
+  assert.match(html, /Requested hosted route remains blocked/);
   assert.match(html, /per-upload test Drive consent/);
   assert.match(html, /guided full-face capture/);
   assert.match(html, /Drive file through your device picker/);
@@ -149,7 +156,7 @@ test("static demo exposes the current release and ship-packet surface", () => {
   assert.match(html, /data-demo="Google account sign-in"/);
   assert.match(html, /no Google Drive or photo access/);
   assert.match(html, /2f56f2989ac03acda92669ca7abffaca00e2c6d6/);
-  assert.match(html, /v4\.416 demo has passed fresh local verification: 19 of 19 gates and 1,370 of 1,370 regression checks passed/);
+  assert.match(html, /hosted subscription and usage-billing controls/);
   assert.match(html, /last independently verified published archive, not a newly confirmed backup/);
   assert.match(html, /Production database audit evidence is bound to the exact candidate commit/);
   assert.match(html, /one exact set of twelve evidence references, including configuration and policy approval/);
@@ -179,6 +186,10 @@ test("static demo keeps the ship packet interactive and clearly sample-only", ()
   assert.match(script, /"Ship packet"/);
   assert.match(script, /"Merchant partner program"/);
   assert.match(script, /"Free plan sponsor"/);
+  assert.match(script, /"Secure billing controls"/);
+  assert.match(script, /NO RAW CARD DATA/);
+  assert.match(script, /"Agent review center"/);
+  assert.match(script, /NO AUTONOMOUS OUTREACH/);
   assert.match(script, /Support the free plan without profiling people/);
   assert.match(script, /cannot read an account profile/);
   assert.match(script, /Drafted, not approved/);
@@ -250,6 +261,8 @@ test("static demo keeps the ship packet interactive and clearly sample-only", ()
 
 test("static demo has responsive ship-packet styling", () => {
   assert.match(styles, /\.packet-grid/);
+  assert.match(styles, /\.commercial-agent-grid/);
+  assert.match(styles, /\.commercial-status-strip/);
   assert.match(styles, /\.brand-mark-image/);
   assert.match(styles, /\.packet-callout/);
   assert.match(styles, /packet-grid \{ grid-template-columns: 1fr; \}/);

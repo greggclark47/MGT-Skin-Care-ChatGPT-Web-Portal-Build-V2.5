@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 
 const compose = readFileSync(new URL("./compose.production.yaml", import.meta.url), "utf8");
+const caddyfile = readFileSync(new URL("./Caddyfile", import.meta.url), "utf8");
 
 test("production runtime requires a unique stage-scoped Compose project identifier", () => {
   assert.match(compose, /^name: \$\{MGT_COMPOSE_PROJECT_NAME:\?Set a unique stage-scoped Compose project identifier\}$/m);
@@ -19,6 +20,13 @@ test("production runtime exposes only the TLS edge", () => {
   assert.equal((compose.match(/^\s+ports:/gm) || []).length, 1);
   assert.match(compose, /ports:\s*\n\s+- "\$\{MGT_EDGE_HTTP_PORT:\?Set the stage-scoped edge HTTP host port\}:80"\s*\n\s+- "\$\{MGT_EDGE_HTTPS_PORT:\?Set the stage-scoped edge HTTPS host port\}:443"/);
   assert.equal((compose.match(/^\s+expose:/gm) || []).length, 2);
+});
+
+test("production edge redirects the www alias to the configured canonical portal domain", () => {
+  assert.match(caddyfile, /^www\.\{\$PORTAL_DOMAIN\} \{/m);
+  assert.match(caddyfile, /redir https:\/\/\{\$PORTAL_DOMAIN\}\{uri\} permanent/);
+  const aliasBlock = caddyfile.split(/\r?\n\r?\n\{\$PORTAL_DOMAIN\}/, 1)[0];
+  assert.doesNotMatch(aliasBlock, /reverse_proxy/);
 });
 
 test("production runtime materializes configuration and secrets per workload without a shared dotenv anchor", () => {

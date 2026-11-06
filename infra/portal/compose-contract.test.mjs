@@ -53,6 +53,14 @@ test("edge applies browser security policy and suppresses server identity", () =
   assert.match(caddyfile, /-Server/);
 });
 
+test("edge keeps the apex host canonical and redirects the www alias without proxying it", () => {
+  assert.match(caddyfile, /^www\.\{\$PORTAL_DOMAIN\} \{/m);
+  assert.match(caddyfile, /redir https:\/\/\{\$PORTAL_DOMAIN\}\{uri\} permanent/);
+  const aliasBlock = caddyfile.split(/\r?\n\r?\n\{\$PORTAL_DOMAIN\}/, 1)[0];
+  assert.doesNotMatch(aliasBlock, /reverse_proxy/);
+  assert.equal((caddyfile.match(/^\{\$PORTAL_DOMAIN\} \{/gm) || []).length, 1);
+});
+
 test("application containers use a read-only reduced-privilege runtime", () => {
   assert.equal((compose.match(/read_only: true/g) || []).length, 4);
   assert.equal((compose.match(/no-new-privileges:true/g) || []).length, 4);

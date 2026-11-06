@@ -1,3 +1,11 @@
+www.{$PORTAL_DOMAIN} {
+ redir https://{$PORTAL_DOMAIN}{uri} permanent
+ log {
+  output stdout
+  format json
+ }
+}
+
 {$PORTAL_DOMAIN} {
  encode zstd gzip
  header {

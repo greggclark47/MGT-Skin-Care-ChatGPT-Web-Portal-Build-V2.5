@@ -14,6 +14,15 @@ Public product name: **Team 47 Studio**
 - Added canonical metadata, Open Graph site identity, `robots.txt` generation and a production sitemap.
 - Added exact Android public URL examples for the portal, API, Privacy, Terms and AI disclosure.
 - Updated the interactive HTML demo to v4.416 and created `team-47-studio-end-to-end-demo.html`.
+- Prepared an edge-level permanent redirect from `www.team47studio.com` to the canonical apex origin while preventing the alias host from proxying application or API traffic.
+- Added a credential-free Cloudflare production gate (`pnpm infra:cloudflare-domain`) that checks authoritative Cloudflare nameservers, apex and `www` address records, TLS reachability, Cloudflare edge headers, and the exact `www`-to-apex redirect.
+
+## Cloudflare validation — 2026-11-05
+
+- Cloudflare authoritative DNS is active through `cloe.ns.cloudflare.com` and `garrett.ns.cloudflare.com`.
+- Cloudflare Resolver `1.1.1.1` returned no apex A/AAAA record and no `www` A/AAAA/CNAME record.
+- Public HTTPS validation therefore could not resolve either hostname.
+- Status: **blocked at DNS publication**, before application deployment or TLS validation. No production availability is claimed.
 
 ## Deliberately preserved
 
@@ -26,7 +35,7 @@ Public product name: **Team 47 Studio**
 These steps require an authorized owner or third-party system and are not represented as complete by this checkpoint:
 
 1. Confirm ownership of `team47studio.com`, create production DNS records and approve the hosting target.
-2. Issue and validate TLS for `team47studio.com`; decide whether `www.team47studio.com` redirects to the primary host.
+2. Publish `team47studio.com` and `www.team47studio.com` DNS records to the approved edge target, then issue and validate TLS for both names. The repository now makes the apex host canonical and permanently redirects the `www` alias.
 3. Add the exact production origin and callback paths to Supabase and the Google identity provider.
 4. Register `com.team47studio.app` in Google Play Console and, later, Apple Developer/App Store Connect before the identifiers become immutable.
 5. Create the approved EAS project and production environment using the five values documented in `apps/mobile/.env.example`.

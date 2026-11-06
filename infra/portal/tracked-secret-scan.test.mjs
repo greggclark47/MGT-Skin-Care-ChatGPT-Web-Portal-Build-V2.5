@@ -1,6 +1,5 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { test } from "node:test";
@@ -36,15 +35,16 @@ test("detects private keys, credentialed database URLs, and unknown sensitive as
   assert.deepEqual(new Set(findings.map((finding) => finding.rule)), new Set(["private_key", "credentialed_database_url", "sensitive_assignment"]));
 });
 
-test("scans the candidate commit rather than a sanitized working tree", () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "mgt-secret-commit-"));
+test("scans the candidate commit rather than a sanitized working tree", (context) => {
+  const root = fs.mkdtempSync(path.join(process.cwd(), ".mgt-secret-commit-"));
+  context.after(() => fs.rmSync(root, { recursive: true, force: true }));
   const secretName = ["STRIPE", "SECRET", "KEY"].join("_");
   const secret = [`${secretName}=sk_live_`, "x".repeat(24)].join("");
   fs.writeFileSync(path.join(root, "config.txt"), `${secret}\n`);
   for (const args of [
     ["init", "-q"],
     ["add", "."],
-    ["-c", "user.name=MGT Test", "-c", "user.email=test@invalid.local", "commit", "-qm", "fixture"]
+    ["-c", "user.name=MGT Test", "-c", "user.email=test@invalid.local", "-c", "commit.gpgsign=false", "commit", "-qm", "fixture"]
   ]) assert.equal(spawnSync("git", args, { cwd: root, windowsHide: true }).status, 0);
   const commit = spawnSync("git", ["rev-parse", "HEAD"], { cwd: root, encoding: "utf8", windowsHide: true }).stdout.trim();
   fs.writeFileSync(path.join(root, "config.txt"), `${secretName}=\n`);

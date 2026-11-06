@@ -9,17 +9,18 @@ import { AppFrame, LoadState, Timestamp } from '../../components/HubFrames';
 import styles from './membership.module.css';
 
 type Plan = {
-  id: 'premium'; name: string; audience: 'consumer';
+  id: 'premium' | 'studio'; name: string; audience: 'consumer';
   summary: string; best_for: string; features: string[]; comparison: Record<string, string>;
   provisional: false; pricing: null | { amount: number; currency: string; interval: string };
+  pricing_options: PricingOptions;
   pricing_status: 'pending' | 'needs_review' | 'configured'; enrollment_open: boolean;
 };
 type Baseline = { id: 'free'; name: string; summary: string; features: string[]; comparison: Record<string, string> };
 type Price = NonNullable<Plan['pricing']>;
-type PricingOptions = { monthly: Price | null; annual: Price | null; annual_savings: null | { amount: number; currency: string; percent: number } };
+type PricingOptions = { monthly: Price | null; annual: Price | null; annual_savings: null | { amount: number; currency: string; percent: number; months_free: number | null } };
 
-const planIds = ['premium'] as const;
-const planNames: Record<string, string> = { premium: 'Premium' };
+const planIds = ['premium', 'studio'] as const;
+const planNames: Record<string, string> = { premium: 'Guided', studio: 'Studio' };
 const isPlanId = (value: string | null): value is typeof planIds[number] => !!value && planIds.includes(value as typeof planIds[number]);
 const formatPrice = (pricing: Plan['pricing']) => pricing ? new Intl.NumberFormat(undefined, { style: 'currency', currency: pricing.currency }).format(pricing.amount / 100) + (pricing.interval === 'year' ? ' / year' : ' / month') : 'Pricing pending';
 const formatMoney = (amount: number, currency: string) => new Intl.NumberFormat(undefined, { style: 'currency', currency }).format(amount / 100);
@@ -39,7 +40,6 @@ export default function Membership() {
   const data = state.data?.plan_id === planId && state.data?.cycle === cycle ? state.data : null;
   const recommendation = catalog.data?.recommendation;
   const baseline = catalog.data?.baseline as Baseline | undefined;
-  const pricingOptions = catalog.data?.pricing_options as PricingOptions | undefined;
   const currentPlanName = planNames[data?.subscription?.plan_id] || 'an earlier plan';
   const enrollmentOpen = selected?.enrollment_open === true && data?.configured === true;
   const busy = busyAction !== '';
@@ -85,12 +85,12 @@ export default function Membership() {
   }
 
   return <AppFrame title="Plans & Billing">
-    <p className="lead">Compare Free and Premium, then review confirmed subscription activity.</p>
-    <p>Premium has one monthly and one annual rate tied to the same approved billing product. Retail purchases remain with external retailers.</p>
+    <p className="lead">Compare Free, Guided, and Studio by the value and level of support each experience provides.</p>
+    <p>Choose monthly flexibility or annual billing with two months free. Retail purchases remain with external retailers.</p>
 
     <fieldset className="filters flow-fieldset" disabled={busy} aria-describedby={error ? 'membership-error' : undefined}><legend className="sr-only">Billing cycle</legend>
       {(['monthly', 'annual'] as const).map(item => <button type="button" key={item} aria-pressed={cycle === item} onClick={() => { setCycle(item); setConsent(false); setNotice(''); setError(''); }}>
-        {item === 'monthly' ? 'Monthly view' : 'Annual view'}
+        {item === 'monthly' ? 'Monthly' : 'Annual · 2 months free'}
       </button>)}
     </fieldset>
 
@@ -106,27 +106,29 @@ export default function Membership() {
             <p>{baseline.summary}</p>
             <ul>{baseline.features.map(feature => <li key={feature}>{feature}</li>)}</ul>
           </article>}
-          {catalog.data.plans.map((plan: Plan) => <article className={styles.planCard + ' ' + styles.selected} key={plan.id} aria-labelledby={'plan-' + plan.id}>
-            <div className="row"><span className="pill">Premium</span></div>
+          {catalog.data.plans.map((plan: Plan) => <article className={styles.planCard + (plan.id === planId ? ' ' + styles.selected : '')} key={plan.id} aria-labelledby={'plan-' + plan.id}>
+            <div className="row"><span className="pill">{plan.id === 'studio' ? 'Most complete experience' : 'Best ongoing value'}</span></div>
             <h3 id={'plan-' + plan.id}>{plan.name}</h3>
             <p className={styles.planPrice}>{formatPrice(plan.pricing)}</p>
             <p>{plan.summary}</p>
             <p className="muted"><strong>Built for:</strong> {plan.best_for}</p>
             <ul>{plan.features.map(feature => <li key={feature}>{feature}</li>)}</ul>
-            {cycle === 'annual' && pricingOptions?.annual_savings && <p className={styles.planMatch}>Save {formatMoney(pricingOptions.annual_savings.amount, pricingOptions.annual_savings.currency)} ({pricingOptions.annual_savings.percent}%) compared with 12 monthly payments</p>}
+            {cycle === 'annual' && plan.pricing_options?.annual_savings && <p className={styles.planMatch}>Two months free · save {formatMoney(plan.pricing_options.annual_savings.amount, plan.pricing_options.annual_savings.currency)} compared with 12 monthly payments</p>}
+            <button className={plan.id === planId ? 'button primary' : 'button'} type="button" aria-pressed={plan.id === planId} onClick={() => { setPlanId(plan.id); setConsent(false); setNotice(''); setError(''); }}>Select {plan.name}</button>
           </article>)}
         </div>
         <FreePlanSponsor />
       </section>
-      {recommendation && <p className="notice" role="status"><strong>Premium membership.</strong> {recommendation.reason} It does not enroll you automatically.</p>}
+      {recommendation && <p className="notice" role="status"><strong>Suggested starting point.</strong> {recommendation.reason}</p>}
       <section className="panel" aria-labelledby="comparison-heading">
-        <h2 id="comparison-heading">Free and Premium comparison</h2>
-        <p>Free remains available without a subscription. Premium adds the services listed below, subject to the displayed terms and account safeguards.</p>
-        <div className="table-wrap"><table><caption className="sr-only">Team 47 Studio Free and Premium membership comparison</caption><thead><tr><th scope="col">Capability</th>{baseline && <th scope="col">{baseline.name}</th>}{catalog.data.plans.map((plan: Plan) => <th scope="col" key={plan.id}>{plan.name}</th>)}</tr></thead><tbody>{catalog.data.comparison_rows.map((row: { id: string; label: string }) => <tr key={row.id}><th scope="row">{row.label}</th>{baseline && <td>{baseline.comparison[row.id]}</td>}{catalog.data.plans.map((plan: Plan) => <td key={plan.id}>{plan.comparison[row.id]}</td>)}</tr>)}</tbody></table></div>
+        <h2 id="comparison-heading">Top offering comparison</h2>
+        <p>Free covers the essentials, Guided adds continuous personalized support, and Studio provides the highest available output depth and most complete end-to-end experience within reviewed safeguards.</p>
+        <div className="table-wrap"><table><caption className="sr-only">Team 47 Studio Free, Guided, and Studio membership comparison</caption><thead><tr><th scope="col">Capability</th>{baseline && <th scope="col">{baseline.name}</th>}{catalog.data.plans.map((plan: Plan) => <th scope="col" key={plan.id}>{plan.name}</th>)}</tr></thead><tbody>{catalog.data.comparison_rows.map((row: { id: string; label: string }) => <tr key={row.id}><th scope="row">{row.label}</th>{baseline && <td>{baseline.comparison[row.id]}</td>}{catalog.data.plans.map((plan: Plan) => <td key={plan.id}>{plan.comparison[row.id]}</td>)}</tr>)}</tbody></table></div>
       </section>
     </>}
 
-    <p className="notice">If an approved plan opens, eligible new subscribers can begin with a 14-day trial. A payment method is collected during checkout and recurring billing starts after the trial unless renewal is turned off. Returning subscribers who already used a trial are not offered another one.</p>
+    <section className="panel"><h2>Simple, flexible billing</h2><p>Your first subscription payment date starts your billing cycle. Monthly plans renew monthly; annual plans renew annually and include two months free compared with 12 monthly payments.</p><p>You can move between available plans and switch between monthly and annual billing. Before you confirm, secure billing shows when the change takes effect, any credit or charge, and whether your renewal date changes.</p><p><strong>Cancel anytime from Account.</strong> Cancellation takes effect at the end of the current paid billing period, and access continues through that date.</p></section>
+    <p className="notice">If an approved plan opens, eligible new subscribers can begin with a 14-day trial. A payment method is collected during checkout and recurring billing starts after the trial unless cancellation is requested. Returning subscribers who already used a trial are not offered another one.</p>
     {notice && <p className="notice success" role="status">{notice}</p>}
     <LoadState {...state} retry={state.reload} />
     {error && <p id="membership-error" className="notice error" role="alert">{error}</p>}
@@ -140,12 +142,12 @@ export default function Membership() {
       {data.subscription && <p role="status" aria-live="polite" aria-atomic="true">Status: <strong>{({ trialing: 'Trial active', active: 'Active', past_due: 'Payment overdue', unpaid: 'Payment required', canceled: 'Ended', incomplete: 'Payment incomplete', incomplete_expired: 'Signup expired', paused: 'Paused' } as Record<string, string>)[data.subscription.status] || data.subscription.status}</strong>{data.subscription.cancel_at_period_end ? ' · Renewal turned off' : ''}</p>}
       {['past_due', 'unpaid', 'incomplete'].includes(data.subscription?.status) && <p className="notice error">Your subscription needs payment attention. Use Manage billing to review your payment details.</p>}
       {data.subscription?.cancel_at_period_end && <p className="notice">Renewal is turned off. Service continues until the end date shown above.</p>}
-      {!enrollmentOpen && <p className="notice">Premium enrollment is closed until pricing, terms, and payment configuration are approved. No charge can be started from this page.</p>}
+      {!enrollmentOpen && <p className="notice">Enrollment for this tier is closed until its pricing, terms, and payment configuration are approved. No charge can be started from this page.</p>}
       <p>Returning from the billing service does not activate access. Only a confirmed signed billing update can change subscription status.</p>
       <button className="text-button" type="button" disabled={state.loading || busy} onClick={state.reload}>Refresh billing status</button>
       {!session.data?.account ? <Link className="button" href="/account">Sign in to manage subscriptions</Link> : <>
         {data.pending_checkout && <div className="notice"><p>You have an unfinished checkout. Discard it before choosing a different plan or billing cycle. This does not cancel an active subscription.</p><button className="button" type="button" disabled={busy} onClick={() => void billing('discard-checkout')}>{busyAction === 'discard-checkout' ? 'Discarding checkout…' : 'Discard unfinished checkout'}</button></div>}
-        {data.can_manage && <button className="button" type="button" disabled={busy || !data.configured} onClick={() => void billing('portal')}>{busyAction === 'portal' ? 'Opening billing…' : 'Manage billing, invoices, and payment methods'}</button>}
+        {data.can_manage && <button className="button" type="button" disabled={busy || !data.configured} onClick={() => void billing('portal')}>{busyAction === 'portal' ? 'Opening billing…' : 'Change plan, billing cycle, payment, or cancel'}</button>}
         {((!data.subscription?.status || ['canceled', 'incomplete_expired'].includes(data.subscription.status)) || (data.subscription?.status === 'trialing' && !data.subscription.cancel_at_period_end)) && <>
           <label className="check-label"><input type="checkbox" checked={consent} disabled={!enrollmentOpen || busy} onChange={event => setConsent(event.target.checked)} />I agree to the displayed recurring rate after any eligible trial ends, and to the subscription terms.</label>
           <div className="actions"><Link className="text-link" href="/terms">Read terms</Link><button className="button primary" type="button" disabled={busy || !consent || !enrollmentOpen} onClick={() => void billing(data.subscription?.status === 'trialing' ? 'trial-cycle' : 'checkout')}>{busyAction === 'trial-cycle' ? 'Requesting change…' : busyAction === 'checkout' ? 'Opening checkout…' : data.subscription?.status === 'trialing' ? 'Request plan or cycle change' : data.trial_eligible ? 'Start 14-day trial' : 'Continue to billing'}</button></div>

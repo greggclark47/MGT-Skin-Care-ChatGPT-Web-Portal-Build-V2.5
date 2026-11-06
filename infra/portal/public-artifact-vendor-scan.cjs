@@ -7,8 +7,7 @@ const REVIEWED_PUBLIC_DISCLOSURES={
  'dist/index.html':[
   '<strong>DeepSeek</strong>',
   '<small>Local via Ollama · qualification pending</small>',
-  'Stripe setup, tier entitlements, terms and signed event verification remain in preparation.',
-  'Stripe is the planned payment gateway.'
+  'approved Stripe prices, terms, entitlements and signed event verification remain required.'
  ]
 };
 

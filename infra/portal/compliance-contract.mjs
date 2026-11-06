@@ -28,15 +28,15 @@ export function validateComplianceContract(sources) {
   const planIds = [...catalog.matchAll(/\bid:\s*'([^']+)'/g)].map((match) => match[1]);
 
   add(
-    "premium_catalog",
-    planIds.length === 1 && planIds[0] === "premium" && /env_prefix:\s*'PREMIUM'/.test(catalog),
-    "The published catalog must contain exactly one Premium plan with the PREMIUM price prefix.",
+    "membership_catalog",
+    planIds.length === 2 && planIds[0] === "premium" && planIds[1] === "studio" && /env_prefix:\s*'PREMIUM'/.test(catalog) && /env_prefix:\s*'STUDIO'/.test(catalog),
+    "The published paid catalog must contain Guided (the continuity-safe premium ID) and Studio with separate price prefixes.",
   );
   add(
     "premium_price_contract",
-    ["STRIPE_LIVE_MODE", "STRIPE_PREMIUM_PRODUCT_ID", "STRIPE_PREMIUM_MONTHLY_PRICE_ID", "STRIPE_PREMIUM_ANNUAL_PRICE_ID"].every((key) => source("preflight").includes(key))
+    ["STRIPE_LIVE_MODE", "STRIPE_PREMIUM_PRODUCT_ID", "STRIPE_PREMIUM_MONTHLY_PRICE_ID", "STRIPE_PREMIUM_ANNUAL_PRICE_ID", "STRIPE_STUDIO_MONTHLY_PRICE_ID", "STRIPE_STUDIO_ANNUAL_PRICE_ID"].every((key) => source("preflight").includes(key))
       && !source("preflight").includes("STRIPE_PREMIUM_PRICE_ID"),
-    "Production preflight must bind Stripe mode, the Premium Product and both recurring Price IDs, never a retired single-price variable.",
+    "Production preflight must bind Stripe mode, the shared Product, Guided prices, and an optional complete Studio price pair, never a retired single-price variable.",
   );
 
   const server = source("server");

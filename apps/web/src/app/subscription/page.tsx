@@ -63,8 +63,8 @@ export default function SubscriptionPage(){
    <section className="panel" aria-labelledby="access-heading"><h2 id="access-heading">Confirmed access</h2>
     <p>{data.entitlement.premium?'Your paid access is active.':'No active paid access is confirmed.'}</p>
     {data.entitlement.valid_until&&<p>Current access period ends <Timestamp value={data.entitlement.valid_until}/>.</p>}
-    {!data.entitlement.premium&&<p>{data.enrollment_available?'Premium enrollment is available in Plans & Billing.':'Premium enrollment is currently closed while pricing, terms, and payment setup are reviewed.'}</p>}
-    <Link className="text-link" href={data.enrollment_path}>{data.enrollment_available?'Compare Free and Premium':'Review Plans & Billing'}</Link>
+    {!data.entitlement.premium&&<p>{data.enrollment_available?'Guided and Studio options are available in Plans & Billing.':'Paid enrollment is currently closed while pricing, terms, and payment setup are reviewed.'}</p>}
+    <Link className="text-link" href={data.enrollment_path}>{data.enrollment_available?'Compare Free, Guided, and Studio':'Review Plans & Billing'}</Link>
    </section>
    {!data.subscriptions.length&&<p className="notice">No subscriptions are linked to this signed-in account.</p>}
    {data.subscriptions.map(item=><section className="panel" key={item.id} aria-label={item.audience==='consumer'?'Personal subscription':'Business subscription'}>
@@ -74,12 +74,12 @@ export default function SubscriptionPage(){
     <p>{item.cancel_at_period_end?'Renewal is off. Turning it off does not itself end the current confirmed access period.':'Renewal is not scheduled to stop.'}</p>
     {item.platform_managed?<p className="notice">Manage this subscription in the store where you purchased it. Renewal controls are not available here.</p>:
      item.pending_command?<p className="notice" role="status">A renewal change is awaiting confirmation. Status refreshes automatically for about one minute.</p>:
-     (item.can_cancel||item.can_resume)?<button className="button" type="button" disabled={busy||loading||!!choice} onClick={event=>choose(item,event.currentTarget)}>{item.can_cancel?'Turn off renewal':'Resume renewal'}</button>:
+     (item.can_cancel||item.can_resume)?<button className="button" type="button" disabled={busy||loading||!!choice} onClick={event=>choose(item,event.currentTarget)}>{item.can_cancel?'Cancel subscription at period end':'Resume subscription renewal'}</button>:
      <p>Renewal changes are unavailable for this record. Contact support if you need help.</p>}
    </section>)}
   </>}
   {choice&&<section className="panel" aria-labelledby="renewal-confirmation" aria-describedby={error?'subscription-error':'renewal-confirmation-help'} aria-busy={busy}>
-   <h2 ref={confirmation} tabIndex={-1} id="renewal-confirmation">{choice.cancel?'Turn off renewal?':'Resume renewal?'}</h2>
+   <h2 ref={confirmation} tabIndex={-1} id="renewal-confirmation">{choice.cancel?'Cancel at the end of this billing period?':'Resume renewal?'}</h2>
    <p id="renewal-confirmation-help">{choice.cancel?'This requests cancellation at the end of the current period, not an immediate refund.':'This requests future renewal on the existing subscription terms. Review your original billing agreement before continuing.'}</p>
    <div className="actions"><button className="button primary" type="button" disabled={busy||loading} onClick={()=>void submit()}>{busy?'Submitting request…':'Confirm request'}</button>
     <button className="button" type="button" disabled={busy} onClick={()=>{setChoice(null);returnFocus();}}>Back</button></div>

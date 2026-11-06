@@ -13,7 +13,7 @@ const interests:{id:AccountServiceInterest;label:string;detail:string}[]=[
  {id:'anti_aging',label:'Anti-aging discovery',detail:'Education, progress and provider discovery'},
  {id:'beauty_style',label:'Beauty and style',detail:'Makeup, hair, color and clothing tools'},
  {id:'retailer_discovery',label:'Retail discovery',detail:'Saved retailers and external purchase handoffs'},
- {id:'premium_guidance',label:'Premium guidance',detail:'Membership-based guidance when available'},
+ {id:'premium_guidance',label:'Guided or Studio membership',detail:'Membership-based guidance when available'},
 ];
 const detectedTimezone=()=>{try{return Intl.DateTimeFormat().resolvedOptions().timeZone||'UTC';}catch{return'UTC';}};
 const emptyProfile=():FormState=>({preferred_name:'',locale:'en-US',timezone:detectedTimezone(),measurement_system:'us',service_interests:['skin_match','routine_care'],communication_preferences:{routine_reminders:false,service_announcements:false},accessibility:{reduced_motion:false,high_contrast:false},default_image_storage:'device'});

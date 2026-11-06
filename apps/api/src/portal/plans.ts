@@ -2,13 +2,13 @@ export const BILLING_CYCLES = ['monthly', 'annual'] as const;
 export type BillingCycle = typeof BILLING_CYCLES[number];
 
 export type PlanDefinition = {
-  id: 'premium';
+  id: 'premium' | 'studio';
   name: string;
   summary: string;
   best_for: string;
   features: string[];
   comparison: Record<string, string>;
-  env_prefix: 'PREMIUM';
+  env_prefix: 'PREMIUM' | 'STUDIO';
 };
 
 export type AccessLevelDefinition = {
@@ -20,12 +20,13 @@ export type AccessLevelDefinition = {
 };
 
 export const PLAN_COMPARISON_ROWS = [
-  { id: 'skin_match', label: 'Skin Match' },
+  { id: 'skin_match', label: 'Profile and Skin Match' },
   { id: 'routine_guidance', label: 'Routine guidance' },
-  { id: 'coach', label: 'Skin Coach' },
-  { id: 'history', label: 'Saved history' },
-  { id: 'shared_access', label: 'Shared access' },
-  { id: 'business_tools', label: 'Business tools' },
+  { id: 'ai_depth', label: 'AI guidance depth' },
+  { id: 'progress', label: 'Progress and photo journal' },
+  { id: 'style', label: 'Color, wardrobe, and retail' },
+  { id: 'experience', label: 'Membership experience' },
+  { id: 'support', label: 'Support' },
 ] as const;
 
 // Free is the non-billable baseline, not a Stripe plan. Keeping it outside
@@ -33,28 +34,38 @@ export const PLAN_COMPARISON_ROWS = [
 export const FREE_ACCESS: AccessLevelDefinition = {
   id: 'free',
   name: 'Free',
-  summary: 'Core skin preferences, routine planning, and reviewed education without a recurring charge.',
-  features: ['Skin Match and saved profile', 'Core routine planning', 'Reviewed skincare education'],
+  summary: 'A practical starting point for building a profile, exploring core care guidance, and learning without a recurring charge.',
+  features: ['Saved profile and core Skin Match', 'Starter routine and reviewed education', 'Clearly labeled sponsor-supported experience'],
   comparison: {
-    skin_match: 'Included',
-    routine_guidance: 'Core routine planning',
-    coach: 'Standard guidance',
-    history: 'Current profile and routine',
-    shared_access: 'Not included',
-    business_tools: 'Not included',
+    skin_match: 'Saved profile and core match',
+    routine_guidance: 'Starter routine',
+    ai_depth: 'Basic guidance preview',
+    progress: 'Current profile and routine',
+    style: 'Core color and retail discovery',
+    experience: 'Clearly labeled sponsor-supported experience',
+    support: 'Standard self-service support',
   },
 };
 
-// C1: the released catalog has one consumer Premium membership. Stripe prices stay
-// fail-closed until both approved monthly and annual prices are configured.
+// The existing `premium` identifier and PREMIUM environment prefix are retained
+// for billing continuity; its customer-facing name is Guided. Studio is a second
+// paid tier and remains fail-closed until both approved prices are configured.
 export const PLAN_DEFINITIONS: readonly PlanDefinition[] = [
   {
-    id: 'premium', name: 'Premium',
-    summary: 'One membership for personalized routine guidance, reviewed education, and Skin Coach support.',
-    best_for: 'People who want a connected skincare guidance experience in one membership.',
-    features: ['Skin Match and saved profile', 'Personalized routine guidance', 'Skin Coach guidance with account controls'],
-    comparison: { skin_match: 'Included', routine_guidance: 'Personalized ongoing guidance', coach: 'Premium guidance with safeguards', history: 'Profile, routine, and subscription activity', shared_access: 'Invite one trusted guest', business_tools: 'Not included' },
+    id: 'premium', name: 'Guided',
+    summary: 'Ongoing personalized support that connects routines, progress, color, wardrobe, and retail discovery.',
+    best_for: 'Customers who want consistent guidance, biweekly routine refinement, and an ad-free membership experience.',
+    features: ['Full personalized routines and biweekly updates', 'Progress and image-journal history', 'Connected color, wardrobe, reminders, and enhanced exports'],
+    comparison: { skin_match: 'Full personalized match', routine_guidance: 'Personalized with biweekly updates', ai_depth: 'Standard account-aware guidance', progress: 'Progress history and image journal', style: 'Connected color, wardrobe, and retail guidance', experience: 'Ad-free membership experience', support: 'Enhanced customer support' },
     env_prefix: 'PREMIUM',
+  },
+  {
+    id: 'studio', name: 'Studio',
+    summary: 'The most complete Team 47 Studio experience, with the highest available output depth and end-to-end coordination.',
+    best_for: 'Customers who want optimal-quality mode, deeper cross-domain synthesis, and priority support within reviewed safeguards.',
+    features: ['Everything in Guided', 'Highest available AI depth and cross-domain synthesis', 'Advanced exports, trusted guest access, priority support, and early features'],
+    comparison: { skin_match: 'Full match with deeper synthesis', routine_guidance: 'Advanced end-to-end coordination', ai_depth: 'Highest available depth and optimal-quality mode', progress: 'Advanced history, journal, and exports', style: 'Complete care, color, style, and retail orchestration', experience: 'Most complete experience and early features', support: 'Priority customer support' },
+    env_prefix: 'STUDIO',
   },
 ] as const;
 
@@ -84,6 +95,6 @@ export function recommendPlan(profile: SavedProfile) {
   return {
     plan_id: 'premium' as const,
     basis: profile?.input ? 'saved_preferences' as const : 'general_starting_point' as const,
-    reason: 'Premium is the single available membership and is not a personalized pricing recommendation.',
+    reason: 'Guided is a balanced starting point for ongoing support. Compare every tier before choosing; this is not an automatic enrollment or personalized pricing decision.',
   };
 }

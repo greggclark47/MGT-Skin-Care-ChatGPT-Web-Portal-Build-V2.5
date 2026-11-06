@@ -231,6 +231,8 @@ export function validateProductionSubscriptionAdmission(env:NodeJS.ProcessEnv):v
  if(typeof env.STRIPE_PREMIUM_PRODUCT_ID!=='string'||!/^prod_[A-Za-z0-9_]+$/.test(env.STRIPE_PREMIUM_PRODUCT_ID))throw new Error('Production subscription admission is invalid.');
  if(typeof env.STRIPE_PREMIUM_MONTHLY_PRICE_ID!=='string'||!/^price_[A-Za-z0-9_]+$/.test(env.STRIPE_PREMIUM_MONTHLY_PRICE_ID))throw new Error('Production subscription admission is invalid.');
  if(typeof env.STRIPE_PREMIUM_ANNUAL_PRICE_ID!=='string'||!/^price_[A-Za-z0-9_]+$/.test(env.STRIPE_PREMIUM_ANNUAL_PRICE_ID)||sameText(env.STRIPE_PREMIUM_MONTHLY_PRICE_ID,env.STRIPE_PREMIUM_ANNUAL_PRICE_ID))throw new Error('Production subscription admission is invalid.');
+ const studioMonthly=env.STRIPE_STUDIO_MONTHLY_PRICE_ID,studioAnnual=env.STRIPE_STUDIO_ANNUAL_PRICE_ID;
+ if((studioMonthly||studioAnnual)&&(typeof studioMonthly!=='string'||typeof studioAnnual!=='string'||!/^price_[A-Za-z0-9_]+$/.test(studioMonthly)||!/^price_[A-Za-z0-9_]+$/.test(studioAnnual)||sameText(studioMonthly,studioAnnual)))throw new Error('Production subscription admission is invalid.');
 }
 
 export function validateProductionSponsoredContentAdmission(env:NodeJS.ProcessEnv):void{
@@ -354,7 +356,7 @@ export function validateProductionApiDisabledFeatureResidue(env:NodeJS.ProcessEn
  if(env.HOSTED_OPENAI_ENABLED==='false'&&populated(['OPENAI_API_KEY']))throw new Error('Production disabled feature residue is invalid.');
  if(env.CLIENT_IMAGE_DRIVE_TEST_ENABLED==='true'||populated(['TEST_GOOGLE_DRIVE_CLIENT_ID','TEST_GOOGLE_DRIVE_CLIENT_SECRET','TEST_GOOGLE_DRIVE_REFRESH_TOKEN','TEST_GOOGLE_DRIVE_FOLDER_ID']))throw new Error('Production disabled feature residue is invalid.');
  if(env.BACKUP_ATTESTATION_ENABLED==='false'&&populated(['BACKUP_ATTESTATION_SECRET','BACKUP_ATTESTATION_KEY_ID','BACKUP_ATTESTATION_MAX_AGE_SECONDS']))throw new Error('Production disabled feature residue is invalid.');
- if(env.SUBSCRIPTIONS_ENABLED==='false'&&populated(['STRIPE_LIVE_MODE','STRIPE_SECRET_KEY','STRIPE_SUBSCRIPTION_WEBHOOK_SECRET','STRIPE_PREMIUM_PRODUCT_ID','STRIPE_PREMIUM_MONTHLY_PRICE_ID','STRIPE_PREMIUM_ANNUAL_PRICE_ID']))throw new Error('Production disabled feature residue is invalid.');
+ if(env.SUBSCRIPTIONS_ENABLED==='false'&&populated(['STRIPE_LIVE_MODE','STRIPE_SECRET_KEY','STRIPE_SUBSCRIPTION_WEBHOOK_SECRET','STRIPE_PREMIUM_PRODUCT_ID','STRIPE_PREMIUM_MONTHLY_PRICE_ID','STRIPE_PREMIUM_ANNUAL_PRICE_ID','STRIPE_STUDIO_MONTHLY_PRICE_ID','STRIPE_STUDIO_ANNUAL_PRICE_ID']))throw new Error('Production disabled feature residue is invalid.');
 }
 
 export function validateProductionWorkerDisabledFeatureResidue(env:NodeJS.ProcessEnv):void{

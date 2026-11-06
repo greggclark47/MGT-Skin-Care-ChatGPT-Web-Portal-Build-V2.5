@@ -148,27 +148,27 @@ const membershipPlans = [
   {
     id: "free",
     name: "Free",
-    audience: "Core tools for a clear skincare starting point.",
+    audience: "A practical starting point for care and discovery.",
     price: "$0",
     billing: "No recurring charge",
-    features: ["Skin Match and saved profile", "Core routine planning", "Reviewed skincare education", "Optional clearly labelled sponsor support"],
+    features: ["Saved profile and core Skin Match", "Starter routine and reviewed education", "Core color and retail discovery", "Clearly labelled sponsor-supported experience"],
     action: "Explore Free",
     popular: false
   },
   {
     id: "guided",
     name: "Guided",
-    audience: "Connected guidance for an ongoing care routine.",
-    monthly: "$14.99", annual: "$149.99",
-    features: ["Full routines and anti-aging education", "Progress, wardrobe, images and history", "Standard AI guidance and reminders"],
+    audience: "Best ongoing value for consistent personalized support.",
+    monthly: "$14.99", annual: "$149.90",
+    features: ["Full routines with biweekly updates", "Progress, image journal, wardrobe, and reminders", "Standard account-aware AI guidance", "Ad-free membership experience"],
     action: "Preview Guided",
     popular: true
   },
   {
     id: "studio", name: "Studio",
-    audience: "More depth across your care and style journey.",
-    monthly: "$29.99", annual: "$299.99",
-    features: ["Higher AI allowance and cross-domain synthesis", "Advanced exports and priority support", "Guest access and early features"],
+    audience: "The most complete end-to-end Team 47 Studio experience.",
+    monthly: "$29.99", annual: "$299.90",
+    features: ["Highest available output depth and optimal-quality mode", "Complete care, color, style, and retail orchestration", "Advanced exports, priority support, and guest access", "Early access to reviewed features"],
     action: "Preview Studio", popular: false
   }
 ];
@@ -178,7 +178,7 @@ function renderPricing() {
   if (!grid) return;
   grid.innerHTML = membershipPlans.map((plan) => {
     const billingNote = plan.id !== "free"
-      ? `Suggested ${state.billing === "annual" ? "annual" : "monthly"} price · not available for enrollment`
+      ? `${state.billing === "annual" ? "Annual · two months free" : "Monthly flexibility"} · not available for enrollment`
       : plan.billing;
     return `<article class="pricing-card${plan.popular ? " popular" : ""}">
       ${plan.popular ? '<span class="popular-badge">PROPOSED PLAN</span>' : ""}

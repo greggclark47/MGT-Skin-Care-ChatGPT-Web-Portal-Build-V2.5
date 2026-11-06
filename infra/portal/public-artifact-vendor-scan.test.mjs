@@ -7,15 +7,14 @@ const {scanPublicArtifact}=require('./public-artifact-vendor-scan.cjs');
 const reviewed=[
  '<strong>DeepSeek</strong>',
  '<small>Local via Ollama · qualification pending</small>',
- 'Stripe setup, tier entitlements, terms and signed event verification remain in preparation.',
- 'Stripe is the planned payment gateway.'
+ 'approved Stripe prices, terms, entitlements and signed event verification remain required.'
 ].join('\n');
 
 test('allows only the exact reviewed operator-demo vendor disclosures',()=>{
  assert.deepEqual(scanPublicArtifact('dist/index.html',reviewed),{blocked:false,invalidDisclosure:false});
  assert.equal(scanPublicArtifact('dist/other.html',reviewed).blocked,true);
  assert.equal(scanPublicArtifact('dist/index.html',reviewed+'\nOpenAI').blocked,true);
- assert.equal(scanPublicArtifact('dist/index.html',reviewed+'\nStripe is the planned payment gateway.').invalidDisclosure,true);
+ assert.equal(scanPublicArtifact('dist/index.html',reviewed+'\napproved Stripe prices, terms, entitlements and signed event verification remain required.').invalidDisclosure,true);
 });
 
 test('reviewed copy cannot conceal secret-shaped or configuration references',()=>{

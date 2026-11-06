@@ -318,6 +318,8 @@ export function validateEnvironment(env) {
     if (!/^price_[A-Za-z0-9_]+$/.test(monthlyPrice)) errors.push("STRIPE_PREMIUM_MONTHLY_PRICE_ID must be a Stripe Price ID.");
     if (!/^price_[A-Za-z0-9_]+$/.test(annualPrice)) errors.push("STRIPE_PREMIUM_ANNUAL_PRICE_ID must be a Stripe Price ID.");
     if (monthlyPrice && monthlyPrice === annualPrice) errors.push("Monthly and annual Premium prices must use different Stripe Price IDs.");
+    const studioMonthly = String(env.STRIPE_STUDIO_MONTHLY_PRICE_ID || ""), studioAnnual = String(env.STRIPE_STUDIO_ANNUAL_PRICE_ID || "");
+    if ((studioMonthly || studioAnnual) && (!/^price_[A-Za-z0-9_]+$/.test(studioMonthly) || !/^price_[A-Za-z0-9_]+$/.test(studioAnnual) || studioMonthly === studioAnnual)) errors.push("Studio enrollment requires two distinct Stripe Price IDs configured together.");
   } else {
     warnings.push("Subscriptions are disabled.");
   }
@@ -358,7 +360,7 @@ export function validateEnvironment(env) {
   if (env.HOSTED_OPENAI_ENABLED === "false" && populated(["OPENAI_API_KEY"])) errors.push("Disabled hosted OpenAI must not retain a credential.");
   if (env.NODE_ENV === "production" && (env.CLIENT_IMAGE_DRIVE_TEST_ENABLED === "true" || populated(["TEST_GOOGLE_DRIVE_CLIENT_ID", "TEST_GOOGLE_DRIVE_CLIENT_SECRET", "TEST_GOOGLE_DRIVE_REFRESH_TOKEN", "TEST_GOOGLE_DRIVE_FOLDER_ID"]))) errors.push("Production test Google Drive image storage must remain disabled and must not retain test credentials or folder configuration.");
   if (backupAttestationEnabled === "false" && populated(["BACKUP_ATTESTATION_SECRET", "BACKUP_ATTESTATION_KEY_ID", "BACKUP_ATTESTATION_MAX_AGE_SECONDS"])) errors.push("Disabled backup attestation must not retain signing configuration.");
-  if (env.SUBSCRIPTIONS_ENABLED === "false" && populated(["STRIPE_LIVE_MODE", "STRIPE_SECRET_KEY", "STRIPE_SUBSCRIPTION_WEBHOOK_SECRET", "STRIPE_PREMIUM_PRODUCT_ID", "STRIPE_PREMIUM_MONTHLY_PRICE_ID", "STRIPE_PREMIUM_ANNUAL_PRICE_ID"])) errors.push("Disabled subscriptions must not retain Stripe configuration.");
+  if (env.SUBSCRIPTIONS_ENABLED === "false" && populated(["STRIPE_LIVE_MODE", "STRIPE_SECRET_KEY", "STRIPE_SUBSCRIPTION_WEBHOOK_SECRET", "STRIPE_PREMIUM_PRODUCT_ID", "STRIPE_PREMIUM_MONTHLY_PRICE_ID", "STRIPE_PREMIUM_ANNUAL_PRICE_ID", "STRIPE_STUDIO_MONTHLY_PRICE_ID", "STRIPE_STUDIO_ANNUAL_PRICE_ID"])) errors.push("Disabled subscriptions must not retain Stripe configuration.");
 
   return { ok: errors.length === 0, errors, warnings };
 }
@@ -467,6 +469,8 @@ function validateApiRuntimeEnvironment(context) {
     if (!/^price_[A-Za-z0-9_]+$/.test(monthly)) errors.push("STRIPE_PREMIUM_MONTHLY_PRICE_ID must be a Stripe Price ID.");
     if (!/^price_[A-Za-z0-9_]+$/.test(annual)) errors.push("STRIPE_PREMIUM_ANNUAL_PRICE_ID must be a Stripe Price ID.");
     if (monthly && monthly === annual) errors.push("Monthly and annual Premium prices must use different Stripe Price IDs.");
+    const studioMonthly = String(env.STRIPE_STUDIO_MONTHLY_PRICE_ID || ""), studioAnnual = String(env.STRIPE_STUDIO_ANNUAL_PRICE_ID || "");
+    if ((studioMonthly || studioAnnual) && (!/^price_[A-Za-z0-9_]+$/.test(studioMonthly) || !/^price_[A-Za-z0-9_]+$/.test(studioAnnual) || studioMonthly === studioAnnual)) errors.push("Studio enrollment requires two distinct Stripe Price IDs configured together.");
   } else warnings.push("Subscriptions are disabled.");
   validateSponsoredContentConfiguration(env, errors, warnings);
   for (const key of ["ANTI_AGING_LIVE_AI", "ANTI_AGING_CHECKOUT_ENABLED", "ANTI_AGING_BOOKING_ENABLED", "ANTI_AGING_IMAGE_ANALYSIS_ENABLED", "ANTI_AGING_ACCESSIBILITY_VERIFIED", "ANTI_AGING_RESTORE_VERIFIED", "ANTI_AGING_PRIVACY_REVIEWED"]) if (!["true", "false"].includes(env[key])) errors.push(`${key} must be explicitly true or false.`);
@@ -477,7 +481,7 @@ function validateApiRuntimeEnvironment(context) {
   if (env.HOSTED_OPENAI_ENABLED === "false" && populated(["OPENAI_API_KEY"])) errors.push("Disabled hosted OpenAI must not retain a credential.");
   if (env.NODE_ENV === "production" && (env.CLIENT_IMAGE_DRIVE_TEST_ENABLED === "true" || populated(["TEST_GOOGLE_DRIVE_CLIENT_ID", "TEST_GOOGLE_DRIVE_CLIENT_SECRET", "TEST_GOOGLE_DRIVE_REFRESH_TOKEN", "TEST_GOOGLE_DRIVE_FOLDER_ID"]))) errors.push("Production test Google Drive image storage must remain disabled and must not retain test credentials or folder configuration.");
   if (attestation === "false" && populated(["BACKUP_ATTESTATION_SECRET", "BACKUP_ATTESTATION_KEY_ID", "BACKUP_ATTESTATION_MAX_AGE_SECONDS"])) errors.push("Disabled backup attestation must not retain signing configuration.");
-  if (env.SUBSCRIPTIONS_ENABLED === "false" && populated(["STRIPE_LIVE_MODE", "STRIPE_SECRET_KEY", "STRIPE_SUBSCRIPTION_WEBHOOK_SECRET", "STRIPE_PREMIUM_PRODUCT_ID", "STRIPE_PREMIUM_MONTHLY_PRICE_ID", "STRIPE_PREMIUM_ANNUAL_PRICE_ID"])) errors.push("Disabled subscriptions must not retain Stripe configuration.");
+  if (env.SUBSCRIPTIONS_ENABLED === "false" && populated(["STRIPE_LIVE_MODE", "STRIPE_SECRET_KEY", "STRIPE_SUBSCRIPTION_WEBHOOK_SECRET", "STRIPE_PREMIUM_PRODUCT_ID", "STRIPE_PREMIUM_MONTHLY_PRICE_ID", "STRIPE_PREMIUM_ANNUAL_PRICE_ID", "STRIPE_STUDIO_MONTHLY_PRICE_ID", "STRIPE_STUDIO_ANNUAL_PRICE_ID"])) errors.push("Disabled subscriptions must not retain Stripe configuration.");
 }
 
 function validateWorkerRuntimeEnvironment(context) {

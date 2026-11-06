@@ -164,9 +164,11 @@ test("static demo exposes the current release and ship-packet surface", () => {
   assert.match(html, /5 phase groups/);
   assert.match(html, /id="flows"/);
   assert.match(html, /Six controlled service paths/);
-  assert.match(html, /Free \+ Premium/);
-  assert.match(html, /signed billing event is reconciled/);
-  assert.match(html, /proposed Free, Guided and Studio model/);
+  assert.match(html, /Free, Guided and Studio/);
+  assert.match(html, /signed event verification remain required/);
+  assert.match(html, /Annual billing equals 10 monthly payments—two months free/);
+  assert.match(html, /Cancel anytime from Account/);
+  assert.match(html, /retained for up to 24 months/);
   assert.match(html, /No Team 47 Studio product checkout/);
   assert.doesNotMatch(html, /<th scope="col">Essential<\/th>/);
   assert.match(html, /<th scope="col">Guided<\/th>/);

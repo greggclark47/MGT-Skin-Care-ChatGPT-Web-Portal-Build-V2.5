@@ -11,6 +11,9 @@ async function main() {
   assert.equal(premium.reasoning_effort, 'medium');
   assert.equal(deep.model, 'gpt-6-astra');
   assert.equal(deep.reasoning_effort, 'high');
+  const finalFallback = getTaskConfig('product_why').fallbacks.at(-1);
+  assert.equal(finalFallback?.model, 'gpt-5');
+  assert.equal(finalFallback?.provider, 'openai');
 
   let seen: {url: string; body: any; headers: Record<string, string>} | undefined;
   const post: HttpPost = async (url, headers, body) => {
@@ -36,7 +39,7 @@ async function main() {
     localUrl = url;
     return {choices: [{message: {content: 'local answer'}}], usage: {prompt_tokens: 10, completion_tokens: 4}};
   }, 'openai-completions');
-  assert.equal((await local.complete(getTaskConfig('product_why').fallbacks[2], 's', 'u', new AbortController().signal)).text, 'local answer');
+  assert.equal((await local.complete(getTaskConfig('product_why').fallbacks[1], 's', 'u', new AbortController().signal)).text, 'local answer');
   assert.equal(localUrl, 'http://127.0.0.1:11434/v1/chat/completions');
 
   let nativeUrl = '';
@@ -46,7 +49,7 @@ async function main() {
     assert.equal((body as {stream?: boolean}).stream, false);
     return {message: {content: 'native local answer'}, prompt_eval_count: 8, eval_count: 3};
   });
-  const nativeResponse = await native.complete(getTaskConfig('product_why').fallbacks[2], 's', 'u', new AbortController().signal);
+  const nativeResponse = await native.complete(getTaskConfig('product_why').fallbacks[1], 's', 'u', new AbortController().signal);
   assert.equal(nativeResponse.text, 'native local answer');
   assert.equal(nativeUrl, 'http://ollama:11434/api/chat');
 

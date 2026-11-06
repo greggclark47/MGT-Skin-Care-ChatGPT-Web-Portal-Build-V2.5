@@ -7,7 +7,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "smoke": "tsc -p tsconfig.json && node dist/__smoke__/gateway.js && node dist/__smoke__/pricing.js"
+    "smoke": "tsc -p tsconfig.json && node dist/__smoke__/gateway.js && node dist/__smoke__/pricing.js && node dist/__smoke__/openai-routing.js"
   },
   "dependencies": {
     "@langchain/core": "^1.2.10",

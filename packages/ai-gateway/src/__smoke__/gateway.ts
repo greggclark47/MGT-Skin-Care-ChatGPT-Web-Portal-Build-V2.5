@@ -42,7 +42,7 @@ async function main() {
   {
     const log = new NoopLogSink();
     const gw = new AiGateway({
-      adapters: { ollama: new ScriptedAdapter('ollama', [ok(JSON.stringify({ blurb: 'A gentle hydrating formula.', cited_knowledge_ids: ['kb-1'] }), 'ollama', 'llama3.2:3b')]) },
+      adapters: { ollama: new ScriptedAdapter('ollama', [ok(JSON.stringify({ blurb: 'A gentle hydrating formula.', cited_knowledge_ids: ['kb-1'] }), 'ollama', 'deepseek-r1:8b')]) },
       logSink: log,
     });
     const res = await gw.execute({ task_type: 'product_why', user_id: 'u1', system_prompt: 's', user_prompt: 'u', retrieved_knowledge_ids: ['kb-1'] });
@@ -53,16 +53,16 @@ async function main() {
     check('one telemetry row written', log.entries.length === 1);
   }
 
-  console.log('\n== 2. Primary hard-fails twice -> falls back to DeepSeek through Ollama ==');
+  console.log('\n== 2. DeepSeek hard-fails twice -> falls back to Qwen through Ollama ==');
   {
     const gw = new AiGateway({
       adapters: {
-        ollama: new ScriptedAdapter('ollama', [boom('provider_http_500'), boom('provider_http_500'), ok(JSON.stringify({ blurb: 'Fallback copy.', cited_knowledge_ids: [] }), 'ollama', 'deepseek-r1:8b')]),
+        ollama: new ScriptedAdapter('ollama', [boom('provider_http_500'), boom('provider_http_500'), ok(JSON.stringify({ blurb: 'Fallback copy.', cited_knowledge_ids: [] }), 'ollama', 'qwen3.5:4b')]),
       },
     });
     const res = await gw.execute({ task_type: 'product_why', user_id: 'u2', system_prompt: 's', user_prompt: 'u', retrieved_knowledge_ids: [] });
     check('ok=true via fallback', res.ok === true, res.failure_reason);
-    check('provider switched to DeepSeek through Ollama', res.provider === 'ollama' && res.model === 'deepseek-r1:8b');
+    check('provider switched to Qwen through Ollama', res.provider === 'ollama' && res.model === 'qwen3.5:4b');
     check('used_fallback=true', res.used_fallback === true);
     check('attempts counted primary retry + fallback = 3', res.attempts === 3, res.attempts);
   }
@@ -71,18 +71,18 @@ async function main() {
   {
     const gw = new AiGateway({
       adapters: {
-        ollama: new ScriptedAdapter('ollama', [ok(JSON.stringify({ blurb: 'This will cure your acne.', cited_knowledge_ids: [] }), 'ollama', 'llama3.2:3b'), ok(JSON.stringify({ blurb: 'Supports a clearer-looking complexion.', cited_knowledge_ids: [] }), 'ollama', 'deepseek-r1:8b')]),
+        ollama: new ScriptedAdapter('ollama', [ok(JSON.stringify({ blurb: 'This will cure your acne.', cited_knowledge_ids: [] }), 'ollama', 'deepseek-r1:8b'), ok(JSON.stringify({ blurb: 'Supports a clearer-looking complexion.', cited_knowledge_ids: [] }), 'ollama', 'qwen3.5:4b')]),
       },
     });
     const res = await gw.execute({ task_type: 'product_why', user_id: 'u3', system_prompt: 's', user_prompt: 'u', retrieved_knowledge_ids: [] });
     check('compliance failure did not return to caller', res.ok === true && !/cure/.test(res.text ?? ''), res.text);
-    check('served from fallback provider', res.provider === 'ollama' && res.model === 'deepseek-r1:8b');
+    check('served from fallback provider', res.provider === 'ollama' && res.model === 'qwen3.5:4b');
   }
 
   console.log('\n== 4. Fabricated citation -> rejected ==');
   {
     const gw = new AiGateway({
-      adapters: { ollama: new ScriptedAdapter('ollama', [ok(JSON.stringify({ blurb: 'Grounded claim.', cited_knowledge_ids: ['kb-does-not-exist'] }), 'ollama', 'llama3.2:3b')]) },
+      adapters: { ollama: new ScriptedAdapter('ollama', [ok(JSON.stringify({ blurb: 'Grounded claim.', cited_knowledge_ids: ['kb-does-not-exist'] }), 'ollama', 'deepseek-r1:8b')]) },
     });
     const res = await gw.execute({ task_type: 'product_why', user_id: 'u4', system_prompt: 's', user_prompt: 'u', retrieved_knowledge_ids: ['kb-1'] });
     check('ok=false', res.ok === false);
@@ -103,7 +103,7 @@ async function main() {
   {
     const budgetStore = new InMemoryBudgetStore();
     await budgetStore.record('u6', 'tier1_copy', 999);
-    const adapter = new ScriptedAdapter('ollama', [ok('never', 'ollama', 'llama3.2:3b')]);
+    const adapter = new ScriptedAdapter('ollama', [ok('never', 'ollama', 'deepseek-r1:8b')]);
     const gw = new AiGateway({ adapters: { openai: adapter }, budgetStore });
     const res = await gw.execute({ task_type: 'product_why', user_id: 'u6', system_prompt: 's', user_prompt: 'u' });
     check('reason=budget_exceeded', res.failure_reason === 'budget_exceeded', res.failure_reason);
@@ -124,9 +124,9 @@ async function main() {
     // And the router must skip an open provider entirely rather than calling it.
     const openBreaker = new CircuitBreaker({ failure_threshold: 1, cooldown_ms: 60_000 });
     openBreaker.recordFailure('ollama', Date.now());
-    const primary = new ScriptedAdapter('ollama', [ok('never', 'ollama', 'llama3.2:3b')]);
+    const primary = new ScriptedAdapter('ollama', [ok('never', 'ollama', 'deepseek-r1:8b')]);
     const gw = new AiGateway({
-      adapters: { ollama: primary, openclaw: new ScriptedAdapter('openclaw', [ok(JSON.stringify({ blurb: 'from fallback' }), 'openclaw', 'llama3.2:3b')]) },
+      adapters: { ollama: primary, openclaw: new ScriptedAdapter('openclaw', [ok(JSON.stringify({ blurb: 'from fallback' }), 'openclaw', 'qwen3.5:4b')]) },
       breaker: openBreaker,
     });
     const res = await gw.execute({ task_type: 'product_why', user_id: 'u7', system_prompt: 's', user_prompt: 'u' });
@@ -136,7 +136,7 @@ async function main() {
 
   console.log('\n== 8. Malformed JSON on a structured task is rejected ==');
   {
-    const gw = new AiGateway({ adapters: { ollama: new ScriptedAdapter('ollama', [ok('not json at all', 'ollama', 'llama3.2:3b')]) } });
+    const gw = new AiGateway({ adapters: { ollama: new ScriptedAdapter('ollama', [ok('not json at all', 'ollama', 'deepseek-r1:8b')]) } });
     const res = await gw.execute({ task_type: 'product_why', user_id: 'u8', system_prompt: 's', user_prompt: 'u' });
     check('ok=false', res.ok === false);
     check('reason=structured_output_not_json', res.failure_reason === 'structured_output_not_json', res.failure_reason);

@@ -12,7 +12,7 @@ class FixtureAdapter {
 
   async complete(config, _system, prompt) {
     this.calls += 1;
-    assert.equal(config.model, 'llama3.2:3b');
+    assert.equal(config.model, 'deepseek-r1:8b');
     const context = JSON.parse(prompt);
     assert.equal(context.question, 'Please organize my saved complexion priorities.');
     assert.deepEqual(context.active_factor_ids, ['anti_blemish', 'acne', 'dark_marks', 'dark_circles']);
@@ -24,7 +24,7 @@ class FixtureAdapter {
       }),
       input_tokens: 24,
       output_tokens: 28,
-      model: 'llama3.2:3b',
+      model: 'deepseek-r1:8b',
       provider: 'ollama',
     };
   }

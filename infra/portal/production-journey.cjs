@@ -13,7 +13,7 @@ async function main(){
   reservedWebServer=http.createServer((_req,res)=>res.end('reserved'));
   const webPort=await listen(reservedWebServer);
   const webOrigin='http://127.0.0.1:'+webPort;
-  const app=await createPortal({store,env:{NODE_ENV:'test',DEMO_MODE:'true',PUBLIC_ORIGIN:webOrigin},verifyOtp:async email=>({id:'journey-user',email})});
+  const app=await createPortal({store,env:{NODE_ENV:'test',DEMO_MODE:'true',PUBLIC_ORIGIN:webOrigin,OLLAMA_ENABLED:'false',OPENCLAW_ENABLED:'false',HOSTED_OPENAI_ENABLED:'false'},verifyOtp:async email=>({id:'journey-user',email})});
   apiServer=http.createServer(app);const apiPort=await listen(apiServer);process.env.PORTAL_API_ORIGIN='http://127.0.0.1:'+apiPort;
   const routesManifest=path.join(root,'apps/web/.next/routes-manifest.json');
   if(fs.existsSync(routesManifest)){

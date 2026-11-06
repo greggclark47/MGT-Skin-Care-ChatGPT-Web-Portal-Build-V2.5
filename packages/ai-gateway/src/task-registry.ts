@@ -1,23 +1,25 @@
 import type { TaskConfig, TaskType } from './types';
 
-// The fixed task registry. Ollama is the default for high-frequency work, DeepSeek is the
-// local reasoning fallback, and GPT-5.6 Sol is the opt-in, entitlement-gated hosted tier.
+// The fixed task registry. DeepSeek is the requested local primary, Qwen is the local
+// secondary, OpenClaw is an optional local orchestration route, and GPT-5 is the final
+// opt-in, entitlement-gated hosted fallback. GPT-5 is deprecated and must be migrated
+// before its published shutdown date; it remains explicit here only because the owner
+// requested this exact temporary fallback.
 // Every assignment is a config value, so routing can change without changing callers.
-const OLLAMA_FAST = { provider: 'ollama' as const, model: 'llama3.2:3b', max_tokens: 700, temperature: 0.3 };
 const QWEN_LOCAL = { provider: 'ollama' as const, model: 'qwen3.5:4b', max_tokens: 1000, temperature: 0.3 };
-const DEEPSEEK_LOCAL = { provider: 'ollama' as const, model: 'deepseek-r1:8b', max_tokens: 900, temperature: 0.2 };
+const DEEPSEEK_LOCAL = { provider: 'ollama' as const, model: 'deepseek-r1:8b', max_tokens: 1600, temperature: 0.2 };
 const OLLAMA_VISION = { provider: 'ollama' as const, model: 'llava:latest', max_tokens: 700, temperature: 0.2 };
+const OPENAI_GPT5_FALLBACK = { provider: 'openai' as const, model: 'gpt-5', max_tokens: 2000, temperature: 0.3, reasoning_effort: 'medium' as const };
 const OPENAI_SOL = { provider: 'openai' as const, model: 'gpt-5.6-sol', max_tokens: 2000, temperature: 0.4, reasoning_effort: 'medium' as const };
-const OPENAI_SOL_FALLBACK = { ...OPENAI_SOL, reasoning_effort: 'low' as const };
 const OPENAI_ASTRA = { provider: 'openai' as const, model: 'gpt-6-astra', max_tokens: 3000, temperature: 0.2, reasoning_effort: 'high' as const };
-const OPENCLAW = { provider: 'openclaw' as const, model: 'llama3.2:3b', max_tokens: 900, temperature: 0.3 };
+const OPENCLAW = { provider: 'openclaw' as const, model: 'qwen3.5:4b', max_tokens: 1000, temperature: 0.3 };
 const OLLAMA_EMBED = { provider: 'ollama' as const, model: 'nomic-embed-text', max_tokens: 0, temperature: 0 };
 
 function tier1(task_type: TaskType, prompt_version: string, grounded: boolean, schema?: TaskConfig['response_schema']): TaskConfig {
   return {
-    task_type, primary: OLLAMA_FAST, fallbacks: [DEEPSEEK_LOCAL, OPENCLAW, OPENAI_SOL_FALLBACK],
+    task_type, primary: DEEPSEEK_LOCAL, fallbacks: [QWEN_LOCAL, OPENCLAW, OPENAI_GPT5_FALLBACK],
     budget_class: 'tier1_copy', requires_entitlement: false,
-    prompt_version, timeout_ms: 8000, grounded, response_schema: schema,
+    prompt_version, timeout_ms: 30000, grounded, response_schema: schema,
   };
 }
 
@@ -39,12 +41,12 @@ export const TASK_REGISTRY: Record<TaskType, TaskConfig> = {
   // the routine mutation itself runs in @mgt/domain's deterministic engines, never here
   // (Section C.4, and the "0 model-authored routine changes" KPI depends on it).
   coach_routine_command: {
-    task_type: 'coach_routine_command', primary: OLLAMA_FAST, fallbacks: [DEEPSEEK_LOCAL, OPENCLAW],
+    task_type: 'coach_routine_command', primary: DEEPSEEK_LOCAL, fallbacks: [QWEN_LOCAL, OPENCLAW],
     budget_class: 'tier1_copy', requires_entitlement: false,
-    prompt_version: 'v2.0.0', timeout_ms: 5000, grounded: false,
+    prompt_version: 'v2.0.0', timeout_ms: 30000, grounded: false,
     response_schema: { type: 'object', required: ['intent'], properties: { intent: { type: 'string' }, days: { type: 'number' }, target_delta_cents: { type: 'number' } } },
   },
-  classify_intent: { ...tier1('classify_intent', 'v2.0.0', false), timeout_ms: 4000 },
+  classify_intent: tier1('classify_intent', 'v2.0.0', false),
   shopping_assistant: tier1('shopping_assistant', 'v2.0.0', true),
   support_draft: tier1('support_draft', 'v2.0.0', false),
   summarize_conversation: tier1('summarize_conversation', 'v2.0.0', false),
@@ -112,13 +114,13 @@ export const TASK_REGISTRY: Record<TaskType, TaskConfig> = {
   }),
 
   social_engagement_draft: {
-    task_type:'social_engagement_draft',primary:DEEPSEEK_LOCAL,fallbacks:[OPENCLAW,QWEN_LOCAL],budget_class:'tier1_copy',requires_entitlement:false,prompt_version:'v1.0.0',timeout_ms:12000,grounded:false,
+    task_type:'social_engagement_draft',primary:DEEPSEEK_LOCAL,fallbacks:[OPENCLAW,QWEN_LOCAL],budget_class:'tier1_copy',requires_entitlement:false,prompt_version:'v1.0.0',timeout_ms:30000,grounded:false,
   },
   marketing_promotion_draft: {
-    task_type:'marketing_promotion_draft',primary:QWEN_LOCAL,fallbacks:[DEEPSEEK_LOCAL,OPENCLAW],budget_class:'tier1_copy',requires_entitlement:false,prompt_version:'v1.0.0',timeout_ms:12000,grounded:false,
+    task_type:'marketing_promotion_draft',primary:QWEN_LOCAL,fallbacks:[DEEPSEEK_LOCAL,OPENCLAW],budget_class:'tier1_copy',requires_entitlement:false,prompt_version:'v1.0.0',timeout_ms:30000,grounded:false,
   },
   retailer_outreach_draft: {
-    task_type:'retailer_outreach_draft',primary:DEEPSEEK_LOCAL,fallbacks:[OPENCLAW,QWEN_LOCAL],budget_class:'tier1_copy',requires_entitlement:false,prompt_version:'v1.0.0',timeout_ms:12000,grounded:false,
+    task_type:'retailer_outreach_draft',primary:DEEPSEEK_LOCAL,fallbacks:[OPENCLAW,QWEN_LOCAL],budget_class:'tier1_copy',requires_entitlement:false,prompt_version:'v1.0.0',timeout_ms:30000,grounded:false,
   },
 
   embed: {

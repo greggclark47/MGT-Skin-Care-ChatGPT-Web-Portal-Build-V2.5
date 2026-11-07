@@ -4,21 +4,22 @@ import Link from 'next/link';
 import {usePathname} from 'next/navigation';
 import {Brand} from './Brand';
 import {hub,useHub} from '../lib/hub';
+import {BRAND} from '../lib/brand';
 type Theme='light'|'dark';
 export function PortalShell({children}:{children:React.ReactNode}){
  const saved=useHub('/saved-retailers');const sessionState=useHub('/session');const savedCount=saved.data?.ids.length||0;
  const headerRef=useRef<HTMLElement>(null),previousPath=useRef<string|undefined>(undefined);
  const path=usePathname(); const [theme,setTheme]=useState<Theme>('dark'); const [open,setOpen]=useState(false); const [routeAnnouncement,setRouteAnnouncement]=useState('');
  const titles:Record<string,string>={'/':'Applications','/account':'My account','/skin-match':'Skin Match','/skin-match/results':'Skin Match results','/my-skin':'My skin','/routine':'My routine','/coach':'Skin Coach','/complexion':'Complexion Intelligence','/anti-aging':'Anti-aging discovery','/shop':'Shop','/saved':'Saved retailers','/wardrobe':'Color Match & Wardrobe','/replenishment':'Replenishment','/membership':'Plans and billing','/subscription':'Subscription','/orders':'Retailer purchase help','/support':'Portal Support','/learn':'Learn','/company':'Company','/trust':'Trust and AI','/ai-disclosure':'AI disclosure','/privacy':'Privacy','/terms':'Terms','/shipping':'Shipping and returns','/partners':'Partners','/studio':'Beauty and Style Studio','/studio/personal-color':'Personal color','/studio/makeup':'Makeup','/studio/haircare':'Haircare','/studio/hair-color':'Hair color','/studio/style':'Personal style','/studio/clothing':'Clothing','/admin':'Portal operations','/admin/analysis':'AI operations','/admin/knowledge':'Knowledge review','/admin/ingredient-rules':'Ingredient rules','/admin/operators':'Operator access'};
- const routeTitle=path==='/care'?'Account & customer care':titles[path]||'Team 47 Studio';
+ const routeTitle=path==='/care'?'Account & customer care':titles[path]||BRAND.name;
  useEffect(()=>{setTheme(document.documentElement.dataset.theme==='light'?'light':'dark');
  const media=matchMedia('(prefers-color-scheme: dark)');
- const sync=()=>{try{if(localStorage.getItem('mgt-theme'))return;}catch{} const t=media.matches?'dark':'light';document.documentElement.dataset.theme=t;setTheme(t);};
- const storage=(e:StorageEvent)=>{if(e.key!=='mgt-theme')return;const t=e.newValue==='light'?'light':e.newValue==='dark'?'dark':media.matches?'dark':'light';document.documentElement.dataset.theme=t;setTheme(t);};
+ const sync=()=>{try{if(localStorage.getItem(BRAND.themeStorageKey))return;}catch{} const t=media.matches?'dark':'light';document.documentElement.dataset.theme=t;setTheme(t);};
+ const storage=(e:StorageEvent)=>{if(e.key!==BRAND.themeStorageKey)return;const t=e.newValue==='light'?'light':e.newValue==='dark'?'dark':media.matches?'dark':'light';document.documentElement.dataset.theme=t;setTheme(t);};
  media.addEventListener('change',sync);window.addEventListener('storage',storage);
  return()=>{media.removeEventListener('change',sync);window.removeEventListener('storage',storage);};
  },[]);
- useEffect(()=>{document.title=routeTitle+' · Team 47 Studio';setOpen(false);if(previousPath.current!==undefined&&previousPath.current!==path){setRouteAnnouncement(routeTitle+' page loaded');window.requestAnimationFrame(()=>document.getElementById('main')?.focus());}previousPath.current=path;},[path,routeTitle]);
+ useEffect(()=>{document.title=routeTitle+' · '+BRAND.name;setOpen(false);if(previousPath.current!==undefined&&previousPath.current!==path){setRouteAnnouncement(routeTitle+' page loaded');window.requestAnimationFrame(()=>document.getElementById('main')?.focus());}previousPath.current=path;},[path,routeTitle]);
  useEffect(()=>{const media=matchMedia('(min-width: 601px)');const reset=()=>{if(media.matches)setOpen(false);};media.addEventListener('change',reset);return()=>media.removeEventListener('change',reset);},[]);
  useEffect(()=>{
   let active=true;const root=document.documentElement;
@@ -29,7 +30,7 @@ export function PortalShell({children}:{children:React.ReactNode}){
   return()=>{active=false;window.removeEventListener('hub:changed',changed);};
  },[sessionState.loading,sessionState.data?.account]);
  useEffect(()=>{if(!open)return;window.requestAnimationFrame(()=>document.querySelector<HTMLElement>('#primary-navigation a')?.focus());const outside=(e:PointerEvent)=>{if(!headerRef.current?.contains(e.target as Node))setOpen(false);};const close=(e:KeyboardEvent)=>{if(e.key==='Escape'){setOpen(false);document.getElementById('menu-toggle')?.focus();}};window.addEventListener('keydown',close);document.addEventListener('pointerdown',outside);return()=>{window.removeEventListener('keydown',close);document.removeEventListener('pointerdown',outside);};},[open]);
- const toggle=()=>{const t=theme==='dark'?'light':'dark';document.documentElement.dataset.theme=t;setTheme(t);try{localStorage.setItem('mgt-theme',t);}catch{}};
+ const toggle=()=>{const t=theme==='dark'?'light':'dark';document.documentElement.dataset.theme=t;setTheme(t);try{localStorage.setItem(BRAND.themeStorageKey,t);}catch{}};
  const primary=[['/','Applications'],['/shop','Shop'],['/learn','Learn'],['/company','Company']];
  const appLinks=[['/skin-match','Skin Match'],['/complexion','Complexion Intelligence'],['/anti-aging','Anti-aging Edit'],['/routine','My Routine'],['/coach','Skin Coach'],['/my-skin','My Skin'],['/replenishment','Replenishment'],['/studio','Beauty & Style'],['/wardrobe','Color Match & Wardrobe'],['/care','Account & Care']];
  const isWithin=(href:string)=>path===href||path.startsWith(href+'/');

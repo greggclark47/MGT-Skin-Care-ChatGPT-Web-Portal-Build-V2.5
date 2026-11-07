@@ -56,6 +56,7 @@ export default function App() {
             <Image source={require('./assets/team47studio-stacked-light-surface.png')} resizeMode="contain" style={styles.brandLogo} accessible accessibilityLabel="Team 47 Studio" />
             <Text style={styles.brandName}>TEAM 47 STUDIO</Text>
             <Text style={styles.brandKicker}>SKIN · COLOR · STYLE, IN SYNC WITH YOU</Text>
+            <Text style={styles.brandOwner}>Owned and operated by MGT · Gregg Clark, Owner/Operator · CEO · CTO · CFO</Text>
           </View>
           <Text style={styles.title}>Your care. Your color. Your rhythm.</Text>
           <Text style={styles.body}>
@@ -116,6 +117,7 @@ const styles = StyleSheet.create({
   brandLogo: { width: '100%', maxWidth: 360, height: 180, borderRadius: radius.lg, backgroundColor: '#FFFFFF' },
   brandName: { color: '#24115D', fontSize: font.size.md, fontWeight: '700', letterSpacing: 1.4 },
   brandKicker: { color: '#514179', fontSize: font.size.xs, fontWeight: '600', letterSpacing: 0.7, textAlign: 'center' },
+  brandOwner: { color: '#5D5870', fontSize: font.size.xs, lineHeight: 18, textAlign: 'center', maxWidth: 340 },
   title: { fontSize: font.size.xxl, fontWeight: '700', color: '#17163B', marginTop: space.sm },
   body: { fontSize: font.size.md, color: color.textMuted, lineHeight: 24, padding: space.lg },
   cta: { marginTop: space.lg, minHeight: 48, alignItems: 'center', justifyContent: 'center',

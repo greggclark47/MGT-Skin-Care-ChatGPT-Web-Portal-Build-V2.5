@@ -47,6 +47,7 @@ test("creates a non-secret operator intake shape with no web assignment", () => 
     "BACKUP_ATTESTATION_SECRET",
     "STRIPE_SECRET_KEY",
     "STRIPE_SUBSCRIPTION_WEBHOOK_SECRET",
+    "OLLAMA_CLOUD_API_KEY",
     "OPENAI_API_KEY",
     "OPENCLAW_API_KEY"
   ]);

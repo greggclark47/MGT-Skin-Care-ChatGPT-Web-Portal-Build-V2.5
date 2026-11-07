@@ -105,7 +105,7 @@ export class AiGateway {
 
     for (let i = 0; i < chain.length; i++) {
       const modelConfig = chain[i];
-      const hosted = modelConfig.provider === 'openai' || modelConfig.provider === 'openai_compatible';
+      const hosted = modelConfig.provider === 'ollama_cloud' || modelConfig.provider === 'openai' || modelConfig.provider === 'openai_compatible';
       if (hosted && (!request.user_id || (request.has_premium_entitlement !== true && request.has_operator_authorization !== true))) {
         skipReason = skipReason ?? 'hosted_entitlement_required';
         continue;

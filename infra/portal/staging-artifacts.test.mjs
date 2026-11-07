@@ -46,7 +46,7 @@ function secretAdmissionFixture() {
     if (consumer === "edge") return { PORTAL_DOMAIN: "staging.mgtskincare.test" };
     const values = Object.fromEntries(REQUIRED_CONFIG_VARIABLES[consumer].map((name) => [name, "configured"]));
     values.NODE_ENV = "production"; values.DEMO_MODE = "false"; values.PORTAL_AUTO_MIGRATE = "false";
-    if (consumer === "api") { values.OLLAMA_ENABLED = "false"; values.OPENCLAW_ENABLED = "false"; values.HOSTED_OPENAI_ENABLED = "false"; values.BACKUP_ATTESTATION_ENABLED = "false"; values.SUBSCRIPTIONS_ENABLED = "false"; values.MGT_OMNI_RETAIL_ENABLED = "false"; values.MGT_RETAIL_PARTNER_AUTHORIZATION_REVIEWED = "false"; values.MGT_SPONSORED_CONTENT_ENABLED = "false"; values.MGT_SPONSORED_CONTENT_REVIEWED = "false"; }
+    if (consumer === "api") { values.OLLAMA_ENABLED = "false"; values.OPENCLAW_ENABLED = "false"; values.OLLAMA_CLOUD_ENABLED = "false"; values.HOSTED_OPENAI_ENABLED = "false"; values.BACKUP_ATTESTATION_ENABLED = "false"; values.SUBSCRIPTIONS_ENABLED = "false"; values.MGT_OMNI_RETAIL_ENABLED = "false"; values.MGT_RETAIL_PARTNER_AUTHORIZATION_REVIEWED = "false"; values.MGT_SPONSORED_CONTENT_ENABLED = "false"; values.MGT_SPONSORED_CONTENT_REVIEWED = "false"; }
     if (consumer === "worker") values.NOTIFICATION_DELIVERY = "in_app";
     return values;
   };

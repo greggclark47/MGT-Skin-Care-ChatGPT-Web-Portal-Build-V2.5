@@ -69,7 +69,7 @@ test('mobile Skin Match consumes shared questionnaire and profile contracts',()=
  assert.match(entry,/Privacy, data export and account deletion/);
  assert.match(entry,/public HTTPS API, portal, privacy, terms and AI disclosure links/);
  assert.match(entry,/needs public HTTPS API, portal, privacy, terms and AI disclosure links/);
- assert.doesNotMatch(entry,/OPENAI_API_KEY|SUPABASE_SERVICE_ROLE_KEY|STRIPE_SECRET_KEY/);
+ assert.doesNotMatch(entry,/OLLAMA_CLOUD_API_KEY|OPENAI_API_KEY|SUPABASE_SERVICE_ROLE_KEY|STRIPE_SECRET_KEY/);
  assert.match(entry,/team47studio-stacked-light-surface\.png/);
  assert.match(entry,/TEAM 47 STUDIO/);
 });

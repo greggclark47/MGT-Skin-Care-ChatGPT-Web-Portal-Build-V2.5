@@ -24,7 +24,7 @@ export const RUNTIME_CONFIG_VARIABLES = Object.freeze({
   api: Object.freeze([
     "NODE_ENV", "DEMO_MODE", "PUBLIC_ORIGIN", "PORTAL_DOMAIN", "PORTAL_AUTO_MIGRATE", "HOST", "PORT",
     "WORKER_INTERVAL_SECONDS", "WORKER_READINESS_MAX_AGE_SECONDS", "SUPABASE_URL", "SUPABASE_GOOGLE_OAUTH_ENABLED",
-    "OLLAMA_ENABLED", "OLLAMA_BASE_URL", "OPENCLAW_ENABLED", "OPENCLAW_BASE_URL", "OPENCLAW_API_MODE", "HOSTED_OPENAI_ENABLED",
+    "OLLAMA_ENABLED", "OLLAMA_BASE_URL", "OPENCLAW_ENABLED", "OPENCLAW_BASE_URL", "OPENCLAW_API_MODE", "OLLAMA_CLOUD_ENABLED", "OLLAMA_CLOUD_BASE_URL", "OLLAMA_CLOUD_MODEL", "HOSTED_OPENAI_ENABLED",
     "BACKUP_ATTESTATION_ENABLED", "BACKUP_ATTESTATION_KEY_ID", "BACKUP_ATTESTATION_MAX_AGE_SECONDS",
     "ANTI_AGING_LIVE_AI", "ANTI_AGING_CHECKOUT_ENABLED", "ANTI_AGING_BOOKING_ENABLED", "ANTI_AGING_IMAGE_ANALYSIS_ENABLED",
     "ANTI_AGING_ACCESSIBILITY_VERIFIED", "ANTI_AGING_RESTORE_VERIFIED", "ANTI_AGING_PRIVACY_REVIEWED",
@@ -64,7 +64,7 @@ const ADMISSION_FIELDS = Object.freeze([
   "contract_checksums", "private_file_security", "feature_posture", "workloads", "errors", "admission_checksum"
 ]);
 const API_FEATURE_POSTURE_FIELDS = Object.freeze([
-  "ollama_enabled", "openclaw_enabled", "openclaw_api_mode", "hosted_openai_enabled", "backup_attestation_enabled", "subscriptions_enabled",
+  "ollama_enabled", "openclaw_enabled", "openclaw_api_mode", "ollama_cloud_enabled", "hosted_openai_enabled", "backup_attestation_enabled", "subscriptions_enabled",
   "omni_retail_enabled", "retail_partner_authorization_reviewed", "sponsored_content_enabled", "sponsored_content_reviewed"
 ]);
 const WORKER_FEATURE_POSTURE_FIELDS = Object.freeze(["notification_delivery"]);
@@ -74,7 +74,7 @@ export const REQUIRED_CONFIG_VARIABLES = Object.freeze({
   api: Object.freeze([
     "NODE_ENV", "DEMO_MODE", "PUBLIC_ORIGIN", "PORTAL_DOMAIN", "PORTAL_AUTO_MIGRATE", "HOST", "PORT",
     "WORKER_INTERVAL_SECONDS", "WORKER_READINESS_MAX_AGE_SECONDS", "SUPABASE_URL", "SUPABASE_GOOGLE_OAUTH_ENABLED",
-    "OLLAMA_ENABLED", "OPENCLAW_ENABLED", "HOSTED_OPENAI_ENABLED", "BACKUP_ATTESTATION_ENABLED", "ANTI_AGING_LIVE_AI",
+    "OLLAMA_ENABLED", "OPENCLAW_ENABLED", "OLLAMA_CLOUD_ENABLED", "HOSTED_OPENAI_ENABLED", "BACKUP_ATTESTATION_ENABLED", "ANTI_AGING_LIVE_AI",
     "ANTI_AGING_CHECKOUT_ENABLED", "ANTI_AGING_BOOKING_ENABLED", "ANTI_AGING_IMAGE_ANALYSIS_ENABLED",
     "ANTI_AGING_ACCESSIBILITY_VERIFIED", "ANTI_AGING_RESTORE_VERIFIED", "ANTI_AGING_PRIVACY_REVIEWED",
     "SUBSCRIPTIONS_ENABLED", "MGT_OMNI_RETAIL_ENABLED", "MGT_RETAIL_PARTNER_AUTHORIZATION_REVIEWED",
@@ -153,6 +153,7 @@ function requiredSecrets(consumer, config) {
     if (config.BACKUP_ATTESTATION_ENABLED === "true") required.push("BACKUP_ATTESTATION_SECRET");
     if (config.SUBSCRIPTIONS_ENABLED === "true") required.push("STRIPE_SECRET_KEY", "STRIPE_SUBSCRIPTION_WEBHOOK_SECRET");
     if (config.OPENCLAW_ENABLED === "true" && config.OPENCLAW_API_MODE === "openai-completions") required.push("OPENCLAW_API_KEY");
+    if (config.OLLAMA_CLOUD_ENABLED === "true") required.push("OLLAMA_CLOUD_API_KEY");
     if (config.HOSTED_OPENAI_ENABLED === "true") required.push("OPENAI_API_KEY");
     return required;
   }
@@ -170,7 +171,7 @@ function conditionalConfigurationErrors(consumer, config, errors) {
     for (const name of names) if (!own(config, name) || text(config[name]) === "") errors.push(`${consumer} configuration must include ${name} when its feature is enabled`);
   };
   if (consumer === "api") {
-    for (const name of ["OLLAMA_ENABLED", "OPENCLAW_ENABLED", "HOSTED_OPENAI_ENABLED", "BACKUP_ATTESTATION_ENABLED", "SUBSCRIPTIONS_ENABLED", "MGT_OMNI_RETAIL_ENABLED", "MGT_RETAIL_PARTNER_AUTHORIZATION_REVIEWED", "MGT_SPONSORED_CONTENT_ENABLED", "MGT_SPONSORED_CONTENT_REVIEWED"]) {
+    for (const name of ["OLLAMA_ENABLED", "OPENCLAW_ENABLED", "OLLAMA_CLOUD_ENABLED", "HOSTED_OPENAI_ENABLED", "BACKUP_ATTESTATION_ENABLED", "SUBSCRIPTIONS_ENABLED", "MGT_OMNI_RETAIL_ENABLED", "MGT_RETAIL_PARTNER_AUTHORIZATION_REVIEWED", "MGT_SPONSORED_CONTENT_ENABLED", "MGT_SPONSORED_CONTENT_REVIEWED"]) {
       if (!["true", "false"].includes(config[name])) errors.push(`${consumer} configuration must declare ${name} as true or false`);
     }
     if (config.OLLAMA_ENABLED === "true") require(["OLLAMA_BASE_URL"]);
@@ -178,6 +179,8 @@ function conditionalConfigurationErrors(consumer, config, errors) {
     if (config.OPENCLAW_ENABLED === "true") require(["OPENCLAW_BASE_URL", "OPENCLAW_API_MODE"]);
     if (config.OPENCLAW_ENABLED === "true" && !["ollama", "openai-completions"].includes(config.OPENCLAW_API_MODE)) errors.push(`${consumer} configuration must declare a supported OpenClaw mode`);
     if (config.OPENCLAW_ENABLED === "false" && ["OPENCLAW_BASE_URL", "OPENCLAW_API_MODE"].some((name) => own(config, name))) errors.push(`${consumer} configuration retains disabled OpenClaw configuration`);
+    if (config.OLLAMA_CLOUD_ENABLED === "true") require(["OLLAMA_CLOUD_BASE_URL", "OLLAMA_CLOUD_MODEL"]);
+    if (config.OLLAMA_CLOUD_ENABLED === "false" && ["OLLAMA_CLOUD_BASE_URL", "OLLAMA_CLOUD_MODEL"].some((name) => own(config, name))) errors.push(`${consumer} configuration retains disabled Ollama Cloud configuration`);
     if (config.BACKUP_ATTESTATION_ENABLED === "true") require(["BACKUP_ATTESTATION_KEY_ID", "BACKUP_ATTESTATION_MAX_AGE_SECONDS"]);
     if (config.BACKUP_ATTESTATION_ENABLED === "false" && ["BACKUP_ATTESTATION_KEY_ID", "BACKUP_ATTESTATION_MAX_AGE_SECONDS"].some((name) => own(config, name))) errors.push(`${consumer} configuration retains disabled backup-attestation configuration`);
     if (config.SUBSCRIPTIONS_ENABLED === "true") require(["SUBSCRIPTION_TERMS_APPROVED", "STRIPE_LIVE_MODE", "STRIPE_PREMIUM_PRODUCT_ID", "STRIPE_PREMIUM_MONTHLY_PRICE_ID", "STRIPE_PREMIUM_ANNUAL_PRICE_ID"]);
@@ -207,6 +210,7 @@ function featurePosture(inventories = {}) {
       ollama_enabled: text(api.OLLAMA_ENABLED),
       openclaw_enabled: text(api.OPENCLAW_ENABLED),
       openclaw_api_mode: text(api.OPENCLAW_API_MODE),
+      ollama_cloud_enabled: text(api.OLLAMA_CLOUD_ENABLED),
       hosted_openai_enabled: text(api.HOSTED_OPENAI_ENABLED),
       backup_attestation_enabled: text(api.BACKUP_ATTESTATION_ENABLED),
       subscriptions_enabled: text(api.SUBSCRIPTIONS_ENABLED),
@@ -353,7 +357,7 @@ export function validateSecretInjectionAdmission(document, { environment, candid
     && exactObjectKeys(posture?.worker, WORKER_FEATURE_POSTURE_FIELDS);
   if (!validPostureShape) errors.push("secret-injection admission must retain its complete feature posture");
   if (validPostureShape) {
-    for (const name of ["ollama_enabled", "openclaw_enabled", "hosted_openai_enabled", "backup_attestation_enabled", "subscriptions_enabled", "omni_retail_enabled", "retail_partner_authorization_reviewed", "sponsored_content_enabled", "sponsored_content_reviewed"]) {
+    for (const name of ["ollama_enabled", "openclaw_enabled", "ollama_cloud_enabled", "hosted_openai_enabled", "backup_attestation_enabled", "subscriptions_enabled", "omni_retail_enabled", "retail_partner_authorization_reviewed", "sponsored_content_enabled", "sponsored_content_reviewed"]) {
       if (!["true", "false"].includes(posture.api[name])) errors.push("secret-injection admission feature posture contains an invalid API toggle");
     }
     if (posture.api.openclaw_enabled === "true" && !["ollama", "openai-completions"].includes(posture.api.openclaw_api_mode)) errors.push("secret-injection admission feature posture requires a valid OpenClaw mode");
@@ -385,6 +389,7 @@ export function validateSecretInjectionAdmission(document, { environment, candid
       OLLAMA_ENABLED: api.ollama_enabled,
       OPENCLAW_ENABLED: api.openclaw_enabled,
       OPENCLAW_API_MODE: api.openclaw_api_mode,
+      OLLAMA_CLOUD_ENABLED: api.ollama_cloud_enabled,
       HOSTED_OPENAI_ENABLED: api.hosted_openai_enabled,
       BACKUP_ATTESTATION_ENABLED: api.backup_attestation_enabled,
       SUBSCRIPTIONS_ENABLED: api.subscriptions_enabled,
@@ -409,6 +414,7 @@ export function validateSecretInjectionAdmission(document, { environment, candid
     if (api.ollama_enabled === "true" && !apiConfig.includes("OLLAMA_BASE_URL")) errors.push("api admission posture requires OLLAMA_BASE_URL");
     if (api.openclaw_enabled === "true" && (!["OPENCLAW_BASE_URL", "OPENCLAW_API_MODE"].every((name) => apiConfig.includes(name)))) errors.push("api admission posture requires OpenClaw configuration");
     if (api.openclaw_enabled === "true" && api.openclaw_api_mode === "openai-completions" && !apiSecrets.includes("OPENCLAW_API_KEY")) errors.push("api admission posture requires OPENCLAW_API_KEY");
+    if (api.ollama_cloud_enabled === "true" && (!apiConfig.includes("OLLAMA_CLOUD_BASE_URL") || !apiConfig.includes("OLLAMA_CLOUD_MODEL") || !apiSecrets.includes("OLLAMA_CLOUD_API_KEY"))) errors.push("api admission posture requires Ollama Cloud configuration and key");
     if (api.hosted_openai_enabled === "true" && !apiSecrets.includes("OPENAI_API_KEY")) errors.push("api admission posture requires OPENAI_API_KEY");
     if (api.backup_attestation_enabled === "true" && (!["BACKUP_ATTESTATION_KEY_ID", "BACKUP_ATTESTATION_MAX_AGE_SECONDS"].every((name) => apiConfig.includes(name)) || !apiSecrets.includes("BACKUP_ATTESTATION_SECRET"))) errors.push("api admission posture requires backup-attestation inputs");
     if (api.subscriptions_enabled === "true" && (!["SUBSCRIPTION_TERMS_APPROVED", "STRIPE_LIVE_MODE", "STRIPE_PREMIUM_PRODUCT_ID", "STRIPE_PREMIUM_MONTHLY_PRICE_ID", "STRIPE_PREMIUM_ANNUAL_PRICE_ID"].every((name) => apiConfig.includes(name)) || !["STRIPE_SECRET_KEY", "STRIPE_SUBSCRIPTION_WEBHOOK_SECRET"].every((name) => apiSecrets.includes(name)))) errors.push("api admission posture requires subscription inputs");
@@ -416,6 +422,7 @@ export function validateSecretInjectionAdmission(document, { environment, candid
     if (api.ollama_enabled === "false" && apiConfig.includes("OLLAMA_BASE_URL")) errors.push("api admission retains disabled Ollama configuration");
     if (api.openclaw_enabled === "false" && (["OPENCLAW_BASE_URL", "OPENCLAW_API_MODE"].some((name) => apiConfig.includes(name)) || apiSecrets.includes("OPENCLAW_API_KEY"))) errors.push("api admission retains disabled OpenClaw configuration");
     if (api.openclaw_enabled === "true" && api.openclaw_api_mode === "ollama" && apiSecrets.includes("OPENCLAW_API_KEY")) errors.push("api admission retains an OpenClaw credential in native Ollama mode");
+    if (api.ollama_cloud_enabled === "false" && (["OLLAMA_CLOUD_BASE_URL", "OLLAMA_CLOUD_MODEL"].some((name) => apiConfig.includes(name)) || apiSecrets.includes("OLLAMA_CLOUD_API_KEY"))) errors.push("api admission retains disabled Ollama Cloud configuration");
     if (api.hosted_openai_enabled === "false" && apiSecrets.includes("OPENAI_API_KEY")) errors.push("api admission retains disabled hosted OpenAI configuration");
     if (api.backup_attestation_enabled === "false" && (["BACKUP_ATTESTATION_KEY_ID", "BACKUP_ATTESTATION_MAX_AGE_SECONDS"].some((name) => apiConfig.includes(name)) || apiSecrets.includes("BACKUP_ATTESTATION_SECRET"))) errors.push("api admission retains disabled backup-attestation configuration");
     if (api.subscriptions_enabled === "false" && (["SUBSCRIPTION_TERMS_APPROVED", "STRIPE_LIVE_MODE", "STRIPE_PREMIUM_PRODUCT_ID", "STRIPE_PREMIUM_MONTHLY_PRICE_ID", "STRIPE_PREMIUM_ANNUAL_PRICE_ID", "STRIPE_STUDIO_MONTHLY_PRICE_ID", "STRIPE_STUDIO_ANNUAL_PRICE_ID"].some((name) => apiConfig.includes(name)) || ["STRIPE_SECRET_KEY", "STRIPE_SUBSCRIPTION_WEBHOOK_SECRET"].some((name) => apiSecrets.includes(name)))) errors.push("api admission retains disabled subscription configuration");

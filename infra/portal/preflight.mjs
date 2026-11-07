@@ -196,6 +196,14 @@ export function validateEnvironment(env) {
     warnings.push("OpenClaw orchestration is disabled.");
   }
 
+  if (!["true", "false"].includes(env.OLLAMA_CLOUD_ENABLED)) errors.push("OLLAMA_CLOUD_ENABLED must be exactly true or false.");
+  if (env.OLLAMA_CLOUD_ENABLED === "true") {
+    if (env.OLLAMA_CLOUD_BASE_URL !== "https://ollama.com") errors.push("OLLAMA_CLOUD_BASE_URL must be the approved https://ollama.com origin.");
+    if (env.OLLAMA_CLOUD_MODEL !== "deepseek-v4.1-flash") errors.push("OLLAMA_CLOUD_MODEL must be the approved DeepSeek cloud model.");
+    const ollamaCloudKey = requireValue("OLLAMA_CLOUD_API_KEY");
+    if (ollamaCloudKey && !validSecretReference(env.OLLAMA_CLOUD_API_KEY)) errors.push("OLLAMA_CLOUD_API_KEY must be injected as a bounded non-placeholder reference without whitespace or control characters.");
+  } else if (env.OLLAMA_CLOUD_ENABLED === "false") warnings.push("Ollama Cloud escalation is disabled; local routes remain primary.");
+
   const workerInterval = Number(env.WORKER_INTERVAL_SECONDS);
   const readinessAge = Number(env.WORKER_READINESS_MAX_AGE_SECONDS);
   if (typeof env.WORKER_INTERVAL_SECONDS !== 'string' || !/^\d+$/.test(env.WORKER_INTERVAL_SECONDS) || !wholeNumber(env.WORKER_INTERVAL_SECONDS, 15, 3600)) errors.push("WORKER_INTERVAL_SECONDS must be a whole number between 15 and 3600.");
@@ -351,6 +359,7 @@ export function validateEnvironment(env) {
   if (backupAttestationEnabled === "true") secretKeys.push("BACKUP_ATTESTATION_SECRET");
   if (env.NOTIFICATION_DELIVERY === "webhook") secretKeys.push("NOTIFICATION_WEBHOOK_TOKEN");
   if (env.OPENCLAW_ENABLED === "true" && env.OPENCLAW_API_MODE === "openai-completions") secretKeys.push("OPENCLAW_API_KEY");
+  if (env.OLLAMA_CLOUD_ENABLED === "true") secretKeys.push("OLLAMA_CLOUD_API_KEY");
   if (env.HOSTED_OPENAI_ENABLED === "true") secretKeys.push("OPENAI_API_KEY");
   if (env.SUBSCRIPTIONS_ENABLED === "true" || commercialStripeEnabled) secretKeys.push("STRIPE_SECRET_KEY");
   if (env.SUBSCRIPTIONS_ENABLED === "true") secretKeys.push("STRIPE_SUBSCRIPTION_WEBHOOK_SECRET");
@@ -367,6 +376,7 @@ export function validateEnvironment(env) {
   if (env.OLLAMA_ENABLED === "false" && populated(["OLLAMA_BASE_URL"])) errors.push("Disabled Ollama must not retain an endpoint.");
   if (env.OPENCLAW_ENABLED === "false" && populated(["OPENCLAW_BASE_URL", "OPENCLAW_API_MODE", "OPENCLAW_API_KEY"])) errors.push("Disabled OpenClaw must not retain endpoint, mode, or credential configuration.");
   if (env.OPENCLAW_ENABLED === "true" && env.OPENCLAW_API_MODE === "ollama" && populated(["OPENCLAW_API_KEY"])) errors.push("Native Ollama-mode OpenClaw must not retain a credential.");
+  if (env.OLLAMA_CLOUD_ENABLED === "false" && populated(["OLLAMA_CLOUD_BASE_URL", "OLLAMA_CLOUD_MODEL", "OLLAMA_CLOUD_API_KEY"])) errors.push("Disabled Ollama Cloud must not retain endpoint, model, or credential configuration.");
   if (env.HOSTED_OPENAI_ENABLED === "false" && populated(["OPENAI_API_KEY"])) errors.push("Disabled hosted OpenAI must not retain a credential.");
   if (env.NODE_ENV === "production" && (env.CLIENT_IMAGE_DRIVE_TEST_ENABLED === "true" || populated(["TEST_GOOGLE_DRIVE_CLIENT_ID", "TEST_GOOGLE_DRIVE_CLIENT_SECRET", "TEST_GOOGLE_DRIVE_REFRESH_TOKEN", "TEST_GOOGLE_DRIVE_FOLDER_ID"]))) errors.push("Production test Google Drive image storage must remain disabled and must not retain test credentials or folder configuration.");
   if (backupAttestationEnabled === "false" && populated(["BACKUP_ATTESTATION_SECRET", "BACKUP_ATTESTATION_KEY_ID", "BACKUP_ATTESTATION_MAX_AGE_SECONDS"])) errors.push("Disabled backup attestation must not retain signing configuration.");
@@ -446,6 +456,13 @@ function validateApiRuntimeEnvironment(context) {
       if (key && !validSecretReference(env.OPENCLAW_API_KEY)) errors.push("OPENCLAW_API_KEY must be a bounded injected reference without whitespace or control characters.");
     }
   } else warnings.push("OpenClaw orchestration is disabled.");
+  if (!["true", "false"].includes(env.OLLAMA_CLOUD_ENABLED)) errors.push("OLLAMA_CLOUD_ENABLED must be exactly true or false.");
+  if (env.OLLAMA_CLOUD_ENABLED === "true") {
+    if (env.OLLAMA_CLOUD_BASE_URL !== "https://ollama.com") errors.push("OLLAMA_CLOUD_BASE_URL must be the approved https://ollama.com origin.");
+    if (env.OLLAMA_CLOUD_MODEL !== "deepseek-v4.1-flash") errors.push("OLLAMA_CLOUD_MODEL must be the approved DeepSeek cloud model.");
+    const ollamaCloudKey = requireValue("OLLAMA_CLOUD_API_KEY");
+    if (ollamaCloudKey && !validSecretReference(env.OLLAMA_CLOUD_API_KEY)) errors.push("OLLAMA_CLOUD_API_KEY must be injected as a bounded non-placeholder reference without whitespace or control characters.");
+  } else if (env.OLLAMA_CLOUD_ENABLED === "false") warnings.push("Ollama Cloud escalation is disabled; local routes remain primary.");
   if (!["true", "false"].includes(env.HOSTED_OPENAI_ENABLED)) errors.push("HOSTED_OPENAI_ENABLED must be exactly true or false.");
   if (env.HOSTED_OPENAI_ENABLED === "true") {
     const hostedOpenAiKey = requireValue("OPENAI_API_KEY");
@@ -498,6 +515,7 @@ function validateApiRuntimeEnvironment(context) {
   if (env.OLLAMA_ENABLED === "false" && populated(["OLLAMA_BASE_URL"])) errors.push("Disabled Ollama must not retain an endpoint.");
   if (env.OPENCLAW_ENABLED === "false" && populated(["OPENCLAW_BASE_URL", "OPENCLAW_API_MODE", "OPENCLAW_API_KEY"])) errors.push("Disabled OpenClaw must not retain endpoint, mode, or credential configuration.");
   if (env.OPENCLAW_ENABLED === "true" && env.OPENCLAW_API_MODE === "ollama" && populated(["OPENCLAW_API_KEY"])) errors.push("Native Ollama-mode OpenClaw must not retain a credential.");
+  if (env.OLLAMA_CLOUD_ENABLED === "false" && populated(["OLLAMA_CLOUD_BASE_URL", "OLLAMA_CLOUD_MODEL", "OLLAMA_CLOUD_API_KEY"])) errors.push("Disabled Ollama Cloud must not retain endpoint, model, or credential configuration.");
   if (env.HOSTED_OPENAI_ENABLED === "false" && populated(["OPENAI_API_KEY"])) errors.push("Disabled hosted OpenAI must not retain a credential.");
   if (env.NODE_ENV === "production" && (env.CLIENT_IMAGE_DRIVE_TEST_ENABLED === "true" || populated(["TEST_GOOGLE_DRIVE_CLIENT_ID", "TEST_GOOGLE_DRIVE_CLIENT_SECRET", "TEST_GOOGLE_DRIVE_REFRESH_TOKEN", "TEST_GOOGLE_DRIVE_FOLDER_ID"]))) errors.push("Production test Google Drive image storage must remain disabled and must not retain test credentials or folder configuration.");
   if (attestation === "false" && populated(["BACKUP_ATTESTATION_SECRET", "BACKUP_ATTESTATION_KEY_ID", "BACKUP_ATTESTATION_MAX_AGE_SECONDS"])) errors.push("Disabled backup attestation must not retain signing configuration.");
@@ -507,7 +525,7 @@ function validateApiRuntimeEnvironment(context) {
 
 function validateWorkerRuntimeEnvironment(context) {
   const { env, errors, requireValue } = context;
-  rejectPeerSecretResidue(context, "Worker", ["MGT_EDGE_TOKEN", "SUPABASE_ANON_KEY", "BACKUP_ATTESTATION_SECRET", "STRIPE_SECRET_KEY", "STRIPE_SUBSCRIPTION_WEBHOOK_SECRET", "OPENAI_API_KEY", "OPENCLAW_API_KEY"]);
+  rejectPeerSecretResidue(context, "Worker", ["MGT_EDGE_TOKEN", "SUPABASE_ANON_KEY", "BACKUP_ATTESTATION_SECRET", "STRIPE_SECRET_KEY", "STRIPE_SUBSCRIPTION_WEBHOOK_SECRET", "OPENAI_API_KEY", "OPENCLAW_API_KEY", "OLLAMA_CLOUD_API_KEY"]);
   validateRuntimeDatabase(context);
   validateRuntimeWorkerTiming(context);
   const healthFile = env.WORKER_HEALTH_FILE;

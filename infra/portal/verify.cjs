@@ -11,7 +11,7 @@ const REGRESSION_TIMEOUT_MS=5*60*1000;
 async function run(name,cwd,args){
  const started=new Date().toISOString();
  const result=await new Promise(resolve=>{let stdout='',stderr='';const child=spawn(process.execPath,args,{cwd:path.join(root,cwd),timeout:REGRESSION_TIMEOUT_MS,windowsHide:true,
-  env:{...process.env,DATABASE_URL:'',SUPABASE_URL:'',SUPABASE_ANON_KEY:'',SUPABASE_SERVICE_ROLE_KEY:'',STRIPE_SECRET_KEY:'',OPENAI_API_KEY:'',OLLAMA_ENABLED:'false',OPENCLAW_ENABLED:'false',HOSTED_OPENAI_ENABLED:'false',NODE_ENV:name==='web production build'?'production':'test',NEXT_TELEMETRY_DISABLED:'1'}});
+  env:{...process.env,DATABASE_URL:'',SUPABASE_URL:'',SUPABASE_ANON_KEY:'',SUPABASE_SERVICE_ROLE_KEY:'',STRIPE_SECRET_KEY:'',OLLAMA_CLOUD_API_KEY:'',OPENAI_API_KEY:'',OLLAMA_ENABLED:'false',OPENCLAW_ENABLED:'false',OLLAMA_CLOUD_ENABLED:'false',HOSTED_OPENAI_ENABLED:'false',NODE_ENV:name==='web production build'?'production':'test',NEXT_TELEMETRY_DISABLED:'1'}});
   child.stdout.on('data',chunk=>{stdout+=chunk;});child.stderr.on('data',chunk=>{stderr+=chunk;});child.once('error',error=>resolve({stdout,stderr,error,status:null}));child.once('close',status=>resolve({stdout,stderr,status}));});
  const output=(result.stdout||'')+(result.stderr||'')+(result.error?'\n'+result.error.message:'');
  const log=name.replace(/[^a-z0-9-]/gi,'-')+'.log';fs.writeFileSync(path.join(out,log),output);

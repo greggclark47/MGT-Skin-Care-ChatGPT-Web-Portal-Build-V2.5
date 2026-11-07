@@ -60,6 +60,7 @@ function configValues(consumer) {
     value.PORT = "3100";
     value.OLLAMA_ENABLED = "false";
     value.OPENCLAW_ENABLED = "false";
+    value.OLLAMA_CLOUD_ENABLED = "false";
     value.HOSTED_OPENAI_ENABLED = "false";
     value.BACKUP_ATTESTATION_ENABLED = "false";
     value.SUBSCRIPTIONS_ENABLED = "false";
@@ -181,6 +182,20 @@ test("requires conditional secret-manager outputs only for enabled features", ()
   const dormantHosted = admission({ inventories: dormantHostedInputs, stagingContract: hostedStaging, productionContract: hostedProduction });
   assert.equal(dormantHosted.status, "blocked");
   assert.match(dormantHosted.errors.join("; "), /disabled or unapproved secret/);
+
+  const cloudInputs = inventories();
+  Object.assign(cloudInputs.api.config_values, {
+    OLLAMA_CLOUD_ENABLED: "true",
+    OLLAMA_CLOUD_BASE_URL: "https://ollama.com",
+    OLLAMA_CLOUD_MODEL: "deepseek-v4.1-flash"
+  });
+  cloudInputs.api.config_keys.push("OLLAMA_CLOUD_BASE_URL", "OLLAMA_CLOUD_MODEL");
+  assert.equal(admission({ inventories: cloudInputs }).status, "blocked");
+  cloudInputs.api.secret_keys.push("OLLAMA_CLOUD_API_KEY");
+  const cloudStaging = contract("staging"), cloudProduction = contract("production");
+  for (const current of [cloudStaging, cloudProduction]) current.consumer_assignments.api.secret_references.OLLAMA_CLOUD_API_KEY = `${current.secret_manager.namespace_reference}/ollama-cloud-api-key`;
+  const cloudEnabled = admission({ inventories: cloudInputs, stagingContract: cloudStaging, productionContract: cloudProduction });
+  assert.equal(cloudEnabled.status, "pass", cloudEnabled.errors.join("\n"));
 
   const sponsoredInputs = inventories();
   Object.assign(sponsoredInputs.api.config_values, {

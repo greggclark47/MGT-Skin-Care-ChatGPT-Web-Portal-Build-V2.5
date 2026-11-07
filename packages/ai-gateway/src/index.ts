@@ -3,7 +3,7 @@ export { AiGateway, NoopLogSink } from './router';
 export { gatewayFromEnv, adaptersFromEnv } from './runtime';
 export { coachPromptChain, composeCoachPrompt } from './orchestration';
 export type { CoachPromptContext, PromptDocument } from './orchestration';
-export { OllamaAdapter, OpenAiAdapter, OpenClawAdapter } from './adapters/http-adapters';
+export { OllamaAdapter, OllamaCloudAdapter, OpenAiAdapter, OpenClawAdapter } from './adapters/http-adapters';
 export type { BudgetCaps, BudgetStore } from './budget';
 export {checkedCents} from './budget';
 export type { ProviderAdapter } from './adapters';
@@ -13,4 +13,4 @@ export type {
   RoutingLogEntry, RoutingLogSink, TaskType,
 } from './types';
 export { TASK_REGISTRY, getTaskConfig } from './task-registry';
-export const AI_GATEWAY_VERSION = '0.2.0-local-first';
+export const AI_GATEWAY_VERSION = '0.3.0-local-first-cloud-fallback';

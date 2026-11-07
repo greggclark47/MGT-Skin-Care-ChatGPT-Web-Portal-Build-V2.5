@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { OpenAiAdapter, OpenClawAdapter, type HttpPost } from '../adapters/http-adapters';
+import { OllamaCloudAdapter, OpenAiAdapter, OpenClawAdapter, type HttpPost } from '../adapters/http-adapters';
 import { getTaskConfig } from '../task-registry';
 import { AiGateway } from '../router';
 import { InMemoryBudgetStore } from '../budget';
@@ -14,6 +14,22 @@ async function main() {
   const finalFallback = getTaskConfig('product_why').fallbacks.at(-1);
   assert.equal(finalFallback?.model, 'gpt-5');
   assert.equal(finalFallback?.provider, 'openai');
+  const ollamaCloudFallback = getTaskConfig('product_why').fallbacks.at(-2);
+  assert.equal(ollamaCloudFallback?.model, 'deepseek-v4.1-flash');
+  assert.equal(ollamaCloudFallback?.provider, 'ollama_cloud');
+
+  let cloudSeen: {url: string; body: any; headers: Record<string, string>} | undefined;
+  const cloud = new OllamaCloudAdapter('cloud-test-key', 'https://ollama.com', async (url, headers, body) => {
+    cloudSeen = {url, headers, body};
+    return {model: 'deepseek-v4.1-flash', message: {content: 'cloud answer'}, prompt_eval_count: 24, eval_count: 9};
+  });
+  const cloudResponse = await cloud.complete(ollamaCloudFallback!, 'cloud system', 'cloud user', new AbortController().signal);
+  assert.equal(cloudSeen?.url, 'https://ollama.com/api/chat');
+  assert.equal(cloudSeen?.headers.authorization, 'Bearer cloud-test-key');
+  assert.equal(cloudSeen?.body.stream, false);
+  assert.equal(cloudResponse.provider, 'ollama_cloud');
+  assert.equal(cloudResponse.model, 'deepseek-v4.1-flash');
+  assert.equal(cloudResponse.text, 'cloud answer');
 
   let seen: {url: string; body: any; headers: Record<string, string>} | undefined;
   const post: HttpPost = async (url, headers, body) => {

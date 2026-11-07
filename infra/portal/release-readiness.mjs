@@ -72,7 +72,7 @@ const ERROR_PREFIXES = Object.freeze({
   database: ["DATABASE_URL", "SUPABASE_URL", "SUPABASE_ANON_KEY", "SUPABASE_SERVICE_ROLE_KEY"],
   backup: ["BACKUP_MAX_AGE_HOURS", "BACKUP_RESTORE_MAX_AGE_DAYS", "WORKER_INTERVAL_SECONDS", "WORKER_READINESS_MAX_AGE_SECONDS"],
   commercial: ["SUBSCRIPTIONS_ENABLED", "SUBSCRIPTION_TERMS_APPROVED", "STRIPE_", "MGT_SPONSORED_CONTENT", "Sponsored content", "Disabled sponsored content"],
-  runtime: ["OLLAMA_ENABLED", "OLLAMA_BASE_URL", "OPENCLAW_ENABLED", "OPENCLAW_BASE_URL", "OPENCLAW_API_MODE", "OPENCLAW_API_KEY", "HOSTED_OPENAI_ENABLED", "OPENAI_API_KEY", "Disabled hosted OpenAI", "Native Ollama-mode OpenClaw"]
+  runtime: ["OLLAMA_ENABLED", "OLLAMA_BASE_URL", "OPENCLAW_ENABLED", "OPENCLAW_BASE_URL", "OPENCLAW_API_MODE", "OPENCLAW_API_KEY", "OLLAMA_CLOUD_ENABLED", "OLLAMA_CLOUD_BASE_URL", "OLLAMA_CLOUD_MODEL", "OLLAMA_CLOUD_API_KEY", "HOSTED_OPENAI_ENABLED", "OPENAI_API_KEY", "Disabled Ollama Cloud", "Disabled hosted OpenAI", "Native Ollama-mode OpenClaw"]
 });
 
 function hasError(errors, prefixes) {
@@ -127,7 +127,7 @@ export function buildReleaseReadiness({ env = {}, localGates = false, liveEviden
     && (!sponsoredContentEnabled || liveEvidence(evidence, "sponsored_content_authorization"));
   phases.push(phase("F77", !commercialEnabled ? "not_applicable" : commercialBlocked ? "blocked" : commercialEvidenceComplete ? "pass" : "pending", !commercialEnabled ? "Subscriptions and sponsored content are disabled for this release." : commercialBlocked ? "Enabled Premium or sponsored-content configuration is incomplete." : commercialEvidenceComplete ? "Required Premium and sponsored-content authorization evidence is recorded." : "Keep paid enrollment and sponsored placement closed until their required evidence is complete."));
   phases.push(phase("F78", configurationBlocked ? "blocked" : liveEvidence(evidence, "container_startup") ? "pass" : "pending", configurationBlocked ? "Immutable image or production configuration checks are incomplete." : liveEvidence(evidence, "container_startup") ? "Immutable images and startup probes are verified." : "Start the approved images and verify health, readiness, and edge routing."));
-  const runtimeConfigured = !runtimeBlocked && (String(env.OLLAMA_ENABLED).toLowerCase() === "true" || String(env.HOSTED_OPENAI_ENABLED).toLowerCase() === "true");
+  const runtimeConfigured = !runtimeBlocked && (String(env.OLLAMA_ENABLED).toLowerCase() === "true" || String(env.OLLAMA_CLOUD_ENABLED).toLowerCase() === "true" || String(env.HOSTED_OPENAI_ENABLED).toLowerCase() === "true");
   phases.push(phase("F79", runtimeBlocked || !runtimeConfigured ? "blocked" : liveEvidence(evidence, "ai_provider") ? "pass" : "pending", runtimeBlocked || !runtimeConfigured ? "No complete enabled AI runtime configuration is available." : liveEvidence(evidence, "ai_provider") ? "Provider, model, fallback, and spend evidence are recorded." : "Verify enabled models/providers, fallback behavior, spend controls, and hosted billing reconciliation."));
 
   const predecessorReady = phases.every((item) => item.status === "pass" || item.status === "not_applicable");

@@ -263,6 +263,11 @@ export function validateProductionAiAdmission(env:NodeJS.ProcessEnv):void{
   if(env.OPENCLAW_API_MODE==='openai-completions'&&!configuredReference(env.OPENCLAW_API_KEY))throw new Error('Production AI admission is invalid.');
   if(env.OPENCLAW_API_MODE==='ollama'&&populatedSecret(env,'OPENCLAW_API_KEY'))throw new Error('Production AI admission is invalid.');
  }
+ if(env.OLLAMA_CLOUD_ENABLED!=='true'&&env.OLLAMA_CLOUD_ENABLED!=='false')throw new Error('Production AI admission is invalid.');
+ if(env.OLLAMA_CLOUD_ENABLED==='true'){
+  if(env.OLLAMA_CLOUD_BASE_URL!=='https://ollama.com'||env.OLLAMA_CLOUD_MODEL!=='deepseek-v4.1-flash'||!configuredReference(env.OLLAMA_CLOUD_API_KEY))throw new Error('Production AI admission is invalid.');
+ }
+ if(env.OLLAMA_CLOUD_ENABLED==='false'&&populatedSecret(env,'OLLAMA_CLOUD_API_KEY'))throw new Error('Production AI admission is invalid.');
  if(env.HOSTED_OPENAI_ENABLED!=='true'&&env.HOSTED_OPENAI_ENABLED!=='false')throw new Error('Production AI admission is invalid.');
  if(env.HOSTED_OPENAI_ENABLED==='true'&&!configuredReference(env.OPENAI_API_KEY))throw new Error('Production AI admission is invalid.');
  if(env.HOSTED_OPENAI_ENABLED==='false'&&populatedSecret(env,'OPENAI_API_KEY'))throw new Error('Production AI admission is invalid.');
@@ -298,6 +303,7 @@ export function validateProductionSecretIsolation(env:NodeJS.ProcessEnv):void{
  const keys=['SUPABASE_ANON_KEY','SUPABASE_SERVICE_ROLE_KEY','OPERATIONS_ALERT_WEBHOOK_TOKEN','MGT_EDGE_TOKEN'];
  if(env.NOTIFICATION_DELIVERY==='webhook')keys.push('NOTIFICATION_WEBHOOK_TOKEN');
  if(env.OPENCLAW_ENABLED==='true'&&env.OPENCLAW_API_MODE==='openai-completions')keys.push('OPENCLAW_API_KEY');
+ if(env.OLLAMA_CLOUD_ENABLED==='true')keys.push('OLLAMA_CLOUD_API_KEY');
  if(env.HOSTED_OPENAI_ENABLED==='true')keys.push('OPENAI_API_KEY');
  if(env.SUBSCRIPTIONS_ENABLED==='true'||env.STRIPE_USAGE_BILLING_ENABLED==='true'||env.STRIPE_B2B_INVOICING_ENABLED==='true')keys.push('STRIPE_SECRET_KEY');
  if(env.SUBSCRIPTIONS_ENABLED==='true')keys.push('STRIPE_SUBSCRIPTION_WEBHOOK_SECRET');
@@ -315,6 +321,7 @@ export function validateProductionApiSecretIsolation(env:NodeJS.ProcessEnv):void
  const keys=['SUPABASE_ANON_KEY','MGT_EDGE_TOKEN'];
  if(env.BACKUP_ATTESTATION_ENABLED==='true')keys.push('BACKUP_ATTESTATION_SECRET');
  if(env.OPENCLAW_ENABLED==='true'&&env.OPENCLAW_API_MODE==='openai-completions')keys.push('OPENCLAW_API_KEY');
+ if(env.OLLAMA_CLOUD_ENABLED==='true')keys.push('OLLAMA_CLOUD_API_KEY');
  if(env.HOSTED_OPENAI_ENABLED==='true')keys.push('OPENAI_API_KEY');
  if(env.SUBSCRIPTIONS_ENABLED==='true'||env.STRIPE_USAGE_BILLING_ENABLED==='true'||env.STRIPE_B2B_INVOICING_ENABLED==='true')keys.push('STRIPE_SECRET_KEY');
  if(env.SUBSCRIPTIONS_ENABLED==='true')keys.push('STRIPE_SUBSCRIPTION_WEBHOOK_SECRET');
@@ -332,7 +339,7 @@ export function validateProductionApiSecretBoundary(env:NodeJS.ProcessEnv):void{
 }
 export function validateProductionWorkerSecretBoundary(env:NodeJS.ProcessEnv):void{
  if(env.NODE_ENV!=='production')return;
- if(['MGT_EDGE_TOKEN','SUPABASE_ANON_KEY','BACKUP_ATTESTATION_SECRET','STRIPE_SECRET_KEY','STRIPE_SUBSCRIPTION_WEBHOOK_SECRET','OPENAI_API_KEY','OPENCLAW_API_KEY'].some(key=>populatedSecret(env,key)))throw new Error('Production worker secret boundary is invalid.');
+ if(['MGT_EDGE_TOKEN','SUPABASE_ANON_KEY','BACKUP_ATTESTATION_SECRET','STRIPE_SECRET_KEY','STRIPE_SUBSCRIPTION_WEBHOOK_SECRET','OPENAI_API_KEY','OPENCLAW_API_KEY','OLLAMA_CLOUD_API_KEY'].some(key=>populatedSecret(env,key)))throw new Error('Production worker secret boundary is invalid.');
 }
 
 export function validateProductionEndpointIsolation(env:NodeJS.ProcessEnv):void{
@@ -361,6 +368,7 @@ export function validateProductionApiDisabledFeatureResidue(env:NodeJS.ProcessEn
  if(env.OLLAMA_ENABLED==='false'&&populated(['OLLAMA_BASE_URL']))throw new Error('Production disabled feature residue is invalid.');
  if(env.OPENCLAW_ENABLED==='false'&&populated(['OPENCLAW_BASE_URL','OPENCLAW_API_MODE','OPENCLAW_API_KEY']))throw new Error('Production disabled feature residue is invalid.');
  if(env.OPENCLAW_ENABLED==='true'&&env.OPENCLAW_API_MODE==='ollama'&&populated(['OPENCLAW_API_KEY']))throw new Error('Production disabled feature residue is invalid.');
+ if(env.OLLAMA_CLOUD_ENABLED==='false'&&populated(['OLLAMA_CLOUD_BASE_URL','OLLAMA_CLOUD_MODEL','OLLAMA_CLOUD_API_KEY']))throw new Error('Production disabled feature residue is invalid.');
  if(env.HOSTED_OPENAI_ENABLED==='false'&&populated(['OPENAI_API_KEY']))throw new Error('Production disabled feature residue is invalid.');
  if(env.CLIENT_IMAGE_DRIVE_TEST_ENABLED==='true'||populated(['TEST_GOOGLE_DRIVE_CLIENT_ID','TEST_GOOGLE_DRIVE_CLIENT_SECRET','TEST_GOOGLE_DRIVE_REFRESH_TOKEN','TEST_GOOGLE_DRIVE_FOLDER_ID']))throw new Error('Production disabled feature residue is invalid.');
  if(env.BACKUP_ATTESTATION_ENABLED==='false'&&populated(['BACKUP_ATTESTATION_SECRET','BACKUP_ATTESTATION_KEY_ID','BACKUP_ATTESTATION_MAX_AGE_SECONDS']))throw new Error('Production disabled feature residue is invalid.');

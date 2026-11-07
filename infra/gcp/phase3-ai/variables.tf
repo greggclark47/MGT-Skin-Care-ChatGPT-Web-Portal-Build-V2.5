@@ -97,6 +97,28 @@ variable "openai_model" {
   default     = ""
 }
 
+variable "ollama_cloud_enabled" {
+  description = "Enables the metered Ollama Cloud fallback after owner subscription and hosted-processing approval."
+  type        = bool
+  default     = false
+}
+
+variable "ollama_cloud_model" {
+  description = "Approved Ollama Cloud model ID."
+  type        = string
+  default     = "deepseek-v4.1-flash"
+  validation {
+    condition     = var.ollama_cloud_model == "deepseek-v4.1-flash"
+    error_message = "Only the reviewed deepseek-v4.1-flash route is currently approved."
+  }
+}
+
+variable "ollama_cloud_secret_id" {
+  description = "Secret Manager secret ID containing the Ollama Cloud API key."
+  type        = string
+  default     = "team47-ollama-cloud-api-key"
+}
+
 variable "openai_secret_id" {
   description = "Secret Manager secret ID containing the OpenAI project service-account key."
   type        = string

@@ -14,3 +14,5 @@ deepseek_model = "deepseek-r1:8b"
 qwen_model     = "qwen3.5:4b"
 openclaw_model = ""
 openai_model   = ""
+ollama_cloud_enabled = false
+ollama_cloud_model   = "deepseek-v4.1-flash"

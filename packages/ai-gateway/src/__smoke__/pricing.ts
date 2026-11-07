@@ -16,6 +16,7 @@ function check(label: string, cond: boolean, detail?: unknown) {
 
 // dollars-per-MTok, as published.
 const ANCHORS: Record<string, { input_usd: number; output_usd: number }> = {
+  'deepseek-v4.1-flash': { input_usd: .30, output_usd: 1.20 },
   'gpt-5': { input_usd: 1.25, output_usd: 10 },
   'gpt-6-astra': { input_usd: 10, output_usd: 50 },
   'gpt-6.1-sol': { input_usd: 2, output_usd: 10 },

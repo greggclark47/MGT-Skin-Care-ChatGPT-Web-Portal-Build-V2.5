@@ -63,6 +63,40 @@ export class OllamaAdapter implements ProviderAdapter {
   }
 }
 
+// Ollama Cloud uses the same native chat contract as local Ollama, but it is a
+// separately metered hosted provider. Keeping it as a distinct adapter lets the
+// router enforce entitlements, cost reservations and audit telemetry before a
+// cloud request is made.
+export class OllamaCloudAdapter implements ProviderAdapter {
+  readonly name: ProviderName = 'ollama_cloud';
+  constructor(
+    private apiKey: string,
+    private baseUrl = 'https://ollama.com',
+    private post: HttpPost = defaultHttpPost,
+  ) {}
+
+  async complete(config: ModelConfig, systemPrompt: string, userPrompt: string, signal: AbortSignal, imageInputs?: readonly GatewayImageInput[]): Promise<ProviderResponse> {
+    if (imageInputs?.length) throw new Error('image_input_local_only');
+    const json = await this.post(`${this.baseUrl.replace(/\/$/, '')}/api/chat`, {
+      authorization: `Bearer ${this.apiKey}`,
+    }, {
+      model: config.model,
+      messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userPrompt }],
+      stream: false,
+      options: { num_predict: config.max_tokens, temperature: config.temperature },
+    }, signal);
+    const text = json.message?.content ?? json.response ?? '';
+    if (!text) throw new Error('provider_response_incomplete');
+    return {
+      text,
+      input_tokens: json.prompt_eval_count ?? 0,
+      output_tokens: json.eval_count ?? 0,
+      model: json.model ?? config.model,
+      provider: this.name,
+    };
+  }
+}
+
 // OpenClaw is an optional orchestration adapter. Native mode talks directly to Ollama;
 // the compatibility mode is explicit so enabling it does not introduce a second paid provider.
 export type OpenClawApiMode = 'ollama' | 'openai-completions';

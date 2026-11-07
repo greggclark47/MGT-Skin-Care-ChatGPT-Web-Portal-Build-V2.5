@@ -57,7 +57,7 @@ export function buildDraftShipPacket({ root = process.cwd(), env = {}, now = new
     evidenceTemplate("container_startup", "F78")
   ];
   if (String(env.SUBSCRIPTIONS_ENABLED).toLowerCase() === "true") evidence.push(evidenceTemplate("stripe_sandbox", "F77"));
-  if (String(env.OLLAMA_ENABLED).toLowerCase() === "true" || String(env.HOSTED_OPENAI_ENABLED).toLowerCase() === "true") evidence.push(evidenceTemplate("ai_provider", "F79"));
+  if (String(env.OLLAMA_ENABLED).toLowerCase() === "true" || String(env.OLLAMA_CLOUD_ENABLED).toLowerCase() === "true" || String(env.HOSTED_OPENAI_ENABLED).toLowerCase() === "true") evidence.push(evidenceTemplate("ai_provider", "F79"));
   const candidate = {
     commit: resolvedCommit || "REPLACE_WITH_40_CHARACTER_COMMIT_SHA",
     branch: resolvedBranch || "REPLACE_WITH_RELEASE_BRANCH",

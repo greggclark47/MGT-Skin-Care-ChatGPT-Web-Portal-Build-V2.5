@@ -21,6 +21,7 @@ const production = {
   OLLAMA_ENABLED: "true",
   OLLAMA_BASE_URL: "http://ollama:11434",
   OPENCLAW_ENABLED: "false",
+  OLLAMA_CLOUD_ENABLED: "false",
   HOSTED_OPENAI_ENABLED: "false",
   HOST: "0.0.0.0",
   PORT: "3100",
@@ -702,4 +703,30 @@ test("requires explicit hosted OpenAI posture and its matching credential", () =
     assert.equal(result.ok, false);
     assert.ok(result.errors.some((error) => error.startsWith("HOSTED_OPENAI_ENABLED")));
   }
+});
+
+test("gates the Ollama Cloud Pro fallback behind the exact endpoint, model and secret", () => {
+  const enabledWithoutKey = validateEnvironment({
+    ...production,
+    OLLAMA_CLOUD_ENABLED: "true",
+    OLLAMA_CLOUD_BASE_URL: "https://ollama.com",
+    OLLAMA_CLOUD_MODEL: "deepseek-v4.1-flash",
+    OLLAMA_CLOUD_API_KEY: ""
+  });
+  assert.equal(enabledWithoutKey.ok, false);
+  assert.ok(enabledWithoutKey.errors.some((error) => error.startsWith("OLLAMA_CLOUD_API_KEY")));
+  const enabled = validateEnvironment({
+    ...production,
+    OLLAMA_CLOUD_ENABLED: "true",
+    OLLAMA_CLOUD_BASE_URL: "https://ollama.com",
+    OLLAMA_CLOUD_MODEL: "deepseek-v4.1-flash",
+    OLLAMA_CLOUD_API_KEY: "ollama-cloud-secret-reference"
+  });
+  assert.equal(enabled.ok, true, enabled.errors.join("\n"));
+  for (const overrides of [
+    { OLLAMA_CLOUD_ENABLED: "True" },
+    { OLLAMA_CLOUD_ENABLED: "true", OLLAMA_CLOUD_BASE_URL: "https://api.ollama.com", OLLAMA_CLOUD_MODEL: "deepseek-v4.1-flash", OLLAMA_CLOUD_API_KEY: "ollama-cloud-secret-reference" },
+    { OLLAMA_CLOUD_ENABLED: "true", OLLAMA_CLOUD_BASE_URL: "https://ollama.com", OLLAMA_CLOUD_MODEL: "unreviewed:cloud", OLLAMA_CLOUD_API_KEY: "ollama-cloud-secret-reference" },
+    { OLLAMA_CLOUD_ENABLED: "false", OLLAMA_CLOUD_API_KEY: "dormant-cloud-key" }
+  ]) assert.equal(validateEnvironment({ ...production, ...overrides }).ok, false, JSON.stringify(overrides));
 });

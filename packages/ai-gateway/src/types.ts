@@ -1,7 +1,7 @@
 // Core AI Gateway types (blueprint Section C.6 / E.2-E.5).
 // The Gateway is an in-process LIBRARY, not a microservice — the API and workers import it.
 
-export type ProviderName = 'ollama' | 'openclaw' | 'openai' | 'openai_compatible';
+export type ProviderName = 'ollama' | 'ollama_cloud' | 'openclaw' | 'openai' | 'openai_compatible';
 
 // Fixed task registry (Section E.3). Callers name a task_type; classification is NEVER an
 // LLM call and never a heuristic on message content — that was the Phase 4 mistake the

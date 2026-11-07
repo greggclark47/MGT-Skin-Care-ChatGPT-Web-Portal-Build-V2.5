@@ -1,6 +1,7 @@
 locals {
   prefix                = "team47-${var.environment}-ai"
   hosted_openai_enabled = var.openai_model != ""
+  ollama_cloud_enabled  = var.ollama_cloud_enabled
   subnet_cidr           = "10.47.0.0/20"
   ollama_internal_url   = "http://${google_compute_instance.ollama.network_interface[0].network_ip}:11434"
 }
@@ -155,6 +156,22 @@ resource "google_secret_manager_secret" "openai" {
   depends_on = [google_project_service.required]
 }
 
+resource "google_secret_manager_secret" "ollama_cloud" {
+  count     = local.ollama_cloud_enabled ? 1 : 0
+  secret_id = var.ollama_cloud_secret_id
+  replication {
+    auto {}
+  }
+  depends_on = [google_project_service.required]
+}
+
+resource "google_secret_manager_secret_iam_member" "broker_ollama_cloud" {
+  count     = local.ollama_cloud_enabled ? 1 : 0
+  secret_id = google_secret_manager_secret.ollama_cloud[0].id
+  role      = "roles/secretmanager.secretAccessor"
+  member    = "serviceAccount:${google_service_account.broker.email}"
+}
+
 resource "google_secret_manager_secret_iam_member" "broker_openai" {
   secret_id = google_secret_manager_secret.openai.id
   role      = "roles/secretmanager.secretAccessor"
@@ -208,6 +225,36 @@ resource "google_cloud_run_v2_service" "broker" {
       env {
         name  = "HOSTED_OPENAI_ENABLED"
         value = tostring(local.hosted_openai_enabled)
+      }
+      env {
+        name  = "OLLAMA_CLOUD_ENABLED"
+        value = tostring(local.ollama_cloud_enabled)
+      }
+      dynamic "env" {
+        for_each = local.ollama_cloud_enabled ? [1] : []
+        content {
+          name  = "OLLAMA_CLOUD_BASE_URL"
+          value = "https://ollama.com"
+        }
+      }
+      dynamic "env" {
+        for_each = local.ollama_cloud_enabled ? [1] : []
+        content {
+          name  = "OLLAMA_CLOUD_MODEL"
+          value = var.ollama_cloud_model
+        }
+      }
+      dynamic "env" {
+        for_each = local.ollama_cloud_enabled ? [1] : []
+        content {
+          name = "OLLAMA_CLOUD_API_KEY"
+          value_source {
+            secret_key_ref {
+              secret  = google_secret_manager_secret.ollama_cloud[0].secret_id
+              version = "latest"
+            }
+          }
+        }
       }
       env {
         name  = "OPENAI_MODEL"

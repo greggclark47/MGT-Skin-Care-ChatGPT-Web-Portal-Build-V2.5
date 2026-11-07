@@ -10,6 +10,7 @@ const QWEN_LOCAL = { provider: 'ollama' as const, model: 'qwen3.5:4b', max_token
 const DEEPSEEK_LOCAL = { provider: 'ollama' as const, model: 'deepseek-r1:8b', max_tokens: 1600, temperature: 0.2 };
 const OLLAMA_VISION = { provider: 'ollama' as const, model: 'llava:latest', max_tokens: 700, temperature: 0.2 };
 const OPENAI_GPT5_FALLBACK = { provider: 'openai' as const, model: 'gpt-5', max_tokens: 2000, temperature: 0.3, reasoning_effort: 'medium' as const };
+const OLLAMA_CLOUD_DEEPSEEK = { provider: 'ollama_cloud' as const, model: 'deepseek-v4.1-flash', max_tokens: 1600, temperature: 0.2 };
 const OPENAI_SOL = { provider: 'openai' as const, model: 'gpt-5.6-sol', max_tokens: 2000, temperature: 0.4, reasoning_effort: 'medium' as const };
 const OPENAI_ASTRA = { provider: 'openai' as const, model: 'gpt-6-astra', max_tokens: 3000, temperature: 0.2, reasoning_effort: 'high' as const };
 const OPENCLAW = { provider: 'openclaw' as const, model: 'qwen3.5:4b', max_tokens: 1000, temperature: 0.3 };
@@ -17,7 +18,7 @@ const OLLAMA_EMBED = { provider: 'ollama' as const, model: 'nomic-embed-text', m
 
 function tier1(task_type: TaskType, prompt_version: string, grounded: boolean, schema?: TaskConfig['response_schema']): TaskConfig {
   return {
-    task_type, primary: DEEPSEEK_LOCAL, fallbacks: [QWEN_LOCAL, OPENCLAW, OPENAI_GPT5_FALLBACK],
+    task_type, primary: DEEPSEEK_LOCAL, fallbacks: [QWEN_LOCAL, OPENCLAW, OLLAMA_CLOUD_DEEPSEEK, OPENAI_GPT5_FALLBACK],
     budget_class: 'tier1_copy', requires_entitlement: false,
     prompt_version, timeout_ms: 30000, grounded, response_schema: schema,
   };

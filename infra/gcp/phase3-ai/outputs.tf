@@ -17,3 +17,8 @@ output "openai_secret_id" {
   value       = google_secret_manager_secret.openai.secret_id
   description = "Secret container only; Terraform never creates or reads a secret value."
 }
+
+output "ollama_cloud_secret_id" {
+  value       = var.ollama_cloud_enabled ? google_secret_manager_secret.ollama_cloud[0].secret_id : null
+  description = "Optional secret container only; Terraform never creates or reads the API key value."
+}

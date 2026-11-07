@@ -35,6 +35,11 @@ export interface ModelPrice {
 const OPENAI_PRICING = 'https://developers.openai.com/api/docs/models';
 
 export const PRICING_PER_MTOK: Record<string, ModelPrice> = {
+  'deepseek-v4.1-flash': {
+    input_cents: 30, output_cents: 120,
+    source: 'https://ollama.com/library/deepseek-v4.1-flash',
+    verified_on: '2026-11-06',
+  },
   'gpt-5': {
     input_cents: 125, output_cents: 1000,
     source: 'https://developers.openai.com/api/docs/models/gpt-5',

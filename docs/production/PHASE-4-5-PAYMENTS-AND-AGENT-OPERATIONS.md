@@ -8,6 +8,9 @@
 - API usage billing records approved Stripe meter events with a stable idempotency identifier. Duplicate retries cannot double-count a locally accepted event.
 - B2B billing requires a locally approved business-to-Stripe-customer link. Invoice creation is draft-only with `auto_advance=false`; the application cannot finalize, email, or charge from this workflow.
 - Customer care, social, marketing, and retailer agents create drafts only. Every draft has a human review state; approval does not publish, email, scrape, contact a retailer, or write to an external lead system.
+- Agent source references are limited to unique Drive identifiers or clean HTTPS URLs without credentials, query strings, fragments, custom ports, or localhost targets.
+- The operator who creates an agent draft cannot approve it. A second authorized operator must complete approval before export is available.
+- Approved drafts can be downloaded as a bounded `team47studio.agent-review-export.v1` JSON artifact. The artifact carries a SHA-256 content digest and excludes provider/model internals, creator/reviewer identities, credentials, and automatic delivery actions.
 - The requested GTM model remains recorded as `gpt-4o`, but that agent is blocked because the model is deprecated. Activation requires an explicit supported replacement decision.
 
 ## Stripe activation steps requiring the corporation owner
@@ -46,6 +49,7 @@ Product and Price IDs remain required as documented in `infra/portal/env.example
 5. Obtain each social network's developer access and approve per-network publishing policy. Start with draft export; do not enable automatic posting or replies until moderation, rollback, and account-compromise controls pass.
 6. Use licensed, authorized retailer lead sources only. Do not scrape sites or contact a lead automatically. Import minimum necessary business contact data for human review, document the source and lawful basis, and honor suppression requests.
 7. Approve the Google Sheet/Drive export destination and schema. Export only reviewed business-lead fields; exclude customer profiles, photos, health-adjacent data, payment data, and private prompts.
+8. Use the reviewed export only as input to a separately authorized Drive, Gmail, social, or retailer-delivery workflow. Approval and export do not authorize sending or publishing.
 
 ## Release evidence required
 

@@ -17,6 +17,7 @@ This control creates a safe handoff between Team 47 Studio's draft-only AI agent
 6. The export omits model/provider details, prompts, creator and reviewer identities, credentials, and customer data.
 7. A SHA-256 digest covers the complete export content before the integrity block, allowing a downstream operator to detect changes.
 8. The portal operations console now supports bounded draft creation, source-reference entry, submit/review/reject actions, and approved-artifact download. The API supplies only viewer-specific action permissions, so the creator is not shown an approval action and unapproved drafts are not shown an export action.
+9. Draft creation, review submission, approval, rejection, and reviewed export record metadata-only audit events. Export is an explicit confirmed POST action protected by the portal's origin and CSRF controls; a passive GET cannot create an export receipt.
 
 ## Deliberately pending
 
@@ -32,4 +33,4 @@ Each pending integration requires its own least-privilege credentials, retention
 
 The focused API regression verifies unsafe source rejection, pre-approval export denial, independent reviewer enforcement, malformed stored-record rejection, approved export shape, digest recomputation, absence of model/provider and operator identity data, and explicit confirmation that no external action occurred.
 
-Full local verification passed all 19 gates and 1,377/1,377 HTTP, persistence, and release-contract tests after the operator console was added. Evidence: `work/verification/2026-11-08T02-12-46-865Z/report.md`. This is local repository evidence only; it does not approve a model replacement, configure an external delivery integration, deploy a service, or authorize production traffic.
+Full local verification passed all 19 gates and 1,377/1,377 HTTP, persistence, and release-contract tests after the audited operator workflow was added. Evidence: `work/verification/2026-11-08T02-19-54-593Z/report.md`. This is local repository evidence only; it does not approve a model replacement, configure an external delivery integration, deploy a service, or authorize production traffic.

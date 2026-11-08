@@ -18,6 +18,18 @@ type SupportTicket = {
   updated_at?: string | null;
   replies?: Array<{ text: string; at?: string | null }>;
 };
+type AgentRun = {
+  id: string;
+  agent_id: string;
+  status: string;
+  draft: string;
+  source_refs: string[];
+  created_at: string;
+  updated_at: string;
+  reviewed_at?: string | null;
+  permissions: { submit: boolean; approve: boolean; reject: boolean; export: boolean };
+};
+type AgentDescriptor = { id: string; name: string; requested_model: string; channel: string; task: string | null; blocked_reason?: string };
 
 const label = (value: string) => value.replace(/_/g, ' ');
 export function MetricSummary({ label: summaryLabel, items }: { label: string; items: Metric[] }) {
@@ -149,6 +161,35 @@ function SponsoredContentOperations() {
   </section>;
 }
 
+export function AgentRunCard({ run, agentName, busy, onReview, onExport }: { run: AgentRun; agentName: string; busy: boolean; onReview: (decision: 'submit'|'approve'|'reject') => void; onExport: () => void }) {
+  const headingId=`agent-run-${run.id.replace(/[^a-zA-Z0-9_-]/g,'')}`;
+  return <article className="panel" aria-labelledby={headingId} aria-busy={busy}><div className="row"><h3 id={headingId}>{agentName}</h3><span className={'pill '+(run.status==='approved'?'success':'')}>{label(run.status)}</span></div>
+    <p className="muted">Created <Timestamp value={run.created_at}/>{run.reviewed_at&&<> · Reviewed <Timestamp value={run.reviewed_at}/></>}</p>
+    <p style={{whiteSpace:'pre-wrap'}}>{run.draft}</p>
+    {run.source_refs.length>0&&<details><summary>Reviewed source references · {run.source_refs.length}</summary><ul className="compact-list">{run.source_refs.map(reference=><li key={reference}>{reference}</li>)}</ul></details>}
+    {run.status==='pending_review'&&!run.permissions.approve&&<p className="notice">A second authorized operator must approve this draft.</p>}
+    <div className="actions">{run.permissions.submit&&<button className="button" type="button" disabled={busy} onClick={()=>onReview('submit')}>Submit for independent review</button>}{run.permissions.approve&&<button className="button primary" type="button" disabled={busy} onClick={()=>onReview('approve')}>Approve reviewed draft</button>}{run.permissions.reject&&<button className="button" type="button" disabled={busy} onClick={()=>onReview('reject')}>Reject draft</button>}{run.permissions.export&&<button className="button" type="button" disabled={busy} onClick={onExport}>Download integrity package</button>}</div>
+    {run.permissions.export&&<p className="muted">Download creates a review artifact only. It does not send, publish, contact a retailer, or write to Drive.</p>}
+  </article>;
+}
+
+function AgentOperations(){
+ const catalog=useHub('/admin/agents'),runs=useHub('/admin/agents/runs');
+ const briefCountId=useId();
+ const [agentId,setAgentId]=useState('customer_care'),[brief,setBrief]=useState(''),[sourceText,setSourceText]=useState(''),[busyKey,setBusyKey]=useState(''),[error,setError]=useState(''),[message,setMessage]=useState('');
+ const agents:AgentDescriptor[]=catalog.data?.agents||[],agentNames=new Map(agents.map(agent=>[agent.id,agent.name]));
+ const busy=busyKey!=='';
+ async function create(event:React.FormEvent<HTMLFormElement>){event.preventDefault();setBusyKey('create');setError('');setMessage('');try{const source_refs=sourceText.split(/\r?\n/).map(value=>value.trim()).filter(Boolean);await hub('/admin/agents/runs',{agent_id:agentId,brief,source_refs});setBrief('');setSourceText('');setMessage('Draft created. No external action occurred.');runs.reload();}catch(err){setError((err as Error).message);}finally{setBusyKey('');}}
+ async function review(run:AgentRun,decision:'submit'|'approve'|'reject'){setBusyKey(`${decision}-${run.id}`);setError('');setMessage('');try{await hub(`/admin/agents/runs/${run.id}/review`,{decision});setMessage(decision==='approve'?'Draft approved for controlled export. Nothing was sent or published.':'Review state updated. No external action occurred.');runs.reload();}catch(err){setError((err as Error).message);}finally{setBusyKey('');}}
+ async function download(run:AgentRun){setBusyKey(`export-${run.id}`);setError('');setMessage('');try{const data=await hub(`/admin/agents/runs/${run.id}/export`);const url=URL.createObjectURL(new Blob([JSON.stringify(data.artifact,null,2)+'\n'],{type:'application/json'}));const link=document.createElement('a');link.href=url;link.download=`${run.agent_id}-${run.id}.json`;document.body.appendChild(link);link.click();link.remove();URL.revokeObjectURL(url);setMessage('Integrity package downloaded. No external action occurred.');}catch(err){setError((err as Error).message);}finally{setBusyKey('');}}
+ return <section aria-labelledby="agent-operations-heading"><div className="section-heading"><div><span className="eyebrow">REVIEWED AGENT OPERATIONS</span><h2 id="agent-operations-heading">Draft, review and controlled export</h2></div></div>
+  <p>Agents create drafts only. A second authorized operator must approve a draft before its integrity package can be downloaded.</p><p className="muted">No action here sends email, publishes content, contacts a retailer, scrapes a lead source, or writes to Google Drive.</p>
+  <LoadState {...catalog} retry={catalog.reload}/>{catalog.data&&<><p className="notice">{catalog.data.model_notice}</p><form className="panel stack" aria-busy={busyKey==='create'} aria-describedby={error?'agent-operations-error':message?'agent-operations-message':undefined} onSubmit={create}><h3>Create an agent draft</h3><label className="field">Agent<select value={agentId} disabled={busy} onChange={event=>setAgentId(event.target.value)}>{agents.map(agent=><option key={agent.id} value={agent.id} disabled={!agent.task}>{agent.name}{agent.task?'':` · blocked (${label(agent.blocked_reason||'model review required')})`}</option>)}</select></label><label className="field">Operator brief<textarea required value={brief} maxLength={6000} disabled={busy} aria-describedby={briefCountId} onChange={event=>{setBrief(event.target.value);setError('');}}/></label><CharacterCount id={briefCountId} current={brief.length} max={6000}/><label className="field">Source references · one per line<textarea value={sourceText} maxLength={10000} disabled={busy} placeholder={'drive:approved-campaign-1\nhttps://example.com/approved-brief'} onChange={event=>{setSourceText(event.target.value);setError('');}}/></label><p className="muted">Use up to 20 unique Drive references or clean HTTPS source URLs without credentials, query strings or fragments.</p><button className="button primary" type="submit" disabled={busy||!brief.trim()||!agents.find(agent=>agent.id===agentId)?.task}>{busyKey==='create'?'Creating draft…':'Create reviewable draft'}</button></form></>}
+  {error&&<p id="agent-operations-error" role="alert" className="notice error">{error}</p>}{message&&<p id="agent-operations-message" role="status" className="notice success">{message}</p>}
+  <LoadState {...runs} retry={runs.reload}/>{runs.data&&<div>{runs.data.runs.length?runs.data.runs.map((run:AgentRun)=><AgentRunCard key={run.id} run={run} agentName={agentNames.get(run.agent_id)||label(run.agent_id)} busy={busyKey.endsWith(run.id)} onReview={decision=>void review(run,decision)} onExport={()=>void download(run)}/>):<div className="empty"><h3>No agent drafts yet.</h3><p>Reviewed marketing, support, social and retailer drafts will appear here.</p></div>}</div>}
+ </section>;
+}
+
 export function SupportTicketEditor({ ticket, onSaved }: { ticket: SupportTicket; onSaved: () => void }) {
   const formId = useId();
   const [status, setStatus] = useState(ticket.status || 'open');
@@ -216,7 +257,7 @@ export function ConnectedAdmin({ kind }: { kind: 'knowledge' | 'rule' | 'operati
     <p>Access uses your signed-in account and assigned roles.</p><LoadState {...state} retry={state.reload}/>
     {error && <p id="admin-save-error" role="alert" className="notice error">{error}</p>}{message && <p id="admin-save-message" role="status" className="notice success">{message}</p>}
     {data && <>{kind === 'operations' ? <>
-      {supportOperator && <><Readiness/><OperationsHealth/><SupportMetrics/><ReferralMetrics/><OmniRetailOperations/><SponsoredContentOperations/><PrivacyOperations/><SubscriptionWebhooks/><AiEconomics/><AiRouting/></>}
+      {supportOperator && <><Readiness/><OperationsHealth/><SupportMetrics/><ReferralMetrics/><OmniRetailOperations/><SponsoredContentOperations/><AgentOperations/><PrivacyOperations/><SubscriptionWebhooks/><AiEconomics/><AiRouting/></>}
       <MetricSummary label="Portal content and support totals" items={[["Products", data.products.length], ["Articles", data.knowledge.length], ["Support requests", data.tickets.length]]}/>
       <section aria-labelledby="support-requests-heading"><div className="row"><h2 id="support-requests-heading">Support requests</h2><span className="pill">{data.tickets.length} saved</span></div>
         {data.tickets.length ? data.tickets.map((ticket: SupportTicket) => <SupportTicketCard key={ticket.id} ticket={ticket} accountId={session.data?.account?.id} canOperate={supportOperator} onSaved={state.reload}/>) : <div className="empty"><h3>No support requests yet.</h3><p>New customer requests will appear here for review.</p></div>}

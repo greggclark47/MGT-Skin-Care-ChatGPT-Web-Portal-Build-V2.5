@@ -14,7 +14,6 @@ const AGENTS={
 type AgentId=keyof typeof AGENTS;
 const isAgent=(value:unknown):value is AgentId=>typeof value==='string'&&value in AGENTS;
 const publicAgent=(id:AgentId)=>({id,...AGENTS[id],mode:'draft_only',human_review_required:true,automatic_publish:false,automatic_send:false,automatic_scraping:false});
-const publicRun=(run:any)=>({id:run.id,agent_id:run.agent_id,status:run.status,draft:run.draft,source_refs:run.source_refs,created_at:run.created_at,updated_at:run.updated_at,reviewed_at:run.reviewed_at||null,review_decision:run.review_decision||null});
 const RUN_ID=/^agent_[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 const validInstant=(value:unknown):value is string=>typeof value==='string'&&value.length>=20&&value.length<=40&&Number.isFinite(Date.parse(value));
 
@@ -37,6 +36,11 @@ function reviewedExport(run:any){
  return{...content,integrity:{algorithm:'sha256' as const,content_sha256:createHash('sha256').update(JSON.stringify(content),'utf8').digest('hex')}};
 }
 
+const publicRun=(run:any,viewerId:string)=>({
+ id:run.id,agent_id:run.agent_id,status:run.status,draft:run.draft,source_refs:run.source_refs,created_at:run.created_at,updated_at:run.updated_at,reviewed_at:run.reviewed_at||null,review_decision:run.review_decision||null,
+ permissions:{submit:run.status==='draft',approve:run.status==='pending_review'&&run.created_by!==viewerId,reject:run.status==='pending_review',export:reviewedExport(run)!==null},
+});
+
 const systems:Record<Exclude<AgentId,'gtm_strategy'>,string>={
  customer_care:'Draft concise customer-care guidance for Team 47 Studio. Never claim to reset credentials, inspect payments, change an account, or contact support. Return text only and direct the user to the relevant secure portal area.',
  social_engagement:'Draft one factual Team 47 Studio social post for human review. Do not publish, use medical claims, invent product partnerships, mention private data, or claim real-time trend monitoring. Return text only.',
@@ -47,7 +51,7 @@ const systems:Record<Exclude<AgentId,'gtm_strategy'>,string>={
 export function installAgentOperations(app:express.Express,db:Store,gateway:AiGateway){
  const operator=(req:any)=>role(req,['superadmin','compliance']);
  app.get('/api/hub/admin/agents',wrap(async(req,res)=>{operator(req);res.set('Cache-Control','no-store').json({agents:(Object.keys(AGENTS) as AgentId[]).map(publicAgent),policy:{draft_only:true,human_review_required:true,external_side_effects_enabled:false,lead_scraping_enabled:false},model_notice:'GPT-4o remains recorded exactly as requested for the GTM agent, but execution is blocked because that model is deprecated. An explicitly approved replacement is required.'});}));
- app.get('/api/hub/admin/agents/runs',wrap(async(req,res)=>{operator(req);const runs=await db.tx(r=>r.list<any>('agent_runs'));res.set('Cache-Control','no-store').json({runs:runs.map(publicRun).sort((a,b)=>b.created_at.localeCompare(a.created_at)).slice(0,100)});}));
+ app.get('/api/hub/admin/agents/runs',wrap(async(req,res)=>{const actor=operator(req);const runs=await db.tx(r=>r.list<any>('agent_runs'));res.set('Cache-Control','no-store').json({runs:runs.map(run=>publicRun(run,actor.id)).sort((a,b)=>b.created_at.localeCompare(a.created_at)).slice(0,100)});}));
  app.get('/api/hub/admin/agents/runs/:id/export',wrap(async(req,res)=>{
   operator(req);check(RUN_ID.test(req.params.id),400,'agent_run_invalid','Choose a valid agent draft.');const run=await db.tx(r=>r.get<any>('agent_runs',req.params.id));check(run,404,'agent_run_missing','No such agent draft.');const artifact=reviewedExport(run);check(artifact,409,'agent_export_not_ready','Only a complete, approved agent draft can be exported.');
   res.set({'Cache-Control':'no-store','Content-Disposition':`attachment; filename="${artifact.agent_id}-${artifact.run_id}.json"`}).json({artifact,notice:'Integrity-bound reviewed draft export created. No email, social post, retailer outreach, Drive write, or other external action occurred.'});
@@ -59,11 +63,11 @@ export function installAgentOperations(app:express.Express,db:Store,gateway:AiGa
   const result=await gateway.execute({task_type:agent.task,user_id:actor.id,system_prompt:systems[agent_id as Exclude<AgentId,'gtm_strategy'>],user_prompt:brief,has_operator_authorization:true,metadata:{agent_id,mode:'draft_only'}});
   check(result.ok&&typeof result.text==='string'&&result.text.trim().length>0&&Buffer.byteLength(result.text,'utf8')<=12000,503,'agent_draft_unavailable','The agent could not produce a reviewable draft.');
   const timestamp=new Date().toISOString(),run={id:'agent_'+randomUUID(),agent_id,status:'draft',draft:result.text.trim(),source_refs,created_at:timestamp,updated_at:timestamp,created_by:actor.id,provider:result.provider,model:result.model};await db.tx(r=>r.put('agent_runs',run.id,run));
-  res.status(201).set('Cache-Control','no-store').json({run:publicRun(run),notice:'Draft created for human review. Nothing was published, emailed, sent to a retailer, or written to an external lead system.'});
+  res.status(201).set('Cache-Control','no-store').json({run:publicRun(run,actor.id),notice:'Draft created for human review. Nothing was published, emailed, sent to a retailer, or written to an external lead system.'});
  }));
  app.post('/api/hub/admin/agents/runs/:id/review',wrap(async(req,res)=>{
   const actor=operator(req),decision=req.body?.decision;check(decision==='submit'||decision==='approve'||decision==='reject',400,'review_decision_invalid','Choose submit, approve, or reject.');
   let saved:any;await db.tx(async r=>{await r.lock('agent-run:'+req.params.id);const run=await r.get<any>('agent_runs',req.params.id);check(run,404,'agent_run_missing','No such agent draft.');const allowed=decision==='submit'?run.status==='draft':run.status==='pending_review';check(allowed,409,'agent_review_conflict','Refresh this draft before reviewing it.');check(decision!=='approve'||run.created_by!==actor.id,409,'agent_independent_review_required','A second authorized operator must approve this draft.');const timestamp=new Date().toISOString();saved={...run,status:decision==='submit'?'pending_review':decision==='approve'?'approved':'rejected',review_decision:decision,reviewed_at:decision==='submit'?null:timestamp,reviewed_by:decision==='submit'?null:actor.id,updated_at:timestamp};await r.put('agent_runs',run.id,saved);});
-  res.set('Cache-Control','no-store').json({run:publicRun(saved),notice:saved.status==='approved'?'Approved for a later, separately authorized export or delivery step. No external action occurred.':'Review state updated. No external action occurred.'});
+  res.set('Cache-Control','no-store').json({run:publicRun(saved,actor.id),notice:saved.status==='approved'?'Approved for a later, separately authorized export or delivery step. No external action occurred.':'Review state updated. No external action occurred.'});
  }));
 }

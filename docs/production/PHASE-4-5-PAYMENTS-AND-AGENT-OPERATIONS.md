@@ -11,6 +11,7 @@
 - Agent source references are limited to unique Drive identifiers or clean HTTPS URLs without credentials, query strings, fragments, custom ports, or localhost targets.
 - The operator who creates an agent draft cannot approve it. A second authorized operator must complete approval before export is available.
 - Approved drafts can be downloaded as a bounded `team47studio.agent-review-export.v1` JSON artifact. The artifact carries a SHA-256 content digest and excludes provider/model internals, creator/reviewer identities, credentials, and automatic delivery actions.
+- The portal operations console exposes the draft, independent-review, rejection, and approved-export states without exposing operator identities or implying that export delivers content externally.
 - The requested GTM model remains recorded as `gpt-4o`, but that agent is blocked because the model is deprecated. Activation requires an explicit supported replacement decision.
 
 ## Stripe activation steps requiring the corporation owner

@@ -2,7 +2,7 @@ import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { IngredientRulesConsole } from '../components/admin/IngredientRulesConsole';
 import { KnowledgeConsole } from '../components/admin/KnowledgeConsole';
-import { AuditTable, DataTable, MetricSummary, ProductionAdmissionGuidance, SupportTicketEditor } from '../components/ConnectedAdmin';
+import { AgentRunCard, AuditTable, DataTable, MetricSummary, ProductionAdmissionGuidance, SupportTicketEditor } from '../components/ConnectedAdmin';
 import { AuditTrail } from '../components/admin/AdminPrimitives';
 import type { KnowledgeObject, VersionedIngredientRule } from '@mgt/domain';
 import { PRODUCTION_ADMISSION_ACTIONS, PRODUCTION_ADMISSION_CONTRACT_VERSION } from '@mgt/shared';
@@ -217,6 +217,22 @@ console.log('\n== 14. Production admission shows only reviewed category-level gu
 
   const nonProduction = renderToStaticMarkup(<ProductionAdmissionGuidance admission={{ mode: 'non_production', healthy: true }}/>);
   check('non-production has no production admission panel', nonProduction === '');
+}
+
+console.log('\n== 15. Agent operations preserve independent review and no-side-effect export ==');
+{
+  const baseRun = { id:'agent_00000000-0000-4000-8000-000000000001', agent_id:'marketing_promotions', status:'pending_review', draft:'Reviewed promotional draft.', source_refs:['drive:approved-campaign-1'], created_at:'2026-11-07T12:00:00.000Z', updated_at:'2026-11-07T12:01:00.000Z', reviewed_at:null, permissions:{submit:false,approve:false,reject:true,export:false} };
+  const creator = renderToStaticMarkup(<AgentRunCard run={baseRun} agentName="Marketing Promotions" busy={false} onReview={()=>{}} onExport={()=>{}}/>);
+  check('draft creator is told a second operator must approve', creator.includes('A second authorized operator must approve this draft.'));
+  check('draft creator cannot approve or export', !creator.includes('Approve reviewed draft') && !creator.includes('Download integrity package'));
+  check('pending draft can still be rejected', creator.includes('Reject draft'));
+
+  const reviewer = renderToStaticMarkup(<AgentRunCard run={{...baseRun,permissions:{submit:false,approve:true,reject:true,export:false}}} agentName="Marketing Promotions" busy={false} onReview={()=>{}} onExport={()=>{}}/>);
+  check('independent reviewer receives explicit approval action', reviewer.includes('Approve reviewed draft'));
+
+  const approved = renderToStaticMarkup(<AgentRunCard run={{...baseRun,status:'approved',reviewed_at:'2026-11-07T12:02:00.000Z',permissions:{submit:false,approve:false,reject:false,export:true}}} agentName="Marketing Promotions" busy={false} onReview={()=>{}} onExport={()=>{}}/>);
+  check('approved draft exposes only the integrity download action', approved.includes('Download integrity package') && !approved.includes('Submit for independent review') && !approved.includes('Approve reviewed draft'));
+  check('export copy states that no external delivery occurs', approved.includes('does not send, publish, contact a retailer, or write to Drive'));
 }
 
 console.log(failures === 0

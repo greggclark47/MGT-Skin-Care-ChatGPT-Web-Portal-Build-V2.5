@@ -36,8 +36,10 @@ test("detects private keys, credentialed database URLs, and unknown sensitive as
 });
 
 test("scans the candidate commit rather than a sanitized working tree", (context) => {
-  const root = fs.mkdtempSync(path.join(process.cwd(), ".mgt-secret-commit-"));
-  context.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const fixtureRoot = path.join(process.cwd(), "tmp", "contract-fixtures");
+  fs.mkdirSync(fixtureRoot, { recursive: true });
+  const root = fs.mkdtempSync(path.join(fixtureRoot, "mgt-secret-commit-"));
+  context.after(() => fs.rmSync(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }));
   const secretName = ["STRIPE", "SECRET", "KEY"].join("_");
   const secret = [`${secretName}=sk_live_`, "x".repeat(24)].join("");
   fs.writeFileSync(path.join(root, "config.txt"), `${secret}\n`);

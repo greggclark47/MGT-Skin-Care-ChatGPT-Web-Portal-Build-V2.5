@@ -2,7 +2,7 @@ import path from 'node:path';
 import { LocalStore, PgStore, startupMigrations, type Store } from './store';
 import { OperationalWorker, identityDeletionFromEnv, notificationDeliveryFromEnv, writeWorkerHeartbeat } from './operations';
 import { startWorkerLoop } from './worker-runtime';
-import { validateWorkerRuntimeAdmission } from './runtime-admission';
+import { validateWorkerRuntimeAdmission, workerRunOnce } from './runtime-admission';
 
 const env=process.env;
 const healthFile=env.WORKER_HEALTH_FILE||'/tmp/mgt-worker-health.json';
@@ -15,6 +15,11 @@ async function openStore():Promise<Store>{
 async function main(){
  const interval=validateWorkerRuntimeAdmission(env);
  const store=await openStore();const worker=new OperationalWorker(store,{env,delivery:notificationDeliveryFromEnv(env),identityDeletion:identityDeletionFromEnv(env)});
+ if(workerRunOnce(env)){
+  try{const result=await worker.runOnce();await writeWorkerHeartbeat(healthFile,result);console.log(JSON.stringify({worker:'portal-operations',mode:'run_once',...result}));}
+  finally{await store.close();}
+  return;
+ }
  const stopLoop=startWorkerLoop(async()=>{const result=await worker.runOnce();await writeWorkerHeartbeat(healthFile,result);console.log(JSON.stringify({worker:'portal-operations',...result}));},interval,code=>console.error(JSON.stringify({worker:'portal-operations',event:code})));
  let stopping:Promise<void>|undefined;
  const stop=()=>{stopping??=stopLoop().then(()=>store.close()).then(()=>{process.exitCode=0;},()=>{console.error(JSON.stringify({worker:'portal-operations',event:'worker_shutdown_failed'}));process.exitCode=1;});};

@@ -1,7 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import {
@@ -16,7 +15,9 @@ import { productionPrerequisitesChecksum } from "./production-prerequisites.mjs"
 const COMMIT = "0123456789abcdef0123456789abcdef01234567";
 
 function fixture() {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "mgt-release-export-"));
+  const temporaryRoot = path.join(process.cwd(), "tmp", "contract-fixtures");
+  fs.mkdirSync(temporaryRoot, { recursive: true });
+  const root = fs.mkdtempSync(path.join(temporaryRoot, "mgt-release-export-"));
   fs.mkdirSync(path.join(root, "infra", "portal"), { recursive: true });
   fs.writeFileSync(path.join(root, "README.md"), "# MGT Skin Care v2\n\nExport-safe documentation.\n");
   fs.writeFileSync(path.join(root, "infra", "portal", "README.md"), "# Portal\n\nLocal release controls.\n");

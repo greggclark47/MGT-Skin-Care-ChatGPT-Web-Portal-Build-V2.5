@@ -5,6 +5,8 @@ import { createReleaseImageManifest, validateReleaseImageManifest } from "./rele
 const candidate = "a".repeat(40);
 const api = `ghcr.io/mgt/api@sha256:${"b".repeat(64)}`;
 const web = `ghcr.io/mgt/web@sha256:${"c".repeat(64)}`;
+const garApi = `us-east1-docker.pkg.dev/team47studio-production/team47-production-platform/api@sha256:${"d".repeat(64)}`;
+const garWeb = `us-east1-docker.pkg.dev/team47studio-production/team47-production-platform/web@sha256:${"e".repeat(64)}`;
 
 test("creates a candidate-bound immutable application image manifest", () => {
   const manifest = createReleaseImageManifest({ candidateCommit: candidate, repository: "mgt/repository", apiImage: api, webImage: web, now: "2026-10-07T00:00:00.000Z" });
@@ -13,7 +15,12 @@ test("creates a candidate-bound immutable application image manifest", () => {
   assert.deepEqual(manifest.images, { api, web });
 });
 
-test("rejects mutable, non-GHCR, identical, or detached image references", () => {
+test("accepts immutable Artifact Registry release images", () => {
+  const manifest = createReleaseImageManifest({ candidateCommit: candidate, repository: "mgt/repository", apiImage: garApi, webImage: garWeb, now: "2026-10-07T00:00:00.000Z" });
+  assert.equal(validateReleaseImageManifest(manifest).ok, true);
+});
+
+test("rejects mutable, unapproved-registry, identical, or detached image references", () => {
   const base = createReleaseImageManifest({ candidateCommit: candidate, repository: "mgt/repository", apiImage: api, webImage: web, now: "2026-10-07T00:00:00.000Z" });
   assert.equal(validateReleaseImageManifest({ ...base, images: { ...base.images, api: "ghcr.io/mgt/api:latest" } }).ok, false);
   assert.equal(validateReleaseImageManifest({ ...base, images: { ...base.images, api: `docker.io/mgt/api@sha256:${"b".repeat(64)}` } }).ok, false);

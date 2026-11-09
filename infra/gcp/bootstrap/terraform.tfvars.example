@@ -1,0 +1,9 @@
+project_id  = "team47studio-staging"
+region      = "us-east1"
+environment = "staging"
+
+# Prefer a Workspace-managed group plus the keyless GitHub deployment identity.
+state_admin_members = [
+  "group:cloud-admins@team47studio.com",
+  "serviceAccount:REPLACE@team47studio-staging.iam.gserviceaccount.com",
+]

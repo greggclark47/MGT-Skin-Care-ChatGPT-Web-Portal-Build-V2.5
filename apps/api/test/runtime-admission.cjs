@@ -2,7 +2,7 @@ const assert = require('node:assert/strict');
 const { test } = require('node:test');
 const { spawnSync } = require('node:child_process');
 const path = require('node:path');
-const { productionAdmissionProjection, validateApiProcessAdmission, validateProductionApiSecretBoundary, validateProductionWorkerSecretBoundary, validateRuntimeOwnership, validateProductionPortalBoundary, validateProductionPolicyPublicationAdmission, validateProductionEdgeToken, validateProductionDatabaseAdmission, validateProductionOperationsAdmission, validateProductionNotificationAdmission, validateProductionIdentityAdmission, validateProductionBackupAdmission, validateProductionBackupAttestationAdmission, validateProductionAntiAgingAdmission, validateProductionAccessibilityAdmission, validateProductionSubscriptionAdmission, validateProductionSponsoredContentAdmission, validateProductionAiAdmission, validateProductionProcessSurfaceAdmission, validateProductionImageAdmission, validateProductionSecretIsolation, validateProductionEndpointIsolation, validateProductionDisabledFeatureResidue, validateWorkerRuntimeAdmission, workerIntervalMs, workerReadinessMaxAgeMs } = require('../dist/portal/runtime-admission');
+const { productionAdmissionProjection, validateApiProcessAdmission, validateProductionApiSecretBoundary, validateProductionWorkerSecretBoundary, validateRuntimeOwnership, validateProductionPortalBoundary, validateProductionPolicyPublicationAdmission, validateProductionEdgeToken, validateProductionDatabaseAdmission, validateProductionOperationsAdmission, validateProductionNotificationAdmission, validateProductionIdentityAdmission, validateProductionBackupAdmission, validateProductionBackupAttestationAdmission, validateProductionAntiAgingAdmission, validateProductionAccessibilityAdmission, validateProductionSubscriptionAdmission, validateProductionSponsoredContentAdmission, validateProductionAiAdmission, validateProductionProcessSurfaceAdmission, validateProductionImageAdmission, validateProductionSecretIsolation, validateProductionEndpointIsolation, validateProductionDisabledFeatureResidue, validateWorkerRuntimeAdmission, workerIntervalMs, workerReadinessMaxAgeMs, workerRunOnce } = require('../dist/portal/runtime-admission');
 const { PRODUCTION_ADMISSION_ACTIONS, PRODUCTION_ADMISSION_CONTRACT_VERSION } = require('../../../packages/shared/dist');
 const { createPortal } = require('../dist/portal/server');
 const owner = 'Gregg Clark of MGT';
@@ -109,6 +109,13 @@ test('production interval rejects invalid inputs rather than falling back or cla
   }
   for (const value of ['15','60','3600']) assert.equal(workerIntervalMs({...valid,WORKER_INTERVAL_SECONDS:value}),Number(value)*1000);
   assert.equal(workerIntervalMs({NODE_ENV:'test'}),60000);
+});
+
+test('scheduled workers use an explicit one-shot execution mode', () => {
+ assert.equal(workerRunOnce({...valid,WORKER_RUN_ONCE:'true'}),true);
+ assert.equal(workerRunOnce({...valid,WORKER_RUN_ONCE:'false'}),false);
+ assert.equal(workerRunOnce(valid),false);
+ for(const value of ['TRUE','1','yes',' true','true ']) assert.throws(()=>workerRunOnce({...valid,WORKER_RUN_ONCE:value}),/Production worker execution mode is invalid/);
 });
 
 test('production readiness age uses the configured value and requires at least two worker intervals', () => {

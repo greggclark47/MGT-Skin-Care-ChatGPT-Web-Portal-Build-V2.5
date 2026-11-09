@@ -5,7 +5,7 @@ import { pathToFileURL } from "node:url";
 export const RELEASE_IMAGE_MANIFEST_VERSION = "1.0";
 
 const SHA = /^[0-9a-f]{40}$/i;
-const DIGEST_IMAGE = /^ghcr\.io\/[a-z0-9._/-]+@sha256:[a-f0-9]{64}$/;
+const DIGEST_IMAGE = /^(?:ghcr\.io\/[a-z0-9._/-]+|[a-z0-9-]+-docker\.pkg\.dev\/[a-z0-9._/-]+)@sha256:[a-f0-9]{64}$/;
 const REPOSITORY = /^[a-z0-9_.-]+\/[a-z0-9_.-]+$/i;
 
 function text(value) {
@@ -21,7 +21,7 @@ export function validateReleaseImageManifest(manifest) {
   const generatedAt = Date.parse(text(manifest.generated_at));
   if (!Number.isFinite(generatedAt) || generatedAt > Date.now()) errors.push("generated_at must be a past ISO timestamp");
   for (const key of ["api", "web"]) {
-    if (!DIGEST_IMAGE.test(text(manifest.images?.[key]))) errors.push(`images.${key} must be an immutable GHCR @sha256 reference`);
+    if (!DIGEST_IMAGE.test(text(manifest.images?.[key]))) errors.push(`images.${key} must be an immutable approved-registry @sha256 reference`);
   }
   if (text(manifest.images?.api) === text(manifest.images?.web)) errors.push("API and web images must be distinct");
   return { ok: errors.length === 0, errors };

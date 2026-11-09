@@ -1,7 +1,6 @@
 import { createHash } from "node:crypto";
 import { matchesDriveFileIdentity } from "./drive-file-identity.mjs";
 import fs from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -174,7 +173,9 @@ function gitRemotes(root) {
 }
 
 function gitArchiveChecksum(root, commit) {
-  const temporary = fs.mkdtempSync(path.join(os.tmpdir(), "mgt-release-archive-"));
+  const temporaryRoot = path.join(path.resolve(root), "tmp");
+  fs.mkdirSync(temporaryRoot, { recursive: true });
+  const temporary = fs.mkdtempSync(path.join(temporaryRoot, "mgt-release-archive-"));
   const archive = path.join(temporary, "candidate.zip");
   try {
     const result = spawnSync("git", ["archive", "--format=zip", `--output=${archive}`, commit], { cwd: root, encoding: "utf8", windowsHide: true });

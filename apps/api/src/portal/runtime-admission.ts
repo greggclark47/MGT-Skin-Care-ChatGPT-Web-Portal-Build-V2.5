@@ -33,6 +33,14 @@ export function workerReadinessMaxAgeMs(env:NodeJS.ProcessEnv):number{
  return Math.max(60,Math.min(10800,Number(value)||Math.max(300,intervalMs/1000*3)))*1000;
 }
 
+export function workerRunOnce(env:NodeJS.ProcessEnv):boolean{
+ const value=env.WORKER_RUN_ONCE;
+ if(value===undefined||value==='false')return false;
+ if(value==='true')return true;
+ if(env.NODE_ENV==='production')throw new Error('Production worker execution mode is invalid.');
+ return false;
+}
+
 export function validateProductionPortalBoundary(env:NodeJS.ProcessEnv):void{
  if(env.NODE_ENV!=='production')return;
  if(env.DEMO_MODE!=='false')throw new Error('Production portal boundary is invalid.');
@@ -458,5 +466,6 @@ export function validateWorkerRuntimeAdmission(env:NodeJS.ProcessEnv):number{
  validateProductionWorkerSecretBoundary(env);
  validateProductionWorkerSecretIsolation(env);
  validateProductionWorkerEndpointIsolation(env);
+ workerRunOnce(env);
  return workerIntervalMs(env);
 }

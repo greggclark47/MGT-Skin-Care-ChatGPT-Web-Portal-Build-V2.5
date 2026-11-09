@@ -419,9 +419,11 @@ function rejectPeerSecretResidue(context, role, keys) {
 function validateRuntimeWorkerTiming(context) {
   const interval = context.env.WORKER_INTERVAL_SECONDS;
   const readiness = context.env.WORKER_READINESS_MAX_AGE_SECONDS;
+  const runOnce = context.env.WORKER_RUN_ONCE;
   if (typeof interval !== "string" || !/^\d+$/.test(interval) || !wholeNumber(interval, 15, 3600)) context.errors.push("WORKER_INTERVAL_SECONDS must be a whole number between 15 and 3600.");
   if (typeof readiness !== "string" || !/^\d+$/.test(readiness) || !wholeNumber(readiness, 60, 86400)) context.errors.push("WORKER_READINESS_MAX_AGE_SECONDS must be a whole number between 60 and 86400.");
   if (wholeNumber(interval, 15, 3600) && wholeNumber(readiness, 60, 86400) && Number(readiness) < Number(interval) * 2) context.errors.push("WORKER_READINESS_MAX_AGE_SECONDS must be at least twice WORKER_INTERVAL_SECONDS.");
+  if (runOnce !== undefined && !["true", "false"].includes(runOnce)) context.errors.push("WORKER_RUN_ONCE must be exactly true or false when configured.");
 }
 
 function validateApiRuntimeEnvironment(context) {

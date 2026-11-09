@@ -8,8 +8,9 @@ const styles = readFileSync(new URL("../../styles.css", import.meta.url), "utf8"
 
 test("static demo exposes the current release and ship-packet surface", () => {
   assert.match(html, /F435/);
-  assert.match(html, /v4\.418 local verification \(19\/19 gates; 1,376\/1,376 regression checks\)/);
-  assert.match(html, /fresh GitHub and Drive backup confirmation is required before they can be relabeled current/);
+  assert.match(html, /v4\.419 Team 47 Studio production-infrastructure checkpoint/);
+  assert.match(html, /1,389\/1,389 consolidated regression assertions/);
+  assert.match(html, /1,162\/1,162 infrastructure contracts/);
   assert.match(html, /data-panel="packet"/);
   assert.match(html, /id="packetPanel"/);
   assert.match(html, /Ship packet/);
@@ -72,7 +73,7 @@ test("static demo exposes the current release and ship-packet surface", () => {
   assert.match(html, /Ship authorization: blocked/);
   assert.match(html, /aria-label="Team 47 Studio home"/);
   assert.match(html, /class="brand-logo-image logo-on-dark" src="assets\/brand\/team47studio-logo-dark-surface-clean\.png"/);
-  assert.match(html, /<small class="build-version">v4\.418<\/small>/);
+  assert.match(html, /<small class="build-version">v4\.419<\/small>/);
   assert.match(html, /rel="canonical" href="https:\/\/team47studio\.com\/"/);
   assert.match(html, /Complexion Intelligence/);
   assert.match(html, /Anti-blemish/);
@@ -86,8 +87,8 @@ test("static demo exposes the current release and ship-packet surface", () => {
   assert.match(html, /COLOR MATCH &amp; WARDROBE · v4\.380/);
   assert.match(html, /identity-bound account continuity/);
   assert.match(html, /verified-email session protection/);
-  assert.match(html, /CI-runnable application regression coverage/);
-  assert.match(html, /candidate-bound database audit and v4\.418 local verification \(19\/19 gates; 1,376\/1,376 regression checks\)/);
+  assert.match(html, /Google Cloud and Cloudflare infrastructure-as-code/);
+  assert.match(html, /Live cloud resources, customer traffic, payment activation, production data, DNS cutover, and release authorization remain intentionally on hold/);
   assert.match(html, /PHASES 4–5 · CONTROLLED COMMERCIAL \+ AGENT OPERATIONS/);
   assert.match(html, /data-demo="Secure billing controls"/);
   assert.match(html, /Idempotent usage-meter events/);
@@ -134,18 +135,12 @@ test("static demo exposes the current release and ship-packet surface", () => {
   assert.match(html, /data-demo="Trust &(?:amp;)? AI"/);
   assert.match(html, /data-demo="Privacy notice"/);
   assert.match(html, /data-demo="AI disclosure"/);
-  assert.match(html, /Account &amp; Customer Care guidance/);
-  assert.match(html, /detailed AI Trust, Privacy and AI Disclosure drafts/);
-  assert.match(html, /strict Android endpoint and policy-link admission/);
-  assert.match(html, /Android account-data-control handoff/);
   assert.match(html, /Android endpoint controls/);
   assert.match(html, /public HTTPS API endpoint, account portal, Privacy, Terms, and AI Disclosure links pass strict URL checks/);
-  assert.match(html, /automated candidate Android configuration preflight/);
   assert.match(html, /Android build preflight/);
   assert.match(html, /rejects secret-shaped public variables before EAS begins an AAB build/);
   assert.match(html, /Android data controls/);
   assert.match(html, /privacy, data export and account deletion controls/);
-  assert.match(html, /API policy-publication admission/);
   assert.match(html, /API startup rejects missing, unsafe, or duplicated public Privacy, Terms, and AI Disclosure locations before database access/);
   assert.match(html, /data-demo="Bi-weekly regimen cycle"/);
   assert.match(html, /Two-week regimen cycle/);
@@ -155,10 +150,11 @@ test("static demo exposes the current release and ship-packet surface", () => {
   assert.match(html, /revokes older local sessions/);
   assert.match(html, /data-demo="Google account sign-in"/);
   assert.match(html, /no Google Drive or photo access/);
-  assert.match(html, /2f56f2989ac03acda92669ca7abffaca00e2c6d6/);
   assert.match(html, /hosted subscription and usage-billing controls/);
-  assert.match(html, /last independently verified published archive, not a newly confirmed backup/);
-  assert.match(html, /Production database audit evidence is bound to the exact candidate commit/);
+  assert.match(html, /Primary source repository/);
+  assert.match(html, /Independent backup repository/);
+  assert.match(html, /The same source candidate is prepared for both GitHub repositories and the designated Google Drive evidence archive/);
+  assert.match(html, /Production database audit evidence remains bound to the exact candidate commit/);
   assert.match(html, /one exact set of twelve evidence references, including configuration and policy approval/);
   assert.match(html, /Candidate-bound database audit/);
   assert.match(html, /A production database audit must bind the exact candidate commit/);

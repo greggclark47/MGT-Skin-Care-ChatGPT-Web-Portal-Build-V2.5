@@ -10,7 +10,6 @@ locals {
     NODE_ENV      = "production"
     DEMO_MODE     = "false"
     HOST          = "0.0.0.0"
-    PORT          = "3100"
     PROCESS_ROLE  = "api"
     PUBLIC_ORIGIN = "https://${var.domain}"
     PORTAL_DOMAIN = var.domain
@@ -213,14 +212,16 @@ resource "google_cloud_run_v2_service" "web" {
         failure_threshold = 12
         period_seconds    = 5
         timeout_seconds   = 3
-        tcp_socket {
+        http_get {
+          path = "/"
           port = 3000
         }
       }
       liveness_probe {
         period_seconds  = 30
         timeout_seconds = 3
-        tcp_socket {
+        http_get {
+          path = "/"
           port = 3000
         }
       }

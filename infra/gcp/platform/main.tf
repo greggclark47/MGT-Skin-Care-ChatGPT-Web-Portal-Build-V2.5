@@ -95,14 +95,14 @@ resource "google_secret_manager_secret" "runtime" {
 
 resource "google_secret_manager_secret_iam_member" "api" {
   for_each  = var.api_secret_environment
-  secret_id = google_secret_manager_secret.runtime[each.value].id
+  secret_id = google_secret_manager_secret.runtime[each.value.secret_id].id
   role      = "roles/secretmanager.secretAccessor"
   member    = "serviceAccount:${google_service_account.api.email}"
 }
 
 resource "google_secret_manager_secret_iam_member" "worker" {
   for_each  = var.worker_secret_environment
-  secret_id = google_secret_manager_secret.runtime[each.value].id
+  secret_id = google_secret_manager_secret.runtime[each.value.secret_id].id
   role      = "roles/secretmanager.secretAccessor"
   member    = "serviceAccount:${google_service_account.worker.email}"
 }

@@ -62,9 +62,15 @@ export function validateProductionDatabaseUrl(url:string,env:NodeJS.ProcessEnv=p
  }catch{ /* Only a bounded diagnostic is emitted; the URL may contain credentials. */ }
  throw new Error('Production DATABASE_URL requires one host and verified TLS without query target overrides.');
 }
-export function portalPoolConfig(url:string):PoolConfig{
+export function portalPoolConfig(url:string,env:NodeJS.ProcessEnv=process.env):PoolConfig{
  if(typeof url!=='string'||url!==url.trim()||Buffer.byteLength(url,'utf8')>4096)throw new Error('Database URL is invalid.');
- return {connectionString:url,application_name:'mgt_skin_care_portal',max:10,connectionTimeoutMillis:5000,statement_timeout:10000,query_timeout:12000,lock_timeout:5000,idle_in_transaction_session_timeout:15000,idleTimeoutMillis:30000,maxLifetimeSeconds:300,keepAlive:true,keepAliveInitialDelayMillis:10000};
+ const config:PoolConfig={connectionString:url,application_name:'mgt_skin_care_portal',max:10,connectionTimeoutMillis:5000,statement_timeout:10000,query_timeout:12000,lock_timeout:5000,idle_in_transaction_session_timeout:15000,idleTimeoutMillis:30000,maxLifetimeSeconds:300,keepAlive:true,keepAliveInitialDelayMillis:10000};
+ if(env.DATABASE_CA_CERT_PATH){
+  const parsed=new URL(url);if(parsed.searchParams.getAll('sslmode').length!==1||parsed.searchParams.get('sslmode')!=='verify-full')throw new Error('Database CA trust requires sslmode=verify-full.');
+  const caPath=path.resolve(env.DATABASE_CA_CERT_PATH);const ca=fs.readFileSync(caPath,'utf8');if(!ca.includes('BEGIN CERTIFICATE')||Buffer.byteLength(ca,'utf8')>32768)throw new Error('Database CA certificate is invalid.');
+  parsed.searchParams.delete('sslmode');config.connectionString=parsed.toString();config.ssl={ca,rejectUnauthorized:true,servername:parsed.hostname};
+ }
+ return config;
 }
 type PoolErrorSource={on:(event:'error',listener:(error:Error&{code?:string})=>void)=>unknown};
 export function installDatabasePoolErrorBoundary(pool:PoolErrorSource,log:(record:{event:string;code:string})=>void=(record)=>console.error(JSON.stringify(record))):void{
@@ -76,7 +82,7 @@ export function installDatabasePoolErrorBoundary(pool:PoolErrorSource,log:(recor
 }
 export class PgStore implements Store{
  kind='postgres';private pool:Pool;private closing?:Promise<void>;private env:NodeJS.ProcessEnv;
- constructor(url:string,env:NodeJS.ProcessEnv=process.env){this.env=env;validateProductionDatabaseUrl(url,env);this.pool=new Pool(portalPoolConfig(url));installDatabasePoolErrorBoundary(this.pool);}
+ constructor(url:string,env:NodeJS.ProcessEnv=process.env){this.env=env;validateProductionDatabaseUrl(url,env);this.pool=new Pool(portalPoolConfig(url,env));installDatabasePoolErrorBoundary(this.pool);}
  async init(migrate=false){
   try{
    if(migrate)await applyPortalMigrations(this.pool);

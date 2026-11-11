@@ -39,6 +39,10 @@ output "worker_job_name" {
   value = var.deploy_application ? google_cloud_run_v2_job.worker[0].name : null
 }
 
+output "operations_alert_receiver_url" {
+  value = var.deploy_application ? "${google_cloud_run_v2_service.alert_receiver[0].uri}/events" : null
+}
+
 output "uptime_check_id" {
   value = local.monitoring_active ? google_monitoring_uptime_check_config.portal[0].uptime_check_id : null
 }

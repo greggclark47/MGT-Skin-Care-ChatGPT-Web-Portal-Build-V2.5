@@ -6,20 +6,24 @@ locals {
     toset([for binding in values(var.worker_secret_environment) : binding.secret_id]),
     var.additional_secret_ids,
   )
-  api_environment = merge({
-    NODE_ENV      = "production"
-    DEMO_MODE     = "false"
-    HOST          = "0.0.0.0"
-    PROCESS_ROLE  = "api"
-    PUBLIC_ORIGIN = "https://${var.domain}"
-    PORTAL_DOMAIN = var.domain
-  }, var.api_environment)
   worker_environment = merge({
-    NODE_ENV        = "production"
-    DEMO_MODE       = "false"
-    PROCESS_ROLE    = "worker"
-    WORKER_RUN_ONCE = "true"
-  }, var.worker_environment)
+    NODE_ENV              = "production"
+    DEMO_MODE             = "false"
+    PROCESS_ROLE          = "worker"
+    WORKER_RUN_ONCE       = "true"
+    DATABASE_CA_CERT_PATH = "/app/infra/portal/supabase-prod-ca-2021.crt"
+    }, var.worker_environment, var.deploy_application ? {
+    OPERATIONS_ALERT_WEBHOOK_URL = "${google_cloud_run_v2_service.alert_receiver[0].uri}/events"
+  } : {})
+  api_environment = merge({
+    NODE_ENV              = "production"
+    DEMO_MODE             = "false"
+    HOST                  = "0.0.0.0"
+    PROCESS_ROLE          = "api"
+    PUBLIC_ORIGIN         = "https://${var.domain}"
+    PORTAL_DOMAIN         = var.domain
+    DATABASE_CA_CERT_PATH = "/app/infra/portal/supabase-prod-ca-2021.crt"
+  }, var.api_environment)
 }
 
 data "google_project" "current" {
@@ -72,6 +76,11 @@ resource "google_service_account" "worker" {
   display_name = "Team 47 Studio ${var.environment} scheduled worker"
 }
 
+resource "google_service_account" "alert_receiver" {
+  account_id   = substr("${local.prefix}-alerts", 0, 30)
+  display_name = "Team 47 Studio ${var.environment} operations alert receiver"
+}
+
 resource "google_service_account" "scheduler" {
   account_id   = substr("${local.prefix}-scheduler", 0, 30)
   display_name = "Team 47 Studio ${var.environment} scheduler"
@@ -104,6 +113,12 @@ resource "google_secret_manager_secret_iam_member" "worker" {
   secret_id = google_secret_manager_secret.runtime[each.value.secret_id].id
   role      = "roles/secretmanager.secretAccessor"
   member    = "serviceAccount:${google_service_account.worker.email}"
+}
+
+resource "google_secret_manager_secret_iam_member" "alert_receiver" {
+  secret_id = google_secret_manager_secret.runtime[var.worker_secret_environment["OPERATIONS_ALERT_WEBHOOK_TOKEN"].secret_id].id
+  role      = "roles/secretmanager.secretAccessor"
+  member    = "serviceAccount:${google_service_account.alert_receiver.email}"
 }
 
 resource "google_storage_bucket" "media" {
@@ -326,6 +341,87 @@ resource "google_cloud_run_v2_service_iam_member" "api_public_through_lb" {
   member   = "allUsers"
 }
 
+resource "google_cloud_run_v2_service" "alert_receiver" {
+  count                = var.deploy_application ? 1 : 0
+  name                 = "${local.prefix}-alerts"
+  location             = var.region
+  deletion_protection  = var.environment == "production"
+  ingress              = "INGRESS_TRAFFIC_ALL"
+  default_uri_disabled = false
+  labels               = local.labels
+  template {
+    service_account                  = google_service_account.alert_receiver.email
+    timeout                          = "30s"
+    max_instance_request_concurrency = 20
+    scaling {
+      min_instance_count = 0
+      max_instance_count = 3
+    }
+    containers {
+      image   = var.api_image
+      command = ["node"]
+      args    = ["/app/apps/api/dist/portal/operations-alert-receiver.js"]
+      ports {
+        container_port = 8080
+      }
+      env {
+        name  = "OPERATIONS_ALERT_KEY_ID"
+        value = "primary"
+      }
+      env {
+        name  = "OPERATIONS_ALERT_MAX_AGE_SECONDS"
+        value = "300"
+      }
+      env {
+        name = "OPERATIONS_ALERT_WEBHOOK_TOKEN"
+        value_source {
+          secret_key_ref {
+            secret  = var.worker_secret_environment["OPERATIONS_ALERT_WEBHOOK_TOKEN"].secret_id
+            version = var.worker_secret_environment["OPERATIONS_ALERT_WEBHOOK_TOKEN"].version
+          }
+        }
+      }
+      resources {
+        limits            = { cpu = "1", memory = "256Mi" }
+        cpu_idle          = true
+        startup_cpu_boost = true
+      }
+      startup_probe {
+        failure_threshold = 12
+        period_seconds    = 5
+        timeout_seconds   = 3
+        http_get {
+          path = "/healthz"
+          port = 8080
+        }
+      }
+      liveness_probe {
+        period_seconds  = 30
+        timeout_seconds = 3
+        http_get {
+          path = "/healthz"
+          port = 8080
+        }
+      }
+    }
+  }
+  lifecycle {
+    precondition {
+      condition     = can(regex("-docker\\.pkg\\.dev/.+@sha256:[0-9a-f]{64}$", var.api_image))
+      error_message = "api_image must be an immutable Artifact Registry digest."
+    }
+  }
+  depends_on = [google_secret_manager_secret_iam_member.alert_receiver]
+}
+
+resource "google_cloud_run_v2_service_iam_member" "alert_receiver_public" {
+  count    = var.deploy_application ? 1 : 0
+  name     = google_cloud_run_v2_service.alert_receiver[0].name
+  location = var.region
+  role     = "roles/run.invoker"
+  member   = "allUsers"
+}
+
 resource "google_cloud_run_v2_job" "worker" {
   count               = var.deploy_application ? 1 : 0
   name                = "${local.prefix}-worker"
@@ -374,7 +470,7 @@ resource "google_cloud_run_v2_job" "worker" {
       error_message = "api_image must be an immutable Artifact Registry digest."
     }
   }
-  depends_on = [google_secret_manager_secret_iam_member.worker]
+  depends_on = [google_secret_manager_secret_iam_member.worker, google_cloud_run_v2_service_iam_member.alert_receiver_public]
 }
 
 resource "google_cloud_run_v2_job_iam_member" "scheduler" {

@@ -3,7 +3,10 @@
   "private": true,
   "version": "0.1.0",
   "packageManager": "pnpm@9.0.0",
-  "workspaces": ["apps/*", "packages/*"],
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
     "build": "pnpm -r build",
     "build:static": "node infra/portal/build-static.cjs",
@@ -140,5 +143,8 @@
     "test:mobile-contract": "pnpm --filter @mgt/mobile test:contract",
     "release:checkpoint": "node infra/portal/local-checkpoint.cjs",
     "test:verification": "node infra/portal/verify.cjs"
+  },
+  "devDependencies": {
+    "supabase": "3.1.1-beta.1"
   }
 }

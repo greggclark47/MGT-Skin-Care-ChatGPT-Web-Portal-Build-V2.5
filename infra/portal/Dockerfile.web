@@ -3,7 +3,7 @@ FROM ${NODE_IMAGE}
 WORKDIR /app
 RUN corepack enable && corepack prepare pnpm@9.0.0 --activate
 COPY . .
-RUN pnpm install --frozen-lockfile
+RUN pnpm install --frozen-lockfile && pnpm --filter @mgt/domain build && pnpm --filter @mgt/shared build
 ARG PORTAL_API_ORIGIN=http://api:3100
 ENV PORTAL_API_ORIGIN=$PORTAL_API_ORIGIN
 RUN pnpm --filter @mgt/web build

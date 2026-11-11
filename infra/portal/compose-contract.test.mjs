@@ -36,6 +36,7 @@ test("application images consume the immutable Node build input", () => {
   assert.equal((compose.match(/NODE_IMAGE:\s+\$\{NODE_IMAGE:\?Set the approved Node image digest\}/g) || []).length, 3);
   assert.match(apiDockerfile, /ARG NODE_IMAGE\s+FROM \$\{NODE_IMAGE\}/);
   assert.match(webDockerfile, /ARG NODE_IMAGE\s+FROM \$\{NODE_IMAGE\}/);
+  assert.match(webDockerfile, /pnpm --filter @mgt\/domain build && pnpm --filter @mgt\/shared build/);
   assert.match(apiDockerfile, /CMD \["sh","-c","node \/app\/infra\/portal\/preflight\.mjs && exec node dist\/portal\/server\.js"\]/);
   assert.match(compose, /command: \["sh", "-c", "node \/app\/infra\/portal\/preflight\.mjs && exec node dist\/portal\/worker\.js"\]/);
 });

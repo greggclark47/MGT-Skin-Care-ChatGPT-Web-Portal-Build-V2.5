@@ -1,5 +1,5 @@
 import { createRequire } from "node:module";
-import { existsSync, mkdirSync, readdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -154,8 +154,21 @@ export function buildProductionDatabaseAudit(snapshot, expectedPortalMigrations 
 async function captureSnapshot(databaseUrl) {
   const requireFromApi = createRequire(join(root, "apps/api/package.json"));
   const { Pool } = requireFromApi("pg");
+  const parsed = new URL(databaseUrl);
+  const caPath = process.env.DATABASE_CA_CERT_PATH;
+  let connectionString = databaseUrl;
+  let ssl;
+  if (caPath) {
+    if (parsed.searchParams.getAll("sslmode").length !== 1 || parsed.searchParams.get("sslmode") !== "verify-full") throw new Error("Verified TLS is required.");
+    const ca = readFileSync(resolve(caPath), "utf8");
+    if (!ca.includes("BEGIN CERTIFICATE") || Buffer.byteLength(ca, "utf8") > 32768) throw new Error("Database CA certificate is invalid.");
+    parsed.searchParams.delete("sslmode");
+    connectionString = parsed.toString();
+    ssl = { ca, rejectUnauthorized: true, servername: parsed.hostname };
+  }
   const pool = new Pool({
-    connectionString: databaseUrl,
+    connectionString,
+    ...(ssl ? { ssl } : {}),
     max: 1,
     connectionTimeoutMillis: 10000,
     statement_timeout: 10000,

@@ -16,6 +16,7 @@ test("detects high-confidence credentials without returning their values", () =>
 test("allows empty, indirect, and explicit fixture configuration", () => {
   const findings = scanText([
     "OPENAI_API_KEY=",
+    `${["OPENAI", "API", "KEY"].join("_")} = "env(OPENAI_API_KEY)"`,
     "SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}",
     "STRIPE_SECRET_KEY=sk-test-value",
     '"SUPABASE_ANON_KEY": "anon-test-key"'

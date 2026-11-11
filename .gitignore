@@ -11,6 +11,7 @@ dist/
 work/data/
 work/verification/
 work/checkpoints/
+work/staging/
 *.sqlite
 *.sqlite-shm
 *.sqlite-wal

@@ -15,7 +15,7 @@ const HIGH_CONFIDENCE = Object.freeze([
 const SENSITIVE_NAME = "(?:OLLAMA_CLOUD_API_KEY|OPENAI_API_KEY|SUPABASE_ANON_KEY|SUPABASE_SERVICE_ROLE_KEY|STRIPE_SECRET_KEY|STRIPE_WEBHOOK_SECRET|NOTIFICATION_WEBHOOK_TOKEN)";
 const ASSIGNMENT = new RegExp("\\b(" + SENSITIVE_NAME + ")[ \\t]*=[ \\t]*([^\\s`]+)", "gi");
 const JSON_ASSIGNMENT = new RegExp(`["'](${SENSITIVE_NAME})["']\\s*:\\s*["']([^"']+)["']`, "gi");
-const SAFE_MARKER = /^(?:["']?)(?:|false|null|undefined|REPLACE(?:_WITH)?\S*|YOUR[_-]\S*|<[^>]+>|\$\{[^}]+\}|process\.env\..+|env\..+)(?:["']?)$/i;
+const SAFE_MARKER = /^(?:["']?)(?:|false|null|undefined|REPLACE(?:_WITH)?\S*|YOUR[_-]\S*|<[^>]+>|\$\{[^}]+\}|process\.env\..+|env\..+|env\([A-Z][A-Z0-9_]*\))(?:["']?)$/i;
 const SAFE_IDENTIFIER = /^[A-Z][A-Z0-9_]*$/;
 const FIXTURE_MARKER = /(?:example|dummy|fake|not-for-evidence|not-a-|test-value|anon-test-key|service-test-key)/i;
 const DATABASE_FIXTURE = /postgres(?:ql)?:\/\/(?:USER|u|mgt|user):(?:PASSWORD|p|secure|password)@/i;

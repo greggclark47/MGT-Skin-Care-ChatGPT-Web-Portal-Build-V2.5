@@ -66,6 +66,15 @@ api_environment = {
   ACCESSIBILITY_VALIDATED_AT    = "REPLACE_WITH_PAST_ISO_TIMESTAMP"
 }
 
+# Keep this map empty while Stripe is disabled. When enabling a Stripe feature,
+# bind only the required explicit Secret Manager versions—never a value or
+# `latest`. Subscription Checkout additionally needs the webhook signing secret.
+#
+# stripe_api_secret_environment = {
+#   "STRIPE_SECRET_KEY"                  = { secret_id = "team47-stripe-secret-key", version = "1" }
+#   "STRIPE_SUBSCRIPTION_WEBHOOK_SECRET" = { secret_id = "team47-stripe-webhook-secret", version = "1" }
+# }
+
 worker_environment = {
   PORTAL_AUTO_MIGRATE            = "false"
   SUPABASE_URL                   = "https://REPLACE.supabase.co"

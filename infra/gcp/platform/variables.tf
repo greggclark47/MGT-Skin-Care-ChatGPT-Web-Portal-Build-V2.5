@@ -59,7 +59,7 @@ variable "worker_environment" {
 }
 
 variable "api_secret_environment" {
-  description = "API environment variable to pinned Secret Manager secret ID/version mapping. Secret values are added outside Terraform."
+  description = "Always-required API environment variable to pinned Secret Manager secret ID/version mapping. Secret values are added outside Terraform."
   type = map(object({
     secret_id = string
     version   = string
@@ -75,6 +75,24 @@ variable "api_secret_environment" {
       can(regex("^[a-z][a-z0-9_-]{0,254}$", binding.secret_id)) && can(regex("^[1-9][0-9]*$", binding.version))
     ])
     error_message = "API secrets must use valid secret IDs and explicit positive numeric versions."
+  }
+}
+
+variable "stripe_api_secret_environment" {
+  description = "Optional Stripe API-only secret bindings. Add the API key for enabled Stripe features and the webhook signing secret only for enabled subscriptions. Secret values are added outside Terraform."
+  type = map(object({
+    secret_id = string
+    version   = string
+  }))
+  default = {}
+  validation {
+    condition = alltrue([
+      for name, binding in var.stripe_api_secret_environment :
+      contains(["STRIPE_SECRET_KEY", "STRIPE_SUBSCRIPTION_WEBHOOK_SECRET"], name)
+      && can(regex("^[a-z][a-z0-9_-]{0,254}$", binding.secret_id))
+      && can(regex("^[1-9][0-9]*$", binding.version))
+    ])
+    error_message = "Stripe API bindings may contain only STRIPE_SECRET_KEY and STRIPE_SUBSCRIPTION_WEBHOOK_SECRET with explicit positive numeric Secret Manager versions."
   }
 }
 

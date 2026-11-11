@@ -38,7 +38,10 @@ When `deploy_application=true`, the module also provisions:
 5. Keep `deploy_application=false`; run `terraform init`, `fmt -check`, `validate` and `plan`.
 6. Review cost, IAM, data location, retention and deletion protection; apply the foundation.
 7. Add secret **versions** directly in Secret Manager. Terraform creates only containers;
-   runtime mappings must pin positive numeric versions and never use `latest`.
+   runtime mappings must pin positive numeric versions and never use `latest`. When enabling
+   Stripe, add `STRIPE_SECRET_KEY` to `stripe_api_secret_environment`; subscription Checkout
+   also requires `STRIPE_SUBSCRIPTION_WEBHOOK_SECRET`. The plan rejects an incomplete
+   Supabase database/identity path or a partial Stripe binding before deployment.
 8. Configure the GitHub environment with the emitted workload-identity provider and service account.
 9. Build and qualify the application, then push digest-addressed images to the emitted registry.
 10. Complete the non-secret runtime maps and run the repository preflight against the same values.

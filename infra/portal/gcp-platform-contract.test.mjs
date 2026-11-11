@@ -47,6 +47,19 @@ test('storage and secret resources fail closed by default',()=>{
  assert.match(variables,/deploy_application[\s\S]*default\s*=\s*false/);
 });
 
+test('Supabase and Stripe secret mounts are feature-gated before Cloud Run deployment',()=>{
+ assert.match(platform,/terraform_data" "runtime_secret_contract"/);
+ assert.match(platform,/SUPABASE_ANON_KEY/);
+ assert.match(platform,/SUPABASE_SERVICE_ROLE_KEY/);
+ assert.match(platform,/STRIPE_SECRET_KEY/);
+ assert.match(platform,/STRIPE_SUBSCRIPTION_WEBHOOK_SECRET/);
+ assert.match(platform,/Do not mount Stripe secrets while every Stripe feature is disabled/);
+ assert.match(variables,/variable "stripe_api_secret_environment"/);
+ assert.match(variables,/\["STRIPE_SECRET_KEY", "STRIPE_SUBSCRIPTION_WEBHOOK_SECRET"\]/);
+ assert.match(platform,/runtime\[each\.value\.secret_id\]/);
+ assert.doesNotMatch(platform,/runtime\[each\.value\]\.id/);
+});
+
 test('scheduled operations run one bounded sweep',()=>{
  assert.match(platform,/google_cloud_run_v2_job/);
  assert.match(platform,/WORKER_RUN_ONCE\s*=\s*"true"/);

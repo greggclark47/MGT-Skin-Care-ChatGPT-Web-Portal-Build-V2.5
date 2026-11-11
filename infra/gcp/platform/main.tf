@@ -1,8 +1,11 @@
 locals {
   prefix = "team47-${var.environment}"
   labels = merge(var.labels, { environment = var.environment })
+  # The baseline API bindings are always present. Stripe remains opt-in: its
+  # two API-only secrets are mounted only through the feature-scoped map.
+  api_secret_environment = merge(var.api_secret_environment, var.stripe_api_secret_environment)
   secret_ids = setunion(
-    toset([for binding in values(var.api_secret_environment) : binding.secret_id]),
+    toset([for binding in values(local.api_secret_environment) : binding.secret_id]),
     toset([for binding in values(var.worker_secret_environment) : binding.secret_id]),
     var.additional_secret_ids,
   )
@@ -21,6 +24,50 @@ locals {
     PROCESS_ROLE    = "worker"
     WORKER_RUN_ONCE = "true"
   }, var.worker_environment)
+  subscriptions_enabled       = lookup(local.api_environment, "SUBSCRIPTIONS_ENABLED", "false") == "true"
+  commercial_stripe_enabled   = lookup(local.api_environment, "STRIPE_USAGE_BILLING_ENABLED", "false") == "true" || lookup(local.api_environment, "STRIPE_B2B_INVOICING_ENABLED", "false") == "true"
+  api_secret_names            = toset(keys(local.api_secret_environment))
+  worker_secret_names         = toset(keys(var.worker_secret_environment))
+}
+
+# Keep the Supabase database/identity path and the Stripe webhook path aligned
+# with the API process that owns both. These checks run during planning, before
+# Cloud Run can receive a partial environment. They validate only variable
+# names and Secret Manager references, never secret values.
+resource "terraform_data" "runtime_secret_contract" {
+  input = {
+    subscriptions_enabled     = local.subscriptions_enabled
+    commercial_stripe_enabled = local.commercial_stripe_enabled
+    api_secret_names          = sort(tolist(local.api_secret_names))
+    worker_secret_names       = sort(tolist(local.worker_secret_names))
+  }
+
+  lifecycle {
+    precondition {
+      condition     = contains(local.api_secret_names, "DATABASE_URL") && contains(local.api_secret_names, "SUPABASE_ANON_KEY") && contains(local.worker_secret_names, "DATABASE_URL") && contains(local.worker_secret_names, "SUPABASE_SERVICE_ROLE_KEY")
+      error_message = "The Supabase runtime path requires DATABASE_URL for API and worker, SUPABASE_ANON_KEY for API, and SUPABASE_SERVICE_ROLE_KEY for worker."
+    }
+
+    precondition {
+      condition     = !local.subscriptions_enabled || (contains(local.api_secret_names, "STRIPE_SECRET_KEY") && contains(local.api_secret_names, "STRIPE_SUBSCRIPTION_WEBHOOK_SECRET"))
+      error_message = "Enabled subscriptions require STRIPE_SECRET_KEY and STRIPE_SUBSCRIPTION_WEBHOOK_SECRET in stripe_api_secret_environment."
+    }
+
+    precondition {
+      condition     = !local.commercial_stripe_enabled || contains(local.api_secret_names, "STRIPE_SECRET_KEY")
+      error_message = "Enabled Stripe usage billing or B2B invoicing requires STRIPE_SECRET_KEY in stripe_api_secret_environment."
+    }
+
+    precondition {
+      condition     = local.subscriptions_enabled || local.commercial_stripe_enabled || !contains(local.api_secret_names, "STRIPE_SECRET_KEY") && !contains(local.api_secret_names, "STRIPE_SUBSCRIPTION_WEBHOOK_SECRET")
+      error_message = "Do not mount Stripe secrets while every Stripe feature is disabled."
+    }
+
+    precondition {
+      condition     = local.subscriptions_enabled || !contains(local.api_secret_names, "STRIPE_SUBSCRIPTION_WEBHOOK_SECRET")
+      error_message = "Do not mount STRIPE_SUBSCRIPTION_WEBHOOK_SECRET when subscriptions are disabled."
+    }
+  }
 }
 
 data "google_project" "current" {
@@ -94,15 +141,15 @@ resource "google_secret_manager_secret" "runtime" {
 }
 
 resource "google_secret_manager_secret_iam_member" "api" {
-  for_each  = var.api_secret_environment
-  secret_id = google_secret_manager_secret.runtime[each.value].id
+  for_each  = local.api_secret_environment
+  secret_id = google_secret_manager_secret.runtime[each.value.secret_id].id
   role      = "roles/secretmanager.secretAccessor"
   member    = "serviceAccount:${google_service_account.api.email}"
 }
 
 resource "google_secret_manager_secret_iam_member" "worker" {
   for_each  = var.worker_secret_environment
-  secret_id = google_secret_manager_secret.runtime[each.value].id
+  secret_id = google_secret_manager_secret.runtime[each.value.secret_id].id
   role      = "roles/secretmanager.secretAccessor"
   member    = "serviceAccount:${google_service_account.worker.email}"
 }
@@ -265,7 +312,7 @@ resource "google_cloud_run_v2_service" "api" {
         }
       }
       dynamic "env" {
-        for_each = var.api_secret_environment
+        for_each = local.api_secret_environment
         content {
           name = env.key
           value_source {

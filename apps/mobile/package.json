@@ -1,1 +1,32 @@
-{ "name": "@mgt/mobile", "version": "0.1.0", "private": true, "scripts": { "test:contract": "node --test test/contract.cjs test/production-config.cjs", "validate:production-config": "node scripts/validate-production-config.cjs", "android:preview": "eas build --platform android --profile preview", "android:production": "pnpm run validate:production-config && eas build --platform android --profile production", "android:submit:internal": "eas submit --platform android --profile production" } }
+{
+  "name": "@mgt/mobile",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test:contract": "node --test test/contract.cjs test/production-config.cjs",
+    "validate:production-config": "node scripts/validate-production-config.cjs",
+    "export:android": "expo export --platform android --output-dir ../../work/build/mobile-android-export",
+    "android:preview": "npx --yes eas-cli@27.9.0 build --platform android --profile preview",
+    "android:production": "pnpm run validate:production-config && npx --yes eas-cli@27.9.0 build --platform android --profile production",
+    "android:submit:internal": "npx --yes eas-cli@27.9.0 submit --platform android --profile production"
+  },
+  "dependencies": {
+    "@mgt/domain": "workspace:*",
+    "@mgt/shared": "workspace:*",
+    "expo": "~58.0.25",
+    "expo-build-properties": "~58.0.12",
+    "expo-status-bar": "^58.0.5",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "react-native": "0.88.1",
+    "react-native-web": "^0.21.4"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/react": "~19.3.0",
+    "@types/react-test-renderer": "^19.3.1",
+    "react-test-renderer": "19.3.0",
+    "typescript": "^6.0.3"
+  }
+}

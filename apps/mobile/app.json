@@ -7,16 +7,28 @@
     "orientation": "portrait",
     "userInterfaceStyle": "light",
     "icon": "./assets/team47studio-app-icon-1024.png",
-    "ios": { "supportsTablet": false, "bundleIdentifier": "com.team47studio.app" },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.team47studio.app"
+    },
     "android": {
       "package": "com.team47studio.app",
       "versionCode": 1,
       "permissions": [],
-      "usesCleartextTraffic": false,
       "adaptiveIcon": {
         "foregroundImage": "./assets/team47studio-adaptive-icon-foreground.png",
         "backgroundColor": "#090D18"
       }
-    }
+    },
+    "plugins": [
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "usesCleartextTraffic": false
+          }
+        }
+      ]
+    ]
   }
 }

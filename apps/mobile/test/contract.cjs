@@ -25,14 +25,23 @@ test('mobile app has a reproducible Expo identity and API configuration seam',()
  assert.match(entry,/\[apiBaseUrl, portalUrl, privacyUrl, termsUrl, aiDisclosureUrl\]\.every\(isHttpsUrl\)/);
  assert.equal(app.android.versionCode,1);
  assert.deepEqual(app.android.permissions,[]);
- assert.equal(app.android.usesCleartextTraffic,false);
+ const buildProperties=app.plugins.find(plugin=>Array.isArray(plugin)&&plugin[0]==='expo-build-properties');
+ assert.equal(buildProperties[1].android.usesCleartextTraffic,false);
  assert.equal(app.android.package,'com.team47studio.app');
  assert.equal(app.android.adaptiveIcon.foregroundImage,'./assets/team47studio-adaptive-icon-foreground.png');
  assert.equal(app.android.adaptiveIcon.backgroundColor,'#090D18');
  assert.equal(eas.build.production.android.buildType,'app-bundle');
  assert.equal(eas.build.production.distribution,'store');
  assert.equal(eas.submit.production.android.track,'internal');
- assert.equal(manifest.scripts['android:production'],'pnpm run validate:production-config && eas build --platform android --profile production');
+ assert.equal(manifest.scripts['android:production'],'pnpm run validate:production-config && npx --yes eas-cli@27.9.0 build --platform android --profile production');
+ assert.equal(manifest.scripts.typecheck,'tsc -p tsconfig.json --noEmit');
+ assert.equal(manifest.scripts['export:android'],'expo export --platform android --output-dir ../../work/build/mobile-android-export');
+ assert.equal(manifest.dependencies['@mgt/shared'],'workspace:*');
+ assert.equal(manifest.dependencies['@mgt/domain'],'workspace:*');
+ assert.match(manifest.dependencies.expo,/^~58\./);
+ assert.equal(manifest.dependencies['react-native'],'0.88.1');
+ assert.equal(manifest.devDependencies['eas-cli'],undefined);
+ assert.match(manifest.scripts['android:preview'],/^npx --yes eas-cli@27\.9\.0 build/);
 });
 
 test('mobile Skin Match consumes shared questionnaire and profile contracts',()=>{

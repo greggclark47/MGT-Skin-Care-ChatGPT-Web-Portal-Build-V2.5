@@ -145,6 +145,7 @@
     "test:verification": "node infra/portal/verify.cjs"
   },
   "devDependencies": {
+    "@types/react": "18.3.31",
     "supabase": "3.1.1-beta.1"
   }
 }

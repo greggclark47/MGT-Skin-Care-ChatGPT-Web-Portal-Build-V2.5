@@ -34,6 +34,11 @@ test("production database audit passes a complete redacted structural snapshot",
   assert.match(report.scope, /does not replace authenticated cross-account isolation/i);
 });
 
+test("live policy queries normalize Supabase role arrays through JSON", () => {
+  const source = readFileSync("infra/db/production-audit.mjs", "utf8");
+  assert.equal((source.match(/to_json\(roles\) as roles/g) || []).length, 2);
+});
+
 test("production database audit fails closed on RLS, policy, extension, trigger, and lineage gaps", () => {
   const snapshot = completeSnapshot();
   snapshot.extensions = ["vector"];

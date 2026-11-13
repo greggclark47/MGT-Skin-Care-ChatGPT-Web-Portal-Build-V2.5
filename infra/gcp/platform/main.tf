@@ -22,7 +22,6 @@ locals {
     NODE_ENV              = "production"
     DEMO_MODE             = "false"
     HOST                  = "0.0.0.0"
-    PORT                  = "3100"
     PROCESS_ROLE          = "api"
     PUBLIC_ORIGIN         = "https://${var.domain}"
     PORTAL_DOMAIN         = var.domain
@@ -652,7 +651,6 @@ resource "google_compute_backend_service" "api" {
   name                  = "${local.prefix}-api"
   protocol              = "HTTP"
   load_balancing_scheme = "EXTERNAL_MANAGED"
-  timeout_sec           = 60
   enable_cdn            = false
   security_policy       = google_compute_security_policy.edge[0].id
   backend {

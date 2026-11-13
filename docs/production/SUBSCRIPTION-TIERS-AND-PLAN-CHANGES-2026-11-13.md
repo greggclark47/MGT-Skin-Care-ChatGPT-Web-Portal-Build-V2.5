@@ -45,3 +45,16 @@ Every plan-change request requires an explicit customer confirmation in Account.
 6. Enable subscriptions only after the preflight and rehearsal evidence pass.
 
 This release implements and validates the application workflow. It does not activate production charges or change live Stripe credentials.
+
+## Deployment result
+
+- Application candidate: `12826d7fec2f5c3cd6c72b41f5eb9483d1a2c334`
+- Google Cloud Build: `a39cc0ce-5d5c-4f84-a12c-18f5cd7bed5f`
+- API image: `sha256:f758cb5ba6b1b349abc0fa256b043670bab265640229014c86d385c7bd529682`
+- Web image: `sha256:09b955b5c0467c63ee8f789d65037b87c5af501eaad4f854f01b008115651502`
+- Ready service revisions: web `team47-production-web-00005-n47`, API `team47-production-api-00004-dt2`, and alerts `team47-production-alerts-00004-g88`
+- Controlled worker execution: `team47-production-worker-jtgc6`, completed successfully
+- Live health route: HTTP 200
+- Live session: authentication configured; payments and subscription billing remain disabled
+- Live plan catalog: Free, Guided, and Studio returned with the complete comparison and the intended timing/credit policy; enrollment remains closed and prices remain pending
+- Operational readiness remains HTTP 503 for the separately tracked `backup_unhealthy` and `catalog_unready` gates. These gates were not caused by this deployment and were not bypassed.

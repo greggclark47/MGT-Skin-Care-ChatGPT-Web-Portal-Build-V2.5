@@ -15,7 +15,7 @@ locals {
     PROCESS_ROLE          = "worker"
     WORKER_RUN_ONCE       = "true"
     DATABASE_CA_CERT_PATH = "/app/infra/portal/supabase-prod-ca-2021.crt"
-  }, var.worker_environment, var.deploy_application ? {
+    }, var.worker_environment, var.deploy_application ? {
     OPERATIONS_ALERT_WEBHOOK_URL = "${google_cloud_run_v2_service.alert_receiver[0].uri}/events"
   } : {})
   api_environment = merge({
@@ -27,10 +27,10 @@ locals {
     PORTAL_DOMAIN         = var.domain
     DATABASE_CA_CERT_PATH = "/app/infra/portal/supabase-prod-ca-2021.crt"
   }, var.api_environment)
-  subscriptions_enabled       = lookup(local.api_environment, "SUBSCRIPTIONS_ENABLED", "false") == "true"
-  commercial_stripe_enabled   = lookup(local.api_environment, "STRIPE_USAGE_BILLING_ENABLED", "false") == "true" || lookup(local.api_environment, "STRIPE_B2B_INVOICING_ENABLED", "false") == "true"
-  api_secret_names            = toset(keys(local.api_secret_environment))
-  worker_secret_names         = toset(keys(var.worker_secret_environment))
+  subscriptions_enabled     = lookup(local.api_environment, "SUBSCRIPTIONS_ENABLED", "false") == "true"
+  commercial_stripe_enabled = lookup(local.api_environment, "STRIPE_USAGE_BILLING_ENABLED", "false") == "true" || lookup(local.api_environment, "STRIPE_B2B_INVOICING_ENABLED", "false") == "true"
+  api_secret_names          = toset(keys(local.api_secret_environment))
+  worker_secret_names       = toset(keys(var.worker_secret_environment))
 }
 
 # Keep the Supabase database/identity path and the Stripe webhook path aligned
@@ -239,7 +239,7 @@ resource "google_cloud_run_v2_service" "web" {
   deletion_protection  = var.environment == "production"
   ingress              = "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER"
   default_uri_disabled = true
-  launch_stage         = "BETA"
+  launch_stage         = "GA"
   labels               = local.labels
   template {
     service_account = google_service_account.web.email
@@ -301,7 +301,7 @@ resource "google_cloud_run_v2_service" "api" {
   deletion_protection  = var.environment == "production"
   ingress              = "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER"
   default_uri_disabled = true
-  launch_stage         = "BETA"
+  launch_stage         = "GA"
   labels               = local.labels
   template {
     service_account                  = google_service_account.api.email

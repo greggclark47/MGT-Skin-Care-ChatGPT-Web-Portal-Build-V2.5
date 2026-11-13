@@ -91,7 +91,7 @@ test("the secret-free environment template declares every validated production c
   const template = readFileSync(new URL("./env.example", import.meta.url), "utf8");
   const declared = new Set(template.split(/\r?\n/).map(line => line.match(/^([A-Z][A-Z0-9_]*)=/)?.[1]).filter(Boolean));
   assert.deepEqual(Object.keys(production).filter(key => !declared.has(key)), []);
-  for (const key of ["NOTIFICATION_WEBHOOK_URL", "NOTIFICATION_WEBHOOK_TOKEN", "NOTIFICATION_WEBHOOK_KEY_ID", "NOTIFICATION_WEBHOOK_TIMEOUT_MS", "STRIPE_PREMIUM_PRODUCT_ID", "STRIPE_PREMIUM_MONTHLY_PRICE_ID", "STRIPE_PREMIUM_ANNUAL_PRICE_ID", "MGT_SPONSORED_CONTENT_APPROVAL_REFERENCE", "MGT_SPONSORED_CONTENT_APPROVED_AT"]) assert.equal(declared.has(key), true, key);
+  for (const key of ["NOTIFICATION_WEBHOOK_URL", "NOTIFICATION_WEBHOOK_TOKEN", "NOTIFICATION_WEBHOOK_KEY_ID", "NOTIFICATION_WEBHOOK_TIMEOUT_MS", "STRIPE_PREMIUM_PRODUCT_ID", "STRIPE_PREMIUM_MONTHLY_PRICE_ID", "STRIPE_PREMIUM_ANNUAL_PRICE_ID", "STRIPE_STUDIO_MONTHLY_PRICE_ID", "STRIPE_STUDIO_ANNUAL_PRICE_ID", "MGT_SPONSORED_CONTENT_APPROVAL_REFERENCE", "MGT_SPONSORED_CONTENT_APPROVED_AT"]) assert.equal(declared.has(key), true, key);
 });
 
 test("accepts the proposed external database configuration without proving live readiness", () => {
@@ -335,9 +335,11 @@ test("requires the complete billing contract when subscriptions are enabled", ()
   assert.ok(result.errors.some((error) => error.startsWith("STRIPE_SECRET_KEY")));
   assert.ok(result.errors.some((error) => error.startsWith("STRIPE_PREMIUM_PRODUCT_ID")));
   assert.ok(result.errors.some((error) => error.startsWith("STRIPE_PREMIUM_ANNUAL_PRICE_ID")));
+  assert.ok(result.errors.some((error) => error.startsWith("STRIPE_STUDIO_MONTHLY_PRICE_ID")));
+  assert.ok(result.errors.some((error) => error.includes("Studio enrollment")));
 });
 
-test("accepts the locked Premium subscription configuration", () => {
+test("accepts the locked three-tier subscription configuration", () => {
   const result = validateEnvironment({
     ...production,
     SUBSCRIPTIONS_ENABLED: "true",
@@ -347,7 +349,9 @@ test("accepts the locked Premium subscription configuration", () => {
     STRIPE_SUBSCRIPTION_WEBHOOK_SECRET: "whsec_configured",
     STRIPE_PREMIUM_PRODUCT_ID: "prod_premium",
     STRIPE_PREMIUM_MONTHLY_PRICE_ID: "price_premium_month",
-    STRIPE_PREMIUM_ANNUAL_PRICE_ID: "price_premium_year"
+    STRIPE_PREMIUM_ANNUAL_PRICE_ID: "price_premium_year",
+    STRIPE_STUDIO_MONTHLY_PRICE_ID: "price_studio_month",
+    STRIPE_STUDIO_ANNUAL_PRICE_ID: "price_studio_year"
   });
   assert.equal(result.ok, true);
 });
@@ -362,9 +366,29 @@ test("accepts a complete Stripe sandbox configuration for staging", () => {
     STRIPE_SUBSCRIPTION_WEBHOOK_SECRET: "whsec_configured",
     STRIPE_PREMIUM_PRODUCT_ID: "prod_premium",
     STRIPE_PREMIUM_MONTHLY_PRICE_ID: "price_premium_month",
-    STRIPE_PREMIUM_ANNUAL_PRICE_ID: "price_premium_year"
+    STRIPE_PREMIUM_ANNUAL_PRICE_ID: "price_premium_year",
+    STRIPE_STUDIO_MONTHLY_PRICE_ID: "price_studio_month",
+    STRIPE_STUDIO_ANNUAL_PRICE_ID: "price_studio_year"
   });
   assert.equal(result.ok, true);
+});
+
+test("rejects subscription activation when either Studio price is missing", () => {
+  const result = validateEnvironment({
+    ...production,
+    SUBSCRIPTIONS_ENABLED: "true",
+    SUBSCRIPTION_TERMS_APPROVED: "true",
+    STRIPE_LIVE_MODE: "true",
+    STRIPE_SECRET_KEY: "sk_live_configured",
+    STRIPE_SUBSCRIPTION_WEBHOOK_SECRET: "whsec_configured",
+    STRIPE_PREMIUM_PRODUCT_ID: "prod_premium",
+    STRIPE_PREMIUM_MONTHLY_PRICE_ID: "price_premium_month",
+    STRIPE_PREMIUM_ANNUAL_PRICE_ID: "price_premium_year",
+    STRIPE_STUDIO_MONTHLY_PRICE_ID: "price_studio_month"
+  });
+  assert.equal(result.ok, false);
+  assert.ok(result.errors.some((error) => error.startsWith("STRIPE_STUDIO_ANNUAL_PRICE_ID")));
+  assert.ok(result.errors.some((error) => error.includes("Studio enrollment")));
 });
 
 test("keeps Free-plan sponsored content disabled until its merchant and review controls are complete", () => {

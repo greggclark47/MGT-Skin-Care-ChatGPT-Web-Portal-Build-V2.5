@@ -322,7 +322,9 @@ export function validateEnvironment(env) {
       "STRIPE_SUBSCRIPTION_WEBHOOK_SECRET",
       "STRIPE_PREMIUM_PRODUCT_ID",
       "STRIPE_PREMIUM_MONTHLY_PRICE_ID",
-      "STRIPE_PREMIUM_ANNUAL_PRICE_ID"
+      "STRIPE_PREMIUM_ANNUAL_PRICE_ID",
+      "STRIPE_STUDIO_MONTHLY_PRICE_ID",
+      "STRIPE_STUDIO_ANNUAL_PRICE_ID"
     ]) requireValue(key);
     const stripeLiveMode = env.STRIPE_LIVE_MODE;
     if (!["true", "false"].includes(stripeLiveMode)) errors.push("STRIPE_LIVE_MODE must be true or false when subscriptions are enabled.");
@@ -336,7 +338,7 @@ export function validateEnvironment(env) {
     if (!/^price_[A-Za-z0-9_]+$/.test(annualPrice)) errors.push("STRIPE_PREMIUM_ANNUAL_PRICE_ID must be a Stripe Price ID.");
     if (monthlyPrice && monthlyPrice === annualPrice) errors.push("Monthly and annual Premium prices must use different Stripe Price IDs.");
     const studioMonthly = String(env.STRIPE_STUDIO_MONTHLY_PRICE_ID || ""), studioAnnual = String(env.STRIPE_STUDIO_ANNUAL_PRICE_ID || "");
-    if ((studioMonthly || studioAnnual) && (!/^price_[A-Za-z0-9_]+$/.test(studioMonthly) || !/^price_[A-Za-z0-9_]+$/.test(studioAnnual) || studioMonthly === studioAnnual)) errors.push("Studio enrollment requires two distinct Stripe Price IDs configured together.");
+    if (!/^price_[A-Za-z0-9_]+$/.test(studioMonthly) || !/^price_[A-Za-z0-9_]+$/.test(studioAnnual) || studioMonthly === studioAnnual) errors.push("Studio enrollment requires two distinct Stripe Price IDs configured together.");
   } else {
     warnings.push("Subscriptions are disabled.");
   }
@@ -498,7 +500,7 @@ function validateApiRuntimeEnvironment(context) {
   if (env.STRIPE_USAGE_BILLING_ENABLED === "true" && !/^[a-z][a-z0-9_.-]{2,99}$/.test(String(env.STRIPE_API_METER_EVENT_NAME || ""))) errors.push("STRIPE_API_METER_EVENT_NAME must identify the approved Stripe Billing Meter event.");
   if (env.SUBSCRIPTIONS_ENABLED === "true") {
     if (env.SUBSCRIPTION_TERMS_APPROVED !== "true") errors.push("SUBSCRIPTION_TERMS_APPROVED must be exactly true before subscriptions are enabled.");
-    for (const key of ["STRIPE_LIVE_MODE", "STRIPE_SECRET_KEY", "STRIPE_SUBSCRIPTION_WEBHOOK_SECRET", "STRIPE_PREMIUM_PRODUCT_ID", "STRIPE_PREMIUM_MONTHLY_PRICE_ID", "STRIPE_PREMIUM_ANNUAL_PRICE_ID"]) requireValue(key);
+    for (const key of ["STRIPE_LIVE_MODE", "STRIPE_SECRET_KEY", "STRIPE_SUBSCRIPTION_WEBHOOK_SECRET", "STRIPE_PREMIUM_PRODUCT_ID", "STRIPE_PREMIUM_MONTHLY_PRICE_ID", "STRIPE_PREMIUM_ANNUAL_PRICE_ID", "STRIPE_STUDIO_MONTHLY_PRICE_ID", "STRIPE_STUDIO_ANNUAL_PRICE_ID"]) requireValue(key);
     const pattern = env.STRIPE_LIVE_MODE === "true" ? /^sk_live_[A-Za-z0-9_]+$/ : /^sk_test_[A-Za-z0-9_]+$/;
     if (!["true", "false"].includes(env.STRIPE_LIVE_MODE)) errors.push("STRIPE_LIVE_MODE must be true or false when subscriptions are enabled.");
     if (!pattern.test(String(env.STRIPE_SECRET_KEY || ""))) errors.push("STRIPE_SECRET_KEY must match the configured Stripe mode.");
@@ -509,7 +511,7 @@ function validateApiRuntimeEnvironment(context) {
     if (!/^price_[A-Za-z0-9_]+$/.test(annual)) errors.push("STRIPE_PREMIUM_ANNUAL_PRICE_ID must be a Stripe Price ID.");
     if (monthly && monthly === annual) errors.push("Monthly and annual Premium prices must use different Stripe Price IDs.");
     const studioMonthly = String(env.STRIPE_STUDIO_MONTHLY_PRICE_ID || ""), studioAnnual = String(env.STRIPE_STUDIO_ANNUAL_PRICE_ID || "");
-    if ((studioMonthly || studioAnnual) && (!/^price_[A-Za-z0-9_]+$/.test(studioMonthly) || !/^price_[A-Za-z0-9_]+$/.test(studioAnnual) || studioMonthly === studioAnnual)) errors.push("Studio enrollment requires two distinct Stripe Price IDs configured together.");
+    if (!/^price_[A-Za-z0-9_]+$/.test(studioMonthly) || !/^price_[A-Za-z0-9_]+$/.test(studioAnnual) || studioMonthly === studioAnnual) errors.push("Studio enrollment requires two distinct Stripe Price IDs configured together.");
   } else warnings.push("Subscriptions are disabled.");
   validateSponsoredContentConfiguration(env, errors, warnings);
   for (const key of ["ANTI_AGING_LIVE_AI", "ANTI_AGING_CHECKOUT_ENABLED", "ANTI_AGING_BOOKING_ENABLED", "ANTI_AGING_IMAGE_ANALYSIS_ENABLED", "ANTI_AGING_ACCESSIBILITY_VERIFIED", "ANTI_AGING_RESTORE_VERIFIED", "ANTI_AGING_PRIVACY_REVIEWED"]) if (!["true", "false"].includes(env[key])) errors.push(`${key} must be explicitly true or false.`);

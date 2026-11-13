@@ -29,3 +29,11 @@ test("a retired single-price variable blocks the release contract", () => {
   assert.equal(result.ok, false);
   assert.ok(result.errors.some((error) => error.startsWith("retired_billing_paths_removed:")));
 });
+
+test("a mobile-visible shared tier cannot be removed from the published catalog", () => {
+  const sources = readComplianceSources(root);
+  sources.membership = sources.membership.replace("id: 'studio'", "id: 'removed-studio'");
+  const result = validateComplianceContract(sources);
+  assert.equal(result.ok, false);
+  assert.ok(result.errors.some((error) => error.startsWith("membership_catalog:")));
+});

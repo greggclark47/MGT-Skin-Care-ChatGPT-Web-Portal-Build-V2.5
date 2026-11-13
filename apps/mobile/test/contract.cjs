@@ -11,6 +11,7 @@ const manifest=JSON.parse(read('package.json'));
 const entry=read('App.tsx');
 const screen=read('src/screens/SkinMatchScreen.tsx');
 const step=read('src/components/SkinMatchStep.tsx');
+const membership=read('src/components/MembershipPlans.tsx');
 
 test('mobile app has a reproducible Expo identity and API configuration seam',()=>{
  assert.equal(app.name,'Team 47 Studio');
@@ -72,6 +73,22 @@ test('mobile Skin Match consumes shared questionnaire and profile contracts',()=
  assert.doesNotMatch(entry,/OLLAMA_CLOUD_API_KEY|OPENAI_API_KEY|SUPABASE_SERVICE_ROLE_KEY|STRIPE_SECRET_KEY/);
  assert.match(entry,/team47studio-stacked-light-surface\.png/);
  assert.match(entry,/TEAM 47 STUDIO/);
+ assert.match(entry,/MembershipPlans/);
+ assert.match(entry,/ScrollView contentContainerStyle=\{styles\.home\}/);
+});
+
+test('mobile account experience exposes the shared three-tier comparison and safe portal handoff',()=>{
+ assert.match(membership,/MEMBERSHIP_TIER_CONTENT\.map/);
+ assert.match(membership,/MEMBERSHIP_COMPARISON_ROWS\.map/);
+ assert.match(membership,/MEMBERSHIP_CHANGE_POLICY\.period_end/);
+ assert.match(membership,/MEMBERSHIP_CHANGE_POLICY\.annual_upgrade/);
+ assert.match(membership,/membership-tier-\$\{tier\.id\}/);
+ assert.match(membership,/membership-comparison-\$\{row\.id\}/);
+ assert.match(membership,/View current plans and pricing/);
+ assert.match(membership,/Manage my plan in Account/);
+ assert.match(membership,/account#payment-settings/);
+ assert.match(membership,/minHeight: 48/);
+ assert.doesNotMatch(membership,/STRIPE_SECRET_KEY|SUPABASE_SERVICE_ROLE_KEY|OPENAI_API_KEY/);
 });
 
 test('mobile controls preserve the shared accessibility and tap-target contract',()=>{

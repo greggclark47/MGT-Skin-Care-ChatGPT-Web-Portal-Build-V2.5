@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { SafeAreaView, Text, View, Pressable, StyleSheet, Switch, Linking, Image } from 'react-native';
+import { SafeAreaView, Text, View, Pressable, StyleSheet, Switch, Linking, Image, ScrollView } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { SkinMatchScreen } from './src/screens/SkinMatchScreen';
+import { MembershipPlans } from './src/components/MembershipPlans';
 import { ACCOUNT_PORTAL_PATHS, ApiClient, color, font, space, radius, type SkinMatchResult } from '@mgt/shared';
 import type { SkinProfileInput } from '@mgt/domain';
 
@@ -51,7 +52,7 @@ export default function App() {
     <SafeAreaView style={styles.root}>
       <StatusBar style="dark" />
       {view === 'home' && (
-        <View style={styles.home}>
+        <ScrollView contentContainerStyle={styles.home}>
           <View style={styles.brandHeader}>
             <Image source={require('./assets/team47studio-stacked-light-surface.png')} resizeMode="contain" style={styles.brandLogo} accessible accessibilityLabel="Team 47 Studio" />
             <Text style={styles.brandName}>TEAM 47 STUDIO</Text>
@@ -83,13 +84,14 @@ export default function App() {
             <Pressable style={styles.portalLink} onPress={() => void Linking.openURL(portalUrl.replace(/\/+$/, '') + ACCOUNT_PORTAL_PATHS.regimen)} accessibilityRole="link"><Text style={styles.portalLinkLabel}>Review my two-week regimen cycle</Text></Pressable>
             <Pressable style={styles.portalLink} onPress={() => void Linking.openURL(portalUrl.replace(/\/+$/, '') + ACCOUNT_PORTAL_PATHS.privacy)} accessibilityRole="link"><Text style={styles.portalLinkLabel}>Privacy, data export and account deletion</Text></Pressable>
           </View>}
+          {isHttpsUrl(portalUrl) && <MembershipPlans portalUrl={portalUrl} />}
           <Text style={styles.configNote}>Account, payment and image management open in the secure web portal until reviewed native Android modules are connected. Photos remain optional and are never analyzed by this build.</Text>
           {!__DEV__ && !productionConfigurationReady ? <Text style={styles.configNote}>Production builds must provide public HTTPS API, portal, privacy, terms and AI disclosure links.</Text> : null}
           <Text style={styles.disclaimer}>
             Cosmetic guidance, not medical care. If you have a persistent or painful skin condition,
             please see a dermatologist.
           </Text>
-        </View>
+        </ScrollView>
       )}
       {view === 'match' && <SkinMatchScreen onComplete={handleComplete} />}
       {view === 'done' && result && <View style={styles.result}>

@@ -4,6 +4,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 
 const sourceFiles = {
   plans: "apps/api/src/portal/plans.ts",
+  membership: "packages/shared/src/membership.ts",
   preflight: "infra/portal/preflight.mjs",
   server: "apps/api/src/portal/server.ts",
   coach: "apps/web/src/app/coach/page.tsx",
@@ -24,19 +25,22 @@ export function validateComplianceContract(sources) {
   const add = (id, ok, message) => checks.push({ id, ok, message });
   const source = (name) => typeof sources[name] === "string" ? sources[name] : "";
   const plans = source("plans");
-  const catalog = plans.match(/export const PLAN_DEFINITIONS[\s\S]*?\] as const;/)?.[0] ?? "";
+  const membership = source("membership");
+  const catalog = membership.match(/export const MEMBERSHIP_TIER_CONTENT[\s\S]*?\] as const;/)?.[0] ?? "";
   const planIds = [...catalog.matchAll(/\bid:\s*'([^']+)'/g)].map((match) => match[1]);
 
   add(
     "membership_catalog",
-    planIds.length === 2 && planIds[0] === "premium" && planIds[1] === "studio" && /env_prefix:\s*'PREMIUM'/.test(catalog) && /env_prefix:\s*'STUDIO'/.test(catalog),
-    "The published paid catalog must contain Guided (the continuity-safe premium ID) and Studio with separate price prefixes.",
+    planIds.length === 3 && planIds[0] === "free" && planIds[1] === "premium" && planIds[2] === "studio"
+      && plans.includes("MEMBERSHIP_TIER_CONTENT")
+      && /env_prefix:\s*plan\.id\s*===\s*'premium'\s*\?\s*'PREMIUM'\s*:\s*'STUDIO'/.test(plans),
+    "The shared cross-platform catalog must contain Free, Guided (the continuity-safe premium ID), and Studio while the API maps separate paid price prefixes.",
   );
   add(
     "premium_price_contract",
     ["STRIPE_LIVE_MODE", "STRIPE_PREMIUM_PRODUCT_ID", "STRIPE_PREMIUM_MONTHLY_PRICE_ID", "STRIPE_PREMIUM_ANNUAL_PRICE_ID", "STRIPE_STUDIO_MONTHLY_PRICE_ID", "STRIPE_STUDIO_ANNUAL_PRICE_ID"].every((key) => source("preflight").includes(key))
       && !source("preflight").includes("STRIPE_PREMIUM_PRICE_ID"),
-    "Production preflight must bind Stripe mode, the shared Product, Guided prices, and an optional complete Studio price pair, never a retired single-price variable.",
+    "Production preflight must bind Stripe mode, the shared Product, and complete Guided and Studio price pairs, never a retired single-price variable.",
   );
 
   const server = source("server");

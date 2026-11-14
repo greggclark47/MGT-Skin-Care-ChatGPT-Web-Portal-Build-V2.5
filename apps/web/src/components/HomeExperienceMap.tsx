@@ -4,32 +4,32 @@ const paths = [
   {
     number: '01',
     eyebrow: 'PERSONAL STUDIO',
-    title: 'Build a routine that can keep up with you.',
-    copy: 'Start with Skin Match, then return to a connected workspace for routine care, progress, replenishment, and preferences.',
+    title: 'Build a routine that makes your day feel more possible.',
+    copy: 'Start with Skin Match, then return to a connected workspace that helps turn daily care into a calmer, more confident rhythm.',
     primary: { href: '/skin-match', label: 'Start Skin Match' },
     secondary: { href: '/routine', label: 'Open my routine' },
     accent: 'aqua',
-    outcomes: ['Profile-led starting point', 'AM / PM routine clarity', 'You approve every change'],
+    outcomes: ['A starting point shaped by you', 'A calmer AM / PM rhythm', 'Every change stays yours to approve'],
   },
   {
     number: '02',
     eyebrow: 'CURATED DISCOVERY',
-    title: 'Explore beauty, style, and retail with context.',
-    copy: 'Review ingredients, color, wardrobe, and retailer destinations with clear labels, practical context, and your choices in control.',
+    title: 'Let your care and style tell the same story.',
+    copy: 'Explore ingredients, color, wardrobe, and retailer destinations with practical context that makes it easier to choose what feels right.',
     primary: { href: '/anti-aging', label: 'Explore the edit' },
     secondary: { href: '/shop', label: 'Find retailer destinations' },
     accent: 'rose',
-    outcomes: ['Reviewed discovery', 'Retailer links stay external', 'Style meets everyday care'],
+    outcomes: ['Inspiration with useful context', 'Independent retailer choices', 'Care and style in one place'],
   },
   {
     number: '03',
     eyebrow: 'PARTNER COLLABORATION',
-    title: 'Create a stronger, more considered customer journey.',
-    copy: 'Retail and professional partners can explore a transparent collaboration path built around customer choice, support, and approved placements.',
+    title: 'Create moments customers want to return to.',
+    copy: 'Retail and professional partners can build transparent, high-care experiences with clear choices, reliable handoffs, and a shared commitment to customer confidence.',
     primary: { href: '/partners', label: 'Explore partnership' },
     secondary: { href: '/support', label: 'Talk to support' },
     accent: 'orange',
-    outcomes: ['Customer-first referrals', 'Clear support handoffs', 'Approved partner workflow'],
+    outcomes: ['Customer-first referrals', 'Warm, clear support handoffs', 'A review-led partner workflow'],
   },
 ] as const;
 
@@ -38,9 +38,9 @@ export function HomeExperienceMap() {
     <div className="experience-map-heading">
       <div>
         <span className="eyebrow">ONE CONNECTED EXPERIENCE</span>
-        <h2 id="experience-map-heading">Choose what you need <em>right now.</em></h2>
+        <h2 id="experience-map-heading">Choose the next thing that helps you <em>feel amazing.</em></h2>
       </div>
-      <p>Start simply, go deeper when it is useful, and keep every decision understandable.</p>
+      <p>Start simply, go deeper when it is useful, and let every choice build toward more confidence in your everyday life.</p>
     </div>
     <div className="experience-paths">
       {paths.map(path => <article className={'experience-path path-' + path.accent} key={path.number}>

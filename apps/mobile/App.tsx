@@ -56,19 +56,19 @@ export default function App() {
           <View style={styles.brandHeader}>
             <Image source={require('./assets/team47studio-stacked-light-surface.png')} resizeMode="contain" style={styles.brandLogo} accessible accessibilityLabel="Team 47 Studio" />
             <Text style={styles.brandName}>TEAM 47 STUDIO</Text>
-            <Text style={styles.brandKicker}>SKIN · COLOR · STYLE, IN SYNC WITH YOU</Text>
-            <Text style={styles.brandOwner}>Owned and operated by MGT · Gregg Clark, Owner/Operator · CEO · CTO · CFO</Text>
+            <Text style={styles.brandKicker}>SKIN · COLOR · STYLE, BUILT AROUND YOUR REAL LIFE</Text>
+            <Text style={styles.brandOwner}>Gregg Clark · Co-Founder, Operations &amp; Sales Lead</Text>
           </View>
-          <Text style={styles.title}>Your care. Your color. Your rhythm.</Text>
+          <Text style={styles.title}>Feel more like yourself, every day.</Text>
           <Text style={styles.body}>
-            Answer a few questions and get a routine built for you — with the reason behind every product.
+            Start with what is true for you. Team 47 Studio turns your preferences into clear next steps for care, color, and style—so you can spend less time second-guessing and more time enjoying your rhythm.
           </Text>
           <Pressable testID="start" onPress={() => setView('match')} disabled={!consent || !releaseConfigurationReady} accessibilityRole="button" accessibilityState={{ disabled: !consent || !releaseConfigurationReady }} style={[styles.cta, (!consent || !releaseConfigurationReady) && styles.ctaDisabled]}>
-            <Text style={styles.ctaLabel}>Start my Skin Match</Text>
+            <Text style={styles.ctaLabel}>Start my more confident next step</Text>
           </Pressable>
           <View style={styles.consentRow}>
             <Switch value={consent} onValueChange={setConsent} accessibilityLabel="Consent to save skincare preferences" />
-            <Text style={styles.consentText}>I agree to send my skincare preferences to Team 47 Studio so it can create my routine.</Text>
+            <Text style={styles.consentText}>I agree to send my skincare preferences to Team 47 Studio so it can create a cosmetic routine starting point for me.</Text>
           </View>
           <View style={styles.legalRow}>
             {isHttpsUrl(privacyUrl) && <Pressable onPress={() => void Linking.openURL(privacyUrl)} accessibilityRole="link"><Text style={styles.legalLink}>Privacy notice</Text></Pressable>}
@@ -76,20 +76,20 @@ export default function App() {
             {isHttpsUrl(aiDisclosureUrl) && <Pressable onPress={() => void Linking.openURL(aiDisclosureUrl)} accessibilityRole="link"><Text style={styles.legalLink}>AI disclosure</Text></Pressable>}
           </View>
           {isHttpsUrl(portalUrl) && <View style={styles.accountHub} accessibilityLabel="Account management links">
-            <Text style={styles.accountHubTitle}>Manage your connected account</Text>
-            <Pressable style={styles.portalLink} onPress={() => void Linking.openURL(portalUrl.replace(/\/+$/, '') + ACCOUNT_PORTAL_PATHS.overview)} accessibilityRole="link"><Text style={styles.portalLinkLabel}>Connected setup checklist</Text></Pressable>
-            <Pressable style={styles.portalLink} onPress={() => void Linking.openURL(portalUrl.replace(/\/+$/, '') + ACCOUNT_PORTAL_PATHS.profile)} accessibilityRole="link"><Text style={styles.portalLinkLabel}>Profile and preferences</Text></Pressable>
+            <Text style={styles.accountHubTitle}>Keep your Studio experience moving forward</Text>
+            <Pressable style={styles.portalLink} onPress={() => void Linking.openURL(portalUrl.replace(/\/+$/, '') + ACCOUNT_PORTAL_PATHS.overview)} accessibilityRole="link"><Text style={styles.portalLinkLabel}>Build my connected setup</Text></Pressable>
+            <Pressable style={styles.portalLink} onPress={() => void Linking.openURL(portalUrl.replace(/\/+$/, '') + ACCOUNT_PORTAL_PATHS.profile)} accessibilityRole="link"><Text style={styles.portalLinkLabel}>Refine my profile and preferences</Text></Pressable>
             <Pressable style={styles.portalLink} onPress={() => void Linking.openURL(portalUrl.replace(/\/+$/, '') + ACCOUNT_PORTAL_PATHS.billing)} accessibilityRole="link"><Text style={styles.portalLinkLabel}>Payment setup and subscriptions</Text></Pressable>
             <Pressable style={styles.portalLink} onPress={() => void Linking.openURL(portalUrl.replace(/\/+$/, '') + ACCOUNT_PORTAL_PATHS.images)} accessibilityRole="link"><Text style={styles.portalLinkLabel}>Upload and manage skincare photos</Text></Pressable>
             <Pressable style={styles.portalLink} onPress={() => void Linking.openURL(portalUrl.replace(/\/+$/, '') + ACCOUNT_PORTAL_PATHS.regimen)} accessibilityRole="link"><Text style={styles.portalLinkLabel}>Review my two-week regimen cycle</Text></Pressable>
             <Pressable style={styles.portalLink} onPress={() => void Linking.openURL(portalUrl.replace(/\/+$/, '') + ACCOUNT_PORTAL_PATHS.privacy)} accessibilityRole="link"><Text style={styles.portalLinkLabel}>Privacy, data export and account deletion</Text></Pressable>
           </View>}
           {isHttpsUrl(portalUrl) && <MembershipPlans portalUrl={portalUrl} />}
-          <Text style={styles.configNote}>Account, payment and image management open in the secure web portal until reviewed native Android modules are connected. Photos remain optional and are never analyzed by this build.</Text>
+          <Text style={styles.configNote}>Account, payment, image, and customer-care support open in the secure web portal until reviewed native Android modules are connected. Photos remain optional and are never analyzed by this build.</Text>
           {!__DEV__ && !productionConfigurationReady ? <Text style={styles.configNote}>Production builds must provide public HTTPS API, portal, privacy, terms and AI disclosure links.</Text> : null}
           <Text style={styles.disclaimer}>
-            Cosmetic guidance, not medical care. If you have a persistent or painful skin condition,
-            please see a dermatologist.
+            Cosmetic guidance, not medical care. For a persistent, painful, or concerning skin condition,
+            please see a qualified healthcare professional.
           </Text>
         </ScrollView>
       )}

@@ -46,15 +46,15 @@ export default function Support(){
   finally{setBusy(false);}
  }
 
- return <AppFrame title="Portal Support">
-  <p className="lead">Keep track of help with your portal.</p>
+ return <AppFrame title="Customer care for your Studio journey">
+  <p className="lead">Bring us the question, the roadblock, or the next thing you want to make easier. We will help you find a clear path forward.</p>
   <div className="actions"><Link className="button" href="/care">Account &amp; customer care</Link><Link className="button" href="/account">My account</Link></div>
-  <div className="notice">For retailer purchases, shipping or returns, contact the vendor shown on your retailer receipt. For a Team 47 Studio Premium subscription, use <Link className="text-link" href="/account#payment-settings">payment settings</Link> or save an account request below. <Link className="text-link" href="/orders">Retailer purchase help →</Link></div>
-  <p>This development preview stores requests locally. External support delivery and response times are not enabled.</p>
+  <div className="notice">For retailer purchases, shipping, or returns, start with the vendor shown on your retailer receipt. If you need help finding the right handoff, Team 47 Studio customer care can guide you there. For a Team 47 Studio Premium subscription, use <Link className="text-link" href="/account#payment-settings">payment settings</Link> or save an account request below. <Link className="text-link" href="/orders">Retailer purchase help →</Link></div>
+  <p>This development preview stores requests locally. External support delivery and response times are not enabled yet.</p>
 
   <section className="panel stack" aria-labelledby="guide-heading">
-   <span className="eyebrow">QUICK PORTAL GUIDANCE</span><h2 id="guide-heading">Find your next step</h2>
-    <p>Get directions for using the portal. Related questions are consolidated for this session only; nothing is saved as a chat transcript.</p>
+   <span className="eyebrow">QUICK CUSTOMER CARE GUIDANCE</span><h2 id="guide-heading">Find the next step that moves you forward</h2>
+    <p>Get practical directions for using the portal and making the most of your Studio experience. Related questions are consolidated for this session only; nothing is saved as a chat transcript.</p>
    <form className="stack" onSubmit={askGuide} aria-busy={guideBusy} aria-describedby={guideError?'guide-error':undefined}>
     <label className="field">Help topic
      <select value={role} disabled={guideBusy} onChange={e=>{setRole(e.target.value as GuideRole);setGuide(null);setGuideQuestion('');setGuideError('');}}>{roleOptions.map(([value,label])=><option key={value} value={value}>{label}</option>)}</select>
@@ -75,7 +75,7 @@ export default function Support(){
 
   {feedback&&<p className="notice success support-reference" role="status">{feedback}</p>}{error&&<p id="support-error" className="notice error" role="alert">{error}</p>}
   <form ref={requestFormRef} id="portal-request" tabIndex={-1} aria-labelledby="portal-request-heading" aria-describedby={error?'support-error':undefined} aria-busy={busy} className="panel stack support-form" onSubmit={submit}>
-   <span className="eyebrow">NEW PORTAL REQUEST</span><h2 id="portal-request-heading">How can we help?</h2>
+   <span className="eyebrow">NEW CUSTOMER CARE REQUEST</span><h2 id="portal-request-heading">What can we make easier today?</h2>
    <label className="field">Request type<select disabled={busy} value={requestType} onChange={e=>{setRequestType(e.target.value as RequestType);setRequestSource('support_form');}}>{requestTypes.map(([value,title])=><option key={value} value={value}>{title}</option>)}</select></label>
    <label className="field">Subject<input ref={requestSubjectRef} required maxLength={150} disabled={busy} value={subject} placeholder="A short summary of the issue" aria-describedby="support-subject-count" onChange={e=>setSubject(e.target.value)}/></label>
    <CharacterCount id="support-subject-count" current={subject.length} max={150}/>

@@ -73,8 +73,8 @@ test('mobile Skin Match consumes shared questionnaire and profile contracts',()=
  assert.match(entry,/ACCOUNT_PORTAL_PATHS\.images/);
  assert.match(entry,/ACCOUNT_PORTAL_PATHS\.regimen/);
  assert.match(entry,/ACCOUNT_PORTAL_PATHS\.privacy/);
- assert.match(entry,/Connected setup checklist/);
- assert.match(entry,/Profile and preferences/);
+ assert.match(entry,/Build my connected setup/);
+ assert.match(entry,/Refine my profile and preferences/);
  assert.match(entry,/two-week regimen cycle/);
  assert.match(entry,/Privacy, data export and account deletion/);
  assert.match(entry,/public HTTPS API, portal, privacy, terms and AI disclosure links/);

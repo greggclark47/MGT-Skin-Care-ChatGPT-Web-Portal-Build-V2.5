@@ -5,7 +5,7 @@ export const BRAND = {
   siteUrl: 'https://team47studio.com',
   operator: {
     name: 'Gregg Clark',
-    roles: ['Owner/Operator', 'CEO', 'CTO', 'CFO'] as const,
+    roles: ['Co-Founder', 'Operations & Sales Lead'] as const,
     productionIdentity: 'Gregg Clark of MGT',
   },
   themeStorageKey: 'team47studio-theme',

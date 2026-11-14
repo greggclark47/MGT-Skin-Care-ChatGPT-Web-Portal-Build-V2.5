@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>D07 · Skin Match</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}*{box-sizing:border-box}a{text-decoration:none;color:inherit}
+.r{width:390px;height:844px;background:#000000;color:#F3F4FA;font-family:'Inter',system-ui,sans-serif;position:relative;overflow:hidden}
+.w{max-width:1200px;margin:0 auto;padding-left:64px;padding-right:64px}
+.d{font-family:'Bodoni Moda','Didot',Georgia,serif;font-weight:700;letter-spacing:-0.035em;line-height:.9;margin:0;text-transform:uppercase}
+.a{font-style:italic;font-weight:400;color:#5AA9FF}.a2{font-style:italic;font-weight:400;color:#9A80FF}
+.k{font-family:'Inter',system-ui,sans-serif;font-size:9.5px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:#5AA9FF}
+.p{font-size:15.5px;line-height:1.75;color:#B9BFD3;margin:0}
+.c{background:#0E0E0E;border:1px solid #2A2A2A;border-radius:0px;box-shadow:none;}
+.b{display:inline-block;font-size:14px;font-weight:600;padding:16px 30px;background:#9A80FF;color:#0B0D1A;border-radius:0px;border:1px solid #9A80FF;text-align:center;}
+.b2{display:inline-block;font-size:14px;font-weight:600;padding:16px 26px;color:#F3F4FA;border-radius:0px;border:1px solid #2A2A2A;text-align:center}
+.chip{display:inline-block;font-size:12px;padding:6px 13px;border:1px solid #2A2A2A;border-radius:0px;color:#B9BFD3;background:transparent}
+.hr{height:1px;background:#2A2A2A}
+</style>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,wght@0,500;0,700;1,400&family=Inter:wght@400;500;600;700&display=swap">
+</helmet>
+<div class="r">
+<div style="height:16px"></div><div style="padding:4px 20px 12px;display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid #F3F4FA"><div style="font-family:'Bodoni Moda','Didot',Georgia,serif;font-weight:700;font-size:15px;letter-spacing:.14em;text-transform:uppercase">Skin Match</div><span style="font-size:18px;color:#B9BFD3">‹</span></div>
+<div style="padding:16px 20px 0"><div style="display:flex;justify-content:space-between;margin-bottom:9px"><span class="k">Step 2 of 4 · Tone</span><span class="k" style="color:#8E96B0">~40s left</span></div><div style="display:flex;gap:4px;margin-bottom:24px"><div style="flex:1;height:5px;border-radius:99px;background:#9A80FF"></div><div style="flex:1;height:5px;border-radius:99px;background:#9A80FF"></div><div style="flex:1;height:5px;border-radius:99px;background:#0A0A0A"></div><div style="flex:1;height:5px;border-radius:99px;background:#0A0A0A"></div></div>
+<div class="d" style="font-size:38px;margin-bottom:10px">What's your <span class="a">skin tone?</span></div><p style="font-size:13px;color:#B9BFD3;line-height:1.6;margin:0 0 20px">Pick the swatch that reads closest. Natural daylight works best.</p></div>
+<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:0;margin:0 0 16px;border-top:1px solid #2A2A2A;border-bottom:1px solid #2A2A2A"><div style="aspect-ratio:1;border-radius:0;background:#FDDBB4;"></div><div style="aspect-ratio:1;border-radius:0;background:#F7CA9F;"></div><div style="aspect-ratio:1;border-radius:0;background:#F0B88A;"></div><div style="aspect-ratio:1;border-radius:0;background:#E2A273;"></div><div style="aspect-ratio:1;border-radius:0;background:#D08E5E;"></div><div style="aspect-ratio:1;border-radius:0;background:#C99A6B;"></div><div style="aspect-ratio:1;border-radius:0;background:#BE8A5C;outline:3px solid #9A80FF;outline-offset:-3px;"></div><div style="aspect-ratio:1;border-radius:0;background:#AC7650;"></div><div style="aspect-ratio:1;border-radius:0;background:#976141;"></div><div style="aspect-ratio:1;border-radius:0;background:#7F4E31;"></div><div style="aspect-ratio:1;border-radius:0;background:#683D24;"></div><div style="aspect-ratio:1;border-radius:0;background:#512D19;"></div><div style="aspect-ratio:1;border-radius:0;background:#3D1F0E;"></div><div style="aspect-ratio:1;border-radius:0;background:#2A1509;"></div><div style="aspect-ratio:1;border-radius:0;background:#1C0E05;"></div></div><div style="padding:0 20px"><div class="c" style="display:flex;align-items:center;gap:12px;padding:12px 14px;box-shadow:none"><div style="width:30px;height:30px;border-radius:0;background:#BE8A5C"></div>
+<div style="flex:1"><div style="font-size:13.5px;font-weight:600">Medium depth, warm</div><div style="font-size:11.5px;color:#8E96B0;margin-top:1px">Feeds makeup, hair colour and wardrobe</div></div><span style="color:#9A80FF;font-weight:700">✓</span></div>
+<a href="#" style="display:block;text-align:center;font-size:13px;font-weight:600;color:#9A80FF;margin-top:14px">Not sure? Help me choose</a></div>
+<div style="position:absolute;left:20px;right:20px;bottom:30px"><p style="font-size:10.5px;color:#8E96B0;text-align:center;margin:0 0 10px;font-style:italic">Cosmetic guidance, not diagnosis or medical treatment.</p><a href="#" class="b" style="display:block">Continue</a></div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

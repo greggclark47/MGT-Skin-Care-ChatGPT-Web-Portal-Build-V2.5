@@ -1,0 +1,119 @@
+project_id        = "team47studio-staging"
+region            = "us-east1"
+environment       = "staging"
+domain            = "staging.team47studio.com"
+github_repository = "greggclark47/MGT-Skin-Care-ChatGPT-Web-Portal-Build-V2.5"
+
+# Phase 1 provisions APIs, Artifact Registry, service accounts, private buckets,
+# secret containers and GitHub OIDC without launching billable application compute.
+deploy_application = false
+
+# Activate only after the load balancer, DNS and certificate are healthy.
+monitoring_enabled            = false
+monitoring_notification_email = "alerts@team47studio.com"
+incident_runbook_url           = "https://staging.team47studio.com/operations/runbook"
+
+# Optional project-scoped budget. Leave both values disabled until the approved
+# billing account and monthly cap are supplied by the owner.
+billing_account_id = ""
+monthly_budget_usd = 0
+
+# Starts in Cloud Armor preview with the other managed rules.
+edge_api_requests_per_minute = 600
+
+# Phase 2: add secret versions outside Terraform, publish digest-pinned images,
+# complete the reviewed non-secret environment maps, then set this true.
+api_image = "us-east1-docker.pkg.dev/team47studio-staging/team47-staging-platform/api@sha256:REPLACE"
+web_image = "us-east1-docker.pkg.dev/team47studio-staging/team47-staging-platform/web@sha256:REPLACE"
+
+api_environment = {
+  PUBLIC_PRIVACY_NOTICE_URL      = "https://staging.team47studio.com/privacy"
+  PUBLIC_TERMS_OF_USE_URL        = "https://staging.team47studio.com/terms"
+  PUBLIC_AI_DISCLOSURE_URL       = "https://staging.team47studio.com/ai-disclosure"
+  PORTAL_AUTO_MIGRATE            = "false"
+  SUPABASE_URL                  = "https://REPLACE.supabase.co"
+  SUPABASE_GOOGLE_OAUTH_ENABLED = "false"
+  OLLAMA_ENABLED                = "false"
+  OPENCLAW_ENABLED              = "false"
+  OLLAMA_CLOUD_ENABLED          = "false"
+  HOSTED_OPENAI_ENABLED         = "false"
+  WORKER_INTERVAL_SECONDS       = "300"
+  WORKER_READINESS_MAX_AGE_SECONDS = "900"
+  BACKUP_MAX_AGE_HOURS          = "26"
+  BACKUP_RESTORE_MAX_AGE_DAYS   = "90"
+  BACKUP_ATTESTATION_ENABLED    = "false"
+  ANTI_AGING_LIVE_AI            = "false"
+  ANTI_AGING_CHECKOUT_ENABLED   = "false"
+  ANTI_AGING_BOOKING_ENABLED    = "false"
+  ANTI_AGING_IMAGE_ANALYSIS_ENABLED = "false"
+  ANTI_AGING_ACCESSIBILITY_VERIFIED = "false"
+  ANTI_AGING_RESTORE_VERIFIED   = "false"
+  ANTI_AGING_PRIVACY_REVIEWED   = "false"
+  OPERATIONS_ANTI_AGING_RETENTION_DAYS = "365"
+  SUBSCRIPTIONS_ENABLED         = "false"
+  MGT_OMNI_RETAIL_ENABLED       = "false"
+  MGT_RETAIL_PARTNER_AUTHORIZATION_REVIEWED = "false"
+  MGT_SPONSORED_CONTENT_ENABLED = "false"
+  MGT_SPONSORED_CONTENT_REVIEWED = "false"
+  RELEASE_OWNER_NAME            = "Gregg Clark of MGT"
+  SUPPORT_OWNER_NAME            = "Gregg Clark of MGT"
+  SUPPORT_OWNER_EMAIL           = "support@team47studio.com"
+  ALERT_OWNER_EMAIL             = "alerts@team47studio.com"
+  SUPPORT_RESPONSE_TARGET_HOURS = "24"
+  MONITORING_DASHBOARD_URL      = "https://console.cloud.google.com/monitoring"
+  INCIDENT_RUNBOOK_URL          = "https://team47studio.com/operations/runbook"
+  ACCESSIBILITY_VALIDATION_REPORT_URL = "https://team47studio.com/evidence/accessibility"
+  ACCESSIBILITY_VALIDATED_AT    = "REPLACE_WITH_PAST_ISO_TIMESTAMP"
+}
+
+# Keep this map empty while Stripe is disabled. When enabling a Stripe feature,
+# bind only the required explicit Secret Manager versions—never a value or
+# `latest`. Subscription Checkout additionally needs the webhook signing secret.
+#
+# stripe_api_secret_environment = {
+#   "STRIPE_SECRET_KEY"                  = { secret_id = "team47-stripe-secret-key", version = "1" }
+#   "STRIPE_SUBSCRIPTION_WEBHOOK_SECRET" = { secret_id = "team47-stripe-webhook-secret", version = "1" }
+# }
+
+worker_environment = {
+  PORTAL_AUTO_MIGRATE            = "false"
+  SUPABASE_URL                   = "https://REPLACE.supabase.co"
+  WORKER_INTERVAL_SECONDS        = "300"
+  WORKER_READINESS_MAX_AGE_SECONDS = "900"
+  WORKER_HEALTH_FILE             = "/tmp/team47-worker-health.json"
+  BACKUP_MAX_AGE_HOURS           = "26"
+  BACKUP_RESTORE_MAX_AGE_DAYS    = "90"
+  OPERATIONS_BACKUP_ATTESTATION_RETENTION_DAYS = "90"
+  OPERATIONS_ANTI_AGING_RETENTION_DAYS = "365"
+  NOTIFICATION_DELIVERY          = "in_app"
+  NOTIFICATION_RETRY_COOLDOWN_SECONDS = "300"
+  NOTIFICATION_MAX_RETRY_DELAY_SECONDS = "3600"
+  NOTIFICATION_MAX_ATTEMPTS      = "3"
+  OPERATIONS_NOTIFICATION_RETENTION_DAYS = "90"
+  RELEASE_OWNER_NAME             = "Gregg Clark of MGT"
+  SUPPORT_OWNER_NAME             = "Gregg Clark of MGT"
+  SUPPORT_OWNER_EMAIL            = "support@team47studio.com"
+  ALERT_OWNER_EMAIL              = "alerts@team47studio.com"
+  SUPPORT_RESPONSE_TARGET_HOURS  = "24"
+  MONITORING_DASHBOARD_URL       = "https://console.cloud.google.com/monitoring"
+  INCIDENT_RUNBOOK_URL           = "https://team47studio.com/operations/runbook"
+  OPERATIONS_ALERT_DELIVERY      = "webhook"
+  OPERATIONS_ALERT_WEBHOOK_URL   = "https://staging.team47studio.com/webhooks/operations"
+  OPERATIONS_ALERT_KEY_ID        = "primary"
+  OPERATIONS_ALERT_TIMEOUT_MS    = "10000"
+  OPERATIONS_ALERT_LEASE_SECONDS = "60"
+  OPERATIONS_ALERT_RETRY_COOLDOWN_SECONDS = "300"
+  OPERATIONS_ALERT_MAX_RETRY_DELAY_SECONDS = "3600"
+  OPERATIONS_ALERT_MAX_ATTEMPTS  = "5"
+  OPERATIONS_ALERT_EVENT_RETENTION_DAYS = "90"
+  OPERATIONS_FOLLOW_UP_OVERDUE_GRACE_SECONDS = "300"
+  OPERATIONS_FOLLOW_UP_RETRY_DELAY_SECONDS = "300"
+  OPERATIONS_FOLLOW_UP_MAX_ATTEMPTS = "5"
+  OPERATIONS_FOLLOW_UP_RETENTION_DAYS = "365"
+  OPERATIONS_AI_LOG_RETENTION_DAYS = "30"
+  OPERATIONS_BILLING_RETENTION_DAYS = "730"
+  OPERATIONS_WEBHOOK_RECEIPT_RETENTION_DAYS = "90"
+  OPERATIONS_AGGREGATE_METRIC_RETENTION_DAYS = "180"
+  OPERATIONS_DELETION_PROOF_RETENTION_DAYS = "730"
+  OPERATIONS_RUN_RETENTION_DAYS = "90"
+}

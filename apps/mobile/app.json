@@ -1,12 +1,34 @@
 {
   "expo": {
-    "name": "MGT Skin Care",
-    "slug": "mgt-skin-care",
-    "scheme": "mgtskincare",
+    "name": "Team 47 Studio",
+    "slug": "team-47-studio",
+    "scheme": "team47studio",
     "version": "0.2.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
-    "ios": { "supportsTablet": false, "bundleIdentifier": "com.mgt.skincare" },
-    "android": { "package": "com.mgt.skincare" }
+    "icon": "./assets/team47studio-app-icon-1024.png",
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.team47studio.app"
+    },
+    "android": {
+      "package": "com.team47studio.app",
+      "versionCode": 1,
+      "permissions": [],
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/team47studio-adaptive-icon-foreground.png",
+        "backgroundColor": "#090D18"
+      }
+    },
+    "plugins": [
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "usesCleartextTraffic": false
+          }
+        }
+      ]
+    ]
   }
 }

@@ -1,0 +1,22 @@
+const assert = require('node:assert/strict');
+const { SeedAntiAgingCatalog } = require('../dist/modules/anti-aging/catalog');
+const { FixtureCatalogAdapter, FixtureProviderDirectoryAdapter, normalizeProviderLocation } = require('../dist/modules/anti-aging/adapters');
+
+const catalog = new SeedAntiAgingCatalog();
+const adapter = new FixtureCatalogAdapter(catalog);
+const ingredient = catalog.getIngredient('ingredient-vitamin-c');
+const good = adapter.import({ import_run_id: 'run-1', observed_at: '2026-10-13T00:00:00.000Z', records: [{ type: 'ingredient', record: ingredient }] });
+assert.deepEqual(good.accepted, ['ingredient:ingredient-vitamin-c']);
+assert.deepEqual(adapter.replay('run-1').accepted, good.accepted);
+const duplicate = adapter.import({ import_run_id: 'run-2', observed_at: '2026-10-13T00:00:00.000Z', records: [{ type: 'ingredient', record: ingredient }, { type: 'ingredient', record: ingredient }] });
+assert.equal(duplicate.quarantined[0].reason, 'duplicate');
+const stale = { ...ingredient, provenance: { ...ingredient.provenance, freshness_until: '2026-01-01T00:00:00.000Z' } };
+assert.equal(adapter.import({ import_run_id: 'run-3', observed_at: '2026-10-13T00:00:00.000Z', records: [{ type: 'ingredient', record: stale }] }).quarantined[0].reason, 'stale');
+const unapproved = { ...ingredient, provenance: { ...ingredient.provenance, reviewed_status: 'draft' } };
+assert.equal(adapter.import({ import_run_id: 'run-4', observed_at: '2026-10-13T00:00:00.000Z', records: [{ type: 'ingredient', record: unapproved }] }).quarantined[0].reason, 'not_approved');
+const provider = catalog.getProvider('provider-example-dermatology');
+const providerAdapter = new FixtureProviderDirectoryAdapter(catalog);
+assert.deepEqual(providerAdapter.submitProvider({ provider, qualification_verification_state: 'pending', normalized_city: 'new york', normalized_region: 'ny' }, '2026-10-13T00:00:00.000Z').moderation_queue, [provider.id]);
+assert.deepEqual(normalizeProviderLocation(' New   York ', ' ny '), { city: 'new york', region: 'NY' });
+assert.equal(providerAdapter.submitProvider({ provider: { ...provider, id: 'provider-rejected' }, qualification_verification_state: 'rejected', normalized_city: 'new york', normalized_region: 'ny' }, '2026-10-13T00:00:00.000Z').quarantined[0].reason, 'not_approved');
+console.log('anti-aging-adapters: ok');

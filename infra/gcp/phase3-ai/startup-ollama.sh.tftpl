@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+MODEL_DISK=/dev/disk/by-id/google-ollama-models
+MODEL_ROOT=/var/lib/ollama-models
+
+if ! blkid "$MODEL_DISK" >/dev/null 2>&1; then
+  mkfs.ext4 -F "$MODEL_DISK"
+fi
+mkdir -p "$MODEL_ROOT"
+mountpoint -q "$MODEL_ROOT" || mount -o discard,defaults "$MODEL_DISK" "$MODEL_ROOT"
+grep -q " $MODEL_ROOT " /etc/fstab || echo "$MODEL_DISK $MODEL_ROOT ext4 discard,defaults,nofail 0 2" >> /etc/fstab
+
+command -v docker >/dev/null 2>&1 || { echo "Reviewed GPU image must include Docker" >&2; exit 1; }
+docker rm -f team47-ollama >/dev/null 2>&1 || true
+docker run --detach --name team47-ollama --restart unless-stopped --gpus all --network host \
+  --volume "$MODEL_ROOT/models:/root/.ollama" \
+  --env OLLAMA_HOST=0.0.0.0:11434 \
+  --env OLLAMA_KEEP_ALIVE=10m \
+  "${ollama_image}"
+
+for model in "${deepseek_model}" "${qwen_model}" "${openclaw_model}"; do
+  if [ -n "$model" ]; then
+    docker exec team47-ollama ollama pull "$model"
+  fi
+done

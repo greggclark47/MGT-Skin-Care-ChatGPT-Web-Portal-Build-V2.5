@@ -1,4 +1,4 @@
-import type { ModelConfig, ProviderName, ProviderResponse } from '../types';
+import type { GatewayImageInput, ModelConfig, ProviderName, ProviderResponse } from '../types';
 import type { ProviderAdapter } from './index';
 
 // HTTP transport is injected so adapters are testable without network access and so the
@@ -16,7 +16,8 @@ export class OpenAiAdapter implements ProviderAdapter {
   constructor(protected apiKey: string, protected baseUrl = 'https://api.openai.com/v1', protected post: HttpPost = defaultHttpPost, name: ProviderName = 'openai') {
     this.name = name;
   }
-  async complete(config: ModelConfig, systemPrompt: string, userPrompt: string, signal: AbortSignal): Promise<ProviderResponse> {
+  async complete(config: ModelConfig, systemPrompt: string, userPrompt: string, signal: AbortSignal, imageInputs?: readonly GatewayImageInput[]): Promise<ProviderResponse> {
+    if (imageInputs?.length) throw new Error('image_input_local_only');
     const json = await this.post(`${this.baseUrl.replace(/\/$/, '')}/responses`, {
       authorization: `Bearer ${this.apiKey}`,
     }, {
@@ -42,11 +43,11 @@ export class OpenAiAdapter implements ProviderAdapter {
 export class OllamaAdapter implements ProviderAdapter {
   readonly name: ProviderName = 'ollama';
   constructor(private baseUrl = 'http://127.0.0.1:11434', private post: HttpPost = defaultHttpPost) {}
-  async complete(config: ModelConfig, systemPrompt: string, userPrompt: string, signal: AbortSignal): Promise<ProviderResponse> {
+  async complete(config: ModelConfig, systemPrompt: string, userPrompt: string, signal: AbortSignal, imageInputs?: readonly GatewayImageInput[]): Promise<ProviderResponse> {
     const json = await this.post(`${this.baseUrl.replace(/\/$/, '')}/api/chat`, {},
       {
         model: config.model,
-        messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userPrompt }],
+        messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userPrompt, ...(imageInputs?.length ? { images: imageInputs.map(input => input.base64) } : {}) }],
         stream: false,
         keep_alive: '10m',
         options: { num_predict: config.max_tokens, temperature: config.temperature },
@@ -62,14 +63,70 @@ export class OllamaAdapter implements ProviderAdapter {
   }
 }
 
-// OpenClaw is an optional OpenAI-compatible orchestration endpoint. By default it points at
-// Ollama's /v1 surface, so enabling it does not introduce a second paid provider.
+// Ollama Cloud uses the same native chat contract as local Ollama, but it is a
+// separately metered hosted provider. Keeping it as a distinct adapter lets the
+// router enforce entitlements, cost reservations and audit telemetry before a
+// cloud request is made.
+export class OllamaCloudAdapter implements ProviderAdapter {
+  readonly name: ProviderName = 'ollama_cloud';
+  constructor(
+    private apiKey: string,
+    private baseUrl = 'https://ollama.com',
+    private post: HttpPost = defaultHttpPost,
+  ) {}
+
+  async complete(config: ModelConfig, systemPrompt: string, userPrompt: string, signal: AbortSignal, imageInputs?: readonly GatewayImageInput[]): Promise<ProviderResponse> {
+    if (imageInputs?.length) throw new Error('image_input_local_only');
+    const json = await this.post(`${this.baseUrl.replace(/\/$/, '')}/api/chat`, {
+      authorization: `Bearer ${this.apiKey}`,
+    }, {
+      model: config.model,
+      messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userPrompt }],
+      stream: false,
+      options: { num_predict: config.max_tokens, temperature: config.temperature },
+    }, signal);
+    const text = json.message?.content ?? json.response ?? '';
+    if (!text) throw new Error('provider_response_incomplete');
+    return {
+      text,
+      input_tokens: json.prompt_eval_count ?? 0,
+      output_tokens: json.eval_count ?? 0,
+      model: json.model ?? config.model,
+      provider: this.name,
+    };
+  }
+}
+
+// OpenClaw is an optional orchestration adapter. Native mode talks directly to Ollama;
+// the compatibility mode is explicit so enabling it does not introduce a second paid provider.
+export type OpenClawApiMode = 'ollama' | 'openai-completions';
+
 export class OpenClawAdapter extends OpenAiAdapter {
-  constructor(baseUrl = 'http://127.0.0.1:11434/v1', apiKey = 'ollama', post: HttpPost = defaultHttpPost) {
+  constructor(
+    baseUrl = 'http://127.0.0.1:11434',
+    apiKey = 'ollama',
+    post: HttpPost = defaultHttpPost,
+    private apiMode: OpenClawApiMode = 'ollama',
+  ) {
     super(apiKey, baseUrl, post, 'openclaw');
   }
-  async complete(config: ModelConfig, systemPrompt: string, userPrompt: string, signal: AbortSignal): Promise<ProviderResponse> {
-    // The local OpenAI-compatible Ollama surface uses Chat Completions.
+  async complete(config: ModelConfig, systemPrompt: string, userPrompt: string, signal: AbortSignal, imageInputs?: readonly GatewayImageInput[]): Promise<ProviderResponse> {
+    if (this.apiMode === 'ollama') {
+      const json = await this.post(`${this.baseUrl.replace(/\/$/, '')}/api/chat`, {}, {
+        model: config.model,
+        messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userPrompt, ...(imageInputs?.length ? { images: imageInputs.map(input => input.base64) } : {}) }],
+        stream: false,
+        keep_alive: '10m',
+        options: { num_predict: config.max_tokens, temperature: config.temperature },
+      }, signal);
+      return {
+        text: json.message?.content ?? json.response ?? '',
+        input_tokens: json.prompt_eval_count ?? 0,
+        output_tokens: json.eval_count ?? 0,
+        model: config.model, provider: this.name,
+      };
+    }
+    if (imageInputs?.length) throw new Error('image_input_local_only');
     const json = await this.post(`${this.baseUrl.replace(/\/$/, '')}/chat/completions`, {
       authorization: `Bearer ${this.apiKey}`,
     }, {

@@ -1,0 +1,7 @@
+zone_id       = "REPLACE_WITH_TEAM47STUDIO_ZONE_ID"
+domain        = "team47studio.com"
+origin_ipv4   = "REPLACE_WITH_GCP_LOAD_BALANCER_IP"
+
+# First apply: false. Wait until the Google certificate reports ACTIVE.
+# Second apply: true. Then set Cloudflare SSL/TLS mode to Full (strict).
+proxy_enabled = false

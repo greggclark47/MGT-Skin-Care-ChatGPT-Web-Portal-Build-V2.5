@@ -1,5 +1,5 @@
 import { AiGateway } from './router';
-import { OllamaAdapter, OpenAiAdapter, OpenClawAdapter } from './adapters/http-adapters';
+import { OllamaAdapter, OllamaCloudAdapter, OpenAiAdapter, OpenClawAdapter, type OpenClawApiMode } from './adapters/http-adapters';
 import type { ProviderAdapter, RoutingLogSink } from './index';
 import type { ProviderName } from './types';
 import type { BudgetCaps, BudgetStore } from './budget';
@@ -23,13 +23,23 @@ export function adaptersFromEnv(env: NodeJS.ProcessEnv): Partial<Record<Provider
   if (env.OLLAMA_ENABLED !== 'false') adapters.ollama = new OllamaAdapter(ollama);
 
   if (env.OPENCLAW_ENABLED === 'true') {
+    const apiMode: OpenClawApiMode = env.OPENCLAW_API_MODE === 'openai-completions' ? 'openai-completions' : 'ollama';
     adapters.openclaw = new OpenClawAdapter(
-      baseUrl(env.OPENCLAW_BASE_URL, `${ollama}/v1`),
-      env.OPENCLAW_API_KEY || 'ollama',
+      baseUrl(env.OPENCLAW_BASE_URL, ollama),
+      apiMode === 'openai-completions' ? env.OPENCLAW_API_KEY || '' : 'ollama',
+      undefined,
+      apiMode,
     );
   }
 
-  if (env.OPENAI_API_KEY) {
+  if (env.OLLAMA_CLOUD_ENABLED === 'true' && env.OLLAMA_CLOUD_API_KEY) {
+    adapters.ollama_cloud = new OllamaCloudAdapter(
+      env.OLLAMA_CLOUD_API_KEY,
+      baseUrl(env.OLLAMA_CLOUD_BASE_URL, 'https://ollama.com'),
+    );
+  }
+
+  if (env.HOSTED_OPENAI_ENABLED === 'true' && env.OPENAI_API_KEY) {
     adapters.openai = new OpenAiAdapter(env.OPENAI_API_KEY, env.OPENAI_BASE_URL || 'https://api.openai.com/v1');
   }
 

@@ -35,7 +35,7 @@ Configure one signed event destination per environment at the exact URL:
 https://<same-portal-origin>/webhooks/subscriptions
 ```
 
-Subscribe it to `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`, `checkout.session.completed`, `invoice.paid`, and `invoice.payment_failed`. The application validates the Stripe signature on the raw request body and re-reads the subscription before it updates account access.
+Subscribe it to `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`, `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `checkout.session.async_payment_failed`, `invoice.paid`, and `invoice.payment_failed`. The application validates the Stripe signature on the raw request body and re-reads the subscription before it updates account access.
 
 ## Secure configuration and release candidate
 

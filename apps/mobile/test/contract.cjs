@@ -88,6 +88,7 @@ test('mobile Skin Match consumes shared questionnaire and profile contracts',()=
 
 test('mobile account experience exposes the shared three-tier comparison and safe portal handoff',()=>{
  assert.match(membership,/MEMBERSHIP_TIER_CONTENT\.map/);
+ assert.match(membership,/tier\.best_for/);
  assert.match(membership,/MEMBERSHIP_COMPARISON_ROWS\.map/);
  assert.match(membership,/MEMBERSHIP_CHANGE_POLICY\.period_end/);
  assert.match(membership,/MEMBERSHIP_CHANGE_POLICY\.annual_upgrade/);

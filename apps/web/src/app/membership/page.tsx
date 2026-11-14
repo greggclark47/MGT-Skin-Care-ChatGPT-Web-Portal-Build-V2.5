@@ -104,7 +104,9 @@ export default function Membership() {
             <h3 id="plan-free">{baseline.name}</h3>
             <p className={styles.planPrice}>$0</p>
             <p>{baseline.summary}</p>
+            <p className="muted"><strong>Built for:</strong> Explore your starting point with no recurring commitment.</p>
             <ul>{baseline.features.map(feature => <li key={feature}>{feature}</li>)}</ul>
+            <Link className="button" href="/account">Start with Free</Link>
           </article>}
           {catalog.data.plans.map((plan: Plan) => <article className={styles.planCard + (plan.id === planId ? ' ' + styles.selected : '')} key={plan.id} aria-labelledby={'plan-' + plan.id}>
             <div className="row"><span className="pill">{plan.id === 'studio' ? 'Most complete experience' : 'Best ongoing value'}</span></div>

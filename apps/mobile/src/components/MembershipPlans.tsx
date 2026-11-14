@@ -11,6 +11,7 @@ export function MembershipPlans({ portalUrl }: { portalUrl: string }) {
       {MEMBERSHIP_TIER_CONTENT.map(tier => <View key={tier.id} testID={`membership-tier-${tier.id}`} style={styles.card}>
         <Text accessibilityRole="header" style={styles.tierName}>{tier.name}</Text>
         <Text style={styles.summary}>{tier.summary}</Text>
+        <Text style={styles.bestFor}><Text style={styles.bestForLabel}>Built for: </Text>{tier.best_for}</Text>
         {tier.features.map(feature => <Text key={feature} style={styles.feature}>• {feature}</Text>)}
       </View>)}
     </View>
@@ -38,6 +39,8 @@ const styles = StyleSheet.create({
   card: { padding: space.md, gap: space.xs, borderWidth: 1, borderColor: '#D8D0EE', borderRadius: radius.md, backgroundColor: '#FFFFFF' },
   tierName: { color: '#24115D', fontSize: font.size.md, fontWeight: '700' },
   summary: { color: '#514179', fontSize: font.size.sm, lineHeight: 20 },
+  bestFor: { color: '#514179', fontSize: font.size.xs, lineHeight: 18 },
+  bestForLabel: { color: '#342070', fontWeight: '700' },
   feature: { color: '#40365D', fontSize: font.size.sm, lineHeight: 20 },
   comparisonRow: { gap: space.xs, paddingVertical: space.sm, borderTopWidth: 1, borderTopColor: '#D8D0EE' },
   capability: { color: '#24115D', fontSize: font.size.sm, fontWeight: '700' },

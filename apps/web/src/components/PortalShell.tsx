@@ -31,7 +31,7 @@ export function PortalShell({children}:{children:React.ReactNode}){
  },[sessionState.loading,sessionState.data?.account]);
  useEffect(()=>{if(!open)return;window.requestAnimationFrame(()=>document.querySelector<HTMLElement>('#primary-navigation a')?.focus());const outside=(e:PointerEvent)=>{if(!headerRef.current?.contains(e.target as Node))setOpen(false);};const close=(e:KeyboardEvent)=>{if(e.key==='Escape'){setOpen(false);document.getElementById('menu-toggle')?.focus();}};window.addEventListener('keydown',close);document.addEventListener('pointerdown',outside);return()=>{window.removeEventListener('keydown',close);document.removeEventListener('pointerdown',outside);};},[open]);
  const toggle=()=>{const t=theme==='dark'?'light':'dark';document.documentElement.dataset.theme=t;setTheme(t);try{localStorage.setItem(BRAND.themeStorageKey,t);}catch{}};
- const primary=[['/','Applications'],['/shop','Shop'],['/learn','Learn'],['/company','Company']];
+ const primary=[['/','Applications'],['/shop','Shop'],['/learn','Learn']];
  const appLinks=[['/skin-match','Skin Match'],['/complexion','Complexion Intelligence'],['/anti-aging','Anti-aging Edit'],['/routine','My Routine'],['/coach','Skin Coach'],['/my-skin','My Skin'],['/replenishment','Replenishment'],['/studio','Beauty & Style'],['/wardrobe','Color Match & Wardrobe'],['/care','Account & Care']];
  const isWithin=(href:string)=>path===href||path.startsWith(href+'/');
  const activePrimary=appLinks.some(([href])=>isWithin(href))?'/':isWithin('/saved')?'/shop':path;

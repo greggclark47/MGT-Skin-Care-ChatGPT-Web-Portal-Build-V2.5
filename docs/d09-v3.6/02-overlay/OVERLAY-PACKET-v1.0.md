@@ -1,0 +1,122 @@
+# Team 47 Studio — Web Portal & App Overlay Packet
+
+**Version 1.0 · 2026-11-15 · Internal build handoff**
+Maps the D09 v3.6 demo (69 screens) onto an existing production build, screen by screen, with every mapped file verified to exist.
+
+| | |
+|---|---|
+| **Target build** | `greggclark47/MGT-Skin-Care-ChatGPT-Web-Portal-Build-V2.5` @ `6b05956` (2026-09-18) — Next.js web, Expo mobile, Express API, live Stripe Checkout |
+| **Source design** | D09 v3.6 demo — `demo/index-v3.6.html` |
+| **Classification** | The blueprint's own vocabulary: REUSE · REFACTOR · REPLACE · CREATE · DEFER |
+| **Result** | 7 REUSE · 18 REFACTOR · 3 REPLACE · 30 CREATE · 11 DEFER |
+
+**Files in this packet**
+
+| File | What it is |
+|---|---|
+| `screen-map.csv` | All 69 demo screens → existing file → action → note. `file_exists` was checked against the repo, not assumed. |
+| `flows.json` | Web flow (32 steps), app flow (23 steps), the setup journey and its resume rules, the password-reset path |
+| `d09-overlay.css` | Drop-in stylesheet. Load after `globals.css`; rebinds the variables the existing components already use |
+| `tokens.d09.ts` | Proposed replacement for `packages/shared/src/tokens.ts`, same export shape, plus dark mode and segment gradients |
+| `brand-string-sweep.txt` | Every user-facing "MGT" in web and mobile source — 22 occurrences with file and line |
+
+---
+
+## 1. Decisions needed before the overlay starts
+
+Ordered by how much work each one blocks. None is a design question; each needs an owner's call.
+
+### O-1 · Which build is the base? `BLOCKS EVERYTHING`
+
+There are two lineages, and they have diverged.
+
+| | GitHub — ChatGPT V2.5 (mapped here) | Drive — Fable build `mgt-skincare-v2` |
+|---|---|---|
+| Last change | 2026-09-18 | Project record runs through SC-P13 |
+| Web verticals | `/studio/[segment]` with makeup, style, clothing | Dedicated `/makeup`, `/hair`, `/style` flows |
+| Hair-colour lift check | Absent | Built; fails closed; own route |
+| Mobile | Skin Match screen only | Six-tab navigator, all six verticals, Coach |
+| Stripe | Hosted Checkout, trial, idempotent webhooks | Config scaffolding, live switch not started |
+| Project record says | — | "Live source of truth" |
+
+This packet maps the GitHub build because it is the one I could read file by file today. The Drive build is further along on product logic; this one is further along on billing. **Recommendation:** the Drive build as the base, with this repo's `portal/billing.ts` and `portal/payments.ts` ported across, since they are the most complete Stripe integration in either lineage. If you choose the GitHub build instead, the 30 CREATE rows shrink considerably for web and grow for mobile.
+
+### O-2 · The intake screen conflicts with a locked ruling `BLOCKS W33`
+
+The v3.5 brief asked for "image and scan intake." The demo's W33 leads with a photo. The project record locks **swatch-picking, not camera** for colour sampling (SC-P9 web, re-asserted SC-P10 mobile) on two grounds: it keeps samples from ever being an image, and phone white balance is a documented cause of wrong undertone reads.
+
+The Terms already reconcile the two. §4.1 says matching "can be completed entirely by selecting from on-screen swatches"; §4.2 makes a photo upload and a guided scan strictly optional extras. **Recommendation:** rebuild W33 swatch-first, with the photo offered as an optional accuracy step exactly as §4.2 words it.
+
+The demo also says the photo is "read in your browser … nothing is uploaded." That is true of the simulation and false of the product as the Terms describe it — §4.5 sends the image to an image-analysis processor. Production copy must follow §4.5.
+
+### O-3 · The entitlement can't represent three plans `BLOCKS W4, W12, W13, W31`
+
+`apps/api/src/portal/payments.ts:43` writes `memberships.premium` as a boolean. Billing reads a single `STRIPE_PREMIUM_PRICE_ID`. The plans are now Free, Guided and Studio, across monthly and annual cycles. That needs a tier field and one Stripe price per tier per cycle — four prices, not one.
+
+The same boolean gates the Coach: `requirePremium` checks `user_profiles.is_premium` in the Drive lineage. Whichever base you pick, the gate has to read the tier.
+
+### O-4 · Keep hosted Checkout; do not build the demo's card form `DECIDED BY LOCKED RULE`
+
+The demo's W7 is a simulated card form so the flow could be reviewed. Production already uses hosted Stripe Checkout, which keeps card data off your servers entirely — the locked rule is "never store raw card data." The overlay restyles the screens either side of Checkout and leaves Checkout itself to Stripe.
+
+Two changes are needed inside the existing billing code, both driven by the Terms rather than the design:
+
+- **Separate renewal consent.** Terms §8.4 promises consent to auto-renewal *separately* from accepting the Terms. `billing.ts` collects only `consent_collection: { terms_of_service: 'required' }`. Counsel packet item C-5 asks what form the separate consent must take; build it once the answer is in.
+- **Trial disclosure.** The code gives a 14-day trial; the plan screens don't mention it. Terms §8.3 requires its length be stated at signup.
+
+### O-5 · Consumer auth doesn't exist yet `BLOCKS W9, W10, W32, journey step 1`
+
+Only admin routes carry auth middleware. The setup journey begins with account creation, so consumer auth (Supabase Auth, per the baseline stack) is a prerequisite for the journey, sign-in and password reset.
+
+### O-6 · The overlay supersedes two locked colour decisions `NEEDS EXPLICIT APPROVAL`
+
+| Locked | Value | Where | D09 replaces with |
+|---|---|---|---|
+| C10 accent (2026-09-05) | `#7C3AED` violet | `packages/shared/src/tokens.ts` | `#6540D4` light, `#9A80FF` dark, plus six segment gradients |
+| SC-P11 mobile tab tint | `#C4A882` gold on `#1A1A1A` | `AppNavigator.tsx` (Drive lineage) | Segment gradient on the active tab |
+
+Your own rule is that architecture-level decisions get explicit approval. `d09-overlay.css` is reversible — delete one import and the old theme returns — so web can be trialled before approval. `tokens.d09.ts` changes the shared package that mobile reads natively, so it should not merge until O-6 is approved.
+
+---
+
+## 2. Overlay sequence
+
+Each phase ships on its own and can be reverted on its own.
+
+| Phase | What changes | Depends on | Reversible by |
+|---|---|---|---|
+| **A · Theme** | Add `d09-overlay.css` after `globals.css`. Fonts, colour, radius, buttons. No component edits. | Nothing | Removing one import |
+| **B · Brand and copy** | Clear the 22 brand strings. Replace `company`, `trust`, `terms`, `privacy` section copy with v3.6 text. Footer statement and disclaimer. | Counsel S-2/S-4 for Terms and Privacy | Git revert |
+| **C · Routes** | Add `/applications`, `/retail-partners`, `/plans-billing`, `/ai-disclosure`, `/reset-password`, `/setup/intake`. Keep existing paths and redirect old names to new; never break a live URL. | — | Git revert |
+| **D · Journey and plans** | Three-tier entitlement, four Stripe prices, journey state, renewal consent, trial and cycle disclosure. | O-3, O-5, counsel C-5 | Feature flag |
+| **E · Shared tokens** | Merge `tokens.d09.ts`. | O-6 | Git revert |
+| **F · Mobile** | Port the six-tab navigator and vertical screens, restyled. | O-1, E | Separate release |
+
+**Routes worth one decision now:** the demo uses `/app/*` for signed-in screens as a convenience. The existing build uses top-level paths (`/my-skin`, `/coach`). Keep the existing paths. And Terms §4.8 links Privacy at `/legal/privacy` while the site uses `/privacy` — one has to change, and the redirect should exist either way.
+
+---
+
+## 3. What carries over unchanged
+
+These are the parts of the demo the overlay must preserve exactly, because each one is a product rule rather than a style.
+
+- **The journey resumes; it never restarts.** Each step is skipped if already satisfied. Free never reaches checkout. Studio is blocked while its price is unset — the demo deliberately refuses to invent one.
+- **Every interactive element resolves.** The v3.4 audit found 18 dead controls; v3.6 has 2,811 and none are dead. The audit script (`interact.py`) is in the demo repo and should run in CI against the real build.
+- **Contrast is measured, not assumed.** The full sweep covers 6,528 text runs in both modes. Gradient buttons use the darkened stops in the token file — each clears 4.91:1 against white or better.
+- **The disclaimer says "cosmetic, not medical" once**, in the footer, followed by the explanation and the copyright line.
+- **The footer copyright is the only place the parent entity appears**, pending counsel's answer on the exact entity name (C-9).
+
+---
+
+## 4. Effort `[ESTIMATE]`
+
+| Phase | Hours | Note |
+|---|---|---|
+| A | 4–6 | Mostly checking existing components under the new variables |
+| B | 6–10 | Copy is written; most of the time is the brand sweep and section pages |
+| C | 6–8 | Routes plus redirects |
+| D | 24–40 | The real work — entitlement migration, prices, consent, journey state |
+| E | 2–4 | Plus regression on mobile |
+| F | 40–80 | Wide range because it depends entirely on O-1 |
+
+These are build-side estimates with no external dependencies counted. Counsel, Stripe dashboard setup and store accounts are additional and are not hours I can estimate.

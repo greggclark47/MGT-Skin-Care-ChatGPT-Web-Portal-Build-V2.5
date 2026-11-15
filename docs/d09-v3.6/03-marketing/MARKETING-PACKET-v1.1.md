@@ -1,7 +1,7 @@
 # Team 47 Studio — Marketing Packet
 
-**Version 1.0 · 2026-11-15 · For anyone producing Team 47 Studio material: web, social, email, partner decks**
-Everything here is taken from the D09 v3.6 build. Colour values come from `tokens/d09-tokens-v3.6.json`; nothing in this document was typed separately from it.
+**Version 1.1 · 2026-11-15 · For anyone producing Team 47 Studio material: web, social, email, partner decks** · v1.1: utility row colours (§5.2)
+Everything here is taken from the D09 v3.8 build. Colour values come from `tokens/d09-tokens-v3.6.json`; nothing in this document was typed separately from it.
 
 **In this folder**
 
@@ -118,15 +118,30 @@ Each of the six verticals owns a three-stop ramp at its own angle. Every stop is
 
 ### 5.2 Navigation colours
 
-| Button | Segment ramp |
-|---|---|
-| Skin | Skin |
-| Color | Color |
-| Style | Wardrobe |
-| Coach | Style |
-| Membership | Makeup |
+**Header**
 
-Adjacent buttons never share a ramp. The fifteen application icons each carry a gradient from the same set, assigned so that no two neighbours match.
+| Button | Segment ramp | Opens |
+|---|---|---|
+| Skin | Skin | Skin Match |
+| Color | Color | Colour & season |
+| Style | Wardrobe | Style studio |
+| Coach | Style | AI Coach |
+| Membership | Makeup | Membership |
+
+**Utility row** — the second row, on every web screen
+
+| Button | Ring | Label ink, light / dark | Filled when you are there |
+|---|---|---|---|
+| Applications | Full prism, seven stops | `#6A2BD0` / `#B49BFF` | Teal → blue → violet → berry |
+| Shop | Makeup | `#9A2E9A` / `#EE9CEE` | Berry → brick (also on the cart) |
+| Learn | Hair | `#0B6F79` / `#5FD8E4` | Green → teal → blue |
+| Retail Partners | Color | `#9A4E00` / `#F7B07A` | Burnt orange → ochre |
+
+Each utility button has a gradient ring, a faint tint of its own ramp, and a round icon in its filled colours. The button for the section you are on is filled solid with a white label. The site sets that from the page's address, never guesses it, and announces it to screen readers.
+
+**Why the filled state uses different darks from §5.1 rule 1.** Mixing toward logo navy keeps blue and violet vivid, but it greys warm hues: orange turns brown and coral turns dusty rose. The filled utility buttons use the hue-preserving darks from the light-mode ink table instead (`small_text_ink.light` in the token file). Each clears 5.2:1 against white and keeps its colour. Measured on the rendered buttons, white on filled Shop is 6.71:1, and the unfilled labels are 5.79:1 (Retail Partners) and 6.02:1 (Shop).
+
+Adjacent buttons never share a ramp, in either row. The fifteen application icons each carry a gradient from the same set, assigned so that no two neighbours match.
 
 ### 5.3 Surfaces
 

@@ -1,12 +1,12 @@
 # Team 47 Studio — Web Portal & App Overlay Packet
 
-**Version 1.1 · 2026-11-15 · Internal build handoff** · v1.1: O-2 decided and applied in demo v3.7
-Maps the D09 v3.7 demo (69 screens) onto an existing production build, screen by screen, with every mapped file verified to exist.
+**Version 1.2 · 2026-11-15 · Internal build handoff** · v1.1: O-2 decided · v1.2: utility row, route-driven active state, keyboard reach
+Maps the D09 v3.8 demo (69 screens) onto an existing production build, screen by screen, with every mapped file verified to exist.
 
 | | |
 |---|---|
 | **Target build** | `greggclark47/MGT-Skin-Care-ChatGPT-Web-Portal-Build-V2.5` @ `6b05956` (2026-09-18) — Next.js web, Expo mobile, Express API, live Stripe Checkout |
-| **Source design** | D09 v3.7 demo — `demo/index-v3.7.html` (held privately) |
+| **Source design** | D09 v3.8 demo — `demo/index-v3.8.html` (held privately) |
 | **Classification** | The blueprint's own vocabulary: REUSE · REFACTOR · REPLACE · CREATE · DEFER |
 | **Result** | 7 REUSE · 18 REFACTOR · 3 REPLACE · 30 CREATE · 11 DEFER |
 
@@ -101,8 +101,11 @@ Each phase ships on its own and can be reverted on its own.
 These are the parts of the demo the overlay must preserve exactly, because each one is a product rule rather than a style.
 
 - **The journey resumes; it never restarts.** Each step is skipped if already satisfied. Free never reaches checkout. Studio is blocked while its price is unset — the demo deliberately refuses to invent one.
-- **Every interactive element resolves.** The v3.4 audit found 18 dead controls; v3.7 has 2,847 and none are dead. The audit script (`interact.py`) is in the demo repo and should run in CI against the real build.
+- **Every interactive element resolves.** The v3.4 audit found 18 dead controls; v3.8 has 2,847 and none are dead. The audit script (`interact.py`) is in the demo repo and should run in CI against the real build.
 - **Contrast is measured, not assumed.** The full sweep covers 6,528 text runs in both modes. Gradient buttons use the darkened stops in the token file — each clears 4.91:1 against white or better.
+- **"You are here" comes from the route.** The utility row (Applications, Shop, Learn, Retail Partners) fills the button for the current section and sets `aria-current="page"` from the URL, never from guessed state. Shop stays filled on `/cart`. In Next.js this is `usePathname()` compared against each button's route list.
+- **The header Style button opens the Style studio** (`/app/wardrobe`), the page that highlights Style. Until v3.8 it opened the Applications hub, so clicking Style landed somewhere Style wasn't lit, and the hub would have lit two buttons once Applications had its own.
+- **Every control is keyboard-reachable, with a visible focus ring.** The demo retrofits tab stops onto click-only links and cards. In the real build, use `<Link href>` and `<button>` and don't add `onClick` to a `div` — then nothing needs retrofitting. Focus ring: 2px `--acc2`, offset 2px.
 - **The disclaimer says "cosmetic, not medical" once**, in the footer, followed by the explanation and the copyright line.
 - **The footer copyright is the only place the parent entity appears**, pending counsel's answer on the exact entity name (C-9).
 

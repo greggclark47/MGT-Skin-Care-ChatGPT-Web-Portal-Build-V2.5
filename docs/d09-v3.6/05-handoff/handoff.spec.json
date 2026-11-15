@@ -1,5 +1,6 @@
 {
  "spec_version": "1.0",
+ "status": "PRELIMINARY — pending full release; subject to change before execution",
  "generated": "2026-11-15",
  "demo_version": "D09 v3.9",
  "note": "Machine-readable companion to HANDOFF-PACKET-v1.0.md. 'demo' is extracted from the built file by demo/verification/extract_spec.py; everything else is authored and proposed, not implemented.",

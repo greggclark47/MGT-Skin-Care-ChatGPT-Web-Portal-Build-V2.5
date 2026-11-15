@@ -2,6 +2,8 @@
 
 **2026-11-15** · The Team 47 Studio design system mapped onto this repository, with a platform-neutral handoff for the backend. The folder keeps its original name so existing links stay valid.
 
+> **Status: PRELIMINARY — pending full release.** Prepared for review ahead of any execution. Decisions, routes, wording and figures are subject to change before work begins; nothing here is final until the owner releases it.
+
 | Packet | Contents |
 |---|---|
 | [`02-overlay/`](02-overlay/OVERLAY-PACKET-v1.3.md) | All 71 design screens mapped to files in this repo (REUSE / REFACTOR / REPLACE / CREATE / DEFER), a drop-in theme stylesheet, proposed shared tokens, and the brand-string sweep |

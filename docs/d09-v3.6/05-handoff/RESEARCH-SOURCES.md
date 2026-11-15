@@ -1,6 +1,9 @@
 # Team 47 Studio — Research Sources for the v3.9 Handoff
 
 **Version 1.0 · 2026-11-15 · Retrieved 2026-11-15**
+
+> **Status: PRELIMINARY — pending full release.** Prepared for review ahead of any execution. Decisions, routes, wording and figures are subject to change before work begins; nothing here is final until the owner releases it.
+
 Every `[SRC n]`, `[SEC n]` and `[UNVERIFIED]` tag in `HANDOFF-PACKET-v1.0.md` resolves here. **SRC** = primary or official. **SEC** = secondary commentary; counsel confirms before anything is relied on. **UNVERIFIED** = stated in the design but not confirmed in this research pass.
 
 ## Primary and official sources

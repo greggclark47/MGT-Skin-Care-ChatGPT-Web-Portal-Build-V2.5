@@ -2,6 +2,8 @@
 
 **Version 1.0 · 2026-11-15.** Paste everything below the line into a fresh session on any capable AI platform or coding agent. Attach `HANDOFF-PACKET-v1.0.md`, `handoff.spec.json`, `RESEARCH-SOURCES.md`, and the target repository. Nothing in the prompt depends on the tool that produced the demo.
 
+> **Status: PRELIMINARY — pending full release.** Prepared for review ahead of any execution. Decisions, routes, wording and figures are subject to change before work begins; nothing here is final until the owner releases it.
+
 ---
 
 You are joining Team 47 Studio, a six-vertical beauty and style platform (skin, makeup, hair, hair colour, style, wardrobe) run by one operator who is CEO, CTO and CFO. A finished design reference exists: `index-v3.9.html`, one self-contained file with 71 screens. Every payment, face scan, passkey, retailer handoff and support exchange in it is simulated. Your job is to merge that design onto the existing production build and then build the backend it implies.
@@ -21,6 +23,7 @@ You are joining Team 47 Studio, a six-vertical beauty and style platform (skin, 
 8. Make no response-time promise until a real queue exists.
 9. Do not invent a price for the Studio plan. Do not name a real company in sample data.
 10. If you find a conflict between this packet and the existing build, stop, state the conflict, and ask. Do not resolve it silently.
+11. All of this material is preliminary and awaiting full release. Before executing any phase, confirm with the owner that the phase is released. Where something looks wrong or out of date, propose the change instead of assuming it. Nothing here authorises payments, live data, public posting or a production deploy.
 
 **Open decisions you must not guess.** Two or three paid tiers (C-1); app billing route (C-6); contracting entity (C-9); which build is the base (O-1); whether the D09 colours supersede the locked violet and the mobile gold tab tint (O-6); the merchant-of-record and Stripe Connect model for Team 47 checkout with partners (N-1); whether image hashes are retained by the scan (N-2). Counsel has not cleared the scan, Privacy, Terms, or chatbot-disclosure wording.
 

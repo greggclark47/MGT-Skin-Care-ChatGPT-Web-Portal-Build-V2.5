@@ -2,6 +2,8 @@
 
 **Version 1.0 · 2026-11-15 · Internal · For any AI platform or engineering team that will merge the v3.9 design onto the existing build and complete the backend**
 
+> **Status: PRELIMINARY — pending full release.** Prepared for review ahead of any execution. Decisions, routes, wording and figures are subject to change before work begins; nothing here is final until the owner releases it.
+
 Everything here is written to be acted on without the original conversation. The demo is a design reference; every payment, scan, passkey and retailer handoff in it is simulated. This packet says what is real, what is a stand-in, what must never change, and in what order to build.
 
 **Evidence tags used throughout.** `[SRC n]` is a primary or official source listed in `RESEARCH-SOURCES.md`. `[SEC n]` is a secondary source (law-firm or trade commentary) that counsel must confirm. `[ASSUMED]` is a design decision made here with no source behind it. A claim with no tag is a property of the demo and can be checked by running it.

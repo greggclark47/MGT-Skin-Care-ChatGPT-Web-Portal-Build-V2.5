@@ -1,6 +1,9 @@
 # Team 47 Studio — Web Portal & App Overlay Packet
 
 **Version 1.3 · 2026-11-15 · Internal build handoff** · v1.1: O-2 decided · v1.2: utility row, route-driven active state, keyboard reach · v1.3: 71 screens, merged legal routes, Aura utility row, new commerce, scan, security and onboarding screens. Backend detail is in `05-handoff/`.
+
+> **Status: PRELIMINARY — pending full release.** Prepared for review ahead of any execution. Decisions, routes, wording and figures are subject to change before work begins; nothing here is final until the owner releases it.
+
 Maps the D09 v3.9 demo (71 screens) onto an existing production build, screen by screen, with every mapped file verified to exist.
 
 | | |

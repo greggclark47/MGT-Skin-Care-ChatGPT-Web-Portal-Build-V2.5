@@ -111,3 +111,20 @@ export const font = {
 } as const;
 
 export const TAP_TARGET_MIN = 44;
+
+/** Utility row (Applications, Shop, Learn, Retail Partners), v3.9 'Aura'. Light pastel gradients, dark family ink.
+ *  Worst ink-on-stop contrast across all states and modes: 5.03:1. Labels and routes are unchanged. */
+export const utilityAura = {
+  apps: { label: "Applications", route: "/applications",
+    light: {"rest": ["#C9DCFF", "#D9CCFF", "#F0CCF2"], "act": ["#8FB5FF", "#B49DFF", "#E48FDD"], "ink": "#1F1459", "bd": "#9DB1F2", "sh": "#6540D4"},
+    dark: {"rest": ["#A9C7FF", "#C2B1FF", "#E5AEEB"], "act": ["#7FA8FF", "#A28BFF", "#D777D0"], "ink": "#140C3A", "bd": "#C6D2FF", "sh": "#9A80FF"} },
+  shop: { label: "Shop", route: "/shop",
+    light: {"rest": ["#FFD3D9", "#FFC8B0", "#FFE0A8"], "act": ["#FF9CAB", "#FF9E78", "#FFC76B"], "ink": "#601522", "bd": "#F2A9B2", "sh": "#C8442F"},
+    dark: {"rest": ["#FFB3BD", "#FFB08F", "#FFD487"], "act": ["#FF8DA0", "#FF8F66", "#FFBE55"], "ink": "#3A0A13", "bd": "#FFC9CF", "sh": "#F27A6B"} },
+  learn: { label: "Learn", route: "/learn",
+    light: {"rest": ["#BDF0E0", "#BFE7F5", "#C9D8FF"], "act": ["#6FD9B8", "#6FC6E8", "#8FA9FF"], "ink": "#06363D", "bd": "#8FD3C3", "sh": "#0B6F79"},
+    dark: {"rest": ["#8FE3CB", "#8FD6EE", "#A6BEFF"], "act": ["#5ED3AE", "#5EBBE3", "#7F9CFF"], "ink": "#042329", "bd": "#B5F0E0", "sh": "#19AFBE"} },
+  partners: { label: "Retail Partners", route: "/retail-partners",
+    light: {"rest": ["#FFE3A3", "#FFD0A0", "#F7B9C8"], "act": ["#FFC94D", "#FFA85C", "#F27A9A"], "ink": "#4A2800", "bd": "#EDBE72", "sh": "#B8620A"},
+    dark: {"rest": ["#FFD36E", "#FFB877", "#F59BB5"], "act": ["#FFC23A", "#FF9E4D", "#EE6D92"], "ink": "#2E1700", "bd": "#FFE2A0", "sh": "#F0AE47"} },
+} as const;

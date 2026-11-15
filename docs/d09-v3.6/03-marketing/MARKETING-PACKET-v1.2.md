@@ -1,7 +1,7 @@
 # Team 47 Studio — Marketing Packet
 
-**Version 1.1 · 2026-11-15 · For anyone producing Team 47 Studio material: web, social, email, partner decks** · v1.1: utility row colours (§5.2)
-Everything here is taken from the D09 v3.8 build. Colour values come from `tokens/d09-tokens-v3.6.json`; nothing in this document was typed separately from it.
+**Version 1.2 · 2026-11-15 · For anyone producing Team 47 Studio material: web, social, email, partner decks** · v1.1: utility row colours (§5.2) · v1.2: utility row moves to the lighter Aura palette (§5.2); build reference is v3.9
+Everything here is taken from the D09 v3.9 build. Colour values come from `tokens/d09-tokens-v3.6.json`; nothing in this document was typed separately from it.
 
 **In this folder**
 
@@ -128,20 +128,20 @@ Each of the six verticals owns a three-stop ramp at its own angle. Every stop is
 | Coach | Style | AI Coach |
 | Membership | Makeup | Membership |
 
-**Utility row** — the second row, on every web screen
+**Utility row** — the second row, on every web screen. Labels, order and destinations are unchanged. From v3.9 each button is a lighter pastel, in a different family from the saturated header pills above it, so the two rows read as two levels of navigation.
 
-| Button | Ring | Label ink, light / dark | Filled when you are there |
+| Button | Light mode, resting | Light mode, current page | Label ink (light / dark) |
 |---|---|---|---|
-| Applications | Full prism, seven stops | `#6A2BD0` / `#B49BFF` | Teal → blue → violet → berry |
-| Shop | Makeup | `#9A2E9A` / `#EE9CEE` | Berry → brick (also on the cart) |
-| Learn | Hair | `#0B6F79` / `#5FD8E4` | Green → teal → blue |
-| Retail Partners | Color | `#9A4E00` / `#F7B07A` | Burnt orange → ochre |
+| Applications | `#C9DCFF` → `#D9CCFF` → `#F0CCF2` | `#8FB5FF` → `#B49DFF` → `#E48FDD` | `#1F1459` / `#140C3A` |
+| Shop | `#FFD3D9` → `#FFC8B0` → `#FFE0A8` | `#FF9CAB` → `#FF9E78` → `#FFC76B` | `#601522` / `#3A0A13` |
+| Learn | `#BDF0E0` → `#BFE7F5` → `#C9D8FF` | `#6FD9B8` → `#6FC6E8` → `#8FA9FF` | `#06363D` / `#042329` |
+| Retail Partners | `#FFE3A3` → `#FFD0A0` → `#F7B9C8` | `#FFC94D` → `#FFA85C` → `#F27A9A` | `#4A2800` / `#2E1700` |
 
-Each utility button has a gradient ring, a faint tint of its own ramp, and a round icon in its filled colours. The button for the section you are on is filled solid with a white label. The site sets that from the page's address, never guesses it, and announces it to screen readers.
+Dark mode uses brighter, slightly more saturated versions of the same four families so they stay luminous on the navy ground: Applications `#A9C7FF → #C2B1FF → #E5AEEB` resting and `#7FA8FF → #A28BFF → #D777D0` current; Shop `#FFB3BD → #FFB08F → #FFD487` and `#FF8DA0 → #FF8F66 → #FFBE55`; Learn `#8FE3CB → #8FD6EE → #A6BEFF` and `#5ED3AE → #5EBBE3 → #7F9CFF`; Retail Partners `#FFD36E → #FFB877 → #F59BB5` and `#FFC23A → #FF9E4D → #EE6D92`. The full values, with borders and glow, are in `handoff.spec.json` under `demo.utility_row`.
 
-**Why the filled state uses different darks from §5.1 rule 1.** Mixing toward logo navy keeps blue and violet vivid, but it greys warm hues: orange turns brown and coral turns dusty rose. The filled utility buttons use the hue-preserving darks from the light-mode ink table instead (`small_text_ink.light` in the token file). Each clears 5.2:1 against white and keeps its colour. Measured on the rendered buttons, white on filled Shop is 6.71:1, and the unfilled labels are 5.79:1 (Retail Partners) and 6.02:1 (Shop).
+The label is always a deep ink drawn from the same family, never white, because white does not clear 4.5:1 on a pastel. The worst ink-on-stop pair across all four buttons in both modes and both states is 5.03:1. Hover slides the gradient. The button for the section you are on takes the deeper pastel and a 2px ink ring, set from the page's address and announced to screen readers as the current page. Reduced-motion settings turn the slide off. Adjacent buttons never share a family, in either row.
 
-Adjacent buttons never share a ramp, in either row. The fifteen application icons each carry a gradient from the same set, assigned so that no two neighbours match.
+**Why the pastels do not follow §5.1 rule 1.** Rule 1 darkens a ramp until white text clears on it. The utility row goes the other way: light fills with dark ink. The two rows therefore need different rules, and the lighter row is what keeps it visibly secondary to the header.
 
 ### 5.3 Surfaces
 

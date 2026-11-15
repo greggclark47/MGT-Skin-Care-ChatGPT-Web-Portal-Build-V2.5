@@ -1,14 +1,14 @@
 # Team 47 Studio — Web Portal & App Overlay Packet
 
-**Version 1.2 · 2026-11-15 · Internal build handoff** · v1.1: O-2 decided · v1.2: utility row, route-driven active state, keyboard reach
-Maps the D09 v3.8 demo (69 screens) onto an existing production build, screen by screen, with every mapped file verified to exist.
+**Version 1.3 · 2026-11-15 · Internal build handoff** · v1.1: O-2 decided · v1.2: utility row, route-driven active state, keyboard reach · v1.3: 71 screens, merged legal routes, Aura utility row, new commerce, scan, security and onboarding screens. Backend detail is in `05-handoff/`.
+Maps the D09 v3.9 demo (71 screens) onto an existing production build, screen by screen, with every mapped file verified to exist.
 
 | | |
 |---|---|
 | **Target build** | `greggclark47/MGT-Skin-Care-ChatGPT-Web-Portal-Build-V2.5` @ `6b05956` (2026-09-18) — Next.js web, Expo mobile, Express API, live Stripe Checkout |
-| **Source design** | D09 v3.8 demo — `demo/index-v3.8.html` (held privately) |
+| **Source design** | D09 v3.9 demo — `demo/index-v3.9.html` (held privately) |
 | **Classification** | The blueprint's own vocabulary: REUSE · REFACTOR · REPLACE · CREATE · DEFER |
-| **Result** | 7 REUSE · 18 REFACTOR · 3 REPLACE · 30 CREATE · 11 DEFER |
+| **Result** | 4 REUSE · 22 REFACTOR · 1 REPLACE · 33 CREATE · 11 DEFER (71 rows in `screen-map.csv`) |
 
 **Files in this packet**
 
@@ -87,7 +87,7 @@ Each phase ships on its own and can be reverted on its own.
 |---|---|---|---|
 | **A · Theme** | Add `d09-overlay.css` after `globals.css`. Fonts, colour, radius, buttons. No component edits. | Nothing | Removing one import |
 | **B · Brand and copy** | Clear the 22 brand strings. Replace `company`, `trust`, `terms`, `privacy` section copy with v3.6 text. Footer statement and disclaimer. | Counsel S-2/S-4 for Terms and Privacy | Git revert |
-| **C · Routes** | Add `/applications`, `/retail-partners`, `/plans-billing`, `/ai-disclosure`, `/reset-password`, `/setup/intake`. Keep existing paths and redirect old names to new; never break a live URL. | — | Git revert |
+| **C · Routes** | Add `/applications`, `/retail-partners`, `/plans-billing`, `/privacy-terms`, `/trust-and-ai`, `/partners/onboarding`, `/app/progress`, `/app/scan`, `/account/security`, `/reset-password`, `/setup/intake`. Redirect `/terms`, `/privacy` and `/ai-disclosure` to their merged pages. Keep existing paths and redirect old names to new; never break a live URL. | — | Git revert |
 | **D · Journey and plans** | Three-tier entitlement, four Stripe prices, journey state, renewal consent, trial and cycle disclosure. | O-3, O-5, counsel C-5 | Feature flag |
 | **E · Shared tokens** | Merge `tokens.d09.ts`. | O-6 | Git revert |
 | **F · Mobile** | Port the six-tab navigator and vertical screens, restyled. | O-1, E | Separate release |
@@ -101,13 +101,15 @@ Each phase ships on its own and can be reverted on its own.
 These are the parts of the demo the overlay must preserve exactly, because each one is a product rule rather than a style.
 
 - **The journey resumes; it never restarts.** Each step is skipped if already satisfied. Free never reaches checkout. Studio is blocked while its price is unset — the demo deliberately refuses to invent one.
-- **Every interactive element resolves.** The v3.4 audit found 18 dead controls; v3.8 has 2,847 and none are dead. The audit script (`interact.py`) is in the demo repo and should run in CI against the real build.
-- **Contrast is measured, not assumed.** The full sweep covers 6,528 text runs in both modes. Gradient buttons use the darkened stops in the token file — each clears 4.91:1 against white or better.
-- **"You are here" comes from the route.** The utility row (Applications, Shop, Learn, Retail Partners) fills the button for the current section and sets `aria-current="page"` from the URL, never from guessed state. Shop stays filled on `/cart`. In Next.js this is `usePathname()` compared against each button's route list.
+- **Every interactive element resolves.** The v3.4 audit found 18 dead controls; v3.9 has 3,417 and none are dead. The audit script (`interact.py`) is in the demo repo and should run in CI against the real build.
+- **Contrast is measured, not assumed.** The full v3.9 sweep covers 8,250 text runs in both modes; it found one failure on a marketing card caption, since fixed. Gradient buttons use the darkened stops in the token file — each clears 4.91:1 against white or better.
+- **"You are here" comes from the route.** The utility row (Applications, Shop, Learn, Retail Partners, now in the lighter Aura palette) fills the button for the current section and sets `aria-current="page"` from the URL, never from guessed state. Shop stays filled on `/cart`. In Next.js this is `usePathname()` compared against each button's route list.
 - **The header Style button opens the Style studio** (`/app/wardrobe`), the page that highlights Style. Until v3.8 it opened the Applications hub, so clicking Style landed somewhere Style wasn't lit, and the hub would have lit two buttons once Applications had its own.
 - **Every control is keyboard-reachable, with a visible focus ring.** The demo retrofits tab stops onto click-only links and cards. In the real build, use `<Link href>` and `<button>` and don't add `onClick` to a `div` — then nothing needs retrofitting. Focus ring: 2px `--acc2`, offset 2px.
 - **The disclaimer says "cosmetic, not medical" once**, in the footer, followed by the explanation and the copyright line.
 - **The footer copyright is the only place the parent entity appears**, pending counsel's answer on the exact entity name (C-9).
+- **The footer reads Plans & Billing, Company, Trust & AI, Support, Privacy & Terms, Shipping & returns, Partners.** Trust & AI absorbs the former AI disclosure page; Privacy and Terms are one route with two documents on tabs.
+- **Photos, face data and card data never travel to a retailer, and the scan is never a credential.** See `05-handoff/HANDOFF-PACKET-v1.0.md` §2 and §7.
 
 ---
 

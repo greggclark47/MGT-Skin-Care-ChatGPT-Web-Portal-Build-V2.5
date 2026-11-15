@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "t47"
+version = "1.0.0"
+description = "Team 47 Studio deployment and operations packet: diagnostics, model qualification, draft-only agents, release gates, economics."
+requires-python = ">=3.11"
+dependencies = []
+
+[project.optional-dependencies]
+workbook = ["openpyxl>=3.1"]
+backup = ["cryptography>=42"]
+assets = ["Pillow>=10"]
+dev = ["pytest>=8", "openpyxl>=3.1", "cryptography>=42", "Pillow>=10"]
+
+[project.scripts]
+t47 = "t47.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["t47*"]
+
+[tool.setuptools.package-data]
+t47 = ["data/*.json"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

@@ -2,6 +2,8 @@
 
 Version 2.0 · 2026-11-14 · Design concepts, not production code.
 
+> D09 Card Grid is superseded by v2.1: see `d09-v2.1-transfer-packet/` (web portal, iOS, Android, Google Play, App Store).
+
 Ten end-to-end interface designs for the Team 47 Studio web portal and app. Every design uses the established logo (prism "47" mark + "Team Studio" wordmark), works in light and dark mode, and shows the Free / Guided / Studio membership.
 
 ## What is here

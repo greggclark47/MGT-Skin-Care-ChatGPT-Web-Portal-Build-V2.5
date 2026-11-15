@@ -1,0 +1,83 @@
+board_file,platform,screen,mode,width,height,summary
+boards/D09-W1-Home-dark.dc.html,web,Homepage,dark,1280,5769,"Prism pill navigation (Skin, Color, Style, Coach, Membership); live-tile hero; five illustrated entry tiles; ""Made to fit you, not an average"" band that replaces the old stats line; skin, six-tool, coach and membership sections; closing call to action; footer with Terms and What to expect links."
+boards/D09-W2-Result-dark.dc.html,web,"Skin Match result, before sign-up",dark,1280,1598,"Skin Match result shown before sign-up: skin summary, color season tile, PM routine, a ""What to expect"" tile, and where the profile goes next."
+boards/D09-W3-Portal-dark.dc.html,web,Signed-in portal home,dark,1280,1159,"Signed-in home: sidebar, tonight's routine, cart, AI Coach tile and six vertical tiles with status."
+boards/D09-W4-Membership-dark.dc.html,web,"Membership: Free, Guided, Studio",dark,1280,1960,"Free, Guided and Studio tiers and a comparison table. Studio price is a placeholder."
+boards/D09-IOS-A01-Welcome-dark.dc.html,ios,Welcome,dark,390,844,"First screen: logo on solid ground, patterned hero card, three-step strip, start button."
+boards/D09-IOS-A02-Match-dark.dc.html,ios,Skin Match question,dark,390,844,One Skin Match question (skin tone) with swatches; progress and edit-anytime note.
+boards/D09-IOS-A03-Result-dark.dc.html,ios,Skin Match result,dark,390,844,Result summary with a patterned color-season card and what the result is based on.
+boards/D09-IOS-A04-Home-dark.dc.html,ios,Home,dark,390,844,"Greeting, tonight's routine tile, six vertical tiles, shop and coach rows."
+boards/D09-IOS-A05-Routine-dark.dc.html,ios,Routine,dark,390,844,AM/PM routine with progress and a mark-done action.
+boards/D09-IOS-A06-Shop-dark.dc.html,ios,Shop My Routine,dark,390,844,Ready-made cart from the routine; each item says why it was picked.
+boards/D09-IOS-A07-Makeup-dark.dc.html,ios,Makeup shade match,dark,390,844,Shade matches by product type; ranges outside the depth are left out and said so.
+boards/D09-IOS-A08-Lift-dark.dc.html,ios,Hair color lift check,dark,390,844,"Hair color lift check: safe direction first, stepwise plan, refusal state when a goal is not advisable."
+boards/D09-IOS-A09-Style-dark.dc.html,ios,Style guidance,dark,390,844,"Preference chips (no particular emphasis first), palette as a nudge, never a rule."
+boards/D09-IOS-A10-CoachPreview-dark.dc.html,ios,AI Coach preview (Free),dark,390,844,Free coach preview with a patterned Guided upgrade card.
+boards/D09-IOS-A11-CoachChat-dark.dc.html,ios,AI Coach chat (Guided),dark,390,844,Guided coach chat; every answer lists what it was based on.
+boards/D09-IOS-A12-Profile-dark.dc.html,ios,Profile,dark,390,844,"Profile, plan, saved answers, privacy and AI disclosure."
+boards/D09-AND-A01-Welcome-dark.dc.html,android,Welcome,dark,412,915,"First screen: logo on solid ground, patterned hero card, three-step strip, start button."
+boards/D09-AND-A02-Match-dark.dc.html,android,Skin Match question,dark,412,915,One Skin Match question (skin tone) with swatches; progress and edit-anytime note.
+boards/D09-AND-A03-Result-dark.dc.html,android,Skin Match result,dark,412,915,Result summary with a patterned color-season card and what the result is based on.
+boards/D09-AND-A04-Home-dark.dc.html,android,Home,dark,412,915,"Greeting, tonight's routine tile, six vertical tiles, shop and coach rows."
+boards/D09-AND-A05-Routine-dark.dc.html,android,Routine,dark,412,915,AM/PM routine with progress and a mark-done action.
+boards/D09-AND-A06-Shop-dark.dc.html,android,Shop My Routine,dark,412,915,Ready-made cart from the routine; each item says why it was picked.
+boards/D09-AND-A07-Makeup-dark.dc.html,android,Makeup shade match,dark,412,915,Shade matches by product type; ranges outside the depth are left out and said so.
+boards/D09-AND-A08-Lift-dark.dc.html,android,Hair color lift check,dark,412,915,"Hair color lift check: safe direction first, stepwise plan, refusal state when a goal is not advisable."
+boards/D09-AND-A09-Style-dark.dc.html,android,Style guidance,dark,412,915,"Preference chips (no particular emphasis first), palette as a nudge, never a rule."
+boards/D09-AND-A10-CoachPreview-dark.dc.html,android,AI Coach preview (Free),dark,412,915,Free coach preview with a patterned Guided upgrade card.
+boards/D09-AND-A11-CoachChat-dark.dc.html,android,AI Coach chat (Guided),dark,412,915,Guided coach chat; every answer lists what it was based on.
+boards/D09-AND-A12-Profile-dark.dc.html,android,Profile,dark,412,915,"Profile, plan, saved answers, privacy and AI disclosure."
+store/google-play/screenshots/dark/01-profile-before-sign-up.png,google-play,"Screenshot 1: Your profile, before sign-up.",dark,1080,1920,See your result first. Every answer stays editable.
+store/google-play/screenshots/dark/02-studio-home.png,google-play,Screenshot 2: Your whole studio on one screen.,dark,1080,1920,"Skin, makeup, hair, color, style and clothing."
+store/google-play/screenshots/dark/03-routine.png,google-play,Screenshot 3: Steps in your order.,dark,1080,1920,Updated as you go. You approve every change.
+store/google-play/screenshots/dark/04-shade-match.png,google-play,Screenshot 4: Shades matched to your depth.,dark,1080,1920,"Ranges that do not fit are left out, not forced."
+store/google-play/screenshots/dark/05-ai-coach.png,google-play,Screenshot 5: Answers that say what they used.,dark,1080,1920,Guided members get a coach that knows their profile.
+store/google-play/screenshots/dark/06-style.png,google-play,"Screenshot 6: Wear what you like, guided by color.",dark,1080,1920,"Preferences, never rules."
+store/app-store/screenshots/dark/01-profile-before-sign-up.png,app-store,"Screenshot 1: Your profile, before sign-up.",dark,1206,2622,See your result first. Every answer stays editable.
+store/app-store/screenshots/dark/02-studio-home.png,app-store,Screenshot 2: Your whole studio on one screen.,dark,1206,2622,"Skin, makeup, hair, color, style and clothing."
+store/app-store/screenshots/dark/03-routine.png,app-store,Screenshot 3: Steps in your order.,dark,1206,2622,Updated as you go. You approve every change.
+store/app-store/screenshots/dark/04-shade-match.png,app-store,Screenshot 4: Shades matched to your depth.,dark,1206,2622,"Ranges that do not fit are left out, not forced."
+store/app-store/screenshots/dark/05-ai-coach.png,app-store,Screenshot 5: Answers that say what they used.,dark,1206,2622,Guided members get a coach that knows their profile.
+store/app-store/screenshots/dark/06-style.png,app-store,"Screenshot 6: Wear what you like, guided by color.",dark,1206,2622,"Preferences, never rules."
+store/google-play/feature-graphic/feature-graphic-dark-1024x500.png,google-play,Feature graphic,dark,1024,500,Logo and headline on solid ground; prism art on pattern.
+boards/D09-W1-Home-light.dc.html,web,Homepage,light,1280,5769,"Prism pill navigation (Skin, Color, Style, Coach, Membership); live-tile hero; five illustrated entry tiles; ""Made to fit you, not an average"" band that replaces the old stats line; skin, six-tool, coach and membership sections; closing call to action; footer with Terms and What to expect links."
+boards/D09-W2-Result-light.dc.html,web,"Skin Match result, before sign-up",light,1280,1598,"Skin Match result shown before sign-up: skin summary, color season tile, PM routine, a ""What to expect"" tile, and where the profile goes next."
+boards/D09-W3-Portal-light.dc.html,web,Signed-in portal home,light,1280,1159,"Signed-in home: sidebar, tonight's routine, cart, AI Coach tile and six vertical tiles with status."
+boards/D09-W4-Membership-light.dc.html,web,"Membership: Free, Guided, Studio",light,1280,1960,"Free, Guided and Studio tiers and a comparison table. Studio price is a placeholder."
+boards/D09-IOS-A01-Welcome-light.dc.html,ios,Welcome,light,390,844,"First screen: logo on solid ground, patterned hero card, three-step strip, start button."
+boards/D09-IOS-A02-Match-light.dc.html,ios,Skin Match question,light,390,844,One Skin Match question (skin tone) with swatches; progress and edit-anytime note.
+boards/D09-IOS-A03-Result-light.dc.html,ios,Skin Match result,light,390,844,Result summary with a patterned color-season card and what the result is based on.
+boards/D09-IOS-A04-Home-light.dc.html,ios,Home,light,390,844,"Greeting, tonight's routine tile, six vertical tiles, shop and coach rows."
+boards/D09-IOS-A05-Routine-light.dc.html,ios,Routine,light,390,844,AM/PM routine with progress and a mark-done action.
+boards/D09-IOS-A06-Shop-light.dc.html,ios,Shop My Routine,light,390,844,Ready-made cart from the routine; each item says why it was picked.
+boards/D09-IOS-A07-Makeup-light.dc.html,ios,Makeup shade match,light,390,844,Shade matches by product type; ranges outside the depth are left out and said so.
+boards/D09-IOS-A08-Lift-light.dc.html,ios,Hair color lift check,light,390,844,"Hair color lift check: safe direction first, stepwise plan, refusal state when a goal is not advisable."
+boards/D09-IOS-A09-Style-light.dc.html,ios,Style guidance,light,390,844,"Preference chips (no particular emphasis first), palette as a nudge, never a rule."
+boards/D09-IOS-A10-CoachPreview-light.dc.html,ios,AI Coach preview (Free),light,390,844,Free coach preview with a patterned Guided upgrade card.
+boards/D09-IOS-A11-CoachChat-light.dc.html,ios,AI Coach chat (Guided),light,390,844,Guided coach chat; every answer lists what it was based on.
+boards/D09-IOS-A12-Profile-light.dc.html,ios,Profile,light,390,844,"Profile, plan, saved answers, privacy and AI disclosure."
+boards/D09-AND-A01-Welcome-light.dc.html,android,Welcome,light,412,915,"First screen: logo on solid ground, patterned hero card, three-step strip, start button."
+boards/D09-AND-A02-Match-light.dc.html,android,Skin Match question,light,412,915,One Skin Match question (skin tone) with swatches; progress and edit-anytime note.
+boards/D09-AND-A03-Result-light.dc.html,android,Skin Match result,light,412,915,Result summary with a patterned color-season card and what the result is based on.
+boards/D09-AND-A04-Home-light.dc.html,android,Home,light,412,915,"Greeting, tonight's routine tile, six vertical tiles, shop and coach rows."
+boards/D09-AND-A05-Routine-light.dc.html,android,Routine,light,412,915,AM/PM routine with progress and a mark-done action.
+boards/D09-AND-A06-Shop-light.dc.html,android,Shop My Routine,light,412,915,Ready-made cart from the routine; each item says why it was picked.
+boards/D09-AND-A07-Makeup-light.dc.html,android,Makeup shade match,light,412,915,Shade matches by product type; ranges outside the depth are left out and said so.
+boards/D09-AND-A08-Lift-light.dc.html,android,Hair color lift check,light,412,915,"Hair color lift check: safe direction first, stepwise plan, refusal state when a goal is not advisable."
+boards/D09-AND-A09-Style-light.dc.html,android,Style guidance,light,412,915,"Preference chips (no particular emphasis first), palette as a nudge, never a rule."
+boards/D09-AND-A10-CoachPreview-light.dc.html,android,AI Coach preview (Free),light,412,915,Free coach preview with a patterned Guided upgrade card.
+boards/D09-AND-A11-CoachChat-light.dc.html,android,AI Coach chat (Guided),light,412,915,Guided coach chat; every answer lists what it was based on.
+boards/D09-AND-A12-Profile-light.dc.html,android,Profile,light,412,915,"Profile, plan, saved answers, privacy and AI disclosure."
+store/google-play/screenshots/light/01-profile-before-sign-up.png,google-play,"Screenshot 1: Your profile, before sign-up.",light,1080,1920,See your result first. Every answer stays editable.
+store/google-play/screenshots/light/02-studio-home.png,google-play,Screenshot 2: Your whole studio on one screen.,light,1080,1920,"Skin, makeup, hair, color, style and clothing."
+store/google-play/screenshots/light/03-routine.png,google-play,Screenshot 3: Steps in your order.,light,1080,1920,Updated as you go. You approve every change.
+store/google-play/screenshots/light/04-shade-match.png,google-play,Screenshot 4: Shades matched to your depth.,light,1080,1920,"Ranges that do not fit are left out, not forced."
+store/google-play/screenshots/light/05-ai-coach.png,google-play,Screenshot 5: Answers that say what they used.,light,1080,1920,Guided members get a coach that knows their profile.
+store/google-play/screenshots/light/06-style.png,google-play,"Screenshot 6: Wear what you like, guided by color.",light,1080,1920,"Preferences, never rules."
+store/app-store/screenshots/light/01-profile-before-sign-up.png,app-store,"Screenshot 1: Your profile, before sign-up.",light,1206,2622,See your result first. Every answer stays editable.
+store/app-store/screenshots/light/02-studio-home.png,app-store,Screenshot 2: Your whole studio on one screen.,light,1206,2622,"Skin, makeup, hair, color, style and clothing."
+store/app-store/screenshots/light/03-routine.png,app-store,Screenshot 3: Steps in your order.,light,1206,2622,Updated as you go. You approve every change.
+store/app-store/screenshots/light/04-shade-match.png,app-store,Screenshot 4: Shades matched to your depth.,light,1206,2622,"Ranges that do not fit are left out, not forced."
+store/app-store/screenshots/light/05-ai-coach.png,app-store,Screenshot 5: Answers that say what they used.,light,1206,2622,Guided members get a coach that knows their profile.
+store/app-store/screenshots/light/06-style.png,app-store,"Screenshot 6: Wear what you like, guided by color.",light,1206,2622,"Preferences, never rules."
+store/google-play/feature-graphic/feature-graphic-light-1024x500.png,google-play,Feature graphic,light,1024,500,Logo and headline on solid ground; prism art on pattern.

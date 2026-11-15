@@ -20,12 +20,12 @@ W8,Account & payment,Order confirmed,/order/confirmed,,n/a,CREATE,Return page fo
 W11,Account & payment,Account center,/account,apps/web/src/app/account/page.tsx,yes,REFACTOR,Account centre.
 W12,Account & payment,Change plan,/account/plan,,n/a,CREATE,Change-plan route; wire to billing portal or checkout with proration per Terms 8.6.
 W32,Account & payment,Password reset,/reset-password,,n/a,CREATE,Password reset. Depends on consumer auth.
-W33,Account & payment,Setup — intake,/setup/intake,,n/a,CREATE,Setup intake. CONFLICTS with locked swatch-picking ruling — see O-1 before building.
+W33,Account & payment,Setup — intake,/setup/intake,,n/a,CREATE,Setup intake. Swatch-first with optional consent-gated photo (O-2 decided 2026-11-15). Matches Terms 4.1-4.2.
 W5,Commerce,Shop / The Edit,/shop,apps/web/src/app/shop/page.tsx,yes,REUSE,ShopView; tokens only.
 W6,Commerce,Cart — Shop My Routine,/cart,apps/web/src/app/cart/page.tsx,yes,REUSE,Shop My Routine cart.
 W21,Commerce,Retail Partners,/retail-partners,apps/web/src/app/saved/page.tsx,yes,REFACTOR,Rename Saved retailers to Retail Partners; route /retail-partners with redirect from /saved.
 W22,Commerce,Order history,/account/orders,apps/web/src/app/orders/page.tsx,yes,REUSE,Tokens; add Reorder.
-W23,Company & trust,Company,/company,apps/web/src/app/[section]/page.tsx,yes,REFACTOR,"section ""company"" — replace copy with v3.5 Company statement."
+W23,Company & trust,Company,/company,apps/web/src/app/[section]/page.tsx,yes,REFACTOR,"section ""company"" — replace copy with v3.7 Company page (kept lines: A studio like no other. / Based on value, results focused on you in every aspect. Simply you.)."
 W24,Company & trust,Trust & AI disclosure,/trust-and-ai,apps/web/src/app/[section]/page.tsx,yes,REFACTOR,"section ""trust""; demo route /trust-and-ai."
 W25,Company & trust,Terms & what to expect,/terms,apps/web/src/app/[section]/page.tsx,yes,REPLACE,"section ""terms"" is a placeholder; replace with Common Terms v3.0.0 once counsel approves."
 W26,Company & trust,Privacy,/privacy,apps/web/src/app/[section]/page.tsx,yes,REPLACE,"section ""privacy""; replace with summary page plus full notice. Counsel S-3."

@@ -1,12 +1,12 @@
 # Team 47 Studio — Web Portal & App Overlay Packet
 
-**Version 1.0 · 2026-11-15 · Internal build handoff**
-Maps the D09 v3.6 demo (69 screens) onto an existing production build, screen by screen, with every mapped file verified to exist.
+**Version 1.1 · 2026-11-15 · Internal build handoff** · v1.1: O-2 decided and applied in demo v3.7
+Maps the D09 v3.7 demo (69 screens) onto an existing production build, screen by screen, with every mapped file verified to exist.
 
 | | |
 |---|---|
 | **Target build** | `greggclark47/MGT-Skin-Care-ChatGPT-Web-Portal-Build-V2.5` @ `6b05956` (2026-09-18) — Next.js web, Expo mobile, Express API, live Stripe Checkout |
-| **Source design** | D09 v3.6 demo — `demo/index-v3.6.html` |
+| **Source design** | D09 v3.7 demo — `demo/index-v3.7.html` (held privately) |
 | **Classification** | The blueprint's own vocabulary: REUSE · REFACTOR · REPLACE · CREATE · DEFER |
 | **Result** | 7 REUSE · 18 REFACTOR · 3 REPLACE · 30 CREATE · 11 DEFER |
 
@@ -41,13 +41,13 @@ There are two lineages, and they have diverged.
 
 This packet maps the GitHub build because it is the one I could read file by file today. The Drive build is further along on product logic; this one is further along on billing. **Recommendation:** the Drive build as the base, with this repo's `portal/billing.ts` and `portal/payments.ts` ported across, since they are the most complete Stripe integration in either lineage. If you choose the GitHub build instead, the 30 CREATE rows shrink considerably for web and grow for mobile.
 
-### O-2 · The intake screen conflicts with a locked ruling `BLOCKS W33`
+### O-2 · Intake is swatch-first `DECIDED 2026-11-15`
 
 The v3.5 brief asked for "image and scan intake." The demo's W33 leads with a photo. The project record locks **swatch-picking, not camera** for colour sampling (SC-P9 web, re-asserted SC-P10 mobile) on two grounds: it keeps samples from ever being an image, and phone white balance is a documented cause of wrong undertone reads.
 
-The Terms already reconcile the two. §4.1 says matching "can be completed entirely by selecting from on-screen swatches"; §4.2 makes a photo upload and a guided scan strictly optional extras. **Recommendation:** rebuild W33 swatch-first, with the photo offered as an optional accuracy step exactly as §4.2 words it.
+The Terms already reconcile the two. §4.1 says matching "can be completed entirely by selecting from on-screen swatches"; §4.2 makes a photo upload and a guided scan strictly optional extras. **Decided 2026-11-15, applied in demo v3.7.** W33 now leads with a twelve-step swatch ladder running to `#33220F` and a self-reported undertone (Cool, Neutral, Warm, Olive, Not sure). Continue stays disabled until both are chosen. The photo is an optional card beneath, gated by a consent checkbox, with copy that follows §4.2 and §4.5. Build it to that shape.
 
-The demo also says the photo is "read in your browser … nothing is uploaded." That is true of the simulation and false of the product as the Terms describe it — §4.5 sends the image to an image-analysis processor. Production copy must follow §4.5.
+The demo's photo copy now matches §4.5 — sent to an image-analysis service, released within thirty seconds, never stored. Production copy must say the same.
 
 ### O-3 · The entitlement can't represent three plans `BLOCKS W4, W12, W13, W31`
 
@@ -101,7 +101,7 @@ Each phase ships on its own and can be reverted on its own.
 These are the parts of the demo the overlay must preserve exactly, because each one is a product rule rather than a style.
 
 - **The journey resumes; it never restarts.** Each step is skipped if already satisfied. Free never reaches checkout. Studio is blocked while its price is unset — the demo deliberately refuses to invent one.
-- **Every interactive element resolves.** The v3.4 audit found 18 dead controls; v3.6 has 2,811 and none are dead. The audit script (`interact.py`) is in the demo repo and should run in CI against the real build.
+- **Every interactive element resolves.** The v3.4 audit found 18 dead controls; v3.7 has 2,847 and none are dead. The audit script (`interact.py`) is in the demo repo and should run in CI against the real build.
 - **Contrast is measured, not assumed.** The full sweep covers 6,528 text runs in both modes. Gradient buttons use the darkened stops in the token file — each clears 4.91:1 against white or better.
 - **The disclaimer says "cosmetic, not medical" once**, in the footer, followed by the explanation and the copyright line.
 - **The footer copyright is the only place the parent entity appears**, pending counsel's answer on the exact entity name (C-9).

@@ -1,6 +1,6 @@
 # 02 Deployment strategy
 
-Version 1.0.0, 2026-11-14. Source labels: [REPO] recorded in the repository or Drive; [WEB] read from a current public source on 2026-11-14; [ESTIMATE] planning figure; [DECISION] needs the owner.
+Version 1.1.0, 2026-11-15. Source labels: [REPO] recorded in the repository or Drive; [WEB] read from a current public source on 2026-11-14; [ESTIMATE] planning figure; [DECISION] needs the owner.
 
 ## 1. Topology: two planes, one rule between them
 
@@ -41,7 +41,7 @@ One Expo project builds both stores. Identifier `com.team47studio.app` on both. 
 
 **Android and Google Play.** Scripts exist for preview, production and internal submit. Remaining: link the Expo project (`eas login`, `eas init`), produce a signed AAB, test on a physical device, complete the Play Console forms (listing, Data safety from `PLAY-DATA-SAFETY-DRAFT.md`, content rating, policy URLs), upload to the internal track. Store images from the D09 v2.1 packet pass `t47 release assets` (35 of 35 checks). One-time Play registration is $25. [REPO]
 
-**iOS and App Store.** No iOS build or submit script exists in `apps/mobile` yet. Remaining: Apple Developer Program enrollment ($99 a year [REPO]), add `ios:preview`, `ios:production` and `ios:submit` scripts mirroring the Android ones, an EAS iOS build, TestFlight on a device, App Privacy answers, age rating, review notes, and an in-app account deletion path, which App Review requires for apps that create accounts.
+**iOS and App Store.** No iOS build or submit script exists in `apps/mobile` yet; `merge/patches/0001` adds `ios:preview`, `ios:production` and `ios:submit:testflight`, mirroring the Android ones (the mobile contract test still passes with it applied). `eas.json` has no iOS submit profile, so the first submit will ask for the App Store Connect details interactively. Remaining: Apple Developer Program enrollment ($99 a year [REPO]), an EAS iOS build, TestFlight on a device, App Privacy answers, age rating, review notes, and an in-app account deletion path, which App Review requires for apps that create accounts.
 
 **Mobile billing route [DECISION].** This sets the fee line and what App Review will accept. Options:
 
@@ -63,6 +63,7 @@ Fee facts behind the table are in `06-ECONOMICS-AND-ROI.md` with sources. Record
 | DR-4 | Mobile billing: option A for first submission | Adopt, revisit after 90 days of data | [DECISION] |
 | DR-5 | Ollama Cloud stays off until G12; then pay-as-you-go before any subscription tier | Adopt | [DECISION] |
 | DR-6 | Make the repository private, or move internal documents out of it | Do one before any launch publicity | [DECISION] |
+| DR-7 | Merge order across this packet, the D09 v3.9 handoff and the candidate build (`10-MERGE-PLAN.md`) | Adopt | [DECISION] |
 
 ## 6. Rollback
 

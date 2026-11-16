@@ -9,6 +9,7 @@ from t47.util import Fetch, http_request, tls_expiry_days
 
 SECURITY_HEADERS = ("strict-transport-security", "content-security-policy", "x-content-type-options", "referrer-policy")
 POLICY_PATHS = ("/privacy", "/terms", "/ai-disclosure", "/support", "/membership")
+V39_PATHS = ("/privacy-terms", "/trust-and-ai", "/partners/onboarding", "/account/security")
 # The route contract verified in the 2026-11-13 checkpoint: /healthz and /api/hub/session answer 200;
 # /readyz stays 503 until the backup and catalog gates pass, which is the intended fail-closed state.
 API_PROBES = (("/healthz", (200,)), ("/readyz", (200, 503)), ("/api/hub/session", (200,)))
@@ -73,6 +74,9 @@ def run(origin: str, www: str, *, fetch: Fetch = http_request, tls_days=tls_expi
     for path in POLICY_PATHS:
         resp = fetch(origin + path, timeout=timeout, follow_redirects=True)
         report.add(f"site.page{path.replace('/', '.')}", f"Page {path}", "pass" if resp.status == 200 else "warn", f"HTTP {resp.status}")
+    for path in V39_PATHS:  # proposed in the D09 v3.9 handoff; absent until that merge ships, so never a warning
+        resp = fetch(origin + path, timeout=timeout, follow_redirects=True)
+        report.add(f"site.v39{path.replace('/', '.')}", f"D09 v3.9 route {path}", "info", "present" if resp.status == 200 else f"not live (HTTP {resp.status})")
 
     for path in ("/robots.txt", "/sitemap.xml"):
         resp = fetch(origin + path, timeout=timeout)

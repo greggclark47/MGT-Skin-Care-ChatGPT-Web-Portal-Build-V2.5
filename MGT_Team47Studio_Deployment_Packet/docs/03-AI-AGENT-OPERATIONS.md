@@ -1,6 +1,6 @@
 # 03 AI and agent operations
 
-Version 1.0.0, 2026-11-14.
+Version 1.1.0, 2026-11-15.
 
 ## 1. How the pieces fit
 
@@ -27,6 +27,12 @@ Rules are regular expressions, so the same draft always gets the same verdict. `
 
 Two limits to know. Rules catch phrasing, not meaning, so a careful reviewer still matters. And a negation within five words clears a negatable rule ("not a diagnosis"), which a determined writer could misuse; the reviewer sees the full draft.
 
+### Deterministic triage for customer care (1.1.0)
+
+Before any model call, a customer-care brief is checked for the four hard escalations in the D09 v3.9 handoff: a reaction or safety concern, a privacy or deletion request, a payment dispute, or a request for a person. A match produces a fixed reply and a flagged draft, with no model call. The reaction reply is fixed wording (stop, rinse, seek medical or emergency help, no assessment). This is cheaper and more predictable than asking a model, and it cannot be talked out of the rule.
+
+A payment card number is refused in a brief and blocked in a draft (13 to 19 digits passing the Luhn check). Photos, scan results, card details and health information are the handoff's never-share list; this packet has no path that reads any of them.
+
 ## 4. Review flow
 
 ```
@@ -43,7 +49,7 @@ The export uses the portal's artifact shape and digest rule under its own schema
 
 ## 5. Model plan
 
-Incumbents stay: `qwen3.5:4b` for drafting and tool use, `deepseek-r1:8b` for reasoning, both measured on the RTX 5080 in the repository's 2026-11-06 report. Candidates to qualify, all open-weight and all screened against 16 GB: `gemma4:12b`, `gemma4:e4b`, `qwen3.5:9b`, `mistral-small3.2`. `qwen3.8:27b` is reported at 18 GB and would spill to CPU. Sizes and capabilities are published figures, not measurements; `t47 models list` shows the source of each.
+Incumbents stay: `qwen3.5:4b` for drafting and tool use, `deepseek-r1:8b` for reasoning, both measured on the RTX 5080 in the repository's 2026-11-06 report. Candidates to qualify, all open-weight and all screened against 16 GB: `gemma4:12b`, `gemma4:e4b` and `qwen3.5:9b` (6.6 GB) fit. `mistral-small3.2` is 15 GB, which leaves about 1 GB, so expect CPU spill; it is low priority. `qwen3.8:27b` is reported at 18 GB and would spill to CPU. Sizes and capabilities are published figures, not measurements; `t47 models list` shows the source of each.
 
 **The rule.** `t47 models bakeoff` runs 15 synthetic cases (10 of them safety cases) on each model and prints PROPOSE only when the candidate has no request errors, fails no safety case, passes at least as many cases as the incumbent, stays inside a 30-second p95, and is better on one measure. PROPOSE is a recommendation. The repository's task registry changes only after the owner accepts it and the staging regression passes (gate G12).
 

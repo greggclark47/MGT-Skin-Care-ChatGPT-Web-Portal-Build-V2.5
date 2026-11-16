@@ -1,6 +1,6 @@
 # 08 Release checklists
 
-Version 1.0.0, 2026-11-14. Built from the production diagnostic (2026-11-13), the candidate `47d405b` checkpoint and `docs/PROJECT-TODO-2026-11-14.md`. The live list is `t47 release gates`; this page is the reading copy.
+Version 1.1.0, 2026-11-15. Built from the production diagnostic (2026-11-13), the candidate `47d405b` checkpoint and `docs/PROJECT-TODO-2026-11-14.md`. The live list is `t47 release gates`; this page is the reading copy.
 
 **Decision today: HOLD on web, Android, iOS and the local agent plane.** A platform ships only when every P0 gate that applies to it is accepted by a named person with an evidence reference. "Reported" means a document says the work was done; it is not acceptance.
 
@@ -18,11 +18,13 @@ Version 1.0.0, 2026-11-14. Built from the production diagnostic (2026-11-13), th
 | G04 | Stripe test matrix, then a controlled live smoke, reconciled | reported locally; provider rehearsal not run |
 | G09 | Named approvers and a signed release authorization | open |
 
-G07 and G08 come first because they are what keeps `/readyz` at 503. G09 is last by nature.
+| G25 | Optional face scan off by feature flag, or counsel sign-off on file | open (added 1.1.0) |
+
+G07 and G08 come first because they are what keeps `/readyz` at 503. G09 is last by nature. G25 applies to all three platforms.
 
 ## Before broad marketing: P1
 
-G10 accessibility audit (WCAG 2.2 AA), G11 support and incident ownership, G12 AI routing approval, G13 customer image storage.
+G10 accessibility audit (WCAG 2.2 AA), G11 support and incident ownership, G12 AI routing approval, G13 customer image storage, G24 D09 v3.9 handoff released by the owner with the base-build, merchant-of-record and entity-name decisions recorded.
 
 ## Android and Google Play
 

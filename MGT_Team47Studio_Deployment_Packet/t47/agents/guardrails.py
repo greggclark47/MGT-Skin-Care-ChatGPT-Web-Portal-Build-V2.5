@@ -112,6 +112,8 @@ def scan(text: str, profile: str, *, brief: str = "", required_tokens: tuple[str
     if profile not in PROFILES:
         raise KeyError(f"unknown guardrail profile: {profile}")
     found: list[Violation] = []
+    if contains_card_number(text):
+        found.append(Violation("card_data", "block", "[redacted]", "A payment card number must never appear in a draft."))
     brief_lower = brief.lower()
     for rule_id in PROFILES[profile]:
         rule = RULES[rule_id]
@@ -133,6 +135,19 @@ def scan(text: str, profile: str, *, brief: str = "", required_tokens: tuple[str
     if max_words and len(text.split()) > max_words:
         found.append(Violation("word_limit", "review", str(len(text.split())), f"Longer than the {max_words}-word target."))
     return found
+
+
+_CARD = re.compile(r"(?<!\d)(?:\d[ -]?){12,18}\d(?!\d)")
+
+
+def contains_card_number(text: str) -> bool:
+    """True when the text holds a 13 to 19 digit run that passes the Luhn check. Card data is on the never-share list."""
+    for found in _CARD.finditer(text):
+        digits = [int(c) for c in found.group(0) if c.isdigit()]
+        total = sum(d if i % 2 == 0 else (d * 2 - 9 if d * 2 > 9 else d * 2) for i, d in enumerate(reversed(digits)))
+        if total % 10 == 0 and len(set(digits)) > 1:
+            return True
+    return False
 
 
 def verdict(violations: list[Violation]) -> str:

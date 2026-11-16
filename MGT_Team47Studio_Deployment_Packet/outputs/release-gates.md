@@ -23,3 +23,5 @@
 | G21 | P2 | web | open | Load, rate-limit and abuse tests before broad marketing traffic | Platform | Test report |  |  |
 | G22 | P2 | web | open | One authoritative runbook reconciling older Cloudflare and GCP documents | Platform | Runbook approved by the platform owner |  |  |
 | G23 | P0 | ops | open | Local agent plane qualified: bake-off, OpenClaw audit, injection cases, review queue, encrypted backup | AI owner | Bake-off report, audit report and a verified agent-plane backup |  |  |
+| G24 | P1 | web, android, ios | open | D09 v3.9 handoff released by the owner and base build decided (handoff items O-1, N-1, C-9) | Owner | Owner release note replacing the PRELIMINARY status; merchant-of-record and entity-name decisions recorded |  |  |
+| G25 | P0 | web, android, ios | open | Optional face scan is off by feature flag, or counsel sign-off is on file | Owner and counsel | Flag state in the deployed configuration, or the signed counsel review (handoff section 7) |  |  |

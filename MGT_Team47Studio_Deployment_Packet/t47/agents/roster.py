@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 
 from t47.util import load_data
 
-PROMPT_VERSION = "t47-agents-1.0.0"
+PROMPT_VERSION = "t47-agents-1.1.0"
 
 
 @dataclass(frozen=True)

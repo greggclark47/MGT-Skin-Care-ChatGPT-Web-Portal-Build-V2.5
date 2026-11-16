@@ -1,7 +1,7 @@
 # OpenClaw policy audit
 
 Target: `config/openclaw.team47.fragment.json5`  
-Generated: 2026-11-15T02:51:16Z  
+Generated: 2026-11-16T00:03:08Z  
 Result: 11 pass, 0 warn, 0 fail, 2 info, 0 skipped
 
 > Static check of the file only. Run `openclaw doctor` and OpenClaw's security audit as well.

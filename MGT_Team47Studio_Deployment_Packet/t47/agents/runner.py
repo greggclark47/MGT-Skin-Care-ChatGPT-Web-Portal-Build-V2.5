@@ -8,7 +8,8 @@ from __future__ import annotations
 import json
 import re
 
-from t47.agents.guardrails import Violation, scan
+from t47.agents.guardrails import Violation, contains_card_number, scan
+from t47.agents.triage import triage
 from t47.agents.queue import Store
 from t47.agents.roster import PROMPT_VERSION, Agent, get_agent
 from t47.agents.sources import validate_sources
@@ -66,6 +67,8 @@ def validate_brief(brief: str) -> str:
         raise ValueError(f"brief is longer than {MAX_BRIEF_CHARS} characters")
     if re.search(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]", brief):
         raise ValueError("brief contains control characters")
+    if contains_card_number(brief):
+        raise ValueError("brief appears to contain a payment card number; remove it (card details are never shared with a model)")
     return brief
 
 
@@ -81,6 +84,17 @@ def run_agent(agent_id: str, brief: str, *, settings: Settings, store: Store | N
         return {"dry_run": True, "agent": agent.public, "chain": chain, "messages": messages}
     if store is None:
         raise ValueError("a review queue is required to run an agent")
+
+    if agent.profile == "care":  # hard escalations are never answered by a model (D09 v3.9 handoff, care_hard_escalation)
+        escalation = triage(brief)
+        if escalation is not None:
+            flag = Violation(f"escalate_{escalation.kind}", "review", escalation.match,
+                             "Hard escalation: fixed reply, no model call. Route to a person before anything is sent.")
+            run = store.create(agent_id=agent.id, brief=brief, draft=escalation.reply, source_refs=refs,
+                               created_by=created_by or settings.agent_identity, violations=[flag, *scan_draft(agent, escalation.reply, brief)],
+                               provider="deterministic", model="triage", prompt_version=PROMPT_VERSION, latency_ms=0.0)
+            return {"run": run, "attempts": [{"provider": "deterministic", "model": "triage", "outcome": "escalated",
+                                              "kind": escalation.kind}], "tokens_per_s": 0.0}
 
     attempts: list[dict] = []
     result = None

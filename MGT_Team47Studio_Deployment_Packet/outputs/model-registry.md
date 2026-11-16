@@ -8,8 +8,8 @@
 | `llava:latest` | incumbent | vision | not read | unknown | repo | packages/ai-gateway/src/task-registry.ts |
 | `gemma4:12b` | candidate | drafting, agent, vision | 8.0 | fits | published | https://registry.ollama.ai/library/gemma4 |
 | `gemma4:e4b` | candidate | drafting, vision | 9.5 | fits | published | https://registry.ollama.ai/library/gemma4 |
-| `qwen3.5:9b` | candidate | drafting, agent | not read | unknown | secondary | https://summarizemeeting.com/en/news/ollama-qwen-3-5-local-tool-calling-multimodal |
-| `mistral-small3.2` | candidate | drafting | not read | unknown | local-inventory | workstation model directory listing, 2026-11-14 |
+| `qwen3.5:9b` | candidate | drafting, agent | 6.6 | fits | published | https://ollama.com/library/qwen3.5/tags (read 2026-11-15) |
+| `mistral-small3.2` | candidate | drafting | 15.0 | tight | published | https://ollama.com/library/mistral-small3.2/tags (read 2026-11-15) |
 | `qwen3.8:27b` | not_local | reasoning, agent | 18.0 | exceeds | secondary | https://www.orcarouter.ai/blog/qwen-3-8-27b-ollama |
 | `deepseek-v4.1-flash` | hosted_fallback | drafting, reasoning | not read | hosted | repo | docs/production/OLLAMA-CLOUD-WORKSPACE-GCP-ACTIVATION-2026-11-06.md |
 

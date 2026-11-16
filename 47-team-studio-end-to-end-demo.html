@@ -608,6 +608,14 @@ body.has-compare .toast { bottom: 105px; }
 .backup-links a { padding: 10px 12px; color: var(--text); border: 1px solid var(--border); border-radius: 8px; background: var(--panel); font-size: .74rem; }
 .backup-links a:hover { border-color: var(--aqua); color: var(--aqua); }
 
+@media (max-width: 1320px) {
+  .topbar { flex-wrap: wrap; gap: 12px; padding-block: 12px; }
+  .menu-button { display: inline-flex; margin-left: auto; }
+  .main-nav { position: absolute; top: 72px; right: 0; display: none; width: 220px; margin: 0; padding: 9px; border: 1px solid var(--border); border-radius: 15px; background: var(--panel); box-shadow: var(--shadow); }
+  .main-nav.open { display: grid; }
+  .main-nav a { padding: 11px; border-radius: 10px; }
+  .header-actions { margin-left: 0; }
+}
 @media (max-width: 1100px) {
   .main-nav { gap: 2px; }
   .main-nav a { padding-inline: 9px; }
@@ -622,12 +630,6 @@ body.has-compare .toast { bottom: 105px; }
   .commercial-status-strip > div:nth-child(-n+2) { border-bottom: 1px solid var(--border); }
 }
 @media (max-width: 850px) {
-  .topbar { flex-wrap: wrap; gap: 12px; padding-block: 12px; }
-  .menu-button { display: inline-flex; margin-left: auto; }
-  .main-nav { position: absolute; top: 72px; right: 0; display: none; width: 220px; margin: 0; padding: 9px; border: 1px solid var(--border); border-radius: 15px; background: var(--panel); box-shadow: var(--shadow); }
-  .main-nav.open { display: grid; }
-  .main-nav a { padding: 11px; border-radius: 10px; }
-  .header-actions { margin-left: 0; }
   .hero, .section-heading, .shop-intro, .account-section { grid-template-columns: 1fr; gap: 27px; }
   .hero { padding-top: 34px; }
   .editorial-card { max-width: 650px; }

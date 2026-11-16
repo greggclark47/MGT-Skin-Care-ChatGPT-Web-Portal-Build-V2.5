@@ -20,8 +20,9 @@ d3f47b6c6e11b0da77f2008bd7a6debaab9f525847a9eafc30a617fc4f71ddf5  ./config/windo
 652e89f4d4b7126b4a6c46d7b81905ce9c8a5b0574bbbcead837e2ce5e44e68e  ./docs/07-RUNBOOK-LOCAL-HARDWARE.md
 b603654844efcabe08422b0298b995060800d742d8f8bfe303a292bcdb7602e5  ./docs/08-RELEASE-CHECKLISTS.md
 3aa6b24cb9ff4c566bad7902e5e6866d08bb7d94663aaf2ac0670c6e21faf42a  ./docs/10-MERGE-PLAN.md
-3db61dcc10cf58bff26fe624dffcde61ec58bc7626487c5db0dcf1cbce762c40  ./docs/12-TRANSFER-PACKET.md
+1c869d2862a19d9692675fa82f849398c4a6bf1585223b51615157e00b636926  ./docs/12-TRANSFER-PACKET.md
 24e96c57ed885289e97494b73d0d0c2fad09eb34f39c1355f8a02c2a63096847  ./evidence/VERIFICATION.md
+54f4bab2f911645583690eb3c39bdd360ac78842c14d60719eb447ee47404bde  ./evidence/merge-check-integration.md
 d4a1482023fe56fd80ef0f132ec16c527e37995805b00ee236704494c0321690  ./evidence/openclaw-fragment-self-audit.md
 e50c43f4bf72b6972fcad2acd436e6d48fd2a05390fc7a80b8c6160267c1af77  ./evidence/release-status-initial.md
 c5cc6fe81b100d6079ce7c43d593a650530118e81ab24735b12fc572fa8a7ea3  ./evidence/store-assets-d09-v2.1.md

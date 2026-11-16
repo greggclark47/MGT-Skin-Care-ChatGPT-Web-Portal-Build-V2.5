@@ -73,10 +73,10 @@ Subscriptions stay off until G03 and G04 are accepted. The trial (O-7) is not bu
 ## 7. Android and Google Play
 
 1. `eas login`, `eas init` in `apps/mobile`.
-2. `pnpm --filter mobile android:preview`, install the APK on a physical device, walk the sign-in and Skin Match paths.
-3. `pnpm --filter mobile android:production` for the signed AAB (G14).
+2. `pnpm --filter @mgt/mobile android:preview`, install the APK on a physical device, walk the sign-in and Skin Match paths.
+3. `pnpm --filter @mgt/mobile android:production` for the signed AAB (G14).
 4. Play Console: listing, Data safety from `PLAY-DATA-SAFETY-DRAFT.md`, content rating, policy URLs, store images from the D09 v2.1 packet (they pass `t47 release assets`).
-5. `pnpm --filter mobile android:submit:internal` to the internal track (G15).
+5. `pnpm --filter @mgt/mobile android:submit:internal` to the internal track (G15).
 6. Record the billing route (G18). Recommended for first submission: no purchase in the app.
 
 Acceptance: internal-track install works; `t47 release status --platform android` prints SHIP. Rollback: halt the rollout in Play Console.
@@ -84,7 +84,7 @@ Acceptance: internal-track install works; `t47 release status --platform android
 ## 8. iOS and App Store
 
 1. Enroll in the Apple Developer Program; create the App Store Connect record.
-2. With patch 0001 merged: `pnpm --filter mobile ios:preview` (internal distribution needs the test device registered with EAS), then `ios:production`.
+2. With patch 0001 merged: `pnpm --filter @mgt/mobile ios:preview` (internal distribution needs the test device registered with EAS), then `ios:production`.
 3. `ios:submit:testflight`. `eas.json` has no iOS submit profile, so the first run asks for the App Store Connect details; add the profile afterwards so it is repeatable.
 4. TestFlight on a device (G16). App Privacy answers, age rating, review notes, and an in-app account deletion path (G17).
 5. Billing route as Android (G18).
@@ -94,7 +94,7 @@ Acceptance: TestFlight build installs and signs in; `t47 release status --platfo
 ## 9. What "frictionless" rests on
 
 - Additions only: the integration branch changes one existing file by three lines.
-- Checked, not assumed: both patches verified against `1ef5c51`; the repository's secret scan and the mobile contract test pass on the integration branch; both manifests verify.
+- Checked, not assumed: both patches verified against `1ef5c51`; the repository's secret scan and the mobile contract test pass on the integration branch; both manifests verify (`evidence/merge-check-integration.md`). The repository lint and full verification workflow were not run here; they run in CI on the pull request.
 - One preflight command for every later step.
 - The holds are untouched: release HOLD, subscriptions off, agents draft-only, nothing merged into `main` or the candidate.
 

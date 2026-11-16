@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.2.0, 2026-11-16
+
+- Transfer packet: `docs/12-TRANSFER-PACKET.md`, `t47 release merge-check`, `merge/Install-T47.ps1`.
+- Integration branch `integration/team47studio-transfer-2026-11-16`: candidate plus packet, patches 0001 and 0002, D09 documents.
+- Follows D09 handoff v1.2: owner-set prices in the model; gate G24 covers the trial decision.
+- Tests: 134 to 135.
+
 ## 1.1.0, 2026-11-15
 
 - Customer care: deterministic triage for the four hard escalations, fixed replies, no model call.

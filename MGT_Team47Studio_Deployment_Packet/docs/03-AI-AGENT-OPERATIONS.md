@@ -1,6 +1,6 @@
 # 03 AI and agent operations
 
-Version 1.1.0, 2026-11-15.
+Version 1.2.0, 2026-11-16.
 
 ## 1. How the pieces fit
 

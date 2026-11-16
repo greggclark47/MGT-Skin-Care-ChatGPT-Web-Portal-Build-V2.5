@@ -1,6 +1,6 @@
 # 00 Maximized request
 
-Version 1.1.0, 2026-11-15. This is the request the packet was built against.
+Version 1.2.0, 2026-11-16. This is the request the packet was built against.
 
 ## Objective
 

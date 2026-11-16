@@ -1,16 +1,16 @@
 # 10 Merge plan
 
-Version 1.1.0, 2026-11-15. How three bodies of work land in one build without stepping on each other.
+Version 1.2.0, 2026-11-16. How three bodies of work land in one build without stepping on each other.
 
 ## The three pieces
 
 | Piece | Where | State | Owns |
 |---|---|---|---|
 | Candidate build | `codex/reconcile-main-2026-09-20` at `1ef5c51` | deployed through `47d405b`; release HOLD | web, API, mobile, infrastructure, gate scripts |
-| D09 v3.9 handoff | `docs/d09-v3.6-overlay` at `ec01557`, plus private Drive material | PRELIMINARY, pending owner release | design overlay, routes, proposed tables and endpoints, locked product rules, counsel gates |
+| D09 handoff (design v4.1, handoff v1.2) | `docs/d09-v3.6-overlay` at `bfe3cac`, plus private Drive material | PRELIMINARY, pending owner release | design overlay, routes, proposed tables and endpoints, locked product rules, counsel gates |
 | This packet | `packet/team47studio-deployment-2026-11-14`, folder `MGT_Team47Studio_Deployment_Packet/` | 1.1.0 | local agent plane, diagnostics, model qualification, release-gate view, economics, runbooks |
 
-One structural fact to settle first: `docs/d09-v3.6-overlay` is built on `main`, which shares no history with the candidate branch. Its 23 files are all new and all under `docs/d09-v3.6/`, so they can be copied or cherry-picked onto the candidate without conflict, but a plain branch merge is not available. This is the practical form of handoff item O-1 (which build is the base).
+One structural fact to settle first: `docs/d09-v3.6-overlay` is built on `main`, which shares no history with the candidate branch. Its files are all new and all under `docs/d09-v3.6/`, so they can be copied or cherry-picked onto the candidate without conflict, but a plain branch merge is not available. This is the practical form of handoff item O-1 (which build is the base).
 
 ## Where the pieces touch, and who wins
 
@@ -43,6 +43,10 @@ Steps 1 to 3 are independent of the handoff and can go now. Both patches were ch
 git apply --check MGT_Team47Studio_Deployment_Packet/merge/patches/0001-mobile-add-ios-build-and-submit-scripts.patch
 git apply --check MGT_Team47Studio_Deployment_Packet/merge/patches/0002-ci-test-the-deployment-packet.patch
 ```
+
+## Integration branch (1.2.0)
+
+Steps 1 to 4 are done on `integration/team47studio-transfer-2026-11-16` for review: the candidate plus the packet, both patches applied, and the D09 documents copied in unchanged. `12-TRANSFER-PACKET.md` carries the sequence from there. `t47 release merge-check` reports the state of any checkout.
 
 ## Integrity
 

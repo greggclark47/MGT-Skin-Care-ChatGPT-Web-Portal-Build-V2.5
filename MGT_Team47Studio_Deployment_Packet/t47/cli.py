@@ -522,6 +522,15 @@ def cmd_release_assets(args, s: Settings) -> int:
     return _emit_report(args, check_store_folder(os.path.expanduser(args.dir)))
 
 
+def cmd_release_merge_check(args, s: Settings) -> int:
+    from t47.release import mergecheck
+
+    path = args.repo or s.repo_path
+    if not path:
+        raise CliError("name the repository checkout with --repo, or set [paths] repo in the config file")
+    return _emit_report(args, mergecheck.run(os.path.expanduser(path)))
+
+
 def cmd_version(args, s: Settings) -> int:
     _write(None, f"t47 {__version__}")
     return 0
@@ -681,6 +690,8 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--evidence", help="document id, path or link")
     p.add_argument("--by", help="name of the person accepting the gate")
     p.add_argument("--note")
+    p = leaf(release, "merge-check", cmd_release_merge_check, "Read-only preflight: packet, manifest, patches, iOS scripts and CI in a checkout", out=True)
+    p.add_argument("--repo", help="path to the monorepo checkout (default: [paths] repo)")
     p = leaf(release, "assets", cmd_release_assets, "Check store images against the Google Play and App Store specifications", out=True)
     p.add_argument("dir", help="folder containing google-play/ and app-store/")
 

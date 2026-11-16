@@ -83,7 +83,7 @@ def test_model_and_cost_data_corrections():
     pytest.importorskip("t47.economics.model")  # cost data ships in the private packet only
     costs = load_data("costs.json")
     preset = costs["price_presets"]["A"]
-    assert preset["studio"] == preset["guided"] and "unset" in preset["label"]      # no invented Studio price
+    assert (preset["guided"], preset["studio"]) == (14.99, 29.99) and "Owner-set" in preset["label"]  # handoff v1.2 plans
     cloud = next(f for f in costs["fixed"] if f["id"] == "ollama_cloud")
     assert (cloud["lean"], cloud["base"]) == (0, 0)
 
@@ -94,3 +94,40 @@ def test_site_reports_v39_routes_as_information_only():
     got = {c.id: (c.status, c.detail) for c in report.checks}
     assert got["site.v39.trust-and-ai"] == ("info", "present")
     assert got["site.v39.privacy-terms"][0] == "info" and "not live" in got["site.v39.privacy-terms"][1]
+
+
+def test_merge_preflight(tmp_path):
+    import json
+    import subprocess
+
+    from t47.release import mergecheck
+
+    assert [c.id for c in mergecheck.run(str(tmp_path)).checks] == ["merge.repo"]
+    root = tmp_path / "repo"
+    (root / "apps/mobile").mkdir(parents=True)
+    (root / "package.json").write_text("{}")
+    (root / "apps/mobile/package.json").write_text(json.dumps({"scripts": {"android:preview": "x"}}, indent=2) + "\n")
+    (root / "apps/mobile/eas.json").write_text(json.dumps({"submit": {"production": {"android": {}}}}))
+    got = {c.id: c.status for c in mergecheck.run(str(root)).checks}
+    assert got["merge.packet"] == "fail"
+    packet = root / mergecheck.PACKET_DIR
+    (packet / "merge/patches").mkdir(parents=True)
+    (packet / "pyproject.toml").write_text("[project]\n")
+    (packet / "VERSION").write_text("9.9.9\n")
+    import hashlib
+    (packet / "MANIFEST.sha256").write_text(f"{hashlib.sha256(b'9.9.9' + chr(10).encode()).hexdigest()}  ./VERSION\n")
+    try:
+        subprocess.run(["git", "init", "-q", str(root)], check=True, capture_output=True)
+    except (OSError, subprocess.CalledProcessError):
+        pytest.skip("git is not available")
+    patch = ("--- a/apps/mobile/package.json\n+++ b/apps/mobile/package.json\n@@ -1,5 +1,6 @@\n {\n   \"scripts\": {\n"
+             "-    \"android:preview\": \"x\"\n+    \"android:preview\": \"x\",\n+    \"ios:preview\": \"y\"\n   }\n }\n")
+    (packet / "merge/patches/0001-ios.patch").write_text(patch)
+    report = mergecheck.run(str(root))
+    got = {c.id: c.status for c in report.checks}
+    assert got["merge.manifest"] == "pass" and got["merge.patch.0001"] == "warn" and got["merge.ios"] == "warn"
+    assert got["merge.ci"] == "warn" and got["merge.d09"] == "info" and report.ok
+    subprocess.run(["git", "-C", str(root), "apply", str(packet / "merge/patches/0001-ios.patch")], check=True, capture_output=True)
+    assert {c.id: c.status for c in mergecheck.run(str(root)).checks}["merge.patch.0001"] == "pass"
+    (packet / "VERSION").write_text("tampered\n")
+    assert {c.id: c.status for c in mergecheck.run(str(root)).checks}["merge.manifest"] == "fail"

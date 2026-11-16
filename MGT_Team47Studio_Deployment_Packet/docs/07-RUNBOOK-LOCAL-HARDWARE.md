@@ -1,10 +1,10 @@
 # 07 Runbook: local hardware
 
-Version 1.1.0, 2026-11-15. Workstation: Windows, RTX 5080 16 GB, Ollama, OpenClaw.
+Version 1.2.0, 2026-11-16. Workstation: Windows, RTX 5080 16 GB, Ollama, OpenClaw.
 
 ## First hour
 
-1. **Install.** Python 3.11 or later. In the packet folder: `python -m venv .venv`, then `.\.venv\Scripts\pip install -e ".[dev]"`, then `.\.venv\Scripts\python -m pytest`. Expect 134 passed.
+1. **Install.** Python 3.11 or later. In the packet folder: `python -m venv .venv`, then `.\.venv\Scripts\pip install -e ".[dev]"`, then `.\.venv\Scripts\python -m pytest`. Expect 135 passed. `merge/Install-T47.ps1` does steps 1 to 5 in one run.
 2. **Configure.** Copy `config\t47.example.toml` to `config\t47.toml`. Set `[paths] repo` to the monorepo checkout. Run `t47 config show`.
 3. **Check the local plane.** `t47 diagnostics local-ai`. Fix any FAIL before going on: Ollama running, loopback only, both role models installed.
 4. **Check the site.** `t47 diagnostics site`. `/readyz` at 503 is reported as INFO; that is the intended state today.

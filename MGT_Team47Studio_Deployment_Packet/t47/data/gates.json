@@ -59,7 +59,7 @@
      "evidence": "Runbook approved by the platform owner", "owner": "Platform"},
     {"id": "G23", "priority": "P0", "platforms": ["ops"], "title": "Local agent plane qualified: bake-off, OpenClaw audit, injection cases, review queue, encrypted backup",
      "evidence": "Bake-off report, audit report and a verified agent-plane backup", "owner": "AI owner"},
-    {"id": "G24", "priority": "P1", "platforms": ["web", "android", "ios"], "title": "D09 v3.9 handoff released by the owner and base build decided (handoff items O-1, N-1, C-9)",
+    {"id": "G24", "priority": "P1", "platforms": ["web", "android", "ios"], "title": "D09 handoff released by the owner and base build decided (handoff items O-1, N-1, C-9, O-7)",
      "evidence": "Owner release note replacing the PRELIMINARY status; merchant-of-record and entity-name decisions recorded", "owner": "Owner",
      "note": "The handoff packet of 2026-11-15 is marked PRELIMINARY. Its routes, tables and endpoints are proposals until released."},
     {"id": "G25", "priority": "P0", "platforms": ["web", "android", "ios"], "title": "Optional face scan is off by feature flag, or counsel sign-off is on file",

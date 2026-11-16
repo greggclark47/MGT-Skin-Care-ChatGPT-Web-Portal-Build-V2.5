@@ -1,6 +1,6 @@
 # 02 Deployment strategy
 
-Version 1.1.0, 2026-11-15. Source labels: [REPO] recorded in the repository or Drive; [WEB] read from a current public source on 2026-11-14; [ESTIMATE] planning figure; [DECISION] needs the owner.
+Version 1.2.0, 2026-11-16. Source labels: [REPO] recorded in the repository or Drive; [WEB] read from a current public source on 2026-11-14; [ESTIMATE] planning figure; [DECISION] needs the owner.
 
 ## 1. Topology: two planes, one rule between them
 

@@ -5,4 +5,4 @@ publishes, deploys, charges or changes production. Commands that write outside t
 state directory require an explicit --apply flag.
 """
 
-__version__ = "1.1.0"
+__version__ = "1.2.0"

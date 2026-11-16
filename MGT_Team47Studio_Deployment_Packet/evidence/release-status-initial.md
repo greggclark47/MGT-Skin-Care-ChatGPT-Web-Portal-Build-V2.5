@@ -1,6 +1,6 @@
 # Release gate status
 
-Generated: 2026-11-16T00:03:07Z
+Generated: 2026-11-16T16:19:03Z
 
 A platform ships only when every P0 gate that applies to it is accepted with evidence. 'reported' means a document says the work was done and the owner has not yet accepted it.
 

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "t47"
-version = "1.1.0"
+version = "1.2.0"
 description = "Team 47 Studio deployment and operations packet: diagnostics, model qualification, draft-only agents, release gates, economics."
 requires-python = ">=3.11"
 dependencies = []

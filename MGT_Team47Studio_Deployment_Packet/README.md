@@ -1,6 +1,6 @@
 # MGT_Team47Studio Deployment Packet
 
-Version 1.1.0, 2026-11-15. Provider of record: MGT Solutions, Inc d/b/a Team47Studio.
+Version 1.2.0, 2026-11-16. Provider of record: MGT Solutions, Inc d/b/a Team47Studio.
 
 A Python package (`t47`) and a set of runbooks that sit on top of the existing Team 47 Studio build. The stack is unchanged. The packet adds a local agent plane on the workstation, one view over the release gates, a model qualification harness, and the operating documents for launch.
 
@@ -13,7 +13,7 @@ A Python package (`t47`) and a set of runbooks that sit on top of the existing T
 | Agents | `t47 agents run`, `submit`, `review`, `export` | Six draft-only agents on local Ollama, deterministic guardrails, a human review queue. Customer-care safety, privacy, billing-dispute and ask-for-a-person messages get a fixed reply with no model call. |
 | OpenClaw | `t47 openclaw render`, `audit`; `t47 mcp serve` | Least-privilege fragment, policy audit, and a three-capability MCP bridge. |
 | Backup | `t47 backup agent-plane`, `verify`, `restore`, `prune`, `drill` | AES-256-GCM backup of local state; the application restore drill as steps and an evidence record. |
-| Release | `t47 release status`, `set`, `assets` | SHIP or HOLD per platform from recorded, evidenced gate decisions. Store image validation. |
+| Release | `t47 release status`, `set`, `assets`, `merge-check` | SHIP or HOLD per platform from recorded, evidenced gate decisions. Store image validation. |
 | Go-to-market, economics | `t47 gtm calendar`, `utm`; `t47 economics summary`, `workbook` | Private packet only. |
 
 ## What it cannot do
@@ -35,6 +35,7 @@ The core has no dependencies. Extras: `workbook` (openpyxl), `backup` (cryptogra
 
 ## Read in this order
 
+0. `docs/12-TRANSFER-PACKET.md`: the end-to-end merge across GitHub, Drive, the workstation and all four platforms. Start here.
 1. `docs/07-RUNBOOK-LOCAL-HARDWARE.md`: first hour on the workstation.
 2. `docs/02-DEPLOYMENT-STRATEGY.md`: topology, connections, platform ship paths.
 3. `docs/03-AI-AGENT-OPERATIONS.md`: agents, guardrails, OpenClaw, model plan.
@@ -45,7 +46,7 @@ The core has no dependencies. Extras: `workbook` (openpyxl), `backup` (cryptogra
 
 ## State of verification
 
-134 unit tests pass. The repository inventory and the store image validation were run on real inputs. The site diagnostic, the local AI diagnostic, the bake-off, the OpenClaw merge and the Windows task script have not been run on the workstation. `evidence/VERIFICATION.md` has the detail.
+135 unit tests pass. The repository inventory and the store image validation were run on real inputs. The site diagnostic, the local AI diagnostic, the bake-off, the OpenClaw merge and the Windows task script have not been run on the workstation. `evidence/VERIFICATION.md` has the detail.
 
 ## This copy
 

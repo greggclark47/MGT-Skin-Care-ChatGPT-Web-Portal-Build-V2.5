@@ -146,7 +146,7 @@ Run `pnpm --filter @mgt/api test:operations` and `pnpm --filter @mgt/api test:re
 Validation: API compilation, web build, existing referral suite and new billing suite. Remaining: real Stripe sandbox lifecycle, production PostgreSQL, container startup, browser interactions and deployment.
 
 ## Trial and billing-cycle update
-New eligible Guided or Studio subscriptions use a 14-day free trial with payment_method_collection=always. The first paid billing period begins at trial end. No upfront subscription payment is collected. Trial eligibility is once per signed-in account, based on stored history and Stripe subscription history.
+Eligible new Guided subscriptions use a 14-day trial with payment_method_collection=always. Studio enrollment starts as paid service without a trial. The first paid Guided billing period begins at trial end. No upfront subscription payment is collected for the Guided trial. Trial eligibility is once per signed-in account, based on stored history and Stripe subscription history.
 
 Configure the approved Product ID and Guided/Studio monthly and annual recurring Price IDs with the five named variables listed above. Every Price must use USD and belong to the same configured Product. Monthly Prices must recur every month and annual Prices every year, with `interval_count=1`. Annual pricing must preserve the approved two-month-free value; no Product or Prices have been created in this repository.
 

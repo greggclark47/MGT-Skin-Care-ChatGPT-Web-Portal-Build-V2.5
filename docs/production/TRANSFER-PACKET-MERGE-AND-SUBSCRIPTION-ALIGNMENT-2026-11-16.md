@@ -15,7 +15,8 @@ The subscription model was then aligned around a single shared policy:
 - Free is permanent $0 access, not a trial.
 - Free requires no payment card and never converts automatically to a paid plan.
 - Free may include clearly labeled, optional sponsor support selected without personal profile targeting.
-- Eligible new Guided or Studio members may receive one 14-day trial per signed-in account.
+- Eligible new Guided members may receive one 14-day trial per signed-in account.
+- Studio enrollment starts as paid service without a trial, preserving Guided as the lower-cost conversion path and Studio as the direct premium tier.
 - A payment method is collected for a paid-plan trial, but no subscription charge is collected when the trial starts.
 - The selected monthly or annual paid plan begins after the displayed trial end date unless canceled first.
 - If no valid payment method is available at trial end, the paid subscription is canceled.
@@ -44,6 +45,7 @@ The subscription model was then aligned around a single shared policy:
 8. Free-plan and trial language aligned in membership screens, account billing, terms, production documentation, and static demos.
 9. Contract coverage added for policy values and demo disclosures.
 10. The packet merge-preflight test now hashes the version file's actual bytes, removing its Unix-only line-ending assumption; the packet manifest was updated to bind that reviewed change.
+11. The older runtime's Guided-and-Studio trial behavior was reconciled with the owner handoff's Guided-only offer. Trial eligibility now fails closed by plan in both the catalog response and Stripe Checkout creation.
 
 ## Deliberately deferred or approval-bound
 
@@ -77,7 +79,7 @@ Passing local tests establishes implementation readiness only. It does not by it
 - Repository lint: passed across six TypeScript projects plus mobile and repository-hygiene checks.
 - Full repository verification: 18 executed gates passed with 1,704 reported assertions passed.
 - Tracked credential scan and generated public-artifact vendor scan: passed with no detected affected files.
-- Verification evidence: `work/verification/2026-11-16T16-51-10-129Z/report.md`.
+- Verification evidence: `work/verification/2026-11-16T17-03-06-035Z/report.md`.
 
 The verification report explicitly leaves live services, browser interaction, PostgreSQL/RLS, imported-store reconciliation, and final production authorization untested. Those limits remain release blockers rather than being inferred as passed.
 

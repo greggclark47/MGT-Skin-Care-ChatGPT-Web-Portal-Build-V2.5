@@ -28,7 +28,7 @@ Every plan-change request requires an explicit customer confirmation in Account.
 ## Trial policy
 
 - Free is ongoing $0 access and is never presented as a trial.
-- Eligible new Guided or Studio subscribers may receive one 14-day trial per signed-in account.
+- Eligible new Guided subscribers may receive one 14-day trial per signed-in account. Studio enrollment starts as paid service without a trial.
 - Checkout collects a payment method but no subscription charge at trial start.
 - Checkout must display the trial end date, selected recurring rate, billing cycle, and first expected charge before consent.
 - The selected paid plan begins at trial end unless the subscriber cancels first.

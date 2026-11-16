@@ -22,7 +22,7 @@ export function MembershipPlans({ portalUrl }: { portalUrl: string }) {
       {MEMBERSHIP_TIER_CONTENT.map(tier => <Text key={tier.id} style={styles.comparisonValue}><Text style={styles.comparisonTier}>{tier.name}: </Text>{tier.comparison[row.id]}</Text>)}
     </View>)}
     <View style={styles.policy} accessibilityLabel="Plan change policy">
-      <Text style={styles.policyText}>Eligible new Guided or Studio members may receive one {MEMBERSHIP_TRIAL_POLICY.days}-day trial. No subscription charge is collected at the start; the selected paid plan begins after the displayed trial end date unless canceled first.</Text>
+      <Text style={styles.policyText}>Eligible new Guided members may receive one {MEMBERSHIP_TRIAL_POLICY.days}-day trial. No subscription charge is collected at the start; Guided begins after the displayed trial end date unless canceled first. Studio enrollment starts as a paid plan without a trial.</Text>
       <Text style={styles.policyText}>{MEMBERSHIP_CHANGE_POLICY.period_end}</Text>
       <Text style={styles.policyText}>{MEMBERSHIP_CHANGE_POLICY.annual_upgrade}</Text>
       <Text style={styles.policyText}>{MEMBERSHIP_CHANGE_POLICY.confirmation}</Text>

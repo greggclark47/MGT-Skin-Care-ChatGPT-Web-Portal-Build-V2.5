@@ -13,12 +13,12 @@ export type MembershipTierId = 'free' | 'premium' | 'studio';
 
 export const MEMBERSHIP_TRIAL_POLICY = {
   days: 14,
-  eligible_tiers: ['premium', 'studio'] as const,
+  eligible_tiers: ['premium'] as const,
   once_per_account: true,
   payment_method_required: true,
   charge_at_start: false,
   missing_payment_method_behavior: 'cancel' as const,
-  conversion: 'The selected paid plan begins when the trial ends unless the member cancels before the displayed trial end date.',
+  conversion: 'Guided begins when the trial ends unless the member cancels before the displayed trial end date.',
 } as const;
 
 export const MEMBERSHIP_TIER_CONTENT: ReadonlyArray<{

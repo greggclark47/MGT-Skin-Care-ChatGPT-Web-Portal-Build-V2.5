@@ -1,4 +1,4 @@
-# D09 v4.0 — Overlay, marketing and handoff packets
+# D09 v4.1 — Overlay, marketing and handoff packets
 
 **2026-11-15** · The Team 47 Studio design system mapped onto this repository, with a platform-neutral handoff for the backend. The folder keeps its original name so existing links stay valid.
 
@@ -6,9 +6,9 @@
 
 | Packet | Contents |
 |---|---|
-| [`02-overlay/`](02-overlay/OVERLAY-PACKET-v1.4.md) | All 71 design screens mapped to files in this repo (REUSE / REFACTOR / REPLACE / CREATE / DEFER), a drop-in theme stylesheet, proposed shared tokens, and the brand-string sweep |
-| [`03-marketing/`](03-marketing/MARKETING-PACKET-v1.4.md) | Brand and voice, approved copy, claims rules, the full gradient system including the v3.9 utility-row palette and the Prism Weave seamless pattern, and six rendered social assets |
-| [`05-handoff/`](05-handoff/HANDOFF-PACKET-v1.1.md) | Merge plan, backend specification, acceptance tests and counsel gates for any AI platform or engineering team, with a machine-readable spec, a paste-ready prompt, and the research sources behind each external claim |
+| [`02-overlay/`](02-overlay/OVERLAY-PACKET-v1.5.md) | All 71 design screens mapped to files in this repo (REUSE / REFACTOR / REPLACE / CREATE / DEFER), a drop-in theme stylesheet, proposed shared tokens, and the brand-string sweep |
+| [`03-marketing/`](03-marketing/MARKETING-PACKET-v1.5.md) | Brand and voice, approved copy, claims rules, the full gradient system including the v3.9 utility-row palette and the Prism Weave seamless pattern, and six rendered social assets |
+| [`05-handoff/`](05-handoff/HANDOFF-PACKET-v1.2.md) | Merge plan, backend specification, acceptance tests and counsel gates for any AI platform or engineering team, with a machine-readable spec, a paste-ready prompt, and the research sources behind each external claim |
 
 **Start here:** Phase A of the overlay is a single stylesheet, `02-overlay/d09-overlay.css`, loaded after `apps/web/src/app/globals.css`. It rebinds the CSS variables the existing components already use, changes no component code, and reverts by removing one import.
 

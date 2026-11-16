@@ -1,10 +1,10 @@
 # Team 47 Studio — Marketing Packet
 
-**Version 1.4 · 2026-11-15 · For anyone producing Team 47 Studio material: web, social, email, partner decks** · v1.1: utility row colours (§5.2) · v1.2: utility row moves to the lighter Aura palette (§5.2) · v1.3: Prism Weave seamless pattern (§5.4, `patterns/`), accessibility figures refreshed (§9) · v1.4: plans and prices (§3.1), Prism Weave on the landing hero; build reference is v4.0
+**Version 1.5 · 2026-11-15 · For anyone producing Team 47 Studio material: web, social, email, partner decks** · v1.1: utility row colours (§5.2) · v1.2: utility row moves to the lighter Aura palette (§5.2) · v1.3: Prism Weave seamless pattern (§5.4, `patterns/`), accessibility figures refreshed (§9) · v1.4: plans and prices (§3.1), Prism Weave on the landing hero · v1.5: trial line in §3.1; build reference is v4.1
 
 > **Status: PRELIMINARY — pending full release.** Prepared for review ahead of any execution. Decisions, routes, wording and figures are subject to change before work begins; nothing here is final until the owner releases it.
 
-Everything here is taken from the D09 v4.0 build. Colour values come from `tokens/d09-tokens-v3.6.json`; nothing in this document was typed separately from it.
+Everything here is taken from the D09 v4.1 build. Colour values come from `tokens/d09-tokens-v3.6.json`; nothing in this document was typed separately from it.
 
 **In this folder**
 
@@ -85,7 +85,7 @@ Owner-set 2026-11-15, pending full release. Use these figures exactly; never rou
 
 Safety checks (shade range, ingredients, hair lift) and "shows its work" are on for every plan. Allowances marked `[ASSUMPTION]` are to be set from routing logs before release; the entitlement system reads them, the copy does not invent them.
 
-Approved plan lines: "Begin free. Grow when it suits you." · "Starter is free to keep — no card, no clock." · "Two months free on annual." · "Guided, $14.99 a month." · "Studio, $29.99 a month."
+Approved plan lines: "Begin free. Grow when it suits you." · "Starter is free to keep — no card, no clock." · "Two months free on annual." · "Guided, $14.99 a month." · "Studio, $29.99 a month." · "14 days of Guided, $0 today." (trial ads must state the price after the trial and that it renews; never "free" without "14 days")
 
 ---
 

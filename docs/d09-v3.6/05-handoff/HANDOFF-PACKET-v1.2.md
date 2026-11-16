@@ -1,6 +1,6 @@
 # Team 47 Studio — Platform-Neutral Handoff Packet
 
-**Version 1.1 · 2026-11-15 · Internal · For any AI platform or engineering team that will merge the v4.0 design onto the existing build and complete the backend** · v1.1: plans priced (rule 6, §5.5), demo reference is v4.0
+**Version 1.2 · 2026-11-15 · Internal · For any AI platform or engineering team that will merge the v4.1 design onto the existing build and complete the backend** · v1.1: plans priced (rule 6, §5.5) · v1.2: optional 14-day Guided trial and separate renewal consent (rule 6, §5.5); demo reference is v4.1
 
 > **Status: PRELIMINARY — pending full release.** Prepared for review ahead of any execution. Decisions, routes, wording and figures are subject to change before work begins; nothing here is final until the owner releases it.
 
@@ -10,7 +10,7 @@ Everything here is written to be acted on without the original conversation. The
 
 | | |
 |---|---|
-| **Reference build** | `demo/index-v4.0.html` — one self-contained file, fonts embedded, 71 screens, opens offline |
+| **Reference build** | `demo/index-v4.1.html` — one self-contained file, fonts embedded, 71 screens, opens offline |
 | **Reproducible source** | `demo/v39-src/` — the v3.8 base plus the patch layer (`patch39.py`, `v39/*.js`, `v39/v39.css`) |
 | **Machine-readable spec** | `handoff.spec.json` — screens, routes, state keys, retailers, facets, endpoints, tables, tests |
 | **Paste-ready prompt** | `PROMPT-CORE.md` |
@@ -46,7 +46,7 @@ These came from earlier decisions and counsel work. Each is a product rule, not 
 3. **No biometric identifiers.** The scan returns coarse descriptors only. It is **not** a login or payment credential. Terms §4.4 says so.
 4. **Colour results are stored, never samples.** Intake is swatch-first; the camera is optional.
 5. **Stripe is the primary payment rail.** Never store raw card data. Webhooks are server-authoritative and idempotent.
-6. **One entitlement system, three plans: Starter $0, Guided $14.99/mo or $149.90/yr, Studio $29.99/mo or $299.90/yr.** Owner-set 2026-11-15, preliminary. Annual is ten months for twelve on both paid plans (same terms). Starter collects no payment method and never expires; it is not a trial under Terms 8.3. Four Stripe prices (two tiers × two cycles). Allowances per plan are `[ASSUMPTION]` until set from usage data. The v3.9 rule that Studio was blocked while unpriced is retired.
+6. **One entitlement system, three plans: Starter $0, Guided $14.99/mo or $149.90/yr, Studio $29.99/mo or $299.90/yr.** Owner-set 2026-11-15, preliminary. Annual is ten months for twelve on both paid plans (same terms). Starter collects no payment method and never expires; it is not a trial under Terms 8.3. Four Stripe prices (two tiers × two cycles). Allowances per plan are `[ASSUMPTION]` until set from usage data. The v3.9 rule that Studio was blocked while unpriced is retired. **v4.1 adds a second door (O-7):** an optional 14-day card-on-file Guided trial, once per customer, $0 today, reminder three days before the first charge, with a separate auto-renewal consent recorded at checkout (Terms 8.3, 8.4). Starter itself never collects a card.
 7. **The Style vertical collects no body metrics.**
 8. **Hair-lift refusals use amber, not red, give no shame and no escape hatch.** A refusal returns no products and says how long before it is worth re-checking.
 9. **The AI Coach is Premium-gated, Tier 3.** Safety, eligibility, lift ceilings and pricing are deterministic code, never model output. No persona or dependency framing.
@@ -60,7 +60,7 @@ These came from earlier decisions and counsel work. Each is a product rule, not 
 
 ## 3. How the demo is built, so you can reproduce or replace it
 
-`demo/index-v4.0.html` is `index-v3.9.html` plus `demo/v40-src/patch40.py` (plans, pricing, Prism Weave hero); v3.9 in turn is the v3.8 file plus an appended patch layer. `demo/v39-src/patch39.py` reads `index-v3.8.html` and the files in `v39/`, replaces the old catalogue, swaps the utility-row block and footer, merges the legal pages, appends the layer before the final `buildRail();paint(true)` and writes the result.
+`demo/index-v4.1.html` is `index-v4.0.html` plus `demo/v41-src/patch41.py` (trial door, renewal consent); v4.0 is `index-v3.9.html` plus `demo/v40-src/patch40.py` (plans, pricing, Prism Weave hero); v3.9 in turn is the v3.8 file plus an appended patch layer. `demo/v39-src/patch39.py` reads `index-v3.8.html` and the files in `v39/`, replaces the old catalogue, swaps the utility-row block and footer, merges the legal pages, appends the layer before the final `buildRail();paint(true)` and writes the result.
 
 | File | Contents |
 |---|---|
@@ -182,6 +182,7 @@ Do **not** build Team 47's own face match for sign-in or payment. That would mak
 
 Safety checks (shade range, ingredients, hair lift) and "shows its work" are on for every plan. Allowances marked `[ASSUMPTION]` are to be set from routing logs before release; the entitlement system reads them, the copy does not invent them.
 
+- **Trial (v4.1).** Stripe subscription with `trial_period_days: 14` on the Guided price and a SetupIntent-backed payment method collected first; `trial_end` reminder email at T−3 days; conversion and cancellation driven by the subscription webhook, never the browser. Record the clause 8.4 consent (text shown, timestamp, version) in the consent ledger (§5.3) as its own entry. Enforce once-per-customer on the customer record, not the email string.
 - **Which lines are payable here.** Only `mode = stripe` items. `handoff` and `linkout` items are completed on the retailer's own platform; the demo's cart already separates them.
 
 ### 5.6 Retailer modes
@@ -274,6 +275,6 @@ Run all of these against the merged build. IDs match `handoff.spec.json`.
 | N-3 | Counsel: BIPA, Washington MHMDA, Texas CUBI, FTC 2023 statement | Scan |
 | N-4 | Real brands and retailers replace invented names; **trademark clearance for every invented name** | Public launch |
 | N-5 | Care infrastructure: build on the platform or buy a desk with an AI layer; a named owner; real response times | Any support promise |
-| N-6 | Checkout lacks a separate auto-renewal consent (C-5) | Plans billing |
+| N-6 | Separate auto-renewal consent (C-5): designed in v4.1 checkout; build it in production | Plans billing |
 | N-7 | Consumer auth is not built; passkeys need an account system | Security page |
 | N-8 | Header Color and Membership lit states still mix toward navy, unlike the utility row | Visual consistency |

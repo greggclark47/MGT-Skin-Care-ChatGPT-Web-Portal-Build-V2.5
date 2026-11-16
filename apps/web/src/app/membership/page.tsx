@@ -7,6 +7,7 @@ import { FreePlanSponsor } from '../../components/FreePlanSponsor';
 import { hub, useHub } from '../../lib/hub';
 import { AppFrame, LoadState, Timestamp } from '../../components/HubFrames';
 import styles from './membership.module.css';
+import { MEMBERSHIP_TRIAL_POLICY } from '@mgt/shared';
 
 type Plan = {
   id: 'premium' | 'studio'; name: string; audience: 'consumer';
@@ -104,6 +105,7 @@ export default function Membership() {
             <h3 id="plan-free">{baseline.name}</h3>
             <p className={styles.planPrice}>$0</p>
             <p>{baseline.summary}</p>
+            <p className={styles.planMatch}>No card required · No trial expiry</p>
             <p className="muted"><strong>Built for:</strong> Explore your starting point with no recurring commitment.</p>
             <ul>{baseline.features.map(feature => <li key={feature}>{feature}</li>)}</ul>
             <Link className="button" href="/account">Start with Free</Link>
@@ -130,7 +132,7 @@ export default function Membership() {
     </>}
 
     <section className="panel"><h2>Simple, predictable billing</h2><p>Your first subscription payment date starts your billing cycle. Monthly plans renew monthly; annual prepaid plans renew annually and include two months free compared with 12 monthly payments.</p><p>Plan changes and downgrades take effect after the current paid billing period. An upgrade to an equal or higher annual prepaid plan can begin immediately: secure billing applies unused paid time as credit and invoices the remaining annual balance.</p><p><strong>Manage plan changes from Account.</strong> Moving to Free or canceling takes effect at the end of the current paid billing period, and paid access continues through that date.</p></section>
-    <p className="notice">If an approved plan opens, eligible new subscribers can begin with a 14-day trial. A payment method is collected during checkout and recurring billing starts after the trial unless cancellation is requested. Returning subscribers who already used a trial are not offered another one.</p>
+    <p className="notice">If an approved plan opens, eligible new subscribers can begin with a {MEMBERSHIP_TRIAL_POLICY.days}-day trial. No subscription charge is collected at the start. A payment method is collected during checkout, and the selected monthly or annual plan begins after the displayed trial end date unless cancellation is requested first. Returning subscribers who already used a trial are not offered another one.</p>
     {notice && <p className="notice success" role="status">{notice}</p>}
     <LoadState {...state} retry={state.reload} />
     {error && <p id="membership-error" className="notice error" role="alert">{error}</p>}
@@ -152,7 +154,7 @@ export default function Membership() {
         {data.can_manage && <><Link className="button primary" href="/account#payment-settings">Change plan or billing cycle</Link><button className="button" type="button" disabled={busy || !data.configured} onClick={() => void billing('portal')}>{busyAction === 'portal' ? 'Opening billing…' : 'Payment method, invoices, or cancel'}</button></>}
         {((!data.subscription?.status || ['canceled', 'incomplete_expired'].includes(data.subscription.status)) || (data.subscription?.status === 'trialing' && !data.subscription.cancel_at_period_end)) && <>
           <label className="check-label"><input type="checkbox" checked={consent} disabled={!enrollmentOpen || busy} onChange={event => setConsent(event.target.checked)} />I agree to the displayed recurring rate after any eligible trial ends, and to the subscription terms.</label>
-          <div className="actions"><Link className="text-link" href="/terms">Read terms</Link><button className="button primary" type="button" disabled={busy || !consent || !enrollmentOpen} onClick={() => void billing(data.subscription?.status === 'trialing' ? 'trial-cycle' : 'checkout')}>{busyAction === 'trial-cycle' ? 'Requesting change…' : busyAction === 'checkout' ? 'Opening checkout…' : data.subscription?.status === 'trialing' ? 'Request plan or cycle change' : data.trial_eligible ? 'Start 14-day trial' : 'Continue to billing'}</button></div>
+          <div className="actions"><Link className="text-link" href="/terms">Read terms</Link><button className="button primary" type="button" disabled={busy || !consent || !enrollmentOpen} onClick={() => void billing(data.subscription?.status === 'trialing' ? 'trial-cycle' : 'checkout')}>{busyAction === 'trial-cycle' ? 'Requesting change…' : busyAction === 'checkout' ? 'Opening checkout…' : data.subscription?.status === 'trialing' ? 'Request plan or cycle change' : data.trial_eligible ? `Start ${MEMBERSHIP_TRIAL_POLICY.days}-day trial` : 'Continue to billing'}</button></div>
         </>}
       </>}
     </section>}

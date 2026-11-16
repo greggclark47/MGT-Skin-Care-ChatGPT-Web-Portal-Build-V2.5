@@ -113,9 +113,12 @@ def test_merge_preflight(tmp_path):
     packet = root / mergecheck.PACKET_DIR
     (packet / "merge/patches").mkdir(parents=True)
     (packet / "pyproject.toml").write_text("[project]\n")
-    (packet / "VERSION").write_text("9.9.9\n")
+    version_file = packet / "VERSION"
+    version_file.write_text("9.9.9\n")
     import hashlib
-    (packet / "MANIFEST.sha256").write_text(f"{hashlib.sha256(b'9.9.9' + chr(10).encode()).hexdigest()}  ./VERSION\n")
+    # Hash the bytes written by this platform so the preflight test is valid
+    # on both LF and CRLF filesystems.
+    (packet / "MANIFEST.sha256").write_text(f"{hashlib.sha256(version_file.read_bytes()).hexdigest()}  ./VERSION\n")
     try:
         subprocess.run(["git", "init", "-q", str(root)], check=True, capture_output=True)
     except (OSError, subprocess.CalledProcessError):

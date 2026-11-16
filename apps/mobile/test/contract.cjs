@@ -92,6 +92,8 @@ test('mobile account experience exposes the shared three-tier comparison and saf
  assert.match(membership,/MEMBERSHIP_COMPARISON_ROWS\.map/);
  assert.match(membership,/MEMBERSHIP_CHANGE_POLICY\.period_end/);
  assert.match(membership,/MEMBERSHIP_CHANGE_POLICY\.annual_upgrade/);
+ assert.match(membership,/MEMBERSHIP_TRIAL_POLICY\.days/);
+ assert.match(membership,/No card required · No trial expiry/);
  assert.match(membership,/membership-tier-\$\{tier\.id\}/);
  assert.match(membership,/membership-comparison-\$\{row\.id\}/);
  assert.match(membership,/View current plans and pricing/);

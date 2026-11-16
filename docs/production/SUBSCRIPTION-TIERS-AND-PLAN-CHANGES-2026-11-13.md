@@ -6,7 +6,7 @@ Date: 2026-11-13
 
 | Tier | Billing | Positioning | Key access |
 | --- | --- | --- | --- |
-| Free | No recurring charge | Practical starting point | Saved profile, core Skin Match, starter routine, reviewed education, and clearly labeled sponsor-supported experience |
+| Free | Permanent $0 access; no card and no trial expiry | Practical starting point | Saved profile, core Skin Match, starter routine, reviewed education, core color and retail discovery, and optional clearly labeled sponsor support selected without personal profile data |
 | Guided | Monthly or annual prepaid | Ongoing personalized guidance | Full personalized routines, biweekly updates, progress and image-journal history, connected color and wardrobe guidance, enhanced exports, and enhanced support |
 | Studio | Monthly or annual prepaid | Most complete experience | Everything in Guided plus the highest available AI depth, deeper cross-domain synthesis, advanced exports, trusted guest access, priority support, and early features |
 
@@ -24,6 +24,17 @@ The Account payment section now contains the three tier cards, monthly and annua
 | Upgrade to an equal or higher annual prepaid plan | Immediately, after signed payment reconciliation | Stripe credits unused paid time, starts the new annual billing anchor, and invoices the remaining annual balance |
 
 Every plan-change request requires an explicit customer confirmation in Account. Provider references and request state are stored; full card numbers and security codes are never stored by Team 47 Studio. Signed Stripe events remain authoritative for final access state.
+
+## Trial policy
+
+- Free is ongoing $0 access and is never presented as a trial.
+- Eligible new Guided or Studio subscribers may receive one 14-day trial per signed-in account.
+- Checkout collects a payment method but no subscription charge at trial start.
+- Checkout must display the trial end date, selected recurring rate, billing cycle, and first expected charge before consent.
+- The selected paid plan begins at trial end unless the subscriber cancels first.
+- A missing payment method at trial end cancels the subscription instead of starting paid access.
+- Returning subscribers and accounts with prior Stripe trial history are not eligible for another trial.
+- Trial reminder and first-charge notices remain a Stripe production-configuration and rehearsal requirement before enrollment opens.
 
 ## Production safety controls
 

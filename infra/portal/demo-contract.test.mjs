@@ -170,6 +170,9 @@ test("static demo exposes the current release and ship-packet surface", () => {
   assert.match(html, /Free, Guided and Studio/);
   assert.match(html, /signed event verification remain required/);
   assert.match(html, /Annual billing equals 10 monthly payments—two months free/);
+  assert.match(html, /Eligible new Guided or Studio members may receive one 14-day trial/);
+  assert.match(html, /Permanent \$0 · no card or trial expiry/);
+  assert.match(script, /No card · no trial expiry · no recurring charge/);
   assert.match(html, /Cancel anytime from Account/);
   assert.match(html, /retained for up to 24 months/);
   assert.match(html, /No Team 47 Studio product checkout/);

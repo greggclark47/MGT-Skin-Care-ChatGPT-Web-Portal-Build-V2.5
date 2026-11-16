@@ -1,6 +1,6 @@
 import React from 'react';
 import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
-import { MEMBERSHIP_CHANGE_POLICY, MEMBERSHIP_COMPARISON_ROWS, MEMBERSHIP_TIER_CONTENT, font, radius, space } from '@mgt/shared';
+import { MEMBERSHIP_CHANGE_POLICY, MEMBERSHIP_COMPARISON_ROWS, MEMBERSHIP_TIER_CONTENT, MEMBERSHIP_TRIAL_POLICY, font, radius, space } from '@mgt/shared';
 
 export function MembershipPlans({ portalUrl }: { portalUrl: string }) {
   const base = portalUrl.replace(/\/+$/, '');
@@ -11,6 +11,7 @@ export function MembershipPlans({ portalUrl }: { portalUrl: string }) {
       {MEMBERSHIP_TIER_CONTENT.map(tier => <View key={tier.id} testID={`membership-tier-${tier.id}`} style={styles.card}>
         <Text accessibilityRole="header" style={styles.tierName}>{tier.name}</Text>
         <Text style={styles.summary}>{tier.summary}</Text>
+        {tier.id === 'free' && <Text style={styles.bestForLabel}>No card required · No trial expiry</Text>}
         <Text style={styles.bestFor}><Text style={styles.bestForLabel}>Built for: </Text>{tier.best_for}</Text>
         {tier.features.map(feature => <Text key={feature} style={styles.feature}>• {feature}</Text>)}
       </View>)}
@@ -21,6 +22,7 @@ export function MembershipPlans({ portalUrl }: { portalUrl: string }) {
       {MEMBERSHIP_TIER_CONTENT.map(tier => <Text key={tier.id} style={styles.comparisonValue}><Text style={styles.comparisonTier}>{tier.name}: </Text>{tier.comparison[row.id]}</Text>)}
     </View>)}
     <View style={styles.policy} accessibilityLabel="Plan change policy">
+      <Text style={styles.policyText}>Eligible new Guided or Studio members may receive one {MEMBERSHIP_TRIAL_POLICY.days}-day trial. No subscription charge is collected at the start; the selected paid plan begins after the displayed trial end date unless canceled first.</Text>
       <Text style={styles.policyText}>{MEMBERSHIP_CHANGE_POLICY.period_end}</Text>
       <Text style={styles.policyText}>{MEMBERSHIP_CHANGE_POLICY.annual_upgrade}</Text>
       <Text style={styles.policyText}>{MEMBERSHIP_CHANGE_POLICY.confirmation}</Text>

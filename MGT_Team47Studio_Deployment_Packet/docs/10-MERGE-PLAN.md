@@ -50,7 +50,7 @@ Steps 1 to 4 are done on `integration/team47studio-transfer-2026-11-16` for revi
 
 ## Integrity
 
-`MANIFEST.sha256` at the packet root covers every file in the packet: `sha256sum -c MANIFEST.sha256`. The CI job in patch 0002 runs the same check.
+`MANIFEST.sha256` at the packet root covers every tracked packet source file except the manifest itself; generated caches are intentionally excluded. Run `sha256sum -c MANIFEST.sha256` on the canonical LF checkout. The merge preflight also accepts Git's CRLF materialization of those same tracked text files on Windows. The CI job in patch 0002 runs the canonical check.
 
 ## What this plan does not do
 

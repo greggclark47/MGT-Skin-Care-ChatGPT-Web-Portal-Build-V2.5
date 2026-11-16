@@ -11,6 +11,16 @@ export const MEMBERSHIP_COMPARISON_ROWS = [
 export type MembershipComparisonId = typeof MEMBERSHIP_COMPARISON_ROWS[number]['id'];
 export type MembershipTierId = 'free' | 'premium' | 'studio';
 
+export const MEMBERSHIP_TRIAL_POLICY = {
+  days: 14,
+  eligible_tiers: ['premium', 'studio'] as const,
+  once_per_account: true,
+  payment_method_required: true,
+  charge_at_start: false,
+  missing_payment_method_behavior: 'cancel' as const,
+  conversion: 'The selected paid plan begins when the trial ends unless the member cancels before the displayed trial end date.',
+} as const;
+
 export const MEMBERSHIP_TIER_CONTENT: ReadonlyArray<{
   id: MembershipTierId;
   name: string;
@@ -22,16 +32,16 @@ export const MEMBERSHIP_TIER_CONTENT: ReadonlyArray<{
   {
     id: 'free',
     name: 'Free',
-    summary: 'A practical starting point for building a profile, exploring core care guidance, and learning without a recurring charge.',
-    best_for: 'Customers who want to explore the core experience without a recurring charge.',
-    features: ['Saved profile and core Skin Match', 'Starter routine and reviewed education', 'Clearly labeled sponsor-supported experience'],
+    summary: 'Permanent $0 access for building a profile, exploring core care guidance, and learning without a payment card, trial deadline, or recurring charge.',
+    best_for: 'Customers who want a useful core experience with no card required and no automatic conversion to a paid plan.',
+    features: ['Saved profile, core Skin Match, and starter routine', 'Reviewed education plus core color and retail discovery', 'Optional, clearly labeled sponsor support selected without personal profile data'],
     comparison: {
       skin_match: 'Saved profile and core match',
       routine_guidance: 'Starter routine',
       ai_depth: 'Basic guidance preview',
       progress: 'Current profile and routine',
       style: 'Core color and retail discovery',
-      experience: 'Clearly labeled sponsor-supported experience',
+      experience: 'No card or expiry; approved sponsor support may appear without personal targeting',
       support: 'Standard self-service support',
     },
   },

@@ -148,10 +148,10 @@ const membershipPlans = [
   {
     id: "free",
     name: "Free",
-    audience: "A practical starting point for care and discovery.",
+    audience: "Permanent $0 access for useful core care and discovery.",
     price: "$0",
-    billing: "No recurring charge",
-    features: ["Saved profile and core Skin Match", "Starter routine and reviewed education", "Core color and retail discovery", "Clearly labelled sponsor-supported experience"],
+    billing: "No card · no trial expiry · no recurring charge",
+    features: ["Saved profile, core Skin Match and starter routine", "Reviewed education plus core color and retail discovery", "Optional, clearly labelled sponsor support without personal profile targeting"],
     action: "Explore Free",
     popular: false
   },

@@ -27,8 +27,14 @@ def verify_manifest(folder: Path) -> tuple[int, list[str]]:
         checked += 1
         if not target.is_file():
             problems.append(f"missing: {name.strip()}")
-        elif hashlib.sha256(target.read_bytes()).hexdigest() != digest.strip():
-            problems.append(f"changed: {name.strip()}")
+        else:
+            content = target.read_bytes()
+            raw_digest = hashlib.sha256(content).hexdigest()
+            # Git may materialize tracked text as CRLF on Windows while the
+            # packet manifest binds the canonical LF bytes used by CI.
+            canonical_digest = hashlib.sha256(content.replace(bytes((13, 10)), bytes((10,)))).hexdigest()
+            if digest.strip() not in (raw_digest, canonical_digest):
+                problems.append(f"changed: {name.strip()}")
     return checked, problems
 
 

@@ -3,10 +3,19 @@
 d73ec03c1b71edc99e1eb08c54351751419a946b43372dfbe3a8c3a385b3295e  ./02-overlay/d09-overlay.css
 13e0a13f8305e48ff0813adfea9924ab896dfb43d0df6e8904cf87b846e1dffd  ./02-overlay/flows.json
 00cc4ef99c07c1db89622c598628a5f3549fe9441dc2b45122a12d8a551e7c2a  ./02-overlay/screen-map.csv
-c38cc931552fbd43c787f4eb60583918c6c559f5f7a8ddd5cfc8f30977fa2bea  ./02-overlay/tokens.d09.ts
-4ba0cf4ad9fb7dfe9c768bfe19c0dc5b3c86c40105f2eafe9713da797ec2db80  ./03-marketing/MARKETING-PACKET-v1.2.md
+2087499e1c431211c4bdf15b691acb466aae0b2aaf56dc4a7eb5569073bb26d9  ./02-overlay/tokens.d09.ts
+96e791081246e2d25b3b7f1046ea7d183eb6b900e44295ae65f6d056f26e37bd  ./03-marketing/MARKETING-PACKET-v1.3.md
 e50bac352b21702862ce03398d06fcaeb0a6ae0bbfb6d74a9608a315f1523cca  ./03-marketing/logo-dark-surface.png
 e58b45afbd1e0181688a72e68431e5b40ea1e0b592063a507dedd9e2b1c2d747  ./03-marketing/logo-light-surface.png
+0618f91f4591125db6e1b3fcc71d3ebc4e6e4de1d59d78b63d2167508e9259a9  ./03-marketing/patterns/build-prism-weave.py
+fcee47108cdc4a212e5c166117e4f2e01c2dd58858353afee143c2e8e3afcf40  ./03-marketing/patterns/prism-weave-day-tile-1080x624.png
+bc3aedf3d2ed07a142ffac2c7eb3d11afb2c5e8c3c4f495600802863f9e434a1  ./03-marketing/patterns/prism-weave-day.svg
+766cc98c47b5cb8a4bef1e0a9aa37fbc2120eb78b46791546376454615086f50  ./03-marketing/patterns/prism-weave-hero-day-1920x1080.png
+eaea50c0737dbafd76e571d101b9e29378ef566fbddb779ef418f5abb303d353  ./03-marketing/patterns/prism-weave-hero-night-1920x1080.png
+4619d6b45a1678bd845891ca785a94afea45a8396a3184181a3563629292d608  ./03-marketing/patterns/prism-weave-night-tile-1080x624.png
+cf5521b778c615698fc6d446cb7ddcf16a22c25bc492183acc98969ce2e940d2  ./03-marketing/patterns/prism-weave-night.svg
+23ba4ae2b5c8df9fae00b1ca984337d1780e556b953c035a65eb285bb124b412  ./03-marketing/patterns/prism-weave.css
+8e763899b4e344248d72cada2fa6da0217762b6651213039426659deda33ed3f  ./03-marketing/patterns/prism-weave.json
 c5be9702aa68bd92298277b8e60f0c8fb147d0dbf17409d273d05647c33e9c16  ./03-marketing/social/T47-your-shade-mail-1200x400.png
 62ed22b9de486ee59874ba1b55490bccd0207c629c5e5891991c8a6faea0ec08  ./03-marketing/social/T47-your-shade-post-1080x1350.png
 63815b33fbf484340f13430f02c2902a43bb6b4bc5524fcbbe3d87440eadcaa3  ./03-marketing/social/T47-your-shade-sq-1080x1080.png
@@ -19,4 +28,4 @@ d16f29fbe2fb801e21443212a29902f9faf655975624585fa04529aaaf85f91f  ./05-handoff/H
 59b68fb3c5e553c194508810b4e7d7aae2e184fcf8296bf23cd0f6ff4cd7fbc0  ./05-handoff/PROMPT-CORE.md
 4fae49756cf640cef22cf5ba7f8f3c4975e479e4c2873e897ce1ceed73a6c28f  ./05-handoff/RESEARCH-SOURCES.md
 1b53f4d4f88aead5886dbd236333797300ea262359c8c258fc6859a4cbd6b93a  ./05-handoff/handoff.spec.json
-1c7cf7850203e0d166383e637ab0f92eb5517b8660a4434510627d592f3fb6b4  ./README.md
+8d78166de9df7555db5bf52d19b4f9ab97d7ef3f37a64be1b6fd15f80124a065  ./README.md

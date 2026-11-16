@@ -128,3 +128,220 @@ export const utilityAura = {
     light: {"rest": ["#FFE3A3", "#FFD0A0", "#F7B9C8"], "act": ["#FFC94D", "#FFA85C", "#F27A9A"], "ink": "#4A2800", "bd": "#EDBE72", "sh": "#B8620A"},
     dark: {"rest": ["#FFD36E", "#FFB877", "#F59BB5"], "act": ["#FFC23A", "#FF9E4D", "#EE6D92"], "ink": "#2E1700", "bd": "#FFE2A0", "sh": "#F0AE47"} },
 } as const;
+
+/** Prism Weave, v1.3 marketing packet 5.4. Seamless hexagonal-lattice gradient pattern mixing the six vertical ramps.
+ *  Generated from 03-marketing/patterns/prism-weave.json; do not edit by hand. Status: PRELIMINARY - pending full release.
+ *  'full' is decoration or under a scrim; 'quiet' is the multiplier at which text may sit directly on the pattern
+ *  (primary text >= 4.6:1, secondary >= 4.65:1 at the worst pixel of the tile). */
+export const prismWeave = {
+  "tile": {
+    "width": 1080,
+    "height": 624,
+    "radius": 260,
+    "hotSpotOffset": 0.26,
+    "stopPositions": [
+      0.0,
+      0.125,
+      0.25,
+      0.375,
+      0.5,
+      0.625,
+      0.75,
+      0.875,
+      1.0
+    ],
+    "rampSpread": 0.8
+  },
+  "ground": {
+    "day": "#FFFFFF",
+    "night": "#101327"
+  },
+  "peakOpacity": {
+    "night": 0.88,
+    "day": 0.95
+  },
+  "blend": {
+    "day": "multiply",
+    "night": "screen"
+  },
+  "assignment": [
+    {
+      "point": [
+        180,
+        156
+      ],
+      "vertical": "skin",
+      "angle": 135,
+      "night": [
+        "#19AFBE",
+        "#1E88F8",
+        "#200068"
+      ],
+      "day": [
+        "#BEE4E9",
+        "#C3DEFF",
+        "#D7D9F6"
+      ],
+      "dayCore": [
+        "#7CC9D3",
+        "#8ABEFF",
+        "#B5B8D6"
+      ]
+    },
+    {
+      "point": [
+        540,
+        156
+      ],
+      "vertical": "makeup",
+      "angle": 108,
+      "night": [
+        "#C844C8",
+        "#F27A6B",
+        "#F27A6B"
+      ],
+      "day": [
+        "#FFD3D9",
+        "#FFC8B0",
+        "#FFE0A8"
+      ],
+      "dayCore": [
+        "#FF9CAB",
+        "#FF9E78",
+        "#FFC76B"
+      ]
+    },
+    {
+      "point": [
+        900,
+        156
+      ],
+      "vertical": "style",
+      "angle": 146,
+      "night": [
+        "#9040F8",
+        "#C844C8",
+        "#200068"
+      ],
+      "day": [
+        "#E0D3FF",
+        "#F3CEF1",
+        "#D7D9F6"
+      ],
+      "dayCore": [
+        "#C4A9FF",
+        "#E59EE3",
+        "#B5B8D6"
+      ]
+    },
+    {
+      "point": [
+        360,
+        468
+      ],
+      "vertical": "wardrobe",
+      "angle": 120,
+      "night": [
+        "#1E88F8",
+        "#9040F8",
+        "#C844C8"
+      ],
+      "day": [
+        "#C9DCFF",
+        "#D9CCFF",
+        "#F0CCF2"
+      ],
+      "dayCore": [
+        "#8FB5FF",
+        "#B49DFF",
+        "#E48FDD"
+      ]
+    },
+    {
+      "point": [
+        720,
+        468
+      ],
+      "vertical": "hair",
+      "angle": 162,
+      "night": [
+        "#19AFBE",
+        "#19AFBE",
+        "#1E88F8"
+      ],
+      "day": [
+        "#BDF0E0",
+        "#BFE7F5",
+        "#C9D8FF"
+      ],
+      "dayCore": [
+        "#6FD9B8",
+        "#6FC6E8",
+        "#8FA9FF"
+      ]
+    },
+    {
+      "point": [
+        0,
+        468
+      ],
+      "vertical": "color",
+      "angle": 94,
+      "night": [
+        "#F27A6B",
+        "#F27A6B",
+        "#C844C8"
+      ],
+      "day": [
+        "#FFE3A3",
+        "#FFD0A0",
+        "#F7B9C8"
+      ],
+      "dayCore": [
+        "#FFC94D",
+        "#FFA85C",
+        "#F27A9A"
+      ]
+    }
+  ],
+  "neverTouch": [
+    [
+      "skin",
+      "hair"
+    ],
+    [
+      "makeup",
+      "color"
+    ],
+    [
+      "style",
+      "wardrobe"
+    ]
+  ],
+  "strength": {
+    "night": {
+      "full": {
+        "x": 1.0,
+        "primaryContrast": 2.78,
+        "secondaryContrast": 1.67
+      },
+      "quiet": {
+        "x": 0.44,
+        "primaryContrast": 7.88,
+        "secondaryContrast": 4.72
+      }
+    },
+    "day": {
+      "full": {
+        "x": 1.0,
+        "primaryContrast": 8.92,
+        "secondaryContrast": 3.59
+      },
+      "quiet": {
+        "x": 0.64,
+        "primaryContrast": 11.56,
+        "secondaryContrast": 4.65
+      }
+    }
+  }
+} as const;

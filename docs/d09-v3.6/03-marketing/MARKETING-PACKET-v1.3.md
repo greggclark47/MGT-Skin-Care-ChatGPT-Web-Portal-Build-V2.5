@@ -1,6 +1,6 @@
 # Team 47 Studio — Marketing Packet
 
-**Version 1.2 · 2026-11-15 · For anyone producing Team 47 Studio material: web, social, email, partner decks** · v1.1: utility row colours (§5.2) · v1.2: utility row moves to the lighter Aura palette (§5.2); build reference is v3.9
+**Version 1.3 · 2026-11-15 · For anyone producing Team 47 Studio material: web, social, email, partner decks** · v1.1: utility row colours (§5.2) · v1.2: utility row moves to the lighter Aura palette (§5.2) · v1.3: Prism Weave seamless pattern (§5.4, `patterns/`), accessibility figures refreshed (§9); build reference is v3.9
 
 > **Status: PRELIMINARY — pending full release.** Prepared for review ahead of any execution. Decisions, routes, wording and figures are subject to change before work begins; nothing here is final until the owner releases it.
 
@@ -12,6 +12,7 @@ Everything here is taken from the D09 v3.9 build. Colour values come from `token
 |---|---|
 | `tokens/d09-tokens-v3.6.json` | The canonical token file — colour, type, segments, motion |
 | `tokens/d09-tokens-v3.6.css` | The same, as CSS custom properties, generated from the JSON |
+| `patterns/` | **Prism Weave**, the seamless gradient pattern: CSS, SVG, PNG tiles, two hero samples, the builder script and its spec (§5.4) |
 | `social/` | Six "Your shade, matched." creatives, rendered at export size |
 | `logo-dark-surface.png` · `logo-light-surface.png` | The established logo for each ground |
 
@@ -162,6 +163,69 @@ The label is always a deep ink drawn from the same family, never white, because 
 
 Cards 26px radius, buttons fully rounded, 1px borders, no drop shadows.
 
+### 5.4 Pattern: Prism Weave
+
+One seamless background that mixes all six vertical ramps, for hero bands, email headers, deck backgrounds, empty states and print. It is built only from colours already in this packet: the raw ramps and the §5.1 dark-ground swap for Night, and the §5.2 Aura families for Day.
+
+**Construction.** A hexagonal lattice of six soft orbs on a 1080 × 624 tile, 360px apart, with alternate rows offset by half a spacing. Each orb belongs to one vertical and runs that vertical's own three-stop ramp, with its hot spot shifted toward the start of the vertical's angle, so the tile keeps the same directional feel as the segment ramps. The falloff uses nine eased stops, so there are no visible rings. Orbs that cross a tile edge are drawn again on the far side, which makes the tile repeat exactly. Checked two ways: in the reference render the step across the tile edge equals the next step inward (0.42 against 0.42 on Night, 0.20 against 0.20 on Day, horizontally); in the exported 8-bit PNGs the edge-to-edge step averages 0.94 to 1.00 of 255 against 0.80 to 0.85 for ordinary neighbouring pixels, which is under one colour level either way.
+
+**Which vertical sits where.** Look-alike verticals are kept apart. Skin and Hair (both teal to blue), Makeup and Color (both warm) and Style and Wardrobe (both violet) sit on lattice points that never touch. Every pair that does touch looks different in both modes (12 touching pairs checked; the weakest pair is separated by roughly a 55° hue gap, measured in OKLab relative to chroma). Placement: Skin, Makeup, Style across the top row; Wardrobe, Hair, Color across the lower row.
+
+**Two twins, one structure.**
+
+| | Night | Day |
+|---|---|---|
+| Ground | `#101327` | `#FFFFFF` |
+| Colour | Raw ramps with the §5.1 rule 3 swap (amber and orange to coral, lime to teal) | Wardrobe, Makeup, Hair, Color use the Applications, Shop, Learn, Retail Partners Aura ramps. Skin and Style use their own ramps tinted to the same lightness and chroma |
+| Orb core | Raw ramp at peak | Aura current-page ramp at the hot spot, easing to the resting ramp by 55% of the radius |
+| Overlap | Screen (overlaps glow) | Multiply (overlaps deepen) |
+| Peak opacity | 0.88 | 0.95 |
+
+**Two strengths.**
+
+| Strength | Use | Night | Day |
+|---|---|---|---|
+| **Full** | Decoration only, or with a scrim under the type (§5.1 rule 4) | Opacity ×1.0. Not for type without a scrim (worst primary-text contrast 2.78:1) | Opacity ×1.0. Primary text clears (8.92:1) but secondary text does not (3.59:1), so copy still uses Quiet |
+| **Quiet** | Anywhere text sits directly on the pattern | Opacity ×0.44. Primary text ≥ 7.88:1, secondary ≥ 4.72:1 | Opacity ×0.64. Primary text ≥ 11.56:1, secondary ≥ 4.65:1 |
+
+Quiet strength is solved, not eyeballed: the opacity multiplier is the highest value at which the mode's primary text (`#F3F4FA` or `#15172D`) holds 4.6:1 and its secondary text (`#B9BFD3` or `#4E5872`) holds 4.65:1 at the worst pixel anywhere on the tile, so text can be placed without checking where it lands. The 4.65 target is 0.15 above AA to leave room for rendering differences.
+
+**Rules of use.**
+
+1. Type on the pattern follows the ordinary rules. White-on-gradient buttons use the button ramp (§5.1 rule 1), body text uses the mode's ink (rule 2), and headline emphasis words use the gradient with the mode's stops. The sample heroes use the lighter stops `#5FD8E4 → #8AC4FF → #B49BFF → #EE9CEE` on Night so the headline holds contrast, and the small-text inks `#0B6F79 → #0F5FBF → #6A2BD0 → #9A2E9A` on Day.
+2. Exported assets (§8) use Night, drawn on `#101327`, with a scrim under the type and the required line (§4.3) on a solid foot band, whatever theme the viewer is in.
+3. The pattern is never the carrier of a claim and never sits behind the required line without the foot band or Quiet strength.
+4. No before-and-after imagery, no faces and no product shots inside the pattern. It is colour only.
+5. Scale only in whole multiples of the tile (1×, 2×) for raster use. CSS and SVG scale freely.
+
+**Measured on the sample heroes** (1920 × 1080, worst pixel inside each text box, pattern plus scrim rendered without the text):
+
+| Element | Night | Day (Quiet) | Needs |
+|---|---|---|---|
+| Headline, large type with gradient emphasis, worst gradient stop | 5.98:1 | 3.83:1 | 3:1 |
+| Sub-line | 8.28:1 | 5.34:1 | 4.5:1 |
+| URL | 8.03:1 | 4.86:1 | 4.5:1 |
+| Required line | 6.12:1 | 6.25:1 | 4.5:1 |
+
+**Fidelity check.** The tile is computed twice. A numpy reference (premultiplied interpolation, as CSS gradients do) produces every contrast figure above. Chromium then renders the CSS and the SVG, and both are compared against the reference pixel by pixel: mean difference 0.5 to 0.6 of 255 per channel, worst single pixel 4. The figures in this section are therefore measured on what a browser actually draws.
+
+**Using it on the web.**
+
+```css
+@import "patterns/prism-weave.css";
+.hero        { /* Quiet where text sits on it */ }
+.hero-bg     { /* decorative */ }
+```
+
+```html
+<section class="t47-weave t47-weave--quiet">…</section>   <!-- text on the pattern -->
+<div class="t47-weave" aria-hidden="true"></div>           <!-- decoration -->
+```
+
+The CSS follows the demo's `[data-mode="dark"]` hook and falls back to `prefers-color-scheme` when no mode is set. `prism-weave.css` exposes `--t47-weave`, `--t47-weave-quiet`, `--t47-weave-size`, `--t47-weave-ground` and `--t47-weave-blend`. Tokens for the lattice, assignment and strengths are in `prismWeave` in `02-overlay/tokens.d09.ts`.
+
+**Open on the pattern.** Both modes were checked by measurement and by eye on the two sample heroes only. Production use on photographic or video backgrounds, and print colour (CMYK) conversion, have not been tested.
+
 ---
 
 ## 6. Type
@@ -205,11 +269,22 @@ All six are rendered from the build's own creative, with the logo on its dark-su
 
 Placement sizes are the platforms' commonly used dimensions as of this packet; check each platform's current spec before a paid run.
 
+**Pattern assets** (`patterns/`, §5.4)
+
+| File | Size | Use |
+|---|---|---|
+| `prism-weave.css` | 1080 × 624 tile, repeating | Web backgrounds. Follows `[data-mode="dark"]` |
+| `prism-weave-night.svg` · `prism-weave-day.svg` | 1080 × 624 tile | Vector use, decks, print workflows |
+| `prism-weave-night-tile-1080x624.png` · `prism-weave-day-tile-1080x624.png` | 1080 × 624 | Raster tile at 1×; repeat in whole multiples |
+| `prism-weave-hero-night-1920x1080.png` · `prism-weave-hero-day-1920x1080.png` | 1920 × 1080 | Sample hero compositions that show the type rules in place |
+| `prism-weave.json` | | Lattice, assignment, stops, strengths and every measured figure |
+| `build-prism-weave.py` | | Regenerates all of the above from `tokens/d09-tokens-v3.6.json` (`--fonts-from <demo html>` also renders the heroes) |
+
 ---
 
 ## 9. Accessibility
 
-Every text run in the build is checked against WCAG AA in both modes. The last full sweep measured 6,528 runs across 69 screens. The only open flag is an 11px line on the social-kit screen, which the automated method mis-reads; measured against rendered pixels it's 15.67:1.
+Every text run in the build is checked against WCAG AA in both modes. The v3.9 sweep measured 8,250 runs across 71 screens and found one failure, a social-card caption at 3.11:1; it now sits on a dark scrim and the re-run is clean. The Prism Weave figures in §5.4 are measured separately, on rendered pixels.
 
 ---
 

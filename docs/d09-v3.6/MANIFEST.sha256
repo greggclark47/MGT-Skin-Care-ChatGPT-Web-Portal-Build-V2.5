@@ -1,4 +1,4 @@
-2073c53c86b06e7e904a7e1d6c1cf1cbe4c97f0ba51fc5111f1f792ab98f0c0d  ./02-overlay/OVERLAY-PACKET-v1.6.md
+a74b893b335073749d03774e3a9d49483c6bf08b3ff27ea0cbd8e9ddb6f5fdf6  ./02-overlay/OVERLAY-PACKET-v1.6.md
 2fff04f6eee0a5ada5fc9c524a772edb1be4dedb5922f1ec680603ccaebff88e  ./02-overlay/brand-string-sweep.txt
 92e08364d7628188040547c39b8eba44ed7b34ac3a4dc40e32b4862d6ae2cec6  ./02-overlay/d09-overlay.css
 2fcee23796abf963bb7ab0491601779bedff82cd9282bb0c690222c2a5b9eafd  ./02-overlay/flows.json
@@ -24,7 +24,7 @@ c5be9702aa68bd92298277b8e60f0c8fb147d0dbf17409d273d05647c33e9c16  ./03-marketing
 1dc410f4f319df669164f334d3d9571e6b2a68a8d965b0d112fdc354f4003c69  ./03-marketing/social/T47-your-shade-wide-1200x628.png
 bf29196e29dfbe374a2b64c61f8a4f4b79769ca11c517117a35a5f7b7401d571  ./03-marketing/tokens/d09-tokens-v3.6.css
 3fee57b3b853c5e32e8776f8052a92915dac127298db863fcd754f611e013821  ./03-marketing/tokens/d09-tokens-v3.6.json
-45ed6d8df77cfad4b375ca5448aaeaaa43adec1f72dbc62a687446dc730220cc  ./05-handoff/HANDOFF-PACKET-v1.3.md
+6c2aec0504c2596da761489876b62ce539df08346215088bd74f48e07ae18a6c  ./05-handoff/HANDOFF-PACKET-v1.3.md
 1f41a0addd26dd60d215ada9774701a2682aada8c1cc6f50e4e230e46618f79c  ./05-handoff/PROMPT-CORE.md
 c3acede95ecd4373dfb5f0833eff34f651c752ca4eeed5fb2cc1637cbede2606  ./05-handoff/RESEARCH-SOURCES.md
 8ca93fb22563729333e5eb3fab9a9776e392193c88b57701f55781b1b344a74b  ./05-handoff/handoff.spec.json
@@ -32,4 +32,4 @@ c3acede95ecd4373dfb5f0833eff34f651c752ca4eeed5fb2cc1637cbede2606  ./05-handoff/R
 c2f18601aca07f1a602b94b006ecccac2733f0d356dbe8a3bffdb8bbc831695d  ./06-growth/GROWTH-PLAN-M2-M3-v1.0.md
 569af03316edc959b7bd54cbbe454666df53677b016edd758bef9cb21644eee8  ./06-growth/LIFECYCLE-MESSAGES-v1.0.md
 295c69bf8424e37f228b3f51238af275ca448d413fb44da4bf737d4a6e7a0861  ./06-growth/SOCIAL-CALENDAR-M1-v1.0.md
-8678e93e33ee3b3790c1122dc4805d83a0437634641897dc9e835d507a702f2f  ./README.md
+fde88b2b7218f34566ccc860324f2d54f822a62af7abaa9f8652de271b2dc7db  ./README.md

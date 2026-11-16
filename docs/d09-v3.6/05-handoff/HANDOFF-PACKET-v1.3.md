@@ -1,6 +1,6 @@
 # Team 47 Studio — Platform-Neutral Handoff Packet
 
-**Version 1.3 · 2026-11-16 · Internal · For any AI platform or engineering team that will merge the v4.2 design onto the existing build and complete the backend** · v1.1: plans priced (rule 6, §5.5) · v1.2: optional 14-day Guided trial and separate renewal consent (rule 6, §5.5) · v1.3: Retail Partners merged into one section (W29 retired, W21 holds the tabs, A24 added), AI setup assistant, product-updates feed, Retail Partners band at the foot of every web screen and row at the foot of every app screen, logo +18%, icon system; demo reference is v4.2
+**Version 1.3 · 2026-11-16 · Internal · For any AI platform or engineering team that will merge the v4.2 design onto the existing build and complete the backend** · v1.1: plans priced (rule 6, §5.5) · v1.2: optional 14-day Guided trial and separate renewal consent (rule 6, §5.5) · v1.3: Retail Partners merged into one section (W29 retired, W21 holds the tabs, A24 added), AI setup assistant, product-updates feed, Retail Partners as a support link in the footer (between Privacy & Terms and Shipping & returns) on every web screen, row at the foot of every app screen, logo +18%, icon system; demo reference is v4.2
 
 > **Status: PRELIMINARY — pending full release.** Prepared for review ahead of any execution. Decisions, routes, wording and figures are subject to change before work begins; nothing here is final until the owner releases it.
 
@@ -32,7 +32,7 @@ Everything here is written to be acted on without the original conversation. The
 | K-beauty-led global catalogue (context: Korea's cosmetics exports hit a record $11.4B in 2025, and it became the world's second-largest exporter, per its food and drug safety ministry `[SRC 12]`) | 24 invented products: KR 6, JP 5, US 4, Nordics 3, DE 2, APAC 2, EU 2. Skincare 15, makeup 5, haircare 4. | Real feed ingestion (§6). Real brands need real contracts; the demo names none. |
 | Retailers by channel, own payment platform, consented data transfer, Stripe credentials with approval | Eight invented retailers in three modes (§5.6). Per-retailer consent sheet with fields default off. Saved card used only after on-device approval. | Consent ledger, handoff API, retailer-side receivers. |
 | AI Coach, customer-care agent, partner onboarding, dedicated support | Coach with AI label, context chips, per-answer Used / Not used, human handoff. Care centre with roles and escalation triggers. Seven-step partner onboarding. | Model routing, escalation rules, ticketing, Stripe Connect (§5.7–5.9). |
-| Footer | Plans & Billing, Company, Trust & AI, Support, Privacy & Terms, Shipping & returns, Partners. Trust & AI and AI disclosure are one page. Privacy and Terms are one link with two documents on tabs. | Old paths 301 to the new ones. |
+| Footer | Plans & Billing, Company, Trust & AI, Support, Privacy & Terms, Retail Partners, Shipping & returns. Trust & AI and AI disclosure are one page. Privacy and Terms are one link with two documents on tabs. | Old paths 301 to the new ones. |
 | Utility row v2 | Same four labels and destinations, lighter pastel gradients distinct from the header pills, brighter in dark mode, active state is a deeper pastel with a 2px ink ring. Worst ink-on-stop contrast 5.03:1. | Ship `util.js` values as tokens. |
 
 ---
@@ -60,7 +60,7 @@ These came from earlier decisions and counsel work. Each is a product rule, not 
 
 ## 3. How the demo is built, so you can reproduce or replace it
 
-`demo/index-v4.2.html` is `index-v4.1.html` plus `demo/v42-src/patch42.py` (Retail Partners merge, Learn rebuild, icon system, logo +18%, Retail Partners band and row; reproducible byte-for-byte from v4.1). `index-v4.1.html` is `index-v4.0.html` plus `demo/v41-src/patch41.py` (trial door, renewal consent); v4.0 is `index-v3.9.html` plus `demo/v40-src/patch40.py` (plans, pricing, Prism Weave hero); v3.9 in turn is the v3.8 file plus an appended patch layer. `demo/v39-src/patch39.py` reads `index-v3.8.html` and the files in `v39/`, replaces the old catalogue, swaps the utility-row block and footer, merges the legal pages, appends the layer before the final `buildRail();paint(true)` and writes the result.
+`demo/index-v4.2.html` is `index-v4.1.html` plus `demo/v42-src/patch42.py` (Retail Partners merge, Learn rebuild, icon system, logo +18%, Retail Partners footer link and app row; reproducible byte-for-byte from v4.1). `index-v4.1.html` is `index-v4.0.html` plus `demo/v41-src/patch41.py` (trial door, renewal consent); v4.0 is `index-v3.9.html` plus `demo/v40-src/patch40.py` (plans, pricing, Prism Weave hero); v3.9 in turn is the v3.8 file plus an appended patch layer. `demo/v39-src/patch39.py` reads `index-v3.8.html` and the files in `v39/`, replaces the old catalogue, swaps the utility-row block and footer, merges the legal pages, appends the layer before the final `buildRail();paint(true)` and writes the result.
 
 | File | Contents |
 |---|---|
@@ -242,7 +242,7 @@ Run all of these against the merged build. IDs match `handoff.spec.json`.
 |---|---|
 | AT-01 | Every screen renders in light and dark with no console error (harness: 71 screens, 294 renders) |
 | AT-02 | Every interactive element has a handler and a keyboard stop (3,417 elements, 0 dead) |
-| AT-03 | Footer order is Plans & Billing, Company, Trust & AI, Support, Privacy & Terms, Shipping & returns, Partners; no separate AI disclosure, Privacy or Terms link |
+| AT-03 | Footer order is Plans & Billing, Company, Trust & AI, Support, Privacy & Terms, Retail Partners, Shipping & returns; no separate AI disclosure, Privacy or Terms link |
 | AT-04 | `/terms` and `/privacy` land on the matching tab of `/privacy-terms`; `/ai-disclosure` lands on `/trust-and-ai` |
 | AT-05 | Selecting a filter changes the count and shows a chip; Clear all restores the original count |
 | AT-06 | No product above the sensitivity ceiling is offered by the shop, the Coach or "Add my whole routine" while the ceiling toggle is on |

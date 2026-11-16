@@ -5,6 +5,8 @@ import test from "node:test";
 const html = readFileSync(new URL("../../index.html", import.meta.url), "utf8");
 const script = readFileSync(new URL("../../app.js", import.meta.url), "utf8");
 const styles = readFileSync(new URL("../../styles.css", import.meta.url), "utf8");
+const primaryEndToEndDemo = readFileSync(new URL("../../47-team-studio-end-to-end-demo.html", import.meta.url), "utf8");
+const alternateEndToEndDemo = readFileSync(new URL("../../team-47-studio-end-to-end-demo.html", import.meta.url), "utf8");
 
 test("static demo exposes the current release and ship-packet surface", () => {
   assert.match(html, /F435/);
@@ -298,4 +300,11 @@ test("static demo has responsive ship-packet styling", () => {
   assert.match(script, /id: "guided"/);
   assert.doesNotMatch(script, /id: "essential"/);
   assert.match(script, /id: "studio"/);
+});
+
+test("end-to-end demos compact the header before desktop navigation can overflow", () => {
+  const compactHeader = /@media \(max-width: 1320px\) \{[\s\S]*?\.menu-button \{ display: inline-flex; margin-left: auto; \}[\s\S]*?\.main-nav \{ position: absolute; top: 72px; right: 0; display: none;/;
+  assert.match(styles, compactHeader);
+  assert.match(primaryEndToEndDemo, compactHeader);
+  assert.match(alternateEndToEndDemo, compactHeader);
 });

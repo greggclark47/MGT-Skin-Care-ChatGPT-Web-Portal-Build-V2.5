@@ -1,0 +1,21 @@
+/* D09 Prism Gradient v3.6 — generated from d09-tokens-v3.6.json. Do not hand-edit. */
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&display=swap');
+:root{--t47-bg:#0B0D1A;--t47-bg2:#101327;--t47-surf:#171B33;--t47-panel:#1B1740;--t47-text:#F3F4FA;--t47-sub:#B9BFD3;--t47-mute:#8E96B0;--t47-line:#2A2F4D;--t47-acc:#9A80FF;--t47-acc2:#F0AE47;}
+:root{--g-skin:linear-gradient(135deg,#19AFBE,#1E88F8,#200068);--gb-skin:linear-gradient(135deg,#1B709F,#1E6DDB,#200068);--g-makeup:linear-gradient(108deg,#C844C8,#F27A6B,#F0AE47);--gb-makeup:linear-gradient(108deg,#A636B5,#A64E6A,#8A5957);--g-hair:linear-gradient(162deg,#6BBF3B,#19AFBE,#1E88F8);--gb-hair:linear-gradient(162deg,#507A4B,#1B709F,#1E6DDB);--g-color:linear-gradient(94deg,#F0AE47,#F08A3C,#C844C8);--gb-color:linear-gradient(94deg,#8A5957,#A5584C,#A636B5);--g-style:linear-gradient(146deg,#9040F8,#C844C8,#200068);--gb-style:linear-gradient(146deg,#9040F8,#A636B5,#200068);--g-wardrobe:linear-gradient(120deg,#1E88F8,#9040F8,#C844C8);--gb-wardrobe:linear-gradient(120deg,#1E6DDB,#9040F8,#A636B5);--t47-navy:#200068}
+[data-theme="light"]{--t47-bg:#FFFFFF;--t47-bg2:#F4F6FB;--t47-surf:#FFFFFF;--t47-panel:#EEEAFE;--t47-text:#15172D;--t47-sub:#4E5872;--t47-mute:#4E5872;--t47-line:#DFE4EE;--t47-acc:#6540D4;--t47-acc2:#9A5B00;}
+
+/* ---------- OVERLAY: maps D09 onto the existing build's variables ----------
+   Load AFTER apps/web/src/app/globals.css. Rebinds the names the components already use,
+   so the first pass changes no component code. */
+:root,[data-theme="light"]{--bg:var(--t47-bg);--panel:var(--t47-surf);--border:var(--t47-line);--text:var(--t47-text);
+ --muted:var(--t47-sub);--purple:var(--t47-acc);--violet:#6540D4;--orange:var(--t47-acc2)}
+[data-theme="light"]{color-scheme:light}
+body{font-family:'DM Sans',system-ui,sans-serif}
+h1,h2,h3,.brand,.app-page-title{font-family:'Space Grotesk','DM Sans',sans-serif;font-weight:700;letter-spacing:-.022em;line-height:1.06}
+em{font-family:inherit;font-style:italic;color:var(--t47-acc)}
+.button.primary{background:var(--gb-skin);border-color:transparent;color:#fff}
+.button.primary:hover{filter:brightness(1.08)}
+.header{background:color-mix(in srgb,var(--t47-bg) 96%,transparent)}
+.app-card,.panel,.product-card{border-radius:26px;background:var(--t47-surf)}
+p{color:var(--t47-sub)}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}

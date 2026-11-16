@@ -1,0 +1,23 @@
+{
+  "schema": "t47.restore-drill-evidence.v1",
+  "prepared_at": "2026-11-15T02:51:17Z",
+  "candidate_commit": "<40-character sha>",
+  "snapshot_taken_at": null,
+  "export_encrypted_at": null,
+  "drive_file_id": null,
+  "archive_sha256": null,
+  "archive_bytes": null,
+  "readback_sha256_matches": null,
+  "restore_requested_at": null,
+  "restore_verified_at": null,
+  "rpo_minutes": null,
+  "rto_minutes": null,
+  "accepted_rpo_minutes": null,
+  "accepted_rto_minutes": null,
+  "restored_row_counts_match": null,
+  "rls_audit_pass": null,
+  "two_account_read_pass": null,
+  "data_owner": null,
+  "signed_off_at": null,
+  "notes": ""
+}

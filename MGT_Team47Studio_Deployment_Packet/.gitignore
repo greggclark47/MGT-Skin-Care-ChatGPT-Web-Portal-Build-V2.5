@@ -1,0 +1,12 @@
+# local settings and state never belong in Git
+config/t47.toml
+*.t47enc.json
+*.receipt.json
+.t47/
+__pycache__/
+*.pyc
+.pytest_cache/
+*.egg-info/
+build/
+dist/
+.venv/

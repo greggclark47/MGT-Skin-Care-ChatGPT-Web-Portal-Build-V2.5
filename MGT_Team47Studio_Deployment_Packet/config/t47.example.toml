@@ -1,0 +1,37 @@
+# Team 47 Studio packet settings. Copy to config/t47.toml (ignored by Git) and edit.
+# This file holds no secrets. A key is named by environment variable only; a secret-looking value here is refused.
+
+[site]
+origin = "https://team47studio.com"
+www = "https://www.team47studio.com"
+
+[ollama]
+# The local model runtime. Loopback only: it is never exposed to the network or tunnelled.
+base_url = "http://127.0.0.1:11434"
+num_ctx = 8192          # context the repository measured both incumbents at
+keep_alive = "10m"
+timeout_s = 60
+
+[ollama_cloud]
+# Metered fallback. Off until the owner approves AI routing (release gate G12).
+enabled = false
+base_url = "https://ollama.com"
+model = "deepseek-v4.1-flash"
+api_key_env = "OLLAMA_CLOUD_API_KEY"   # the NAME of the environment variable, never the key
+
+[models]
+# Incumbents from packages/ai-gateway/src/task-registry.ts. Change a line only after `t47 models bakeoff`
+# prints PROPOSE for the new model and you accept it.
+drafting = "qwen3.5:4b"
+reasoning = "deepseek-r1:8b"
+embedding = "nomic-embed-text"
+
+[hardware]
+vram_gb = 16            # RTX 5080
+
+[paths]
+state_dir = "~/.t47"    # review queue, gate state, bake-off results, encrypted backups
+repo = ""               # path to the monorepo checkout, used by `t47 diagnostics repo`
+
+[operator]
+agent_identity = "agent:t47-local"   # recorded as the creator of agent drafts; it can never review

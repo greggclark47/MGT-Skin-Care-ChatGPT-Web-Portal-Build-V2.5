@@ -1,9 +1,9 @@
 # Team47Studio project tracker
 
-Updated: 2026-11-14 EST  
+Updated: 2026-11-16 EST
 Release posture: **development candidate verified; production expansion remains review-gated.**
 
-Latest local readiness snapshot: 2026-11-14 13:13 EST. The secret-free checker correctly remains blocked without the private production configuration, immutable release-image declarations, target Supabase evidence, backup/restore evidence, deployed accessibility evidence, and named approvals. Subscriptions are reported as **not applicable** for the current disabled production release; this is intentional until the separate Stripe review package is accepted.
+Latest local readiness snapshot: 2026-11-16 17:14 EST. The secret-free checker correctly remains blocked without the private production configuration, immutable release-image declarations, target Supabase evidence, backup/restore evidence, deployed accessibility evidence, and named approvals. The final local suite passed 18 executed gates, one generated-artifact scan, and 1,704 reported assertions. Subscriptions remain disabled pending the separate Stripe review package; Free access, Guided-only 14-day trial behavior, and Studio paid enrollment are implemented but not activated.
 
 ## Completed in the current candidate
 
@@ -13,6 +13,8 @@ Latest local readiness snapshot: 2026-11-14 13:13 EST. The secret-free checker c
 - [x] Stripe-hosted Checkout and Customer Portal integration boundaries, signed webhook reconciliation, duplicate-event controls, and asynchronous Checkout-event handling.
 - [x] Review-gated Stripe activation package with explicit Secret Manager references only.
 - [x] Web production build, mobile type/contract checks, subscription/billing regressions, full application regression, and credential scan.
+- [x] Reconciled transfer-packet, API, web, mobile, terms, and demo subscription language around Free permanent access, a Guided-only 14-day trial, Studio paid enrollment, and annual two-month savings.
+- [x] Corrected the preproduction policy helper so it distinguishes implemented membership workflows from still-required Stripe activation evidence.
 
 ## Development work remaining
 

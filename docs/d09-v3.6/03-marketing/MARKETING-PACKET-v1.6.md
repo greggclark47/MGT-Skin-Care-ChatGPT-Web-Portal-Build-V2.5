@@ -1,10 +1,10 @@
 # Team 47 Studio — Marketing Packet
 
-**Version 1.5 · 2026-11-15 · For anyone producing Team 47 Studio material: web, social, email, partner decks** · v1.1: utility row colours (§5.2) · v1.2: utility row moves to the lighter Aura palette (§5.2) · v1.3: Prism Weave seamless pattern (§5.4, `patterns/`), accessibility figures refreshed (§9) · v1.4: plans and prices (§3.1), Prism Weave on the landing hero · v1.5: trial line in §3.1; build reference is v4.1
+**Version 1.6 · 2026-11-16 · For anyone producing Team 47 Studio material: web, social, email, partner decks** · v1.1: utility row colours (§5.2) · v1.2: utility row moves to the lighter Aura palette (§5.2) · v1.3: Prism Weave seamless pattern (§5.4, `patterns/`), accessibility figures refreshed (§9) · v1.4: plans and prices (§3.1), Prism Weave on the landing hero · v1.5: trial line in §3.1; build reference is v4.2 · v1.6: Retail Partners is one section with its own text theme, accent colours (dark `#FFC23A`, light `#8A5B00`; the utility-row Aura family is unchanged), global and regional graphics; the logo on landing surfaces is 18% larger (36px to 42.5px header height)
 
 > **Status: PRELIMINARY — pending full release.** Prepared for review ahead of any execution. Decisions, routes, wording and figures are subject to change before work begins; nothing here is final until the owner releases it.
 
-Everything here is taken from the D09 v4.1 build. Colour values come from `tokens/d09-tokens-v3.6.json`; nothing in this document was typed separately from it.
+Everything here is taken from the D09 v4.2 build. Colour values come from `tokens/d09-tokens-v3.6.json`; nothing in this document was typed separately from it.
 
 **In this folder**
 

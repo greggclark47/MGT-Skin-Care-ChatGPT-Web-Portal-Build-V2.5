@@ -19,3 +19,6 @@ em{font-family:inherit;font-style:italic;color:var(--t47-acc)}
 .app-card,.panel,.product-card{border-radius:26px;background:var(--t47-surf)}
 p{color:var(--t47-sub)}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+/* v1.6: logo +18% on landing surfaces (36px -> 42.5px header height) */
+.t47hdr .logo,.logo.logo-l{height:42.5px}

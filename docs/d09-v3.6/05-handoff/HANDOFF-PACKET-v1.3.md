@@ -1,6 +1,6 @@
 # Team 47 Studio — Platform-Neutral Handoff Packet
 
-**Version 1.2 · 2026-11-15 · Internal · For any AI platform or engineering team that will merge the v4.1 design onto the existing build and complete the backend** · v1.1: plans priced (rule 6, §5.5) · v1.2: optional 14-day Guided trial and separate renewal consent (rule 6, §5.5); demo reference is v4.1
+**Version 1.3 · 2026-11-16 · Internal · For any AI platform or engineering team that will merge the v4.2 design onto the existing build and complete the backend** · v1.1: plans priced (rule 6, §5.5) · v1.2: optional 14-day Guided trial and separate renewal consent (rule 6, §5.5) · v1.3: Retail Partners merged into one section (W29 retired, W21 holds the tabs, A24 added), AI setup assistant, product-updates feed, Retail Partners band at the foot of every web screen and row at the foot of every app screen, logo +18%, icon system; demo reference is v4.2
 
 > **Status: PRELIMINARY — pending full release.** Prepared for review ahead of any execution. Decisions, routes, wording and figures are subject to change before work begins; nothing here is final until the owner releases it.
 
@@ -10,7 +10,7 @@ Everything here is written to be acted on without the original conversation. The
 
 | | |
 |---|---|
-| **Reference build** | `demo/index-v4.1.html` — one self-contained file, fonts embedded, 71 screens, opens offline |
+| **Reference build** | `demo/index-v4.2.html` — one self-contained file, fonts embedded, 71 screens, opens offline |
 | **Reproducible source** | `demo/v39-src/` — the v3.8 base plus the patch layer (`patch39.py`, `v39/*.js`, `v39/v39.css`) |
 | **Machine-readable spec** | `handoff.spec.json` — screens, routes, state keys, retailers, facets, endpoints, tables, tests |
 | **Paste-ready prompt** | `PROMPT-CORE.md` |
@@ -60,7 +60,7 @@ These came from earlier decisions and counsel work. Each is a product rule, not 
 
 ## 3. How the demo is built, so you can reproduce or replace it
 
-`demo/index-v4.1.html` is `index-v4.0.html` plus `demo/v41-src/patch41.py` (trial door, renewal consent); v4.0 is `index-v3.9.html` plus `demo/v40-src/patch40.py` (plans, pricing, Prism Weave hero); v3.9 in turn is the v3.8 file plus an appended patch layer. `demo/v39-src/patch39.py` reads `index-v3.8.html` and the files in `v39/`, replaces the old catalogue, swaps the utility-row block and footer, merges the legal pages, appends the layer before the final `buildRail();paint(true)` and writes the result.
+`demo/index-v4.2.html` is `index-v4.1.html` plus `demo/v42-src/patch42.py` (Retail Partners merge, Learn rebuild, icon system, logo +18%, Retail Partners band and row; reproducible byte-for-byte from v4.1). `index-v4.1.html` is `index-v4.0.html` plus `demo/v41-src/patch41.py` (trial door, renewal consent); v4.0 is `index-v3.9.html` plus `demo/v40-src/patch40.py` (plans, pricing, Prism Weave hero); v3.9 in turn is the v3.8 file plus an appended patch layer. `demo/v39-src/patch39.py` reads `index-v3.8.html` and the files in `v39/`, replaces the old catalogue, swaps the utility-row block and footer, merges the legal pages, appends the layer before the final `buildRail();paint(true)` and writes the result.
 
 | File | Contents |
 |---|---|
@@ -84,8 +84,8 @@ These came from earlier decisions and counsel work. Each is a product rule, not 
 The existing build is `greggclark47/MGT-Skin-Care-ChatGPT-Web-Portal-Build-V2.5` (Next.js web, Expo mobile, Express API, live Stripe Checkout), subject to decision O-1 (which build is the base). Follow `02-overlay/OVERLAY-PACKET-v1.3.md` for the screen-by-screen mapping (71 rows in `screen-map.csv`). In this order:
 
 1. **Theme.** Drop `d09-overlay.css` and `tokens.d09.ts` in. No component edits. Reversible by removing one import.
-2. **Routes and redirects.** Add `/privacy-terms` (tabs `#privacy`, `#terms`), `/trust-and-ai`, `/partners/onboarding`, `/app/progress`, `/app/scan`, `/account/security`. 301 these: `/terms` and `/privacy` to the matching tab, `/ai-disclosure` to `/trust-and-ai`. Never break a live URL. Resolve Terms §4.8's `/legal/privacy` against the site's `/privacy`.
-3. **Chrome.** Footer in the new order. Utility row from `util.js` with `aria-current="page"` set from the route (`usePathname()`), never from guessed state. Shop stays lit on `/cart`; Retail Partners stays lit on `/partners/onboarding`.
+2. **Routes and redirects.** Add `/privacy-terms` (tabs `#privacy`, `#terms`), `/trust-and-ai`, `/retail-partners/onboarding`, `/app/progress`, `/app/scan`, `/account/security`. 301 these: `/terms` and `/privacy` to the matching tab, `/ai-disclosure` to `/trust-and-ai`, `/partners` to `/retail-partners#brands`, and `/partners/onboarding` to `/retail-partners/onboarding`. Never break a live URL. Resolve Terms §4.8's `/legal/privacy` against the site's `/privacy`.
+3. **Chrome.** Footer in the new order. Utility row from `util.js` with `aria-current="page"` set from the route (`usePathname()`), never from guessed state. Shop stays lit on `/cart`; Retail Partners stays lit on `/retail-partners` and `/retail-partners/onboarding`.
 4. **Catalogue and filters.** Create the tables in §5.1. Port `fMatch` semantics to the API (§6). Keep the UI behaviour: applied chips with ×, Clear all, per-facet counts computed against all other facets, `aria-live` result count.
 5. **Commerce.** Cart grouped by retailer; consent sheet; Stripe modes (§5.6).
 6. **Security.** WebAuthn registration and login; step-up approval for saved-card use (§5.4).
@@ -142,7 +142,7 @@ All of this is proposed. Nothing exists yet. Names are suggestions.
 | Scan | `POST /api/scan/consent`, `POST /api/scan/analyse`, `DELETE /api/scan/result` |
 | Progress | `GET`/`POST /api/progress` |
 | Coach and care | `POST /api/coach/turn`, `POST /api/care/handoff`, `GET /api/care/tickets/:ref` |
-| Partners | `POST /api/partners/applications`, `POST /api/partners/:id/account-link`, `POST /api/partners/:id/agreement`, `POST /api/partners/:id/feed`, `POST /api/partners/:id/sandbox-order`, `POST /api/partners/:id/go-live` |
+| Partners (Retail Partners) | `POST /api/partners/applications`, `POST /api/partners/:id/account-link`, `POST /api/partners/:id/agreement`, `POST /api/partners/:id/feed`, `POST /api/partners/:id/sandbox-order`, `POST /api/partners/:id/go-live` |
 | Account | `GET /api/account/sharing` (what has been shared, per retailer), `GET /api/account/activity` |
 
 ### 5.3 Consent ledger

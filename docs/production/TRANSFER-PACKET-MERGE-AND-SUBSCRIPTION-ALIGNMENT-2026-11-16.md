@@ -80,3 +80,17 @@ Passing local tests establishes implementation readiness only. It does not by it
 - Verification evidence: `work/verification/2026-11-16T16-51-10-129Z/report.md`.
 
 The verification report explicitly leaves live services, browser interaction, PostgreSQL/RLS, imported-store reconciliation, and final production authorization untested. Those limits remain release blockers rather than being inferred as passed.
+
+## Current production holds
+
+The production preflight was intentionally run without production secrets or approvals. It failed closed with 61 missing or unapproved configuration inputs rather than inventing values. Release phases F71-F76 and F78-F80 remain blocked; F77 is currently not applicable because subscriptions and sponsored content are disabled. The principal categories are:
+
+- production identity, owner, domain, public-policy, support, monitoring, accessibility, and incident-response declarations;
+- immutable application and infrastructure image digests;
+- production database, Supabase, OAuth, edge-token, worker, backup, alert, and notification configuration;
+- explicit AI runtime and customer-feature enablement decisions;
+- deployed RLS, restoration, accessibility, provider, and release evidence.
+
+The redacted Stripe template probe remains not ready with 11 holds: candidate identity; one product and four distinct price IDs; approved subscription terms; signed event-destination verification; staging checkout evidence; and account-management, Checkout, webhook-reconciliation, and customer-portal evidence. Its redacted local report is `work/verification/stripe-subscription-readiness-2026-11-16.json`.
+
+These results confirm the intended safety posture: local source is green, while live services remain disabled until real operator inputs and independently reviewable evidence are supplied.

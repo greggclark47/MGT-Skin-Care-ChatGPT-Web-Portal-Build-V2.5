@@ -1,6 +1,6 @@
 # Team 47 Studio — Platform-Neutral Handoff Packet
 
-**Version 1.0 · 2026-11-15 · Internal · For any AI platform or engineering team that will merge the v3.9 design onto the existing build and complete the backend**
+**Version 1.1 · 2026-11-15 · Internal · For any AI platform or engineering team that will merge the v4.0 design onto the existing build and complete the backend** · v1.1: plans priced (rule 6, §5.5), demo reference is v4.0
 
 > **Status: PRELIMINARY — pending full release.** Prepared for review ahead of any execution. Decisions, routes, wording and figures are subject to change before work begins; nothing here is final until the owner releases it.
 
@@ -10,7 +10,7 @@ Everything here is written to be acted on without the original conversation. The
 
 | | |
 |---|---|
-| **Reference build** | `demo/index-v3.9.html` — one self-contained file, fonts embedded, 71 screens, opens offline |
+| **Reference build** | `demo/index-v4.0.html` — one self-contained file, fonts embedded, 71 screens, opens offline |
 | **Reproducible source** | `demo/v39-src/` — the v3.8 base plus the patch layer (`patch39.py`, `v39/*.js`, `v39/v39.css`) |
 | **Machine-readable spec** | `handoff.spec.json` — screens, routes, state keys, retailers, facets, endpoints, tables, tests |
 | **Paste-ready prompt** | `PROMPT-CORE.md` |
@@ -20,7 +20,7 @@ Everything here is written to be acted on without the original conversation. The
 
 ---
 
-## 1. What v3.9 delivers, mapped to the request
+## 1. What v3.9 and v4.0 deliver, mapped to the request
 
 | Request | Delivered in the demo | Real work remaining |
 |---|---|---|
@@ -46,7 +46,7 @@ These came from earlier decisions and counsel work. Each is a product rule, not 
 3. **No biometric identifiers.** The scan returns coarse descriptors only. It is **not** a login or payment credential. Terms §4.4 says so.
 4. **Colour results are stored, never samples.** Intake is swatch-first; the camera is optional.
 5. **Stripe is the primary payment rail.** Never store raw card data. Webhooks are server-authoritative and idempotent.
-6. **One entitlement system, three plans: Free, Guided, Studio.** Studio is blocked while its price is unset. The demo refuses to invent one.
+6. **One entitlement system, three plans: Starter $0, Guided $14.99/mo or $149.90/yr, Studio $29.99/mo or $299.90/yr.** Owner-set 2026-11-15, preliminary. Annual is ten months for twelve on both paid plans (same terms). Starter collects no payment method and never expires; it is not a trial under Terms 8.3. Four Stripe prices (two tiers × two cycles). Allowances per plan are `[ASSUMPTION]` until set from usage data. The v3.9 rule that Studio was blocked while unpriced is retired.
 7. **The Style vertical collects no body metrics.**
 8. **Hair-lift refusals use amber, not red, give no shame and no escape hatch.** A refusal returns no products and says how long before it is worth re-checking.
 9. **The AI Coach is Premium-gated, Tier 3.** Safety, eligibility, lift ceilings and pricing are deterministic code, never model output. No persona or dependency framing.
@@ -60,7 +60,7 @@ These came from earlier decisions and counsel work. Each is a product rule, not 
 
 ## 3. How the demo is built, so you can reproduce or replace it
 
-`demo/index-v3.9.html` is the v3.8 file plus an appended patch layer. `demo/v39-src/patch39.py` reads `index-v3.8.html` and the files in `v39/`, replaces the old catalogue, swaps the utility-row block and footer, merges the legal pages, appends the layer before the final `buildRail();paint(true)` and writes the result.
+`demo/index-v4.0.html` is `index-v3.9.html` plus `demo/v40-src/patch40.py` (plans, pricing, Prism Weave hero); v3.9 in turn is the v3.8 file plus an appended patch layer. `demo/v39-src/patch39.py` reads `index-v3.8.html` and the files in `v39/`, replaces the old catalogue, swaps the utility-row block and footer, merges the legal pages, appends the layer before the final `buildRail();paint(true)` and writes the result.
 
 | File | Contents |
 |---|---|
@@ -164,6 +164,24 @@ Do **not** build Team 47's own face match for sign-in or payment. That would mak
 - **One-click wallets.** Use Stripe's Express Checkout Element for Apple Pay, Google Pay and Link; Link needs the `card` payment method type alongside it `[SRC 5]`. Register the domain in test and live.
 - **Saved cards.** Create a SetupIntent. `usage` defaults to `off_session`; saving for later use needs the customer's permission, recorded as a mandate with the recommended mandate text `[SRC 6]`. Mirror only display fields.
 - **Webhooks.** Verify signatures, process idempotently by event ID, and treat the webhook as the source of truth for entitlement and order state, never the browser redirect.
+- **Plans and prices.** Create four Stripe prices on one product per tier: Guided monthly $14.99, Guided annual $149.90, Studio monthly $29.99, Studio annual $299.90. Starter has no price object. The membership screen is the offer of record (Terms 8.2 states no price). Upgrades invoice immediately with a proration credit; downgrades schedule at period end (Terms 8.6). Renewal reminders and price-change notice follow Terms 8.5. Plan comparison for reference:
+
+| | Starter | Guided | Studio |
+|---|---|---|---|
+| Monthly | $0 | $14.99 | $29.99 |
+| Annual (two months free) | $0 | $149.90 ($12.49 a month) | $299.90 ($24.99 a month) |
+| Best for | Exploring: first match, first routine | Building a routine you keep | The whole studio, at full depth |
+| The outcome | A profile, a season and a starter routine today | Routines that keep up with you, and visible progress | Everything coordinated, with a record you own |
+| Profile and matching | Core match; colour season from swatches | Full personalized match; optional scan 2/mo `[ASSUMPTION]` | Cross-domain synthesis; optional scan 6/mo `[ASSUMPTION]` |
+| Routines and progress | Starter routine with reasons; current only | Refreshed every two weeks; history and photo journal; replenishment | Advanced coordination; history, journal and exports |
+| AI Coach | 3 answers a month `[ASSUMPTION]` | 60 answers a month `[ASSUMPTION]` | Unlimited within fair use, highest depth |
+| Voice | Narrated routines | Live narration allowance | Realtime conversation, session-capped |
+| Colour, style and shop | Core discovery, six verticals; browse wardrobe | Colour carried into makeup, hair, wardrobe; Shop My Routine cart | As Guided, plus priority agent runs and guest access |
+| Membership | Sponsor-supported, labelled; standard support | Ad-free; enhanced support | Ad-free; priority support and early features |
+| Billing and changes | Never billed; no card, no clock | Upgrade immediate with proration; downgrade at period end (Terms 8.6) | Same terms as Guided |
+
+Safety checks (shade range, ingredients, hair lift) and "shows its work" are on for every plan. Allowances marked `[ASSUMPTION]` are to be set from routing logs before release; the entitlement system reads them, the copy does not invent them.
+
 - **Which lines are payable here.** Only `mode = stripe` items. `handoff` and `linkout` items are completed on the retailer's own platform; the demo's cart already separates them.
 
 ### 5.6 Retailer modes
@@ -246,7 +264,7 @@ Run all of these against the merged build. IDs match `handoff.spec.json`.
 
 | ID | Item | Blocks |
 |---|---|---|
-| C-1 | Two paid tiers or three? | Terms approval |
+| C-1 | Two paid tiers or three? Product now prices two (Guided, Studio); Terms 8.1 names three | Terms approval |
 | C-6 | App billing: store purchase via RevenueCat, or unresolved? | Android and Apple schedules |
 | C-9 | Contracting entity: MGT Solutions, Inc or MGT Global Solutions, Inc? | Terms, footer |
 | O-1 | Base build: Drive lineage or GitHub V2.5? | Everything past theme |

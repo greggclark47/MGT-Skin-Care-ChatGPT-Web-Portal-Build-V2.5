@@ -1,15 +1,15 @@
 # Team 47 Studio — Web Portal & App Overlay Packet
 
-**Version 1.3 · 2026-11-15 · Internal build handoff** · v1.1: O-2 decided · v1.2: utility row, route-driven active state, keyboard reach · v1.3: 71 screens, merged legal routes, Aura utility row, new commerce, scan, security and onboarding screens. Backend detail is in `05-handoff/`.
+**Version 1.4 · 2026-11-15 · Internal build handoff** · v1.1: O-2 decided · v1.2: utility row, route-driven active state, keyboard reach · v1.3: 71 screens, merged legal routes, Aura utility row, new commerce, scan, security and onboarding screens · v1.4: plans priced (Starter $0 / Guided $14.99 / Studio $29.99, annual two months free), Studio checkout unblocked, Prism Weave behind the landing hero; demo reference is v4.0. Backend detail is in `05-handoff/`.
 
 > **Status: PRELIMINARY — pending full release.** Prepared for review ahead of any execution. Decisions, routes, wording and figures are subject to change before work begins; nothing here is final until the owner releases it.
 
-Maps the D09 v3.9 demo (71 screens) onto an existing production build, screen by screen, with every mapped file verified to exist.
+Maps the D09 v4.0 demo (71 screens) onto an existing production build, screen by screen, with every mapped file verified to exist.
 
 | | |
 |---|---|
 | **Target build** | `greggclark47/MGT-Skin-Care-ChatGPT-Web-Portal-Build-V2.5` @ `6b05956` (2026-09-18) — Next.js web, Expo mobile, Express API, live Stripe Checkout |
-| **Source design** | D09 v3.9 demo — `demo/index-v3.9.html` (held privately) |
+| **Source design** | D09 v4.0 demo — `demo/index-v4.0.html` (held privately) |
 | **Classification** | The blueprint's own vocabulary: REUSE · REFACTOR · REPLACE · CREATE · DEFER |
 | **Result** | 4 REUSE · 22 REFACTOR · 1 REPLACE · 33 CREATE · 11 DEFER (71 rows in `screen-map.csv`) |
 
@@ -54,7 +54,7 @@ The demo's photo copy now matches §4.5 — sent to an image-analysis service, r
 
 ### O-3 · The entitlement can't represent three plans `BLOCKS W4, W12, W13, W31`
 
-`apps/api/src/portal/payments.ts:43` writes `memberships.premium` as a boolean. Billing reads a single `STRIPE_PREMIUM_PRICE_ID`. The plans are now Free, Guided and Studio, across monthly and annual cycles. That needs a tier field and one Stripe price per tier per cycle — four prices, not one.
+`apps/api/src/portal/payments.ts:43` writes `memberships.premium` as a boolean. Billing reads a single `STRIPE_PREMIUM_PRICE_ID`. The plans are now Starter ($0), Guided ($14.99/mo or $149.90/yr) and Studio ($29.99/mo or $299.90/yr), owner-set 2026-11-15 and preliminary. That needs a tier field, a cycle field and one Stripe price per paid tier per cycle — four prices, not one.
 
 The same boolean gates the Coach: `requirePremium` checks `user_profiles.is_premium` in the Drive lineage. Whichever base you pick, the gate has to read the tier.
 
@@ -103,9 +103,9 @@ Each phase ships on its own and can be reverted on its own.
 
 These are the parts of the demo the overlay must preserve exactly, because each one is a product rule rather than a style.
 
-- **The journey resumes; it never restarts.** Each step is skipped if already satisfied. Free never reaches checkout. Studio is blocked while its price is unset — the demo deliberately refuses to invent one.
-- **Every interactive element resolves.** The v3.4 audit found 18 dead controls; v3.9 has 3,417 and none are dead. The audit script (`interact.py`) is in the demo repo and should run in CI against the real build.
-- **Contrast is measured, not assumed.** The full v3.9 sweep covers 8,250 text runs in both modes; it found one failure on a marketing card caption, since fixed. Gradient buttons use the darkened stops in the token file — each clears 4.91:1 against white or better.
+- **The journey resumes; it never restarts.** Each step is skipped if already satisfied. Starter never reaches checkout. Guided and Studio both check out, on the monthly or annual cycle chosen on the membership screen; the checkout summary reads the plan and cycle, never a constant.
+- **Every interactive element resolves.** The v3.4 audit found 18 dead controls; v4.0 has 3,421 and none are dead. The audit script (`interact.py`) is in the demo repo and should run in CI against the real build.
+- **Contrast is measured, not assumed.** The full v4.0 sweep covers 8,446 text runs in both modes and is clean; the v3.9 sweep found one failure on a marketing card caption, since fixed. Gradient buttons use the darkened stops in the token file — each clears 4.91:1 against white or better.
 - **"You are here" comes from the route.** The utility row (Applications, Shop, Learn, Retail Partners, now in the lighter Aura palette) fills the button for the current section and sets `aria-current="page"` from the URL, never from guessed state. Shop stays filled on `/cart`. In Next.js this is `usePathname()` compared against each button's route list.
 - **The header Style button opens the Style studio** (`/app/wardrobe`), the page that highlights Style. Until v3.8 it opened the Applications hub, so clicking Style landed somewhere Style wasn't lit, and the hub would have lit two buttons once Applications had its own.
 - **Every control is keyboard-reachable, with a visible focus ring.** The demo retrofits tab stops onto click-only links and cards. In the real build, use `<Link href>` and `<button>` and don't add `onClick` to a `div` — then nothing needs retrofitting. Focus ring: 2px `--acc2`, offset 2px.

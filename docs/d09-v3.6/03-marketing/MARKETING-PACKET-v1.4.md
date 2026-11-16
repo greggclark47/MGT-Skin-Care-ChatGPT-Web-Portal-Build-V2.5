@@ -1,10 +1,10 @@
 # Team 47 Studio — Marketing Packet
 
-**Version 1.3 · 2026-11-15 · For anyone producing Team 47 Studio material: web, social, email, partner decks** · v1.1: utility row colours (§5.2) · v1.2: utility row moves to the lighter Aura palette (§5.2) · v1.3: Prism Weave seamless pattern (§5.4, `patterns/`), accessibility figures refreshed (§9); build reference is v3.9
+**Version 1.4 · 2026-11-15 · For anyone producing Team 47 Studio material: web, social, email, partner decks** · v1.1: utility row colours (§5.2) · v1.2: utility row moves to the lighter Aura palette (§5.2) · v1.3: Prism Weave seamless pattern (§5.4, `patterns/`), accessibility figures refreshed (§9) · v1.4: plans and prices (§3.1), Prism Weave on the landing hero; build reference is v4.0
 
 > **Status: PRELIMINARY — pending full release.** Prepared for review ahead of any execution. Decisions, routes, wording and figures are subject to change before work begins; nothing here is final until the owner releases it.
 
-Everything here is taken from the D09 v3.9 build. Colour values come from `tokens/d09-tokens-v3.6.json`; nothing in this document was typed separately from it.
+Everything here is taken from the D09 v4.0 build. Colour values come from `tokens/d09-tokens-v3.6.json`; nothing in this document was typed separately from it.
 
 **In this folder**
 
@@ -62,6 +62,30 @@ All of these are live in the v3.6 build and have been checked against the claims
 | **Guidance for looking and feeling your best — cosmetic, not medical.** | Required line — see §4.3 |
 
 **Retired — do not use:** *"Start free"* as a button or asset CTA (removed 2026-11-15). *"Cosmetic guidance, not diagnosis or medical treatment."* (superseded by the line above).
+
+---
+
+### 3.1 Plans and prices (preliminary)
+
+Owner-set 2026-11-15, pending full release. Use these figures exactly; never round, never "from". Starter is "free to keep", never "free trial" (no card is collected). Annual is always stated with its effective monthly figure.
+
+| | Starter | Guided | Studio |
+|---|---|---|---|
+| Monthly | $0 | $14.99 | $29.99 |
+| Annual (two months free) | $0 | $149.90 ($12.49 a month) | $299.90 ($24.99 a month) |
+| Best for | Exploring: first match, first routine | Building a routine you keep | The whole studio, at full depth |
+| The outcome | A profile, a season and a starter routine today | Routines that keep up with you, and visible progress | Everything coordinated, with a record you own |
+| Profile and matching | Core match; colour season from swatches | Full personalized match; optional scan 2/mo `[ASSUMPTION]` | Cross-domain synthesis; optional scan 6/mo `[ASSUMPTION]` |
+| Routines and progress | Starter routine with reasons; current only | Refreshed every two weeks; history and photo journal; replenishment | Advanced coordination; history, journal and exports |
+| AI Coach | 3 answers a month `[ASSUMPTION]` | 60 answers a month `[ASSUMPTION]` | Unlimited within fair use, highest depth |
+| Voice | Narrated routines | Live narration allowance | Realtime conversation, session-capped |
+| Colour, style and shop | Core discovery, six verticals; browse wardrobe | Colour carried into makeup, hair, wardrobe; Shop My Routine cart | As Guided, plus priority agent runs and guest access |
+| Membership | Sponsor-supported, labelled; standard support | Ad-free; enhanced support | Ad-free; priority support and early features |
+| Billing and changes | Never billed; no card, no clock | Upgrade immediate with proration; downgrade at period end (Terms 8.6) | Same terms as Guided |
+
+Safety checks (shade range, ingredients, hair lift) and "shows its work" are on for every plan. Allowances marked `[ASSUMPTION]` are to be set from routing logs before release; the entitlement system reads them, the copy does not invent them.
+
+Approved plan lines: "Begin free. Grow when it suits you." · "Starter is free to keep — no card, no clock." · "Two months free on annual." · "Guided, $14.99 a month." · "Studio, $29.99 a month."
 
 ---
 
@@ -284,7 +308,7 @@ Placement sizes are the platforms' commonly used dimensions as of this packet; c
 
 ## 9. Accessibility
 
-Every text run in the build is checked against WCAG AA in both modes. The v3.9 sweep measured 8,250 runs across 71 screens and found one failure, a social-card caption at 3.11:1; it now sits on a dark scrim and the re-run is clean. The Prism Weave figures in §5.4 are measured separately, on rendered pixels.
+Every text run in the build is checked against WCAG AA in both modes. The v3.9 sweep measured 8,250 runs across 71 screens and found one failure, a social-card caption at 3.11:1; it now sits on a dark scrim. The v4.0 sweep (8,446 runs, plans and pricing screens included) is clean. The Prism Weave figures in §5.4 are measured separately, on rendered pixels.
 
 ---
 

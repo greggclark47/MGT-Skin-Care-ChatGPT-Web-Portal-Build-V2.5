@@ -1,10 +1,10 @@
-2d1fac8a567a79cf899fb6594c3e7b633236fc01d6313e1f78087295c1b00098  ./02-overlay/OVERLAY-PACKET-v1.3.md
+77312ee01cddf52ba9bf45f0f034c545eefb7fc6f80b90dd31c2c68aae11744e  ./02-overlay/OVERLAY-PACKET-v1.4.md
 2fff04f6eee0a5ada5fc9c524a772edb1be4dedb5922f1ec680603ccaebff88e  ./02-overlay/brand-string-sweep.txt
 d73ec03c1b71edc99e1eb08c54351751419a946b43372dfbe3a8c3a385b3295e  ./02-overlay/d09-overlay.css
 13e0a13f8305e48ff0813adfea9924ab896dfb43d0df6e8904cf87b846e1dffd  ./02-overlay/flows.json
 00cc4ef99c07c1db89622c598628a5f3549fe9441dc2b45122a12d8a551e7c2a  ./02-overlay/screen-map.csv
 2087499e1c431211c4bdf15b691acb466aae0b2aaf56dc4a7eb5569073bb26d9  ./02-overlay/tokens.d09.ts
-96e791081246e2d25b3b7f1046ea7d183eb6b900e44295ae65f6d056f26e37bd  ./03-marketing/MARKETING-PACKET-v1.3.md
+b0cad7fd03c222bd1cb3826c5d60d103d92cc695e41ae69687510aaf31939893  ./03-marketing/MARKETING-PACKET-v1.4.md
 e50bac352b21702862ce03398d06fcaeb0a6ae0bbfb6d74a9608a315f1523cca  ./03-marketing/logo-dark-surface.png
 e58b45afbd1e0181688a72e68431e5b40ea1e0b592063a507dedd9e2b1c2d747  ./03-marketing/logo-light-surface.png
 0618f91f4591125db6e1b3fcc71d3ebc4e6e4de1d59d78b63d2167508e9259a9  ./03-marketing/patterns/build-prism-weave.py
@@ -24,8 +24,8 @@ c5be9702aa68bd92298277b8e60f0c8fb147d0dbf17409d273d05647c33e9c16  ./03-marketing
 1dc410f4f319df669164f334d3d9571e6b2a68a8d965b0d112fdc354f4003c69  ./03-marketing/social/T47-your-shade-wide-1200x628.png
 bf29196e29dfbe374a2b64c61f8a4f4b79769ca11c517117a35a5f7b7401d571  ./03-marketing/tokens/d09-tokens-v3.6.css
 3fee57b3b853c5e32e8776f8052a92915dac127298db863fcd754f611e013821  ./03-marketing/tokens/d09-tokens-v3.6.json
-d16f29fbe2fb801e21443212a29902f9faf655975624585fa04529aaaf85f91f  ./05-handoff/HANDOFF-PACKET-v1.0.md
-59b68fb3c5e553c194508810b4e7d7aae2e184fcf8296bf23cd0f6ff4cd7fbc0  ./05-handoff/PROMPT-CORE.md
-4fae49756cf640cef22cf5ba7f8f3c4975e479e4c2873e897ce1ceed73a6c28f  ./05-handoff/RESEARCH-SOURCES.md
-1b53f4d4f88aead5886dbd236333797300ea262359c8c258fc6859a4cbd6b93a  ./05-handoff/handoff.spec.json
-8d78166de9df7555db5bf52d19b4f9ab97d7ef3f37a64be1b6fd15f80124a065  ./README.md
+ce46fc1e0c47c9a9837decc8754a69ac2b5cecb4f943b1bbfc4f5a7efd8800c7  ./05-handoff/HANDOFF-PACKET-v1.1.md
+47b0b9d6b2f5bb0bed8d6085086dc7e8edcfdfc882c6e990bb7ccb5c0f4c79a7  ./05-handoff/PROMPT-CORE.md
+f3ef3c20c5474b01c870c97b2c216fe5b9d183f5a0a66a77d6f978a06db5020f  ./05-handoff/RESEARCH-SOURCES.md
+d3cf2ce77233def470f0dd86ea8b167cc9cc10a68faa05681eb3de936c02a073  ./05-handoff/handoff.spec.json
+9521ae8605921876efa88c389bf70184d7634788e5f9ec6500a16d4746ee4ec2  ./README.md

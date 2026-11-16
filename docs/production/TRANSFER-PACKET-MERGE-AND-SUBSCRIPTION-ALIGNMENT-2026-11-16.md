@@ -72,7 +72,7 @@ Passing local tests establishes implementation readiness only. It does not by it
 ## Executed verification result
 
 - Packet merge preflight: passed; 79 packet files and 35 D09 files verified, both integration patches applied, zero warnings or failures.
-- Packet test suite: 114 tests collected; 111 passed and 3 expected environment-dependent tests skipped.
+- Packet test suite: 115 tests collected; 112 passed and 3 expected environment-dependent tests skipped, including a cross-platform text-line-ending test that rejects binary normalization.
 - Focused membership, API billing, mobile contract, and static-demo tests: passed.
 - Repository lint: passed across six TypeScript projects plus mobile and repository-hygiene checks.
 - Full repository verification: 18 executed gates passed with 1,704 reported assertions passed.

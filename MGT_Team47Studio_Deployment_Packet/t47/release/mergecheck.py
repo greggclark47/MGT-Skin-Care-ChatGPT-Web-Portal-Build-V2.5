@@ -30,10 +30,17 @@ def verify_manifest(folder: Path) -> tuple[int, list[str]]:
         else:
             content = target.read_bytes()
             raw_digest = hashlib.sha256(content).hexdigest()
-            # Git may materialize tracked text as CRLF on Windows while the
-            # packet manifest binds the canonical LF bytes used by CI.
-            canonical_digest = hashlib.sha256(content.replace(bytes((13, 10)), bytes((10,)))).hexdigest()
-            if digest.strip() not in (raw_digest, canonical_digest):
+            accepted_digests = {raw_digest}
+            # Git may materialize tracked UTF-8 text as CRLF on Windows while
+            # the packet manifest binds the canonical LF bytes used by CI.
+            # Never normalize binary files: their exact bytes stay mandatory.
+            try:
+                text = content.decode("utf-8")
+            except UnicodeDecodeError:
+                text = ""
+            if text and "\x00" not in text:
+                accepted_digests.add(hashlib.sha256(text.replace("\r\n", "\n").encode("utf-8")).hexdigest())
+            if digest.strip() not in accepted_digests:
                 problems.append(f"changed: {name.strip()}")
     return checked, problems
 

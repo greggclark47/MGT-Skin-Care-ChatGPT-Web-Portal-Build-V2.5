@@ -1,4 +1,6 @@
 """Regression tests for 1.1.0: deterministic care triage, card data, D09 v3.9 alignment, corrected data."""
+import hashlib
+
 import pytest
 
 from t47.agents.guardrails import contains_card_number, scan, verdict
@@ -115,7 +117,6 @@ def test_merge_preflight(tmp_path):
     (packet / "pyproject.toml").write_text("[project]\n")
     version_file = packet / "VERSION"
     version_file.write_text("9.9.9\n")
-    import hashlib
     # Hash the bytes written by this platform so the preflight test is valid
     # on both LF and CRLF filesystems.
     (packet / "MANIFEST.sha256").write_text(f"{hashlib.sha256(version_file.read_bytes()).hexdigest()}  ./VERSION\n")
@@ -134,3 +135,19 @@ def test_merge_preflight(tmp_path):
     assert {c.id: c.status for c in mergecheck.run(str(root)).checks}["merge.patch.0001"] == "pass"
     (packet / "VERSION").write_text("tampered\n")
     assert {c.id: c.status for c in mergecheck.run(str(root)).checks}["merge.manifest"] == "fail"
+
+
+def test_manifest_normalizes_text_line_endings_but_never_binary(tmp_path):
+    from t47.release.mergecheck import verify_manifest
+
+    text = tmp_path / "notes.txt"
+    text.write_bytes(b"first\r\nsecond\r\n")
+    expected_text = hashlib.sha256(b"first\nsecond\n").hexdigest()
+    (tmp_path / "MANIFEST.sha256").write_text(f"{expected_text}  ./notes.txt\n")
+    assert verify_manifest(tmp_path) == (1, [])
+
+    binary = tmp_path / "image.bin"
+    binary.write_bytes(b"image\r\n\x00payload")
+    normalized_binary = hashlib.sha256(b"image\n\x00payload").hexdigest()
+    (tmp_path / "MANIFEST.sha256").write_text(f"{normalized_binary}  ./image.bin\n")
+    assert verify_manifest(tmp_path) == (1, ["changed: ./image.bin"])

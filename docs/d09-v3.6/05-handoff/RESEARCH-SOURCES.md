@@ -4,7 +4,7 @@
 
 > **Status: PRELIMINARY — pending full release.** Prepared for review ahead of any execution. Decisions, routes, wording and figures are subject to change before work begins; nothing here is final until the owner releases it.
 
-Every `[SRC n]`, `[SEC n]` and `[UNVERIFIED]` tag in `HANDOFF-PACKET-v1.6.md` resolves here. **SRC** = primary or official. **SEC** = secondary commentary; counsel confirms before anything is relied on. **UNVERIFIED** = stated in the design but not confirmed in this research pass.
+Every `[SRC n]`, `[SEC n]` and `[UNVERIFIED]` tag in `HANDOFF-PACKET-v1.7.md` resolves here. **SRC** = primary or official. **SEC** = secondary commentary; counsel confirms before anything is relied on. **UNVERIFIED** = stated in the design but not confirmed in this research pass.
 
 ## Primary and official sources
 
@@ -61,3 +61,13 @@ All eight retailers and every brand in the 24-item catalogue are invented placeh
 | SRC-T5 | Appcues GoodUX, Curology sign-up flow | Skin quiz before the trial in personalized beauty |
 | SEC-T6 | Davis+Gilbert; Kilpatrick Townsend; California Attorney General consumer alert (Sept 4, 2025) | California AB 2863, effective July 1, 2025, covers free-to-pay conversions; counsel confirms notice timing (C-11) |
 | SEC-T7 | Latham & Watkins; Fenwick | FTC click-to-cancel rule vacated by the Eighth Circuit, July 8, 2025; the 1973 rule and state laws remain |
+
+## Added for v4.6 (legal-name placement), read 2026-11-16
+
+| Tag | Source | Used for |
+|---|---|---|
+| SRC-E1 | FTC, CAN-SPAM Act: A Compliance Guide for Business | Commercial email must include a valid physical postal address (street, USPS-registered P.O. Box or registered private mailbox) and truthful sender details; purely transactional or relationship messages are held only to truthful routing. https://www.ftc.gov/business-guidance/resources/can-spam-act-compliance-guide-business |
+| SRC-E2 | Apple Developer, Enrollment help | An organization's legal entity name is listed as the App Store seller; DBAs and trade names are not accepted. https://developer.apple.com/support/enrollment/ |
+| SRC-E3 | Stripe Support, statement descriptors | Descriptor 5 to 22 Latin characters, must reflect the DBA, URL or legal entity name. https://support.stripe.com/questions/what-is-a-statement-descriptor-and-how-do-i-update-it |
+| SRC-E4 | O.C.G.A. § 10-1-490 (Justia); Fayette County Clerk of Superior Court | A domestic corporation using a name other than its corporate name registers it with the Clerk of Superior Court of the county of its legal domicile; publication in the county newspaper. https://law.justia.com/codes/georgia/title-10/chapter-1/article-16/part-3/section-10-1-490 |
+

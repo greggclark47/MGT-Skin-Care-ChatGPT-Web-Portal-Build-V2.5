@@ -1,6 +1,6 @@
 # Team 47 Studio — Lifecycle Messages
 
-**Version 1.1 · 2026-11-16 · For the lifecycle agent and anyone sending member email, SMS or push** · Companion to the marketing packet (voice §2, copy bank §3, claims rules §4) and cost addendum v2.3 §11.5 · v1.1: two plans since 2026-11-16; the sequence now follows the 14-day trial on Guided or Studio (day 0, 3, 7, 11, 14); renewal reminder two days before every charge; cancel and payment-failure paths end in "no plan", not a free tier (counsel item label corrected to C-11 on 2026-11-16)
+**Version 1.2 · 2026-11-16 · For the lifecycle agent and anyone sending member email, SMS or push** · Companion to the marketing packet (voice §2, copy bank §3, claims rules §4) and cost addendum v2.3 §11.5 · v1.2: two footers by message purpose; legal name and postal address in commercial email only as required · v1.1: two plans since 2026-11-16; the sequence now follows the 14-day trial on Guided or Studio (day 0, 3, 7, 11, 14); renewal reminder two days before every charge; cancel and payment-failure paths end in "no plan", not a free tier (counsel item label corrected to C-11 on 2026-11-16)
 
 > **Status: PRELIMINARY — pending full release.** Prepared for review ahead of any execution. Decisions, routes, wording and figures are subject to change before work begins; nothing here is final until the owner releases it. The trial messages depend on owner decision O-7; notice timing depends on counsel item C-11.
 
@@ -8,7 +8,9 @@ Every template is written in the packet voice: warm, plain, specific, one idea p
 
 **Variables.** `{first}` first name or "there" · `{plan}` Guided or Studio · `{price}` e.g. `$29.99/mo`, `$89.97/qtr`, `$299.90/yr` · `{cycle_word}` monthly / quarterly / yearly · `{trial_end}` e.g. Dec 1, 2026 · `{season}` colour season from the intake · `{routine_step}` a named step · `{product}` an invented catalogue name · `{trial_url}` Your trial page · `{manage_url}` account billing · `{cancel_url}` one-step cancel · `{support_url}` care centre · `{last4}` card ending.
 
-**Footer, every email.** Guidance for looking and feeling your best — cosmetic, not medical. Results differ from person to person. · Manage membership · Privacy & Terms · © 2026 Team 47 Studio — MGT Solutions, Inc. Marketing emails add: You are receiving this because you opted in on {date}. Unsubscribe.
+**Footer, transactional and service messages (L-01 to L-12).** Guidance for looking and feeling your best — cosmetic, not medical. Results differ from person to person. · Manage membership · Privacy & Terms · © 2026 Team 47 Studio — {entity_legal}. The From name is Team 47 Studio and the sending domain is ours; routing and sender details must be truthful.
+
+**Footer, commercial messages (L-13, L-14, and any message whose subject line reads as an ad).** The transactional footer, plus: Sent by {entity_legal} d/b/a Team 47 Studio, {entity_address}. · You are receiving this because you opted in on {date}. · Unsubscribe (one click, honoured within 10 business days). `{entity_legal}` and `{entity_address}` come from the single `ENTITY` value; `{entity_address}` is a street address, a USPS-registered P.O. Box or a registered private mailbox [ASSUMPTION: P.O. Box or private mailbox preferred over a home address — owner to choose]. Keep transactional content first and promotion out of transactional subject lines, or the message becomes commercial. Sources: FTC CAN-SPAM compliance guide.
 
 ---
 
@@ -292,7 +294,7 @@ If you want to try it, 14 days of {recommended_plan} costs nothing today. The re
 
 ## 3. Agent instruction (paste into the lifecycle agent's system prompt)
 
-You draft and send Team 47 Studio member messages from the templates in LIFECYCLE-MESSAGES-v1.1.md. Rules you cannot override:
+You draft and send Team 47 Studio member messages from the templates in LIFECYCLE-MESSAGES-v1.2.md. Rules you cannot override:
 
 1. Transactional and service messages (L-01 to L-12) send on their trigger without approval. L-02, L-05 and L-09 are required and must never be skipped, delayed past their window, or suppressed by a notification setting. L-10 respects the member's renewal-reminder switch.
 2. Marketing messages (L-13, L-14) are drafted into the approval queue. Never send one yourself. Never send a marketing message without a recorded marketing consent for that channel.

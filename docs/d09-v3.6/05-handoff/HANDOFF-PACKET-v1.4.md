@@ -1,6 +1,6 @@
 # Team 47 Studio — Platform-Neutral Handoff Packet
 
-**Version 1.3 · 2026-11-16 · Internal · For any AI platform or engineering team that will merge the v4.2 design onto the existing build and complete the backend** · v1.1: plans priced (rule 6, §5.5) · v1.2: optional 14-day Guided trial and separate renewal consent (rule 6, §5.5) · v1.3: Retail Partners merged into one section (W29 retired, W21 holds the tabs, A24 added), AI setup assistant, product-updates feed, Retail Partners as a support link in the footer (between Privacy & Terms and Shipping & returns) on every web screen, row at the foot of every app screen, logo +18%, icon system; demo reference is v4.2
+**Version 1.4 · 2026-11-16 · Internal · For any AI platform or engineering team that will merge the v4.3 design onto the existing build and complete the backend** · v1.1: plans priced (rule 6, §5.5) · v1.2: optional 14-day Guided trial and separate renewal consent (rule 6, §5.5) · v1.3: Retail Partners merged into one section (W29 retired, W21 holds the tabs, A24 added), AI setup assistant, product-updates feed, Retail Partners as a support link in the footer (between Privacy & Terms and Shipping & returns) on every web screen, row at the foot of every app screen, logo +18%, icon system · v1.4: Starter retired (two plans), Studio quarterly option, renewal reminders with switches on web and app, header gradients; demo reference is v4.3
 
 > **Status: PRELIMINARY — pending full release.** Prepared for review ahead of any execution. Decisions, routes, wording and figures are subject to change before work begins; nothing here is final until the owner releases it.
 
@@ -10,7 +10,7 @@ Everything here is written to be acted on without the original conversation. The
 
 | | |
 |---|---|
-| **Reference build** | `demo/index-v4.2.html` — one self-contained file, fonts embedded, 71 screens, opens offline |
+| **Reference build** | `demo/index-v4.3.html` — one self-contained file, fonts embedded, 71 screens, opens offline |
 | **Reproducible source** | `demo/v39-src/` — the v3.8 base plus the patch layer (`patch39.py`, `v39/*.js`, `v39/v39.css`) |
 | **Machine-readable spec** | `handoff.spec.json` — screens, routes, state keys, retailers, facets, endpoints, tables, tests |
 | **Paste-ready prompt** | `PROMPT-CORE.md` |
@@ -46,7 +46,7 @@ These came from earlier decisions and counsel work. Each is a product rule, not 
 3. **No biometric identifiers.** The scan returns coarse descriptors only. It is **not** a login or payment credential. Terms §4.4 says so.
 4. **Colour results are stored, never samples.** Intake is swatch-first; the camera is optional.
 5. **Stripe is the primary payment rail.** Never store raw card data. Webhooks are server-authoritative and idempotent.
-6. **One entitlement system, three plans: Starter $0, Guided $14.99/mo or $149.90/yr, Studio $29.99/mo or $299.90/yr.** Owner-set 2026-11-15, preliminary. Annual is ten months for twelve on both paid plans (same terms). Starter collects no payment method and never expires; it is not a trial under Terms 8.3. Four Stripe prices (two tiers × two cycles). Allowances per plan are `[ASSUMPTION]` until set from usage data. The v3.9 rule that Studio was blocked while unpriced is retired. **v4.1 adds a second door (O-7):** an optional 14-day card-on-file Guided trial, once per customer, $0 today, reminder three days before the first charge, with a separate auto-renewal consent recorded at checkout (Terms 8.3, 8.4). Starter itself never collects a card.
+6. **One entitlement system, two plans: Guided $14.99/mo or $149.90/yr; Studio $29.99/mo, $89.97/qtr (optional) or $299.90/yr.** Owner-set, preliminary. Starter ($0) was retired by the owner on 2026-11-16: there is no free tier, no free price object and no free-tier gate anywhere. Annual is ten months for twelve on both plans. Quarterly is a Studio-only option and never required; its price is `[ASSUMPTION]` (three months at the monthly price) until the owner sets it. Five Stripe prices (Guided monthly and annual; Studio monthly, quarterly and annual). Allowances per plan are `[ASSUMPTION]` until set from usage data. A signed-in member with no plan sees intake and the match, and every member feature (routines, progress, Coach) offers the two plans. The optional 14-day card-on-file Guided trial (O-7) remains the way to try Guided first, once per customer, with a reminder three days before the first charge and the separate auto-renewal consent (Terms 8.3, 8.4). **Every paid renewal sends a reminder two days before the charge**, on by default, with one switch shared by the web account and the app.
 7. **The Style vertical collects no body metrics.**
 8. **Hair-lift refusals use amber, not red, give no shame and no escape hatch.** A refusal returns no products and says how long before it is worth re-checking.
 9. **The AI Coach is Premium-gated, Tier 3.** Safety, eligibility, lift ceilings and pricing are deterministic code, never model output. No persona or dependency framing.
@@ -60,7 +60,7 @@ These came from earlier decisions and counsel work. Each is a product rule, not 
 
 ## 3. How the demo is built, so you can reproduce or replace it
 
-`demo/index-v4.2.html` is `index-v4.1.html` plus `demo/v42-src/patch42.py` (Retail Partners merge, Learn rebuild, icon system, logo +18%, Retail Partners footer link and app row; reproducible byte-for-byte from v4.1). `index-v4.1.html` is `index-v4.0.html` plus `demo/v41-src/patch41.py` (trial door, renewal consent); v4.0 is `index-v3.9.html` plus `demo/v40-src/patch40.py` (plans, pricing, Prism Weave hero); v3.9 in turn is the v3.8 file plus an appended patch layer. `demo/v39-src/patch39.py` reads `index-v3.8.html` and the files in `v39/`, replaces the old catalogue, swaps the utility-row block and footer, merges the legal pages, appends the layer before the final `buildRail();paint(true)` and writes the result.
+`demo/index-v4.3.html` is `index-v4.2.html` plus `demo/v43-src/patch43.py` (Starter retired, two-plan comparison, Studio quarterly, renewal reminders and notification switches, header gradients; reproducible byte-for-byte from v4.2). `index-v4.2.html` is `index-v4.1.html` plus `demo/v42-src/patch42.py` (Retail Partners merge, Learn rebuild, icon system, logo +18%, Retail Partners footer link and app row; reproducible byte-for-byte from v4.1). `index-v4.1.html` is `index-v4.0.html` plus `demo/v41-src/patch41.py` (trial door, renewal consent); v4.0 is `index-v3.9.html` plus `demo/v40-src/patch40.py` (plans, pricing, Prism Weave hero); v3.9 in turn is the v3.8 file plus an appended patch layer. `demo/v39-src/patch39.py` reads `index-v3.8.html` and the files in `v39/`, replaces the old catalogue, swaps the utility-row block and footer, merges the legal pages, appends the layer before the final `buildRail();paint(true)` and writes the result.
 
 | File | Contents |
 |---|---|
@@ -164,24 +164,27 @@ Do **not** build Team 47's own face match for sign-in or payment. That would mak
 - **One-click wallets.** Use Stripe's Express Checkout Element for Apple Pay, Google Pay and Link; Link needs the `card` payment method type alongside it `[SRC 5]`. Register the domain in test and live.
 - **Saved cards.** Create a SetupIntent. `usage` defaults to `off_session`; saving for later use needs the customer's permission, recorded as a mandate with the recommended mandate text `[SRC 6]`. Mirror only display fields.
 - **Webhooks.** Verify signatures, process idempotently by event ID, and treat the webhook as the source of truth for entitlement and order state, never the browser redirect.
-- **Plans and prices.** Create four Stripe prices on one product per tier: Guided monthly $14.99, Guided annual $149.90, Studio monthly $29.99, Studio annual $299.90. Starter has no price object. The membership screen is the offer of record (Terms 8.2 states no price). Upgrades invoice immediately with a proration credit; downgrades schedule at period end (Terms 8.6). Renewal reminders and price-change notice follow Terms 8.5. Plan comparison for reference:
+- **Plans and prices.** Create five Stripe prices on one product per tier: Guided monthly $14.99, Guided annual $149.90, Studio monthly $29.99, Studio quarterly $89.97 `[ASSUMPTION]` (`interval: month`, `interval_count: 3`), Studio annual $299.90. There is no free tier. The membership screen is the offer of record (Terms 8.2 states no price). Upgrades invoice immediately with a proration credit; downgrades schedule at period end (Terms 8.6). Renewal reminders and price-change notice follow Terms 8.5. Plan comparison for reference:
 
-| | Starter | Guided | Studio |
-|---|---|---|---|
-| Monthly | $0 | $14.99 | $29.99 |
-| Annual (two months free) | $0 | $149.90 ($12.49 a month) | $299.90 ($24.99 a month) |
-| Best for | Exploring: first match, first routine | Building a routine you keep | The whole studio, at full depth |
-| The outcome | A profile, a season and a starter routine today | Routines that keep up with you, and visible progress | Everything coordinated, with a record you own |
-| Profile and matching | Core match; colour season from swatches | Full personalized match; optional scan 2/mo `[ASSUMPTION]` | Cross-domain synthesis; optional scan 6/mo `[ASSUMPTION]` |
-| Routines and progress | Starter routine with reasons; current only | Refreshed every two weeks; history and photo journal; replenishment | Advanced coordination; history, journal and exports |
-| AI Coach | 3 answers a month `[ASSUMPTION]` | 60 answers a month `[ASSUMPTION]` | Unlimited within fair use, highest depth |
-| Voice | Narrated routines | Live narration allowance | Realtime conversation, session-capped |
-| Colour, style and shop | Core discovery, six verticals; browse wardrobe | Colour carried into makeup, hair, wardrobe; Shop My Routine cart | As Guided, plus priority agent runs and guest access |
-| Membership | Sponsor-supported, labelled; standard support | Ad-free; enhanced support | Ad-free; priority support and early features |
-| Billing and changes | Never billed; no card, no clock | Upgrade immediate with proration; downgrade at period end (Terms 8.6) | Same terms as Guided |
+| | Guided | Studio |
+|---|---|---|
+| Monthly | $14.99 | $29.99 |
+| Quarterly (optional, Studio only) | — | $89.97 `[ASSUMPTION]` — three months at the monthly price, no discount, until the owner sets it |
+| Annual (two months free) | $149.90 ($12.49 a month) | $299.90 ($24.99 a month) |
+| Best for | Building a routine you keep | The whole studio, at professional depth |
+| The outcome | Routines that keep up with you, and visible progress | Everything coordinated, with a record you own |
+| Profile and matching | Full personalized match; optional scan 2/mo `[ASSUMPTION]` | Cross-domain synthesis; optional scan 6/mo `[ASSUMPTION]`; seasonal re-match `[NEW · to spec]` |
+| Routines and progress | Refreshed every two weeks; history and photo journal; replenishment | Coordinated across six verticals; monthly routine and wardrobe plan `[NEW · to spec]`; history, journal and exports |
+| AI Coach | Account-aware; 60 answers a month `[ASSUMPTION]`; live narration | Highest depth, unlimited within fair use `[ASSUMPTION]`; realtime voice, session-capped `[ASSUMPTION]`; saved session summaries |
+| Colour, style and shop | Colour carried into makeup, hair, wardrobe; Shop My Routine cart; Retail Partners | As Guided, plus priority agent runs, early partner launches and stylist guest access |
+| Membership | Ad-free; enhanced support | Ad-free; priority support and early features |
+| Try first | 14-day Guided trial, once per customer (O-7) | Start on Guided, move up any time |
+| Renewal reminder | Two days before each charge; on by default; switch on web and app | Same |
+| Billing and changes | Upgrade immediate with proration; downgrade at period end (Terms 8.6) | Same terms as Guided |
 
 Safety checks (shade range, ingredients, hair lift) and "shows its work" are on for every plan. Allowances marked `[ASSUMPTION]` are to be set from routing logs before release; the entitlement system reads them, the copy does not invent them.
 
+- **Renewal reminders (v4.3).** For every paid subscription, schedule a reminder at `current_period_end` minus two days from our own job, re-scheduled on every `customer.subscription.updated` and `invoice.paid` webhook; do not rely on a provider's default upcoming-invoice interval. Deliver to the in-app inbox and the web account banner. One preference per member, `notification_prefs(user_id, kind, enabled, updated_at)` with `kind = 'renewal'` defaulting to enabled, read by both web and app. A cycle change (monthly ↔ quarterly ↔ annual for Studio; monthly ↔ annual for Guided) applies from the next renewal via a subscription schedule and is logged in the consent ledger. `[UNVERIFIED]` Some state auto-renewal laws set their own notice windows, which may be longer for longer terms; counsel to confirm whether two days satisfies them for quarterly and annual cycles (C-10).
 - **Trial (v4.1).** Stripe subscription with `trial_period_days: 14` on the Guided price and a SetupIntent-backed payment method collected first; `trial_end` reminder email at T−3 days; conversion and cancellation driven by the subscription webhook, never the browser. Record the clause 8.4 consent (text shown, timestamp, version) in the consent ledger (§5.3) as its own entry. Enforce once-per-customer on the customer record, not the email string.
 - **Which lines are payable here.** Only `mode = stripe` items. `handoff` and `linkout` items are completed on the retailer's own platform; the demo's cart already separates them.
 
@@ -256,8 +259,12 @@ Run all of these against the merged build. IDs match `handoff.spec.json`.
 | AT-14 | The four utility buttons keep their labels and routes in both modes; the current section carries `aria-current="page"` |
 | AT-15 | Text contrast is at least 4.5:1 (3:1 for large text) in both modes on every screen. Demo result: a full sweep of 8,250 text runs found one failure (the M1 social-card caption, 3.11:1), now fixed and re-run clean; 3,820 runs on the 21 changed screens, 0 failures |
 | AT-16 | The first journey still resumes without restarting: membership, plan, account, intake, checkout |
+| AT-17 | No screen, button, link or message offers a free tier; a member with no plan is offered Guided and Studio |
+| AT-18 | Studio checks out monthly, quarterly or annual; Guided monthly or annual; the checkout, renewal consent and account read the chosen cycle |
+| AT-19 | A renewal reminder is scheduled two days before every paid charge; one switch, shared by web and app, turns it off and on |
+| AT-20 | Each header button (Skin, Color, Style, Coach, Membership) has its own gradient; text clears 4.5:1 at rest and when current |
 
-`demo/verification/v39test.py` covers AT-03 to AT-07, AT-11 to AT-14. `interact.py`, `harness.js`, `kbd.py`, `jrny.py` and `audit_new.py` / `audit_full.py` cover the rest.
+`demo/verification/v39test.py` covers AT-03 to AT-07, AT-11 to AT-14; `v43test.py` covers AT-17 to AT-20. `interact.py`, `harness.js`, `kbd.py`, `jrny.py` and `audit_new.py` / `audit_full.py` cover the rest.
 
 ---
 
@@ -276,5 +283,7 @@ Run all of these against the merged build. IDs match `handoff.spec.json`.
 | N-4 | Real brands and retailers replace invented names; **trademark clearance for every invented name** | Public launch |
 | N-5 | Care infrastructure: build on the platform or buy a desk with an AI layer; a named owner; real response times | Any support promise |
 | N-6 | Separate auto-renewal consent (C-5): designed in v4.1 checkout; build it in production | Plans billing |
+| N-9 | Set the Studio quarterly price (demo: $89.97, three months at the monthly price, `[ASSUMPTION]`) | Studio quarterly launch |
+| N-10 | Rerun the cost and ROI plan and the growth packet without a free tier; both assumed a Starter funnel | Paid campaigns |
 | N-7 | Consumer auth is not built; passkeys need an account system | Security page |
 | N-8 | Header Color and Membership lit states still mix toward navy, unlike the utility row | Visual consistency |

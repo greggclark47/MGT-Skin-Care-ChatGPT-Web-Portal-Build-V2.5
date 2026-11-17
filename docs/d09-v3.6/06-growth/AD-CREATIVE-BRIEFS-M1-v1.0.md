@@ -1,5 +1,7 @@
 # Team 47 Studio — Month 1 Ad Creative Briefs and Channel Playbook
 
+> **Superseded in part on 2026-11-16 — do not use as is.** The owner retired the free Starter plan. This document still assumes a Starter funnel (free sign-up, free-to-paid conversion and "begin free" copy). It must be rerun for two plans, Guided and Studio, before any message, ad or post is used (README N-10).
+
 **Version 1.0 · 2026-11-15 · For the creative agent, the performance agent and whoever runs the ad accounts** · Companion to the cost addendum v2.2 §11 (budget ramp, step-up rules, scenarios) and the marketing packet (voice §2, copy bank §3, claims rules §4, gradients §5, Prism Weave §5.4)
 
 > **Status: PRELIMINARY — pending full release.** Prepared for review ahead of any execution. Nothing here runs until the owner approves the budget (O-8), the trial (O-7) and trademark clearance or real partners for any brand shown (N-4).

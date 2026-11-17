@@ -1,5 +1,7 @@
 # Team 47 Studio — Lifecycle Messages
 
+> **Superseded in part on 2026-11-16 — do not use as is.** The owner retired the free Starter plan. This document still assumes a Starter funnel (free sign-up, free-to-paid conversion and "begin free" copy). It must be rerun for two plans, Guided and Studio, before any message, ad or post is used (README N-10).
+
 **Version 1.0 · 2026-11-15 · For the lifecycle agent and anyone sending member email, SMS or push** · Companion to the marketing packet (voice §2, copy bank §3, claims rules §4) and the cost addendum v2.2 §11.5 (what the lifecycle agent carries)
 
 > **Status: PRELIMINARY — pending full release.** Prepared for review ahead of any execution. Decisions, routes, wording and figures are subject to change before work begins; nothing here is final until the owner releases it. The trial messages depend on owner decision O-7.

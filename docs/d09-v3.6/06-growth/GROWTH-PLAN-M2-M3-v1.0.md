@@ -1,5 +1,7 @@
 # Team 47 Studio — Months 2 and 3: Scale-Phase Ads and Organic Calendar
 
+> **Superseded in part on 2026-11-16 — do not use as is.** The owner retired the free Starter plan. This document still assumes a Starter funnel (free sign-up, free-to-paid conversion and "begin free" copy). It must be rerun for two plans, Guided and Studio, before any message, ad or post is used (README N-10).
+
 **Version 1.0 · 2026-11-15 · For the creative agent, the performance agent and whoever runs the accounts** · Continues AD-CREATIVE-BRIEFS-M1 and SOCIAL-CALENDAR-M1; budget and gates from the cost addendum v2.2 §11.2
 
 > **Status: PRELIMINARY — pending full release.** Month 2 runs only if month 1 met its step-up rule; month 3 only if month 2 met its own. Trial items depend on O-7, spend on O-8, any product tile on N-4.

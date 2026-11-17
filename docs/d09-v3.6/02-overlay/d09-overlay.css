@@ -22,3 +22,13 @@ p{color:var(--t47-sub)}
 
 /* v1.6: logo +18% on landing surfaces (36px -> 42.5px header height) */
 .t47hdr .logo,.logo.logo-l{height:42.5px}
+
+/* v1.7: header buttons, one gradient family each. Rest = pale half + dark ink; current = deep half + white.
+   Contrast (worst stop): rest ink >= 7.01:1, current white >= 4.92:1. Membership runs dark to pale. */
+.t47hdr .pill[data-np="skin"]  {--np-r:linear-gradient(100deg,#FFEBD2,#F6B877);--np-a:linear-gradient(100deg,#A3520F,#5E2C04);--np-i:#4A2400;--np-b:#F6B877}
+.t47hdr .pill[data-np="color"] {--np-r:linear-gradient(100deg,#EEE6FF,#B9A2F8);--np-a:linear-gradient(100deg,#6743D4,#34197F);--np-i:#2A1263;--np-b:#B9A2F8}
+.t47hdr .pill[data-np="style"] {--np-r:linear-gradient(100deg,#DCEEFF,#8CC2F6);--np-a:linear-gradient(100deg,#2266B5,#103B73);--np-i:#0A2C55;--np-b:#8CC2F6}
+.t47hdr .pill[data-np="coach"] {--np-r:linear-gradient(100deg,#DDF6E3,#86D69F);--np-a:linear-gradient(100deg,#25804A,#0D4426);--np-i:#0B3A1E;--np-b:#86D69F}
+.t47hdr .pill[data-np="member"]{--np-r:linear-gradient(100deg,#F3A3C6,#FDE3EE);--np-a:linear-gradient(100deg,#7E1546,#B22F6E);--np-i:#5A0F33;--np-b:#F3A3C6}
+.t47hdr .pill[data-np]{background:var(--np-r);color:var(--np-i);border:1px solid var(--np-b)}
+.t47hdr .pill[data-np][aria-current="page"]{background:var(--np-a);color:#fff;border-color:transparent}

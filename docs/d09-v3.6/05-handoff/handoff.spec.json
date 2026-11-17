@@ -2,8 +2,8 @@
   "spec_version": "1.2",
   "status": "PRELIMINARY — pending full release; subject to change before execution",
   "generated": "2026-11-15",
-  "demo_version": "D09 v4.2",
-  "note": "Machine-readable companion to HANDOFF-PACKET-v1.3.md. 'demo' is extracted from the built file by demo/verification/extract_spec.py; everything else is authored and proposed, not implemented.",
+  "demo_version": "D09 v4.3",
+  "note": "Machine-readable companion to HANDOFF-PACKET-v1.4.md. 'demo' is extracted from the built file by demo/verification/extract_spec.py; everything else is authored and proposed, not implemented.",
   "demo": {
     "screens": [
       {
@@ -964,7 +964,7 @@
           "key": "lv",
           "label": "Level",
           "fixed_order": [
-            "Starter",
+            "Basics",
             "Deeper"
           ]
         }
@@ -1368,7 +1368,7 @@
     "No biometric identifiers; scan is not a login or payment credential",
     "Colour results stored, never samples; swatch-first intake",
     "Stripe primary rail; no raw card data; server-authoritative idempotent webhooks",
-    "One entitlement system; plans Starter $0, Guided $14.99/mo or $149.90/yr, Studio $29.99/mo or $299.90/yr (owner-set 2026-11-15, preliminary; annual = ten months for twelve; allowances per plan are assumptions until set from usage data)",
+    "One entitlement system; plans Guided $14.99/mo or $149.90/yr, Studio $29.99/mo, $89.97/qtr (optional, assumption) or $299.90/yr (owner-set 2026-11-15, preliminary; annual = ten months for twelve; allowances per plan are assumptions until set from usage data)",
     "Style vertical collects no body metrics",
     "Hair-lift refusals amber not red; no products returned",
     "AI Coach Premium-gated Tier 3; safety, eligibility, ceilings and pricing are deterministic code",
@@ -1789,15 +1789,9 @@
     "N-8"
   ],
   "plans": {
-    "status": "PRELIMINARY - owner-set 2026-11-15, pending full release",
+    "status": "PRELIMINARY - owner-set, pending full release; two plans since 2026-11-16",
     "currency": "USD",
     "tiers": [
-      {
-        "id": "Starter",
-        "monthly": 0,
-        "annual": 0,
-        "note": "free to keep; no payment method; not a trial under Terms 8.3"
-      },
       {
         "id": "Guided",
         "monthly": 14.99,
@@ -1806,27 +1800,27 @@
       {
         "id": "Studio",
         "monthly": 29.99,
+        "quarterly": 89.97,
+        "quarterly_status": "ASSUMPTION - three months at the monthly price until the owner sets it (N-9)",
         "annual": 299.9
       }
     ],
-    "annual_rule": "ten months for twelve (two months free) on both paid tiers",
+    "annual_rule": "ten months for twelve (two months free) on both plans",
     "changes": {
       "upgrade": "immediate with proration credit (Terms 8.6)",
       "downgrade": "end of paid period (Terms 8.6)"
     },
     "allowances_assumed": {
       "coach_answers_per_month": {
-        "Starter": 3,
         "Guided": 60,
         "Studio": "fair use"
       },
       "guided_scan_per_month": {
-        "Starter": 0,
         "Guided": 2,
         "Studio": 6
       }
     },
-    "stripe_prices_needed": 4,
+    "stripe_prices_needed": 5,
     "trial": {
       "plan": "Guided",
       "days": 14,
@@ -1835,8 +1829,20 @@
       "once_per_customer": true,
       "reminder_days_before_first_charge": 3,
       "separate_renewal_consent": "Terms 8.4, recorded in consent ledger",
-      "starter_collects_card": false,
       "status": "PRELIMINARY - O-7 pending owner approval"
-    }
+    },
+    "quarterly_rule": "Studio only, optional, never required",
+    "renewal_reminder": {
+      "days_before_charge": 2,
+      "default": "on",
+      "switch": "one preference shared by web account (W11) and app (A23)",
+      "channels": [
+        "in-app",
+        "web portal"
+      ],
+      "trial_reminder_days_before_first_charge": 3,
+      "counsel": "C-10"
+    },
+    "no_plan_state": "signed-in member with no plan: intake and match available; routines, progress and Coach offer Guided and Studio"
   }
 }

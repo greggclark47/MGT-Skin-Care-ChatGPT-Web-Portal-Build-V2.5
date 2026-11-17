@@ -1,10 +1,10 @@
 # Team 47 Studio — Marketing Packet
 
-**Version 1.6 · 2026-11-16 · For anyone producing Team 47 Studio material: web, social, email, partner decks** · v1.1: utility row colours (§5.2) · v1.2: utility row moves to the lighter Aura palette (§5.2) · v1.3: Prism Weave seamless pattern (§5.4, `patterns/`), accessibility figures refreshed (§9) · v1.4: plans and prices (§3.1), Prism Weave on the landing hero · v1.5: trial line in §3.1; build reference is v4.2 · v1.6: Retail Partners is one section with its own text theme, accent colours (dark `#FFC23A`, light `#8A5B00`; the utility-row Aura family is unchanged), global and regional graphics; the logo on landing surfaces is 18% larger (36px to 42.5px header height)
+**Version 1.7 · 2026-11-16 · For anyone producing Team 47 Studio material: web, social, email, partner decks** · v1.1: utility row colours (§5.2) · v1.2: utility row moves to the lighter Aura palette (§5.2) · v1.3: Prism Weave seamless pattern (§5.4, `patterns/`), accessibility figures refreshed (§9) · v1.4: plans and prices (§3.1), Prism Weave on the landing hero · v1.5: trial line in §3.1; build reference is v4.2 · v1.6: Retail Partners is one section with its own text theme, accent colours (dark `#FFC23A`, light `#8A5B00`; the utility-row Aura family is unchanged), global and regional graphics; the logo on landing surfaces is 18% larger (36px to 42.5px header height) · v1.7: two plans since 2026-11-16, Studio quarterly option, renewal-reminder line, a gradient per header button (§5.2); build reference is v4.3
 
 > **Status: PRELIMINARY — pending full release.** Prepared for review ahead of any execution. Decisions, routes, wording and figures are subject to change before work begins; nothing here is final until the owner releases it.
 
-Everything here is taken from the D09 v4.2 build. Colour values come from `tokens/d09-tokens-v3.6.json`; nothing in this document was typed separately from it.
+Everything here is taken from the D09 v4.3 build. Colour values come from `tokens/d09-tokens-v3.6.json`; nothing in this document was typed separately from it.
 
 **In this folder**
 
@@ -36,7 +36,7 @@ Warm, plain, specific. We sound like someone who knows a lot and is on your side
 |---|---|
 | Say what the person gets: *"built from your own profile"* | Say what the technology is: *"AI-powered"* as a headline |
 | Name the method: *"one profile behind all of it"* | Promise an outcome: *"flawless skin"* |
-| Offer: *"Begin free. Grow when it suits you."* | Pressure: *"Limited time"*, *"Don't miss out"* |
+| Offer: *"Two plans. Everything connected."* | Pressure: *"Limited time"*, *"Don't miss out"* |
 | Admit limits warmly: *"not this one, and here is why"* | Hide them in fine print |
 | Use "you" and "your" | Talk about "users" or "consumers" |
 
@@ -56,7 +56,7 @@ All of these are live in the v3.6 build and have been checked against the claims
 | **Twelve tones. Six verticals. One profile behind all of it.** | Campaign subhead |
 | **Care, color, and style. Connected.** | Home hero |
 | **Made to fit you, not an average.** | Home section; brand line |
-| **Begin free. Grow when it suits you.** | Membership |
+| **Two plans. Everything connected.** | Membership |
 | **Yours to share. Yours to take back.** | Privacy |
 | **Find my match** · **Find your match at team47studio.com** | Primary call to action — web and assets |
 | **Guidance for looking and feeling your best — cosmetic, not medical.** | Required line — see §4.3 |
@@ -67,25 +67,27 @@ All of these are live in the v3.6 build and have been checked against the claims
 
 ### 3.1 Plans and prices (preliminary)
 
-Owner-set 2026-11-15, pending full release. Use these figures exactly; never round, never "from". Starter is "free to keep", never "free trial" (no card is collected). Annual is always stated with its effective monthly figure.
+Owner-set 2026-11-15, pending full release. Use these figures exactly; never round, never "from". There is no free plan: never write "free plan", "free to keep" or "begin free". The only $0 offer is the 14-day Guided trial, always stated with what it renews at. Annual is always stated with its effective monthly figure. Quarterly is a Studio option; its $89.97 figure is `[ASSUMPTION]` and is not approved for ads until the owner sets it (N-9).
 
-| | Starter | Guided | Studio |
-|---|---|---|---|
-| Monthly | $0 | $14.99 | $29.99 |
-| Annual (two months free) | $0 | $149.90 ($12.49 a month) | $299.90 ($24.99 a month) |
-| Best for | Exploring: first match, first routine | Building a routine you keep | The whole studio, at full depth |
-| The outcome | A profile, a season and a starter routine today | Routines that keep up with you, and visible progress | Everything coordinated, with a record you own |
-| Profile and matching | Core match; colour season from swatches | Full personalized match; optional scan 2/mo `[ASSUMPTION]` | Cross-domain synthesis; optional scan 6/mo `[ASSUMPTION]` |
-| Routines and progress | Starter routine with reasons; current only | Refreshed every two weeks; history and photo journal; replenishment | Advanced coordination; history, journal and exports |
-| AI Coach | 3 answers a month `[ASSUMPTION]` | 60 answers a month `[ASSUMPTION]` | Unlimited within fair use, highest depth |
-| Voice | Narrated routines | Live narration allowance | Realtime conversation, session-capped |
-| Colour, style and shop | Core discovery, six verticals; browse wardrobe | Colour carried into makeup, hair, wardrobe; Shop My Routine cart | As Guided, plus priority agent runs and guest access |
-| Membership | Sponsor-supported, labelled; standard support | Ad-free; enhanced support | Ad-free; priority support and early features |
-| Billing and changes | Never billed; no card, no clock | Upgrade immediate with proration; downgrade at period end (Terms 8.6) | Same terms as Guided |
+| | Guided | Studio |
+|---|---|---|
+| Monthly | $14.99 | $29.99 |
+| Quarterly (optional, Studio only) | — | $89.97 `[ASSUMPTION]` — three months at the monthly price, no discount, until the owner sets it |
+| Annual (two months free) | $149.90 ($12.49 a month) | $299.90 ($24.99 a month) |
+| Best for | Building a routine you keep | The whole studio, at professional depth |
+| The outcome | Routines that keep up with you, and visible progress | Everything coordinated, with a record you own |
+| Profile and matching | Full personalized match; optional scan 2/mo `[ASSUMPTION]` | Cross-domain synthesis; optional scan 6/mo `[ASSUMPTION]`; seasonal re-match `[NEW · to spec]` |
+| Routines and progress | Refreshed every two weeks; history and photo journal; replenishment | Coordinated across six verticals; monthly routine and wardrobe plan `[NEW · to spec]`; history, journal and exports |
+| AI Coach | Account-aware; 60 answers a month `[ASSUMPTION]`; live narration | Highest depth, unlimited within fair use `[ASSUMPTION]`; realtime voice, session-capped `[ASSUMPTION]`; saved session summaries |
+| Colour, style and shop | Colour carried into makeup, hair, wardrobe; Shop My Routine cart; Retail Partners | As Guided, plus priority agent runs, early partner launches and stylist guest access |
+| Membership | Ad-free; enhanced support | Ad-free; priority support and early features |
+| Try first | 14-day Guided trial, once per customer (O-7) | Start on Guided, move up any time |
+| Renewal reminder | Two days before each charge; on by default; switch on web and app | Same |
+| Billing and changes | Upgrade immediate with proration; downgrade at period end (Terms 8.6) | Same terms as Guided |
 
 Safety checks (shade range, ingredients, hair lift) and "shows its work" are on for every plan. Allowances marked `[ASSUMPTION]` are to be set from routing logs before release; the entitlement system reads them, the copy does not invent them.
 
-Approved plan lines: "Begin free. Grow when it suits you." · "Starter is free to keep — no card, no clock." · "Two months free on annual." · "Guided, $14.99 a month." · "Studio, $29.99 a month." · "14 days of Guided, $0 today." (trial ads must state the price after the trial and that it renews; never "free" without "14 days")
+Approved plan lines: "Two plans. Everything connected." · "Two months free on annual." · "A reminder two days before every renewal." · "Studio, quarterly if you prefer." (no quarterly price in ads until N-9) · "Guided, $14.99 a month." · "Studio, $29.99 a month." · "14 days of Guided, $0 today." (trial ads must state the price after the trial and that it renews; never "free" without "14 days")
 
 ---
 
@@ -148,13 +150,17 @@ Each of the six verticals owns a three-stop ramp at its own angle. Every stop is
 
 **Header**
 
-| Button | Segment ramp | Opens |
-|---|---|---|
-| Skin | Skin | Skin Match |
-| Color | Color | Colour & season |
-| Style | Wardrobe | Style studio |
-| Coach | Style | AI Coach |
-| Membership | Makeup | Membership |
+From v4.3 each header button is filled with its own gradient family. At rest it shows the pale half with a dark ink of the same hue; on the current page it shows the deep half with white text.
+
+| Button | Opens | Resting | Current page | Ink at rest |
+|---|---|---|---|---|
+| Skin | Skin Match | `#FFEBD2` → `#F6B877` | `#A3520F` → `#5E2C04` | `#4A2400` |
+| Color | Colour & season | `#EEE6FF` → `#B9A2F8` | `#6743D4` → `#34197F` | `#2A1263` |
+| Style | Style studio | `#DCEEFF` → `#8CC2F6` | `#2266B5` → `#103B73` | `#0A2C55` |
+| Coach | AI Coach | `#DDF6E3` → `#86D69F` (pale to dark green) | `#25804A` → `#0D4426` | `#0B3A1E` |
+| Membership | Membership | `#F3A3C6` → `#FDE3EE` (dark to pale pink) | `#7E1546` → `#B22F6E` | `#5A0F33` |
+
+Worst ink-on-stop pair at rest is 7.01:1; worst white-on-stop pair when current is 4.92:1. Both modes use the same values.
 
 **Utility row** — the second row, on every web screen. Labels, order and destinations are unchanged. From v3.9 each button is a lighter pastel, in a different family from the saturated header pills above it, so the two rows read as two levels of navigation.
 

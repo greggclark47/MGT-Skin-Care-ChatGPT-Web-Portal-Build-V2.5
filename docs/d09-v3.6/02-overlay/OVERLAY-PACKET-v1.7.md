@@ -1,15 +1,15 @@
 # Team 47 Studio — Web Portal & App Overlay Packet
 
-**Version 1.6 · 2026-11-16 · Internal build handoff** · v1.1: O-2 decided · v1.2: utility row, route-driven active state, keyboard reach · v1.3: 71 screens, merged legal routes, Aura utility row, new commerce, scan, security and onboarding screens · v1.4: plans priced (Starter $0 / Guided $14.99 / Studio $29.99, annual two months free), Studio checkout unblocked, Prism Weave behind the landing hero · v1.5: optional 14-day Guided trial door and separate renewal consent at checkout; demo reference is v4.2 · v1.6: Retail Partners merged into one section, W29 retired, A24 added, footer without Partners, Retail Partners as a footer support link between Privacy & Terms and Shipping & returns (no separate band), Retail Partners row on every app screen, logo +18%, icon system. Backend detail is in `05-handoff/`.
+**Version 1.7 · 2026-11-16 · Internal build handoff** · v1.1: O-2 decided · v1.2: utility row, route-driven active state, keyboard reach · v1.3: 71 screens, merged legal routes, Aura utility row, new commerce, scan, security and onboarding screens · v1.4: plans priced (Guided $14.99 / Studio $29.99, annual two months free), Studio checkout unblocked, Prism Weave behind the landing hero · v1.5: optional 14-day Guided trial door and separate renewal consent at checkout; demo reference is v4.2 · v1.6: Retail Partners merged into one section, W29 retired, A24 added, footer without Partners, Retail Partners as a footer support link between Privacy & Terms and Shipping & returns (no separate band), Retail Partners row on every app screen, logo +18%, icon system. v1.7: Starter retired (two plans), Studio quarterly option, renewal reminders with shared web and app switches, a gradient per header button; demo reference is v4.3. Backend detail is in `05-handoff/`.
 
 > **Status: PRELIMINARY — pending full release.** Prepared for review ahead of any execution. Decisions, routes, wording and figures are subject to change before work begins; nothing here is final until the owner releases it.
 
-Maps the D09 v4.2 demo (71 screens) onto an existing production build, screen by screen, with every mapped file verified to exist.
+Maps the D09 v4.3 demo (71 screens) onto an existing production build, screen by screen, with every mapped file verified to exist.
 
 | | |
 |---|---|
 | **Target build** | `greggclark47/MGT-Skin-Care-ChatGPT-Web-Portal-Build-V2.5` @ `6b05956` (2026-09-18) — Next.js web, Expo mobile, Express API, live Stripe Checkout |
-| **Source design** | D09 v4.2 demo — `demo/index-v4.2.html` (held privately) |
+| **Source design** | D09 v4.3 demo — `demo/index-v4.3.html` (held privately) |
 | **Classification** | The blueprint's own vocabulary: REUSE · REFACTOR · REPLACE · CREATE · DEFER |
 | **Result** | 4 REUSE · 22 REFACTOR · 1 REPLACE · 33 CREATE · 11 DEFER (71 rows in `screen-map.csv`) |
 
@@ -52,9 +52,9 @@ The Terms already reconcile the two. §4.1 says matching "can be completed entir
 
 The demo's photo copy now matches §4.5 — sent to an image-analysis service, released within thirty seconds, never stored. Production copy must say the same.
 
-### O-3 · The entitlement can't represent three plans `BLOCKS W4, W12, W13, W31`
+### O-3 · The entitlement can't represent the plans `BLOCKS W4, W12, W13, W31`
 
-`apps/api/src/portal/payments.ts:43` writes `memberships.premium` as a boolean. Billing reads a single `STRIPE_PREMIUM_PRICE_ID`. The plans are now Starter ($0), Guided ($14.99/mo or $149.90/yr) and Studio ($29.99/mo or $299.90/yr), owner-set 2026-11-15 and preliminary. That needs a tier field, a cycle field and one Stripe price per paid tier per cycle — four prices, not one.
+`apps/api/src/portal/payments.ts:43` writes `memberships.premium` as a boolean. Billing reads a single `STRIPE_PREMIUM_PRICE_ID`. The plans are now Guided ($14.99/mo or $149.90/yr) and Studio ($29.99/mo, $89.97/qtr optional `[ASSUMPTION]`, or $299.90/yr), preliminary; Starter was retired 2026-11-16. That needs a tier field, a cycle field (monthly, quarterly, annual) and one Stripe price per tier per cycle — five prices, not one.
 
 The same boolean gates the Coach: `requirePremium` checks `user_profiles.is_premium` in the Drive lineage. Whichever base you pick, the gate has to read the tier.
 
@@ -103,7 +103,9 @@ Each phase ships on its own and can be reverted on its own.
 
 These are the parts of the demo the overlay must preserve exactly, because each one is a product rule rather than a style.
 
-- **The journey resumes; it never restarts.** Each step is skipped if already satisfied. Starter never reaches checkout. Guided and Studio both check out, on the monthly or annual cycle chosen on the membership screen; the checkout summary reads the plan and cycle, never a constant. The optional Guided trial is the only card-gated entry and needs the separate renewal consent ticked before the pay button fires.
+- **Header buttons each carry their own gradient (v4.3).** Skin amber, Color violet, Style blue, Coach pale to dark green, Membership dark to pale pink. At rest the pale half of the ramp with a dark ink of the same hue (worst pair 7.01:1); on the current page the deep half with white text (worst 4.92:1) and `aria-current="page"`. Values are in `d09-overlay.css` and marketing §5.2.
+- **Renewal reminders and notification switches (v4.3).** The account page gains a Billing and reminders card (next charge, amount, reminder date, cycle switch) and a Notifications card with the same six switches as the app screen A23; both read one `notification_prefs` record. A subtle banner sits under the header on every web screen, and a card sits on app Home, from two days before a charge.
+- **The journey resumes; it never restarts.** Each step is skipped if already satisfied. There is no free tier. Guided checks out monthly or annual; Studio monthly, quarterly (optional) or annual, chosen on the membership screen; the checkout summary reads the plan and cycle, never a constant. The optional Guided trial is the only card-gated entry and needs the separate renewal consent ticked before the pay button fires.
 - **Every interactive element resolves.** The v3.4 audit found 18 dead controls; v4.2 has 3,733 and none are dead. The audit script (`interact.py`) is in the demo repo and should run in CI against the real build.
 - **Contrast is measured, not assumed.** The full v4.2 sweep covers 8,480 text runs in both modes with 0 real failures (2 inactive disabled buttons exempt); the v3.9 sweep found one failure on a marketing card caption, since fixed. Gradient buttons use the darkened stops in the token file — each clears 4.91:1 against white or better.
 - **"You are here" comes from the route.** The utility row (Applications, Shop, Learn, Retail Partners, now in the lighter Aura palette) fills the button for the current section and sets `aria-current="page"` from the URL, never from guessed state. Shop stays filled on `/cart`. In Next.js this is `usePathname()` compared against each button's route list.

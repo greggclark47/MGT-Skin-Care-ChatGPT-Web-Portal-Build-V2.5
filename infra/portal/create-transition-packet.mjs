@@ -158,9 +158,7 @@ Local Ollama remains the intended primary runtime. DeepSeek supports complex loc
 }
 
 function compress(stage, destination) {
-  const quote = (value) => `'${value.replaceAll("'", "''")}'`;
-  const script = `$items = Get-ChildItem -LiteralPath ${quote(stage)} -Force; Compress-Archive -LiteralPath $items.FullName -DestinationPath ${quote(destination)} -Force`;
-  const result = spawnSync("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", script], { cwd: root, encoding: "utf8", windowsHide: true, maxBuffer: 8 * 1024 * 1024 });
+  const result = spawnSync("tar", ["-a", "-c", "-f", destination, "-C", stage, "."], { cwd: root, encoding: "utf8", windowsHide: true, maxBuffer: 8 * 1024 * 1024 });
   if (result.status !== 0) throw new Error(`Unable to create transition ZIP: ${result.stderr.trim() || result.stdout.trim()}`);
 }
 

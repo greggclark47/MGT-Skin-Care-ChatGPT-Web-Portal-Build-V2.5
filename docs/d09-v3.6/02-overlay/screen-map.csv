@@ -1,6 +1,8 @@
 demo_id,group,screen,demo_route,existing_file,file_exists,action,note
 W1,Web portal,Home,/,apps/web/src/app/page.tsx,yes,REFACTOR,"Restyle to D09; hero, three-path chooser, value cards. Brand string sweep."
 W1B,Web portal,Applications hub,/applications,apps/web/src/app/studio/page.tsx,yes,REFACTOR,Becomes the Applications hub; add /applications alias. 15 app tiles with unique icons. v3.9: real tabs and row filters.
+W38,Web portal,Start — intake,/start,,new,CREATE,"v4.4: eight steps before any price; answers saved before an account exists (intake_answers)."
+W39,Web portal,Studio preview & 14-day trial,/start/plan,,new,CREATE,"v4.4: personalized preview beside the trial paywall (plan, cycle, timeline with reminder and first-charge dates)."
 W2A,Web portal,Skin Match flow,/skin-match,apps/web/src/app/skin-match/page.tsx,yes,REUSE,Keep SkinMatchFlow logic; apply tokens only.
 W2,Web portal,Match result (pre-signup),/skin-match/result,apps/web/src/app/skin-match/results/page.tsx,yes,REFACTOR,Demo route is /skin-match/result; keep existing /results path and update demo.
 W3,Web portal,Portal (signed in),/app,apps/web/src/app/my-skin/page.tsx,yes,REFACTOR,Signed-in portal home. Demo route /app is a demo convenience; keep /my-skin. v3.9: progress card and scan teaser.
@@ -18,6 +20,7 @@ W10,Account & payment,Create account,/create-account,,n/a,CREATE,No consumer sig
 W7,Account & payment,Checkout — payment,/checkout,apps/api/src/portal/billing.ts,yes,REFACTOR,"Demo checkout is a simulated card form. Production uses hosted Stripe Checkout — keep production, drop the demo form. See O-4. v3.9: Express Checkout (Apple Pay / Google Pay / Link) and saved card via SetupIntent; only Team 47 checkout items are payable here."
 W8,Account & payment,Order confirmed,/order/confirmed,,n/a,CREATE,Return page for Stripe success_url (currently /membership?checkout=returned).
 W11,Account & payment,Account center,/account,apps/web/src/app/account/page.tsx,yes,REFACTOR,Account centre. v3.9: security and sharing card. v4.3: Billing and reminders card (cycle switch) and Notifications card with the same switches as A23.
+W40,Account & payment,Your trial,/trial,,new,CREATE,"v4.4: day counter, timeline, checklist, switch plan or cycle (consent entry), one-step cancel."
 W12,Account & payment,Change plan,/account/plan,,n/a,CREATE,Change-plan route; wire to billing portal or checkout with proration per Terms 8.6. v4.3: two plans.
 W32,Account & payment,Password reset,/reset-password,,n/a,CREATE,Password reset. Depends on consumer auth.
 W33,Account & payment,Setup — intake,/setup/intake,,n/a,CREATE,"Setup intake. Swatch-first with optional consent-gated photo (O-2 decided 2026-11-15). Matches Terms 4.1-4.2. v3.9: photo guide, optional scan card, passkey note."
@@ -40,9 +43,11 @@ P2,Partnerships,Stage 1 — listing invite,/ops/outreach/invite,,n/a,DEFER,Ops.
 P3,Partnerships,Stage 2 — placement offer,/ops/outreach/offer,,n/a,DEFER,Ops.
 P4,Partnerships,Rate model & variables,/ops/rate-model,,n/a,DEFER,Ops.
 A01,App,Welcome,,apps/mobile/src/screens/SkinMatchScreen.tsx,yes,REFACTOR,Skin Match exists on mobile.
+A25,App,Start — intake & trial,/app/start,,n/a,CREATE,"v4.4: same intake, preview and trial paywall; store billing unresolved (C-6)."
 A02,App,Skin Match question,,apps/mobile/src/screens/SkinMatchScreen.tsx,yes,REFACTOR,Skin Match exists on mobile.
 A03,App,Match result,,apps/mobile/src/screens/SkinMatchScreen.tsx,yes,REFACTOR,Skin Match exists on mobile.
 A04,App,Home,,,n/a,CREATE,This repo ships only SkinMatchScreen on mobile. The Drive (Fable) lineage has a 6-tab AppNavigator — port from there rather than rebuild. See O-2. v3.9: filter chips / progress / AI label as applicable.
+A26,App,Your trial,/app/trial,,n/a,CREATE,"v4.4: trial panel in the app, reached from Home."
 A05,App,Routine,,,n/a,CREATE,This repo ships only SkinMatchScreen on mobile. The Drive (Fable) lineage has a 6-tab AppNavigator — port from there rather than rebuild. See O-2.
 A06,App,Shop,,,n/a,CREATE,This repo ships only SkinMatchScreen on mobile. The Drive (Fable) lineage has a 6-tab AppNavigator — port from there rather than rebuild. See O-2. v3.9: filter chips / progress / AI label as applicable.
 A07,App,Makeup,,,n/a,CREATE,This repo ships only SkinMatchScreen on mobile. The Drive (Fable) lineage has a 6-tab AppNavigator — port from there rather than rebuild. See O-2. v3.9: filter chips / progress / AI label as applicable.

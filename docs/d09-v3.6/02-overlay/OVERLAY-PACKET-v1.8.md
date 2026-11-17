@@ -1,15 +1,15 @@
 # Team 47 Studio — Web Portal & App Overlay Packet
 
-**Version 1.7 · 2026-11-16 · Internal build handoff** · v1.1: O-2 decided · v1.2: utility row, route-driven active state, keyboard reach · v1.3: 71 screens, merged legal routes, Aura utility row, new commerce, scan, security and onboarding screens · v1.4: plans priced (Guided $14.99 / Studio $29.99, annual two months free), Studio checkout unblocked, Prism Weave behind the landing hero · v1.5: optional 14-day Guided trial door and separate renewal consent at checkout; demo reference is v4.2 · v1.6: Retail Partners merged into one section, W29 retired, A24 added, footer without Partners, Retail Partners as a footer support link between Privacy & Terms and Shipping & returns (no separate band), Retail Partners row on every app screen, logo +18%, icon system. v1.7: Starter retired (two plans), Studio quarterly option, renewal reminders with shared web and app switches, a gradient per header button; demo reference is v4.3. Backend detail is in `05-handoff/`.
+**Version 1.8 · 2026-11-16 · Internal build handoff** · v1.1: O-2 decided · v1.2: utility row, route-driven active state, keyboard reach · v1.3: 71 screens, merged legal routes, Aura utility row, new commerce, scan, security and onboarding screens · v1.4: plans priced (Guided $14.99 / Studio $29.99, annual two months free), Studio checkout unblocked, Prism Weave behind the landing hero · v1.5: optional 14-day Guided trial door and separate renewal consent at checkout; demo reference is v4.2 · v1.6: Retail Partners merged into one section, W29 retired, A24 added, footer without Partners, Retail Partners as a footer support link between Privacy & Terms and Shipping & returns (no separate band), Retail Partners row on every app screen, logo +18%, icon system. v1.7: Starter retired (two plans), Studio quarterly option, renewal reminders with shared web and app switches, a gradient per header button; demo reference is v4.3. v1.8: intake W38, preview and trial W39, Your trial W40, app A25 and A26 (76 screens); the trial is the only way in; demo reference is v4.4. Backend detail is in `05-handoff/`.
 
 > **Status: PRELIMINARY — pending full release.** Prepared for review ahead of any execution. Decisions, routes, wording and figures are subject to change before work begins; nothing here is final until the owner releases it.
 
-Maps the D09 v4.3 demo (71 screens) onto an existing production build, screen by screen, with every mapped file verified to exist.
+Maps the D09 v4.4 demo (71 screens) onto an existing production build, screen by screen, with every mapped file verified to exist.
 
 | | |
 |---|---|
 | **Target build** | `greggclark47/MGT-Skin-Care-ChatGPT-Web-Portal-Build-V2.5` @ `6b05956` (2026-09-18) — Next.js web, Expo mobile, Express API, live Stripe Checkout |
-| **Source design** | D09 v4.3 demo — `demo/index-v4.3.html` (held privately) |
+| **Source design** | D09 v4.4 demo — `demo/index-v4.4.html` (held privately) |
 | **Classification** | The blueprint's own vocabulary: REUSE · REFACTOR · REPLACE · CREATE · DEFER |
 | **Result** | 4 REUSE · 22 REFACTOR · 1 REPLACE · 33 CREATE · 11 DEFER (71 rows in `screen-map.csv`) |
 
@@ -105,6 +105,7 @@ These are the parts of the demo the overlay must preserve exactly, because each 
 
 - **Header buttons each carry their own gradient (v4.3).** Skin amber, Color violet, Style blue, Coach pale to dark green, Membership dark to pale pink. At rest the pale half of the ramp with a dark ink of the same hue (worst pair 7.01:1); on the current page the deep half with white text (worst 4.92:1) and `aria-current="page"`. Values are in `d09-overlay.css` and marketing §5.2.
 - **Renewal reminders and notification switches (v4.3).** The account page gains a Billing and reminders card (next charge, amount, reminder date, cycle switch) and a Notifications card with the same six switches as the app screen A23; both read one `notification_prefs` record. A subtle banner sits under the header on every web screen, and a card sits on app Home, from two days before a charge.
+- **The journey starts with the intake (v4.4).** Answers, then the studio preview and the trial paywall, then the account, then the card on file at $0. Every entry point (header, home, membership cards, plans page, app welcome) goes to `/start`. A member whose trial is used goes straight to paid checkout.
 - **The journey resumes; it never restarts.** Each step is skipped if already satisfied. There is no free tier. Guided checks out monthly or annual; Studio monthly, quarterly (optional) or annual, chosen on the membership screen; the checkout summary reads the plan and cycle, never a constant. The optional Guided trial is the only card-gated entry and needs the separate renewal consent ticked before the pay button fires.
 - **Every interactive element resolves.** The v3.4 audit found 18 dead controls; v4.2 has 3,733 and none are dead. The audit script (`interact.py`) is in the demo repo and should run in CI against the real build.
 - **Contrast is measured, not assumed.** The full v4.2 sweep covers 8,480 text runs in both modes with 0 real failures (2 inactive disabled buttons exempt); the v3.9 sweep found one failure on a marketing card caption, since fixed. Gradient buttons use the darkened stops in the token file — each clears 4.91:1 against white or better.

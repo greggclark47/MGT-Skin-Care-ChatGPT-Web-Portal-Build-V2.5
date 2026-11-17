@@ -1,8 +1,6 @@
 # Team 47 Studio — Months 2 and 3: Scale-Phase Ads and Organic Calendar
 
-> **Superseded in part on 2026-11-16 — do not use as is.** The owner retired the free Starter plan. This document still assumes a Starter funnel (free sign-up, free-to-paid conversion and "begin free" copy). It must be rerun for two plans, Guided and Studio, before any message, ad or post is used (README N-10).
-
-**Version 1.0 · 2026-11-15 · For the creative agent, the performance agent and whoever runs the accounts** · Continues AD-CREATIVE-BRIEFS-M1 and SOCIAL-CALENDAR-M1; budget and gates from the cost addendum v2.2 §11.2
+**Version 1.1 · 2026-11-16 · For the creative agent, the performance agent and whoever runs the accounts** · Continues AD-CREATIVE-BRIEFS-M1 and SOCIAL-CALENDAR-M1; budget and gates from the cost addendum v2.3 §11.2 · v1.1: two plans since 2026-11-16; gates and base-case outcomes from addendum v2.3; lookalikes and retargeting built on intake and trial events; Concept G headline and two carousels rewritten
 
 > **Status: PRELIMINARY — pending full release.** Month 2 runs only if month 1 met its step-up rule; month 3 only if month 2 met its own. Trial items depend on O-7, spend on O-8, any product tile on N-4.
 
@@ -14,13 +12,13 @@ All the rules in AD-CREATIVE-BRIEFS-M1 §2 and SOCIAL-CALENDAR-M1 §2 carry over
 
 | | Month 2 | Month 3 |
 |---|---|---|
-| Runs only if | Month 1 found one concept per channel at CTR ≥ 1.2% and CAC ≤ $95 | Blended CAC ≤ $95 and trial→paid ≥ 25% on the month-1 cohort |
+| Runs only if | Month 1 found one concept per channel at CTR ≥ 1.2% and click → trial ≥ 4% | Blended CAC ≤ $95 and trial → paid ≥ 30% on the month-1 cohort (its day-14 results) |
 | Ad spend | $3,000 | $5,000 |
 | Meta | $1,650 (55%) | $2,500 (50%) |
 | TikTok | $1,200 (40%) | $2,000 (40%) |
 | Google brand search | $150 (5%) | $500 (10%) |
 | Target CAC to earn month 4 | ≤ $95 | ≤ $75 |
-| Base-scenario outcome (addendum §11.3 B) | ~86 new paid, ~134 paid base, ~$2.8k MRR | ~148 new paid, ~273 paid base, ~$5.7k MRR |
+| Base-scenario outcome (addendum v2.3 §11.3 A) | ~63 new paid, ~86 paid base, ~$1.8k MRR | ~104 new paid, ~184 paid base, ~$3.9k MRR |
 
 If a gate fails, spend holds at the previous month's level for a month while the losing piece is reworked. The performance agent states plainly at each month end whether the next step is earned.
 
@@ -29,8 +27,8 @@ If a gate fails, spend holds at the previous month's level for a month while the
 ## 2. What changes from month 1
 
 1. **Winners scale, losers retire.** The month-1 winner per channel gets 60% of that channel's spend. The rest tests new concepts below. No concept runs more than 8 days without a fresh variant (fatigue sets in at ~8.4 days, AdRiseLab H1 2026).
-2. **Lookalikes switch on** once there are 500 Starter sign-ups: Meta 1% lookalike of sign-ups, then of trial starters, then of paid members as each pool reaches 500.
-3. **Retargeting starts, narrowly.** Pool: people who viewed a Skin Match result in the last 14 days and did not sign up. Never people who opened the scan, the lift check or any care page. Frequency cap 2 a week.
+2. **Lookalikes switch on** once there are 500 intake completions: Meta 1% lookalike of intake completions, then of trial starters, then of paid members as each pool reaches 500.
+3. **Retargeting starts, narrowly.** Pool: people who completed the intake or viewed their studio preview in the last 14 days and did not start a trial. Never people who opened the scan, the lift check or any care page. Frequency cap 2 a week.
 4. **Google brand search** covers "Team 47 Studio" and "team47studio" only. No competitor or category terms in months 2–3.
 5. **Annual enters the creative** in month 3: "Two months free on annual" with the effective monthly figure beside it ($12.49 Guided, $24.99 Studio), never the annual total alone.
 6. **Studio gets its own concept** in month 3, aimed only at lookalikes of paid Guided members.
@@ -63,7 +61,7 @@ If a gate fails, spend holds at the previous month's level for a month while the
 **Shows:** the membership toggle sliding from Monthly to Annual; Guided changes from $14.99/mo to $149.90/yr with "$12.49 a month" underneath.
 **Hook:** "Same Guided. Two months free."
 **Body:** "Pay yearly and Guided works out at $12.49 a month. Change or cancel yourself, any time; it renews yearly until you do."
-**Headline:** Begin free. Grow when it suits you.
+**Headline:** Two plans. Everything connected.
 **CTA:** See plans
 **Audience:** retargeting pool and lookalike of trial starters only.
 **Variants:** G1 9:16 10 s · G2 4:5 static.
@@ -80,7 +78,7 @@ If a gate fails, spend holds at the previous month's level for a month while the
 
 ### Retargeting creative (months 2–3)
 
-One static, one 8-second clip. "Your result is waiting. Free to save it." over the result screen they already saw, with Prism Weave Quiet behind it. No new claims, no countdown, no "last chance" (packet voice §2: offer, never pressure).
+One static, one 8-second clip. "Your studio preview is saved. 14 days free when you are ready." over the result screen they already saw, with Prism Weave Quiet behind it. No new claims, no countdown, no "last chance" (packet voice §2: offer, never pressure).
 
 ---
 
@@ -132,7 +130,7 @@ Cadence unchanged from month 1: five short videos a week (one per vertical, rota
 - Mon · Studio: "Six verticals, reasoned together. That is Studio." [connections diagram]
 - Tue · Makeup: "Studio carries your season into every recommendation, and says when it did." [reused label]
 - Wed · Hair: "Hair care and hair colour share one profile. You answer once." [shared profile]
-- Thu · Carousel: "Starter, Guided, Studio" — the three "best for" lines.
+- Thu · Carousel: "Guided or Studio" — the two "best for" lines and "14 days free on either".
 - Thu · Hair colour: "Salon guidance sits above the product list, not below it." [salon card]
 - Fri · Wardrobe: "Exports: your palette and history, yours to take with you." [export screen]
 
@@ -146,7 +144,7 @@ Cadence unchanged from month 1: five short videos a week (one per vertical, rota
 
 ### Week 12 — "Connected" (quarter close)
 - Mon · Colour: "One reading, six places it shows up." [season travelling across screens]
-- Tue · Makeup: "Your result is free to save. Your shade, matched." [result screen]
+- Tue · Makeup: "Your shade, matched. See your preview in eight questions." [result screen]
 - Wed · Hair: "Scalp first, always." [routine]
 - Thu · Carousel: "Quarter recap" — the top-saved post of each month.
 - Thu · Hair colour: "Lighter or darker, the answer comes with its reason." [both paths]
@@ -158,7 +156,7 @@ Stories, both months: one product frame a day, Monday polls (swatch, plan, routi
 
 ## 5. Measurement and hand-off to month 4
 
-Weekly, the performance agent reports per concept: CTR, CPC, sign-ups, trial starts, CAC, and for months 2–3 also annual take-rate and Studio share of new paid. At the end of month 3 it produces one page: blended CAC against the $75 gate, trial→paid on the month-1 and month-2 cohorts, retention of the month-1 cohort, and which of scenarios A–D in the addendum the real numbers most resemble. That page replaces the scenario assumptions with measured ones before month-4 spend is approved.
+Weekly, the performance agent reports per concept: CTR, CPC, intake completions, trial starts, trial → paid, CAC, and for months 2–3 also annual take-rate and Studio share of new paid. At the end of month 3 it produces one page: blended CAC against the $75 gate, trial→paid on the month-1 and month-2 cohorts, retention of the month-1 cohort, and which of scenarios A–D in the addendum the real numbers most resemble. That page replaces the scenario assumptions with measured ones before month-4 spend is approved.
 
 ---
 
@@ -168,5 +166,5 @@ Weekly, the performance agent reports per concept: CTR, CPC, sign-ups, trial sta
 |---|---|
 | — | Month-1 step-up rule met (measured, not assumed) |
 | O-7 / O-8 / N-4 | Trial, budget, trademark clearance |
-| — | 500 sign-ups before lookalikes; Google Ads account for brand search |
+| — | 500 intake completions before lookalikes; Google Ads account for brand search |
 | — | Annual price objects live in Stripe before Concept G runs |

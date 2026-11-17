@@ -1,10 +1,10 @@
-# Team 47 Studio — Research Sources for the v4.3 Handoff
+# Team 47 Studio — Research Sources for the v4.4 Handoff
 
 **Version 1.0 · 2026-11-15 · Retrieved 2026-11-15**
 
 > **Status: PRELIMINARY — pending full release.** Prepared for review ahead of any execution. Decisions, routes, wording and figures are subject to change before work begins; nothing here is final until the owner releases it.
 
-Every `[SRC n]`, `[SEC n]` and `[UNVERIFIED]` tag in `HANDOFF-PACKET-v1.4.md` resolves here. **SRC** = primary or official. **SEC** = secondary commentary; counsel confirms before anything is relied on. **UNVERIFIED** = stated in the design but not confirmed in this research pass.
+Every `[SRC n]`, `[SEC n]` and `[UNVERIFIED]` tag in `HANDOFF-PACKET-v1.5.md` resolves here. **SRC** = primary or official. **SEC** = secondary commentary; counsel confirms before anything is relied on. **UNVERIFIED** = stated in the design but not confirmed in this research pass.
 
 ## Primary and official sources
 
@@ -49,3 +49,15 @@ Every `[SRC n]`, `[SEC n]` and `[UNVERIFIED]` tag in `HANDOFF-PACKET-v1.4.md` re
 ## Invented names in the demo — trademark clearance required
 
 All eight retailers and every brand in the 24-item catalogue are invented placeholders. None has been checked against any trademark register. Clear every name, or replace each with a real partner under contract, before any public use.
+
+## Added for v4.4 (intake and the 14-day trial), read 2026-11-16
+
+| Tag | Source | Used for |
+|---|---|---|
+| SRC-T1 | RevenueCat, "How long should your free trial be? Data from 17,000+ apps" (Aug 2025–Jul 2026) | 14-day length: monthly 10–16-day trials have the highest median trial-to-paid (46.6%); AI apps 38.5% |
+| SRC-T2 | RevenueCat, State of Subscription Apps 2026 | Hard paywall median Day-35 conversion 10.7% against 2.1% freemium; supports card on file |
+| SRC-T3 | RevenueCat, "How to build a Blinkist-style paywall"; UX Planet (Blinkist) | Timeline paywall that states the end date and promises a reminder; +23% trial starts, 55% fewer complaints |
+| SRC-T4 | RevenueCat, "Inside Noom's web-to-app onboarding funnel" | Quiz before any price; a personalized plan reveal before the paywall |
+| SRC-T5 | Appcues GoodUX, Curology sign-up flow | Skin quiz before the trial in personalized beauty |
+| SEC-T6 | Davis+Gilbert; Kilpatrick Townsend; California Attorney General consumer alert (Sept 4, 2025) | California AB 2863, effective July 1, 2025, covers free-to-pay conversions; counsel confirms notice timing (C-10) |
+| SEC-T7 | Latham & Watkins; Fenwick | FTC click-to-cancel rule vacated by the Eighth Circuit, July 8, 2025; the 1973 rule and state laws remain |

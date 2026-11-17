@@ -1,14 +1,14 @@
 # Team 47 Studio — Paste-Ready Prompt for Any AI Platform
 
-**Version 1.1 · 2026-11-16.** Paste everything below the line into a fresh session on any capable AI platform or coding agent. Attach `HANDOFF-PACKET-v1.5.md`, `handoff.spec.json`, `RESEARCH-SOURCES.md`, and the target repository. Nothing in the prompt depends on the tool that produced the demo.
+**Version 1.1 · 2026-11-16.** Paste everything below the line into a fresh session on any capable AI platform or coding agent. Attach `HANDOFF-PACKET-v1.6.md`, `handoff.spec.json`, `RESEARCH-SOURCES.md`, and the target repository. Nothing in the prompt depends on the tool that produced the demo.
 
 > **Status: PRELIMINARY — pending full release.** Prepared for review ahead of any execution. Decisions, routes, wording and figures are subject to change before work begins; nothing here is final until the owner releases it.
 
 ---
 
-You are joining Team 47 Studio, a six-vertical beauty and style platform (skin, makeup, hair, hair colour, style, wardrobe) run by one operator who is CEO, CTO and CFO. A finished design reference exists: `index-v4.4.html`, one self-contained file with 76 screens. Every payment, face scan, passkey, retailer handoff and support exchange in it is simulated. Your job is to merge that design onto the existing production build and then build the backend it implies.
+You are joining Team 47 Studio, a six-vertical beauty and style platform (skin, makeup, hair, hair colour, style, wardrobe) run by one operator who is CEO, CTO and CFO. A finished design reference exists: `index-v4.5.html`, one self-contained file with 76 screens. Every payment, face scan, passkey, retailer handoff and support exchange in it is simulated. Your job is to merge that design onto the existing production build and then build the backend it implies.
 
-**Read first, in this order.** `HANDOFF-PACKET-v1.5.md` (what to build, in what order, and what must not change), `handoff.spec.json` (screens, routes, retailers, catalogue, facets, tables, endpoints, acceptance tests), `RESEARCH-SOURCES.md` (what each external claim rests on and what is unverified).
+**Read first, in this order.** `HANDOFF-PACKET-v1.6.md` (what to build, in what order, and what must not change), `handoff.spec.json` (screens, routes, retailers, catalogue, facets, tables, endpoints, acceptance tests), `RESEARCH-SOURCES.md` (what each external claim rests on and what is unverified).
 
 **Work in this order.** Theme, then routes and redirects, then chrome (footer and utility row), then catalogue and filters, then commerce, then passkeys and device approval, then care and the Coach, then partner onboarding, then the optional scan behind a feature flag that stays off, then merge the existing tracking module into the progress screen. Ship each phase on its own so each can be reverted on its own.
 

@@ -1,8 +1,8 @@
 # Team 47 Studio — Lifecycle Messages
 
-**Version 1.1 · 2026-11-16 · For the lifecycle agent and anyone sending member email, SMS or push** · Companion to the marketing packet (voice §2, copy bank §3, claims rules §4) and cost addendum v2.3 §11.5 · v1.1: two plans since 2026-11-16; the sequence now follows the 14-day trial on Guided or Studio (day 0, 3, 7, 11, 14); renewal reminder two days before every charge; cancel and payment-failure paths end in "no plan", not a free tier
+**Version 1.1 · 2026-11-16 · For the lifecycle agent and anyone sending member email, SMS or push** · Companion to the marketing packet (voice §2, copy bank §3, claims rules §4) and cost addendum v2.3 §11.5 · v1.1: two plans since 2026-11-16; the sequence now follows the 14-day trial on Guided or Studio (day 0, 3, 7, 11, 14); renewal reminder two days before every charge; cancel and payment-failure paths end in "no plan", not a free tier (counsel item label corrected to C-11 on 2026-11-16)
 
-> **Status: PRELIMINARY — pending full release.** Prepared for review ahead of any execution. Decisions, routes, wording and figures are subject to change before work begins; nothing here is final until the owner releases it. The trial messages depend on owner decision O-7; notice timing depends on counsel item C-10.
+> **Status: PRELIMINARY — pending full release.** Prepared for review ahead of any execution. Decisions, routes, wording and figures are subject to change before work begins; nothing here is final until the owner releases it. The trial messages depend on owner decision O-7; notice timing depends on counsel item C-11.
 
 Every template is written in the packet voice: warm, plain, specific, one idea per line, "you" not "users". Every message passes the claims rules in marketing §4: fit and method, never outcome; no "accurate"; no timing claims; no before-and-after; invented brands only until clearance. Transactional messages carry no marketing. Marketing messages carry a working opt-out and are sent only with recorded consent (Terms clause 7).
 
@@ -312,6 +312,6 @@ You draft and send Team 47 Studio member messages from the templates in LIFECYCL
 |---|---|
 | O-7 | Owner approval of the 14-day trial as the only way in |
 | C-5 / N-6 | Production consent ledger that L-02 and L-05 read `{consent_date}` from |
-| C-10 | Counsel confirms the day-11 trial reminder, L-09's 30-day annual notice and L-10's two-day reminder meet each launch state's automatic-renewal rules. California's law covers free-to-pay conversions from July 1, 2025. The cancel link is one step with no retention screen |
+| C-11 | Counsel confirms the day-11 trial reminder, L-09's 30-day annual notice and L-10's two-day reminder meet each launch state's automatic-renewal rules. California's law covers free-to-pay conversions from July 1, 2025. The cancel link is one step with no retention screen |
 | SMS | Separate SMS consent capture and STOP handling before L-05 SMS is enabled |
 | Email provider | None selected; send-time and quiet-hour logic assumes one that supports member time zones |

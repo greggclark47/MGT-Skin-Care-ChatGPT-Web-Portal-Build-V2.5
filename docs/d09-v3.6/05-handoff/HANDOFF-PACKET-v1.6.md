@@ -1,6 +1,6 @@
 # Team 47 Studio — Platform-Neutral Handoff Packet
 
-**Version 1.5 · 2026-11-16 · Internal · For any AI platform or engineering team that will merge the v4.4 design onto the existing build and complete the backend** · v1.1: plans priced (rule 6, §5.5) · v1.2: optional 14-day Guided trial and separate renewal consent (rule 6, §5.5) · v1.3: Retail Partners merged into one section (W29 retired, W21 holds the tabs, A24 added), AI setup assistant, product-updates feed, Retail Partners as a support link in the footer (between Privacy & Terms and Shipping & returns) on every web screen, row at the foot of every app screen, logo +18%, icon system · v1.4: Starter retired (two plans), Studio quarterly option, renewal reminders with switches on web and app, header gradients · v1.5: new customer intake (eight steps, no price), studio preview, a 14-day card-on-file trial on Guided or Studio as the only way in, Your trial page with one-step cancel; demo reference is v4.4
+**Version 1.6 · 2026-11-16 · Internal · For any AI platform or engineering team that will merge the v4.5 design onto the existing build and complete the backend** · v1.1: plans priced (rule 6, §5.5) · v1.2: optional 14-day Guided trial and separate renewal consent (rule 6, §5.5) · v1.3: Retail Partners merged into one section (W29 retired, W21 holds the tabs, A24 added), AI setup assistant, product-updates feed, Retail Partners as a support link in the footer (between Privacy & Terms and Shipping & returns) on every web screen, row at the foot of every app screen, logo +18%, icon system · v1.4: Starter retired (two plans), Studio quarterly option, renewal reminders with switches on web and app, header gradients · v1.5: new customer intake (eight steps, no price), studio preview, a 14-day card-on-file trial on Guided or Studio as the only way in, Your trial page with one-step cancel · v1.6: funnel events and attribution (§5.10); entity is a Georgia corporation only (C-9); reminder-timing item renumbered C-11; demo reference is v4.5
 
 > **Status: PRELIMINARY — pending full release.** Prepared for review ahead of any execution. Decisions, routes, wording and figures are subject to change before work begins; nothing here is final until the owner releases it.
 
@@ -10,7 +10,7 @@ Everything here is written to be acted on without the original conversation. The
 
 | | |
 |---|---|
-| **Reference build** | `demo/index-v4.4.html` — one self-contained file, fonts embedded, 76 screens, opens offline |
+| **Reference build** | `demo/index-v4.5.html` — one self-contained file, fonts embedded, 76 screens, opens offline |
 | **Reproducible source** | `demo/v39-src/` — the v3.8 base plus the patch layer (`patch39.py`, `v39/*.js`, `v39/v39.css`) |
 | **Machine-readable spec** | `handoff.spec.json` — screens, routes, state keys, retailers, facets, endpoints, tables, tests |
 | **Paste-ready prompt** | `PROMPT-CORE.md` |
@@ -53,14 +53,14 @@ These came from earlier decisions and counsel work. Each is a product rule, not 
 10. **The sensitivity ceiling is a hard limit.** A product above it is excluded, never down-ranked. The shop's "Fits my sensitivity ceiling" toggle can show what was excluded and why; it is on by default.
 11. **No hard-numbered response-time promise anywhere** until a real queue exists. Every figure is `[SLA UNSET]`.
 12. **The demo names no real company.** Invented brands and retailers are placeholders pending trademark clearance (§9).
-13. **Brand rule.** MGT appears only in the closing line "© 2026 Team 47 Studio - MGT Solutions, Inc." Entity name pending C-9.
+13. **Brand rule.** MGT appears only in the closing line "© 2026 Team 47 Studio - MGT Solutions, Inc." The company is a Georgia corporation only; the exact registered name is confirmed against the Georgia filing (C-9).
 14. **Face data never leaves the device for sign-in or payment.** Team 47 must never receive, log or store the biometric check.
 
 ---
 
 ## 3. How the demo is built, so you can reproduce or replace it
 
-`demo/index-v4.4.html` is `index-v4.3.html` plus `demo/v44-src/patch44.py` (intake W38, preview and trial paywall W39, Your trial W40, app A25 and A26, trial on either plan; reproducible byte-for-byte from v4.3). `index-v4.3.html` is `index-v4.2.html` plus `demo/v43-src/patch43.py` (Starter retired, two-plan comparison, Studio quarterly, renewal reminders and notification switches, header gradients; reproducible byte-for-byte from v4.2). `index-v4.2.html` is `index-v4.1.html` plus `demo/v42-src/patch42.py` (Retail Partners merge, Learn rebuild, icon system, logo +18%, Retail Partners footer link and app row; reproducible byte-for-byte from v4.1). `index-v4.1.html` is `index-v4.0.html` plus `demo/v41-src/patch41.py` (trial door, renewal consent); v4.0 is `index-v3.9.html` plus `demo/v40-src/patch40.py` (plans, pricing, Prism Weave hero); v3.9 in turn is the v3.8 file plus an appended patch layer. `demo/v39-src/patch39.py` reads `index-v3.8.html` and the files in `v39/`, replaces the old catalogue, swaps the utility-row block and footer, merges the legal pages, appends the layer before the final `buildRail();paint(true)` and writes the result.
+`demo/index-v4.5.html` is `index-v4.4.html` plus `demo/v45-src/patch45.py` (funnel events, internal readout; reproducible byte-for-byte from v4.4). `index-v4.4.html` is `index-v4.3.html` plus `demo/v44-src/patch44.py` (intake W38, preview and trial paywall W39, Your trial W40, app A25 and A26, trial on either plan; reproducible byte-for-byte from v4.3). `index-v4.3.html` is `index-v4.2.html` plus `demo/v43-src/patch43.py` (Starter retired, two-plan comparison, Studio quarterly, renewal reminders and notification switches, header gradients; reproducible byte-for-byte from v4.2). `index-v4.2.html` is `index-v4.1.html` plus `demo/v42-src/patch42.py` (Retail Partners merge, Learn rebuild, icon system, logo +18%, Retail Partners footer link and app row; reproducible byte-for-byte from v4.1). `index-v4.1.html` is `index-v4.0.html` plus `demo/v41-src/patch41.py` (trial door, renewal consent); v4.0 is `index-v3.9.html` plus `demo/v40-src/patch40.py` (plans, pricing, Prism Weave hero); v3.9 in turn is the v3.8 file plus an appended patch layer. `demo/v39-src/patch39.py` reads `index-v3.8.html` and the files in `v39/`, replaces the old catalogue, swaps the utility-row block and footer, merges the legal pages, appends the layer before the final `buildRail();paint(true)` and writes the result.
 
 | File | Contents |
 |---|---|
@@ -184,7 +184,7 @@ Do **not** build Team 47's own face match for sign-in or payment. That would mak
 
 Safety checks (shade range, ingredients, hair lift) and "shows its work" are on for every plan. Allowances marked `[ASSUMPTION]` are to be set from routing logs before release; the entitlement system reads them, the copy does not invent them.
 
-- **Renewal reminders (v4.3).** For every paid subscription, schedule a reminder at `current_period_end` minus two days from our own job, re-scheduled on every `customer.subscription.updated` and `invoice.paid` webhook; do not rely on a provider's default upcoming-invoice interval. Deliver to the in-app inbox and the web account banner. One preference per member, `notification_prefs(user_id, kind, enabled, updated_at)` with `kind = 'renewal'` defaulting to enabled, read by both web and app. A cycle change (monthly ↔ quarterly ↔ annual for Studio; monthly ↔ annual for Guided) applies from the next renewal via a subscription schedule and is logged in the consent ledger. `[UNVERIFIED]` Some state auto-renewal laws set their own notice windows, which may be longer for longer terms; counsel to confirm whether two days satisfies them for quarterly and annual cycles (C-10).
+- **Renewal reminders (v4.3).** For every paid subscription, schedule a reminder at `current_period_end` minus two days from our own job, re-scheduled on every `customer.subscription.updated` and `invoice.paid` webhook; do not rely on a provider's default upcoming-invoice interval. Deliver to the in-app inbox and the web account banner. One preference per member, `notification_prefs(user_id, kind, enabled, updated_at)` with `kind = 'renewal'` defaulting to enabled, read by both web and app. A cycle change (monthly ↔ quarterly ↔ annual for Studio; monthly ↔ annual for Guided) applies from the next renewal via a subscription schedule and is logged in the consent ledger. `[UNVERIFIED]` Some state auto-renewal laws set their own notice windows, which may be longer for longer terms; counsel to confirm whether two days satisfies them for quarterly and annual cycles (C-11).
 - **Trial (v4.4).** Stripe subscription on the chosen price (Guided or Studio, any of its cycles) with `trial_period_days: 14` and a SetupIntent-backed payment method collected first. Conversion and cancellation are driven by the subscription webhook, never the browser. Record the clause 8.4 consent (text shown, plan, cycle, price, timestamp, version) in the consent ledger (§5.3) as its own entry. Enforce once-per-customer on the customer record, not the email string. Send the acknowledgment (lifecycle L-02, with how to cancel) at once and the day-11 reminder (L-05) from our own scheduler at `trial_end` minus three days; neither can be switched off. Cancel during the trial sets `cancel_at_period_end` so access runs to `trial_end` with no charge. Switching the post-trial plan or cycle updates the subscription item and writes a new consent entry.
 - **Intake (v4.4).** `intake_answers(user_id nullable, anon_id, version, answers jsonb, completed_at)` holds the eight steps; it is written before an account exists and attached at sign-up. The preview in the demo is a fixed rule set (undertone and depth to a starting season, time to step count, reaction to ceiling, three-plus areas or hair colour plus another area to a Studio recommendation) `[ASSUMPTION]`. Production replaces it with the real match, ceiling and routine engines, and keeps the season labelled a starting point.
 - **Which lines are payable here.** Only `mode = stripe` items. `handoff` and `linkout` items are completed on the retailer's own platform; the demo's cart already separates them.
@@ -208,6 +208,30 @@ The reaction reply is fixed, not generated: stop using the product, rinse gently
 ### 5.8 Care and escalation
 
 Five roles: care assistant (AI), order helper (AI, read-only), safety triage (rules, then a person), partner concierge (person with AI drafts), care specialist (person, signs replies). **Hard escalation triggers:** reaction or safety concern, privacy or deletion request, payment dispute, the customer asks for a person. **Soft:** two failed attempts on the same question, frustration in the customer's words. A person writes and sends every refund, exception and safety reply; the assistant may draft. A handoff creates a ticket with the context in §5.1 and shows the customer exactly what is included. No reply-time promise is made `[SLA UNSET]`; the safety route in particular cannot be advertised until something answers it.
+
+### 5.10 Funnel events and attribution (v4.5)
+
+The two numbers the plan depends on, click → trial start and trial → paid (cost addendum v2.3 §11), come from these events. Names and properties match the demo (`track()` in v4.5), so the build can be checked against it.
+
+| Event | Fires | Properties (only these) | Source |
+|---|---|---|---|
+| `intake_started` | Once per anonymous id, on the first question | `surface` (web, app) | Client |
+| `intake_step_completed` | Once per step, 1–8 | `step`, `of` | Client |
+| `intake_completed` | Once, after step 8 | `areas` (count), `recommended` (Guided or Studio) | Client |
+| `preview_viewed` | Once, on the studio preview | `recommended`, `surface` | Client |
+| `paywall_plan_selected` | Each plan or cycle change on the paywall | `plan`, `cycle` | Client |
+| `trial_checkout_started` | "Start my 14-day trial" pressed | `plan`, `cycle` | Client |
+| `account_created` | New account | `surface` | Server |
+| `trial_started` | Subscription created in trial (webhook `customer.subscription.created`, `status = trialing`) | `plan`, `cycle`, `surface`, `value = 0` | Server |
+| `trial_plan_switched` | Post-trial plan or cycle changed and consented | `plan`, `cycle` | Server |
+| `trial_cancelled` / `trial_resumed` | Cancel or undo during the trial | `day`, `plan` | Server |
+| `trial_converted` | First paid invoice (`invoice.paid`, `billing_reason = subscription_cycle` after a trial) | `plan`, `cycle`, `value` (net of tax) | Server |
+| `trial_refunded` | Refund on the first charge | `plan`, `value` | Server |
+| `subscription_started` | Paid checkout with no trial (trial already used) | `plan`, `cycle`, `value` | Server |
+
+**Identity.** An `anon_id` is minted on the first visit and carried through the intake; at sign-up it is linked to the user, so one journey is one id. **Attribution.** `utm_*`, `fbclid`, `ttclid` and `gclid` are captured on the landing URL and kept with the anonymous id. They are attached only as source, campaign and click network, never the raw click id in analytics. **Ad platforms.** Only `intake_completed`, `trial_started` and `trial_converted` go server-side to the Meta Conversions API and the TikTok Events API, with a shared `event_id` for de-duplication, a value and a hashed email only where marketing consent is recorded. **Never sent:** intake answers, concerns, season, ceiling, anything from a scan, or any health-adjacent property. The events carry counts and plan names, nothing a person said about their skin, hair or body.
+
+**Metric definitions.** Click → trial start = `trial_started` ÷ ad clicks, by campaign and week. Trial → paid = `trial_converted` ÷ `trial_started`, by start-week cohort, read at day 14 plus the refund window. Intake completion = `intake_completed` ÷ `intake_started`. Paywall take = `trial_started` ÷ `preview_viewed`. The performance agent reports these against the §11.2 gates.
 
 ### 5.9 Retail partner onboarding
 
@@ -269,8 +293,9 @@ Run all of these against the merged build. IDs match `handoff.spec.json`.
 | AT-23 | A trial on Guided or Studio needs the renewal consent; it is once per customer, after which choosing a plan goes to paid checkout |
 | AT-24 | Your trial shows the day, lets the member switch plan or cycle (recorded as consent) and cancel in one step with no charge |
 | AT-25 | The day-11 reminder shows in the app, the web account and every web screen, and cannot be switched off |
+| AT-26 | Funnel events fire once each, in journey order, with only the §5.10 properties; no intake answer appears in any event |
 
-`demo/verification/v39test.py` covers AT-03 to AT-07, AT-11 to AT-14; `v43test.py` covers AT-17 to AT-20; `v44test.py` covers AT-21 to AT-25. `interact.py`, `harness.js`, `kbd.py`, `jrny.py` and `audit_new.py` / `audit_full.py` cover the rest.
+`demo/verification/v39test.py` covers AT-03 to AT-07, AT-11 to AT-14; `v43test.py` covers AT-17 to AT-20; `v44test.py` covers AT-21 to AT-25; `v45test.py` covers AT-26. `interact.py`, `harness.js`, `kbd.py`, `jrny.py` and `audit_new.py` / `audit_full.py` cover the rest.
 
 ---
 
@@ -280,7 +305,7 @@ Run all of these against the merged build. IDs match `handoff.spec.json`.
 |---|---|---|
 | C-1 | Two paid tiers or three? Product now prices two (Guided, Studio); Terms 8.1 names three | Terms approval |
 | C-6 | App billing: store purchase via RevenueCat, or unresolved? | Android and Apple schedules |
-| C-9 | Contracting entity: MGT Solutions, Inc or MGT Global Solutions, Inc? | Terms, footer |
+| C-9 | **Partly decided 2026-11-16:** a Georgia corporation only, no Delaware entity. Still to confirm: the exact name on the Georgia registration (Terms and footer say MGT Solutions, Inc.; the incorporation notes say MGT Global Solutions, Inc.), then Terms §1.1, §13.1 and §12.1 governing law | Terms, footer |
 | O-1 | Base build: Drive lineage or GitHub V2.5? | Everything past theme |
 | O-6 | Approve D09 colours superseding the locked C10 violet `#7C3AED` and the mobile gold tab tint? | Shared tokens, mobile |
 | N-1 | Merchant of record and Stripe Connect model for Team 47 checkout with partners | Partner checkout mode |

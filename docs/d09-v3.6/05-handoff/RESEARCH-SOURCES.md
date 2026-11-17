@@ -1,10 +1,10 @@
-# Team 47 Studio — Research Sources for the v4.4 Handoff
+# Team 47 Studio — Research Sources for the v4.5 Handoff
 
 **Version 1.0 · 2026-11-15 · Retrieved 2026-11-15**
 
 > **Status: PRELIMINARY — pending full release.** Prepared for review ahead of any execution. Decisions, routes, wording and figures are subject to change before work begins; nothing here is final until the owner releases it.
 
-Every `[SRC n]`, `[SEC n]` and `[UNVERIFIED]` tag in `HANDOFF-PACKET-v1.5.md` resolves here. **SRC** = primary or official. **SEC** = secondary commentary; counsel confirms before anything is relied on. **UNVERIFIED** = stated in the design but not confirmed in this research pass.
+Every `[SRC n]`, `[SEC n]` and `[UNVERIFIED]` tag in `HANDOFF-PACKET-v1.6.md` resolves here. **SRC** = primary or official. **SEC** = secondary commentary; counsel confirms before anything is relied on. **UNVERIFIED** = stated in the design but not confirmed in this research pass.
 
 ## Primary and official sources
 
@@ -59,5 +59,5 @@ All eight retailers and every brand in the 24-item catalogue are invented placeh
 | SRC-T3 | RevenueCat, "How to build a Blinkist-style paywall"; UX Planet (Blinkist) | Timeline paywall that states the end date and promises a reminder; +23% trial starts, 55% fewer complaints |
 | SRC-T4 | RevenueCat, "Inside Noom's web-to-app onboarding funnel" | Quiz before any price; a personalized plan reveal before the paywall |
 | SRC-T5 | Appcues GoodUX, Curology sign-up flow | Skin quiz before the trial in personalized beauty |
-| SEC-T6 | Davis+Gilbert; Kilpatrick Townsend; California Attorney General consumer alert (Sept 4, 2025) | California AB 2863, effective July 1, 2025, covers free-to-pay conversions; counsel confirms notice timing (C-10) |
+| SEC-T6 | Davis+Gilbert; Kilpatrick Townsend; California Attorney General consumer alert (Sept 4, 2025) | California AB 2863, effective July 1, 2025, covers free-to-pay conversions; counsel confirms notice timing (C-11) |
 | SEC-T7 | Latham & Watkins; Fenwick | FTC click-to-cancel rule vacated by the Eighth Circuit, July 8, 2025; the 1973 rule and state laws remain |

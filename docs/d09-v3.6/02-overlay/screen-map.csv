@@ -1,0 +1,78 @@
+demo_id,group,screen,demo_route,existing_file,file_exists,action,note
+W1,Web portal,Home,/,apps/web/src/app/page.tsx,yes,REFACTOR,"Restyle to D09; hero, three-path chooser, value cards. Brand string sweep."
+W1B,Web portal,Applications hub,/applications,apps/web/src/app/studio/page.tsx,yes,REFACTOR,Becomes the Applications hub; add /applications alias. 15 app tiles with unique icons. v3.9: real tabs and row filters.
+W38,Web portal,Start — intake,/start,,new,CREATE,"v4.4: eight steps before any price; answers saved before an account exists (intake_answers)."
+W39,Web portal,Studio preview & 14-day trial,/start/plan,,new,CREATE,"v4.4: personalized preview beside the trial paywall (plan, cycle, timeline with reminder and first-charge dates)."
+W2A,Web portal,Skin Match flow,/skin-match,apps/web/src/app/skin-match/page.tsx,yes,REUSE,Keep SkinMatchFlow logic; apply tokens only.
+W2,Web portal,Match result (pre-signup),/skin-match/result,apps/web/src/app/skin-match/results/page.tsx,yes,REFACTOR,Demo route is /skin-match/result; keep existing /results path and update demo.
+W3,Web portal,Portal (signed in),/app,apps/web/src/app/my-skin/page.tsx,yes,REFACTOR,Signed-in portal home. Demo route /app is a demo convenience; keep /my-skin. v3.9: progress card and scan teaser.
+W13,Web portal,AI Coach,/app/coach,apps/web/src/app/coach/page.tsx,yes,REFACTOR,"Premium gate must read the three-tier entitlement, not a boolean. See O-3. v3.9: AI disclosure, context chips, per-answer Used / Not used, human handoff. Gate still reads the three-tier entitlement."
+W14,Web portal,Color & season,/app/color,apps/web/src/app/studio/[segment]/page.tsx,yes,REFACTOR,"Colour lives under /studio/[segment]; segment id ""color"". v3.9: ""find a colour"" filter."
+W16,Web portal,Hair color — lift check,/app/hair/lift,,n/a,CREATE,Lift-check route. Present in the Drive (Fable) lineage as /api/hair/lift-check; absent from this repo.
+W4,Web portal,Membership,/membership,apps/web/src/app/membership/page.tsx,yes,REFACTOR,"Three tiers, journey bar, trial and cycle disclosure. Wires to billing.ts checkout. v4.3: two plans (Starter retired), Studio quarterly option, new side-by-side, Studio-adds panel, application-by-application value."
+W15,Web portal,Makeup studio,/app/makeup,apps/web/src/app/studio/[segment]/page.tsx,yes,REFACTOR,"segment ""makeup"" exists in BeautyStudio. v3.9: filters (finish, undertone, origin, free-from)."
+W17,Web portal,Hair studio,/app/hair,,n/a,CREATE,"No hair segment in BeautyStudio; add segment ""hair"". v3.9: filters, lift ladder, scalp chips."
+W18,Web portal,Wardrobe studio,/app/wardrobe,apps/web/src/app/studio/[segment]/page.tsx,yes,REFACTOR,"segments ""style"" and ""clothing"" exist; demo calls it Wardrobe. v3.9: filters and palette strip."
+W19,Web portal,Learn,/learn,apps/web/src/app/learn/page.tsx,yes,REUSE,"Tokens only. v3.9: filters, UV gauge, pH ruler."
+W20,Web portal,Replenishment,/app/replenishment,apps/web/src/app/replenishment/page.tsx,yes,REUSE,Tokens only. v3.9: row filters and reorder.
+W9,Account & payment,Sign in,/sign-in,,n/a,CREATE,No consumer sign-in route. Consumer auth is unbuilt; admin auth only. See O-5. v3.9: passkey sign-in / create button (on-device biometric; server receives a signed yes).
+W10,Account & payment,Create account,/create-account,,n/a,CREATE,No consumer sign-up route. Journey step 1. v3.9: passkey sign-in / create button (on-device biometric; server receives a signed yes).
+W7,Account & payment,Checkout — payment,/checkout,apps/api/src/portal/billing.ts,yes,REFACTOR,"Demo checkout is a simulated card form. Production uses hosted Stripe Checkout — keep production, drop the demo form. See O-4. v3.9: Express Checkout (Apple Pay / Google Pay / Link) and saved card via SetupIntent; only Team 47 checkout items are payable here."
+W8,Account & payment,Order confirmed,/order/confirmed,,n/a,CREATE,Return page for Stripe success_url (currently /membership?checkout=returned).
+W11,Account & payment,Account center,/account,apps/web/src/app/account/page.tsx,yes,REFACTOR,Account centre. v3.9: security and sharing card. v4.3: Billing and reminders card (cycle switch) and Notifications card with the same switches as A23.
+W40,Account & payment,Your trial,/trial,,new,CREATE,"v4.4: day counter, timeline, checklist, switch plan or cycle (consent entry), one-step cancel."
+W12,Account & payment,Change plan,/account/plan,,n/a,CREATE,Change-plan route; wire to billing portal or checkout with proration per Terms 8.6. v4.3: two plans.
+W32,Account & payment,Password reset,/reset-password,,n/a,CREATE,Password reset. Depends on consumer auth.
+W33,Account & payment,Setup — intake,/setup/intake,,n/a,CREATE,"Setup intake. Swatch-first with optional consent-gated photo (O-2 decided 2026-11-15). Matches Terms 4.1-4.2. v3.9: photo guide, optional scan card, passkey note."
+W5,Commerce,Shop / The Edit,/shop,apps/web/src/app/shop/page.tsx,yes,REFACTOR,"ShopView; tokens only. v3.9: faceted filters, 24-product global catalogue, retailer channel modes, FTC disclosure. Catalogue moves to the database; see HANDOFF-PACKET §6."
+W6,Commerce,Cart — Shop My Routine,/cart,apps/web/src/app/cart/page.tsx,yes,REFACTOR,Shop My Routine cart. v3.9: cart grouped by retailer; per-retailer consent sheet; on-device approval before any saved card is used.
+W21,Commerce,Retail Partners,/retail-partners,apps/web/src/app/saved/page.tsx,yes,REFACTOR,"Rename Saved retailers to Retail Partners; route /retail-partners with redirect from /saved. v3.9: filters, origin globe, checkout-mode chips, link to onboarding (W34)."
+W22,Commerce,Order history,/account/orders,apps/web/src/app/orders/page.tsx,yes,REUSE,Tokens; add Reorder.
+W23,Company & trust,Company,/company,apps/web/src/app/[section]/page.tsx,yes,REFACTOR,"section ""company"" — replace copy with v3.7 Company page (kept lines: A studio like no other. / Based on value, results focused on you in every aspect. Simply you.)."
+W24,Company & trust,Trust & AI,/trust-and-ai,apps/web/src/app/[section]/page.tsx,yes,REFACTOR,"section ""trust""; demo route /trust-and-ai. v3.9: merged with the former AI disclosure page (W30); adds assistants, scan, sign-in and affiliate sections."
+W26,Company & trust,Privacy & Terms,/privacy-terms,apps/web/src/app/[section]/page.tsx,yes,REPLACE,"section ""privacy""; replace with summary page plus full notice. Counsel S-3. v3.9: merged with Terms; one route, two tabs (#privacy, #terms). The Terms inner schedule tabs are kept."
+W27,Company & trust,Shipping & returns,/shipping-returns,apps/web/src/app/shipping/page.tsx,yes,REFACTOR,Demo route /shipping-returns.
+W28,Company & trust,Care centre,/support,apps/web/src/app/support/page.tsx,yes,REFACTOR,"Tokens only. v3.9: care assistant (AI, labelled), human handoff with context packet, roles and escalation table."
+W29,Company & trust,Partners (public) — RETIRED in v4.2,/partners,,retired,RETIRE,Merged into Retail Partners (W21, #brands tab). /partners 301 to /retail-partners#brands. Remove the page; keep the redirect.
+W31,Company & trust,Plans & billing,/plans-billing,,n/a,CREATE,Plans & billing page; second entry to the setup journey.
+M1,Marketing,Social kit,/brand/social,,n/a,DEFER,"Marketing surface, not a product route."
+M2,Marketing,Campaign — Your Shade,/brand/campaign,,n/a,DEFER,Marketing surface.
+M3,Marketing,Treatment lane — GATED,/brand/treatment,,n/a,DEFER,Gated. Do not build — see partnerships packet §4.
+P1,Partnerships,Outreach console,/ops/outreach,,n/a,DEFER,Ops console; internal. No send capability may be built.
+P2,Partnerships,Stage 1 — listing invite,/ops/outreach/invite,,n/a,DEFER,Ops.
+P3,Partnerships,Stage 2 — placement offer,/ops/outreach/offer,,n/a,DEFER,Ops.
+P4,Partnerships,Rate model & variables,/ops/rate-model,,n/a,DEFER,Ops.
+A01,App,Welcome,,apps/mobile/src/screens/SkinMatchScreen.tsx,yes,REFACTOR,Skin Match exists on mobile.
+A25,App,Start — intake & trial,/app/start,,n/a,CREATE,"v4.4: same intake, preview and trial paywall; store billing unresolved (C-6)."
+A02,App,Skin Match question,,apps/mobile/src/screens/SkinMatchScreen.tsx,yes,REFACTOR,Skin Match exists on mobile.
+A03,App,Match result,,apps/mobile/src/screens/SkinMatchScreen.tsx,yes,REFACTOR,Skin Match exists on mobile.
+A04,App,Home,,,n/a,CREATE,This repo ships only SkinMatchScreen on mobile. The Drive (Fable) lineage has a 6-tab AppNavigator — port from there rather than rebuild. See O-2. v3.9: filter chips / progress / AI label as applicable.
+A26,App,Your trial,/app/trial,,n/a,CREATE,"v4.4: trial panel in the app, reached from Home."
+A05,App,Routine,,,n/a,CREATE,This repo ships only SkinMatchScreen on mobile. The Drive (Fable) lineage has a 6-tab AppNavigator — port from there rather than rebuild. See O-2.
+A06,App,Shop,,,n/a,CREATE,This repo ships only SkinMatchScreen on mobile. The Drive (Fable) lineage has a 6-tab AppNavigator — port from there rather than rebuild. See O-2. v3.9: filter chips / progress / AI label as applicable.
+A07,App,Makeup,,,n/a,CREATE,This repo ships only SkinMatchScreen on mobile. The Drive (Fable) lineage has a 6-tab AppNavigator — port from there rather than rebuild. See O-2. v3.9: filter chips / progress / AI label as applicable.
+A08,App,Hair lift check,,,n/a,CREATE,This repo ships only SkinMatchScreen on mobile. The Drive (Fable) lineage has a 6-tab AppNavigator — port from there rather than rebuild. See O-2.
+A09,App,Style,,,n/a,CREATE,This repo ships only SkinMatchScreen on mobile. The Drive (Fable) lineage has a 6-tab AppNavigator — port from there rather than rebuild. See O-2. v3.9: filter chips / progress / AI label as applicable.
+A10,App,Coach,,,n/a,CREATE,This repo ships only SkinMatchScreen on mobile. The Drive (Fable) lineage has a 6-tab AppNavigator — port from there rather than rebuild. See O-2. v3.9: filter chips / progress / AI label as applicable.
+A12,App,Profile,,,n/a,CREATE,This repo ships only SkinMatchScreen on mobile. The Drive (Fable) lineage has a 6-tab AppNavigator — port from there rather than rebuild. See O-2. v3.9: filter chips / progress / AI label as applicable.
+A13,App,Paywall / plan,,,n/a,CREATE,This repo ships only SkinMatchScreen on mobile. The Drive (Fable) lineage has a 6-tab AppNavigator — port from there rather than rebuild. See O-2. v4.3: two plans; Studio quarterly shown.
+A11,App,Coach chat,,,n/a,CREATE,This repo ships only SkinMatchScreen on mobile. The Drive (Fable) lineage has a 6-tab AppNavigator — port from there rather than rebuild. See O-2. v3.9: filter chips / progress / AI label as applicable.
+A14,App,Colour & season,,,n/a,CREATE,This repo ships only SkinMatchScreen on mobile. The Drive (Fable) lineage has a 6-tab AppNavigator — port from there rather than rebuild. See O-2.
+A15,App,Replenishment,,,n/a,CREATE,This repo ships only SkinMatchScreen on mobile. The Drive (Fable) lineage has a 6-tab AppNavigator — port from there rather than rebuild. See O-2.
+A16,App,Cart,,,n/a,CREATE,This repo ships only SkinMatchScreen on mobile. The Drive (Fable) lineage has a 6-tab AppNavigator — port from there rather than rebuild. See O-2.
+A17,App,Checkout (simulated),,,n/a,CREATE,This repo ships only SkinMatchScreen on mobile. The Drive (Fable) lineage has a 6-tab AppNavigator — port from there rather than rebuild. See O-2.
+A18,App,Order confirmed,,,n/a,CREATE,This repo ships only SkinMatchScreen on mobile. The Drive (Fable) lineage has a 6-tab AppNavigator — port from there rather than rebuild. See O-2.
+A19,App,Sign in,,,n/a,CREATE,This repo ships only SkinMatchScreen on mobile. The Drive (Fable) lineage has a 6-tab AppNavigator — port from there rather than rebuild. See O-2.
+A20,App,Create account,,,n/a,CREATE,This repo ships only SkinMatchScreen on mobile. The Drive (Fable) lineage has a 6-tab AppNavigator — port from there rather than rebuild. See O-2.
+A21,App,Account & settings,,,n/a,CREATE,This repo ships only SkinMatchScreen on mobile. The Drive (Fable) lineage has a 6-tab AppNavigator — port from there rather than rebuild. See O-2.
+A22,App,Orders,,,n/a,CREATE,This repo ships only SkinMatchScreen on mobile. The Drive (Fable) lineage has a 6-tab AppNavigator — port from there rather than rebuild. See O-2.
+A23,App,Notifications,,,n/a,CREATE,This repo ships only SkinMatchScreen on mobile. The Drive (Fable) lineage has a 6-tab AppNavigator — port from there rather than rebuild. See O-2. v4.3: working switches shared with W11; renewal reminder row and upcoming reminder.
+A24,App,Retail Partners (in-app),in-app account list,,new,CREATE,Same merged section on mobile: Shop / Brands / Setup / Updates tabs and the AI setup assistant. Replaces the old account-list link to W21 as a web-only page.
+S1,Store,Google Play listing,,,n/a,DEFER,Store listing copy; needs EAS and store accounts.
+S2,Store,App Store listing,,,n/a,DEFER,Store listing copy.
+X1,Reference,Merge map & open items,,,n/a,DEFER,Demo reference screen.
+X2,Reference,Gradient system,,,n/a,DEFER,Demo reference screen.
+W34,Commerce,Retail partner onboarding,/retail-partners/onboarding,,new,CREATE,Seven steps. Verification through Stripe Connect hosted onboarding (Account Links); data-sharing agreement drafted by counsel. Proposed path apps/web/src/app/retail-partners/onboarding/page.tsx.
+W35,Web portal,My progress,/app/progress,,new,CREATE,"Merge point for the existing skin and persona tracking module. Scores only, never photos. See HANDOFF-PACKET §5."
+W36,Account & payment,Guided scan (optional),/app/scan,,new,CREATE,"COUNSEL GATE. Optional, cosmetic, written consent, never a credential. See HANDOFF-PACKET §7."
+W37,Account & payment,"Security, sharing & approvals",/account/security,,new,CREATE,"Passkeys (WebAuthn), saved cards, per-retailer sharing with withdraw, scan result delete."

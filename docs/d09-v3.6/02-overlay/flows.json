@@ -1,0 +1,102 @@
+{
+  "web_flow": [
+    "W1",
+    "W38",
+    "W39",
+    "W1B",
+    "W2A",
+    "W2",
+    "W10",
+    "W3",
+    "W14",
+    "W15",
+    "W17",
+    "W16",
+    "W18",
+    "W19",
+    "W5",
+    "W6",
+    "W7",
+    "W8",
+    "W40",
+    "W20",
+    "W22",
+    "W21",
+    "W34",
+    "W4",
+    "W12",
+    "W13",
+    "W11",
+    "W37",
+    "W36",
+    "W35",
+    "W23",
+    "W24",
+    "W26",
+    "W27",
+    "W28",
+    "W31"
+  ],
+  "app_flow": [
+    "A01",
+    "A25",
+    "A02",
+    "A03",
+    "A20",
+    "A04",
+    "A26",
+    "A05",
+    "A14",
+    "A07",
+    "A08",
+    "A09",
+    "A15",
+    "A06",
+    "A16",
+    "A17",
+    "A18",
+    "A22",
+    "A10",
+    "A11",
+    "A13",
+    "A12",
+    "A21",
+    "A23",
+    "A24",
+    "A19"
+  ],
+  "setup_journey": {
+    "entry_points": [
+      "W4 /membership",
+      "W31 /plans-billing"
+    ],
+    "steps": [
+      {
+        "n": 1,
+        "screen": "W10",
+        "route": "/create-account",
+        "skip_if": "authenticated"
+      },
+      {
+        "n": 2,
+        "screen": "W33",
+        "route": "/setup/intake",
+        "skip_if": "intake complete or skipped"
+      },
+      {
+        "n": 3,
+        "screen": "W7",
+        "route": "/checkout → Stripe Checkout",
+        "skip_if": "plan is Free → W11 /account"
+      }
+    ],
+    "rules": [
+      "Resume, never restart: each step is skipped if already satisfied.",
+      "Studio is blocked while its price is unset.",
+      "Free never reaches checkout."
+    ]
+  },
+  "password_reset": [
+    "W9 → W32 → W9"
+  ]
+}

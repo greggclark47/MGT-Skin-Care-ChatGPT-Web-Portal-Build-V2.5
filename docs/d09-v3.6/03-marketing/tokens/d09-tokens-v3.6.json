@@ -1,0 +1,221 @@
+{
+ "design": "D09 Prism Gradient",
+ "version": "3.6",
+ "date": "2026-11-15",
+ "type": {
+  "display": {
+   "family": "Space Grotesk",
+   "weight": 700,
+   "tracking": "-0.022em",
+   "line_height": 1.06,
+   "source": "Google Fonts, SIL OFL 1.1"
+  },
+  "body": {
+   "family": "DM Sans",
+   "weights": [
+    400,
+    500,
+    700
+   ],
+   "source": "Google Fonts, SIL OFL 1.1"
+  }
+ },
+ "modes": {
+  "dark": {
+   "bg": "#0B0D1A",
+   "bg2": "#101327",
+   "surf": "#171B33",
+   "panel": "#1B1740",
+   "text": "#F3F4FA",
+   "sub": "#B9BFD3",
+   "mute": "#8E96B0",
+   "line": "#2A2F4D",
+   "acc": "#9A80FF",
+   "acc2": "#F0AE47"
+  },
+  "light": {
+   "bg": "#FFFFFF",
+   "bg2": "#F4F6FB",
+   "surf": "#FFFFFF",
+   "panel": "#EEEAFE",
+   "text": "#15172D",
+   "sub": "#4E5872",
+   "mute": "#4E5872",
+   "line": "#DFE4EE",
+   "acc": "#6540D4",
+   "acc2": "#9A5B00"
+  }
+ },
+ "logo_navy": "#200068",
+ "prism": [
+  "#19AFBE",
+  "#6BBF3B",
+  "#F0AE47",
+  "#F08A3C",
+  "#9040F8",
+  "#1E88F8"
+ ],
+ "mesh_dark": [
+  "#19AFBE",
+  "#1E88F8",
+  "#9040F8",
+  "#C844C8",
+  "#F27A6B",
+  "#9040F8"
+ ],
+ "segments": [
+  {
+   "segment": "skin",
+   "angle": 135,
+   "stops": [
+    "#19AFBE",
+    "#1E88F8",
+    "#200068"
+   ],
+   "button_stops": [
+    "#1B709F",
+    "#1E6DDB",
+    "#200068"
+   ],
+   "button_min_contrast_vs_white": 4.92
+  },
+  {
+   "segment": "makeup",
+   "angle": 108,
+   "stops": [
+    "#C844C8",
+    "#F27A6B",
+    "#F0AE47"
+   ],
+   "button_stops": [
+    "#A636B5",
+    "#A64E6A",
+    "#8A5957"
+   ],
+   "button_min_contrast_vs_white": 5.36
+  },
+  {
+   "segment": "hair",
+   "angle": 162,
+   "stops": [
+    "#6BBF3B",
+    "#19AFBE",
+    "#1E88F8"
+   ],
+   "button_stops": [
+    "#507A4B",
+    "#1B709F",
+    "#1E6DDB"
+   ],
+   "button_min_contrast_vs_white": 4.92
+  },
+  {
+   "segment": "color",
+   "angle": 94,
+   "stops": [
+    "#F0AE47",
+    "#F08A3C",
+    "#C844C8"
+   ],
+   "button_stops": [
+    "#8A5957",
+    "#A5584C",
+    "#A636B5"
+   ],
+   "button_min_contrast_vs_white": 5.12
+  },
+  {
+   "segment": "style",
+   "angle": 146,
+   "stops": [
+    "#9040F8",
+    "#C844C8",
+    "#200068"
+   ],
+   "button_stops": [
+    "#9040F8",
+    "#A636B5",
+    "#200068"
+   ],
+   "button_min_contrast_vs_white": 4.91
+  },
+  {
+   "segment": "wardrobe",
+   "angle": 120,
+   "stops": [
+    "#1E88F8",
+    "#9040F8",
+    "#C844C8"
+   ],
+   "button_stops": [
+    "#1E6DDB",
+    "#9040F8",
+    "#A636B5"
+   ],
+   "button_min_contrast_vs_white": 4.91
+  }
+ ],
+ "dark_ground_rule": {
+  "applies_when": "relative luminance of ground < 0.25",
+  "swap": {
+   "#F0AE47": "#F27A6B",
+   "#F08A3C": "#F27A6B",
+   "#6BBF3B": "#19AFBE"
+  }
+ },
+ "small_text_ink": {
+  "light": {
+   "#F0AE47": "#8A5B00",
+   "#F27A6B": "#A33C2B",
+   "#6BBF3B": "#3F7A1A",
+   "#19AFBE": "#0B6F79",
+   "#1E88F8": "#0F5FBF",
+   "#9040F8": "#6A2BD0",
+   "#C844C8": "#9A2E9A",
+   "#F08A3C": "#9A4E00"
+  },
+  "dark": {
+   "#200068": "#C9BEFF",
+   "#6540D4": "#B49BFF",
+   "#9040F8": "#B49BFF",
+   "#C844C8": "#EE9CEE",
+   "#1E88F8": "#8AC4FF",
+   "#19AFBE": "#5FD8E4",
+   "#6BBF3B": "#A8E383",
+   "#F08A3C": "#F7B07A",
+   "#F27A6B": "#FFA79B"
+  },
+  "rule": "Never set body-size text in a raw ramp stop; use the ink for the current mode."
+ },
+ "button_rule": "White label on a gradient: each stop is mixed 20% toward logo navy, repeatedly, until it clears 4.6:1 against white.",
+ "nav_segment_map": {
+  "Skin": "skin",
+  "Color": "color",
+  "Style": "wardrobe",
+  "Coach": "style",
+  "Membership": "makeup"
+ },
+ "shape": {
+  "card_radius": 26,
+  "pill_radius": 999,
+  "border": "1px",
+  "shadow": "none"
+ },
+ "motion": {
+  "enter": {
+   "scale": 0.945,
+   "translateZ": "-140px",
+   "blur": "16px",
+   "ms": 620,
+   "ease": "cubic-bezier(.16,.86,.3,1)"
+  },
+  "leave": {
+   "scale": 1.045,
+   "translateZ": "+90px",
+   "blur": "10px",
+   "ms": 340
+  },
+  "stagger_ms": 42,
+  "reduced_motion": "prefers-reduced-motion: reduce disables field, stagger and transitions"
+ }
+}

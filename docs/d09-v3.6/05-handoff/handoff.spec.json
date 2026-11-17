@@ -3,7 +3,7 @@
   "status": "PRELIMINARY — pending full release; subject to change before execution",
   "generated": "2026-11-15",
   "demo_version": "D09 v4.5",
-  "note": "Machine-readable companion to HANDOFF-PACKET-v1.7.md. 'demo' is extracted from the built file by demo/verification/extract_spec.py; everything else is authored and proposed, not implemented.",
+  "note": "Machine-readable companion to HANDOFF-PACKET-v1.8.md. 'demo' is extracted from the built file by demo/verification/extract_spec.py; everything else is authored and proposed, not implemented.",
   "demo": {
     "screens": [
       {
@@ -1393,7 +1393,7 @@
     "No biometric identifiers; scan is not a login or payment credential",
     "Colour results stored, never samples; swatch-first intake",
     "Stripe primary rail; no raw card data; server-authoritative idempotent webhooks",
-    "One entitlement system; plans Guided $14.99/mo or $149.90/yr, Studio $29.99/mo, $89.97/qtr (optional, assumption) or $299.90/yr (owner-set 2026-11-15, preliminary; annual = ten months for twelve; allowances per plan are assumptions until set from usage data)",
+    "One entitlement system; plans Guided $14.99/mo or $149.90/yr, Studio $29.99/mo or $299.90/yr (owner-set 2026-11-15, preliminary; annual = ten months for twelve; allowances per plan are assumptions until set from usage data)",
     "Style vertical collects no body metrics",
     "Hair-lift refusals amber not red; no products returned",
     "AI Coach Premium-gated Tier 3; safety, eligibility, ceilings and pricing are deterministic code",
@@ -1853,7 +1853,7 @@
     ],
     [
       "AT-25",
-      "Day-11 reminder on app, account and every web screen; cannot be switched off"
+      "Day-7 reminder on app, account and every web screen; cannot be switched off"
     ],
     [
       "AT-26",
@@ -1895,8 +1895,6 @@
       {
         "id": "Studio",
         "monthly": 29.99,
-        "quarterly": 89.97,
-        "quarterly_status": "ASSUMPTION - three months at the monthly price until the owner sets it (N-9)",
         "annual": 299.9
       }
     ],
@@ -1915,7 +1913,7 @@
         "Studio": 6
       }
     },
-    "stripe_prices_needed": 5,
+    "stripe_prices_needed": 4,
     "trial": {
       "plan": [
         "Guided",
@@ -1925,17 +1923,17 @@
       "charge_today": 0,
       "card_collected_first": true,
       "once_per_customer": true,
-      "reminder_days_before_first_charge": 3,
+      "reminder_days_before_first_charge": 7,
       "separate_renewal_consent": "Terms 8.4, recorded in consent ledger",
       "status": "PRELIMINARY - O-7 pending owner approval",
       "only_way_in": true,
-      "reminder_day": 11,
+      "reminder_day": 7,
       "reminder_switchable": false,
       "acknowledgment": "at trial start, with how to cancel (lifecycle L-02)",
       "cancel": "one step online; access runs to trial_end; no charge",
       "plan_switch_during_trial": "allowed; writes a consent ledger entry"
     },
-    "quarterly_rule": "Studio only, optional, never required",
+    "quarterly_rule": "internal only; never offered to customers (owner, 2026-11-17)",
     "renewal_reminder": {
       "days_before_charge": 2,
       "default": "on",
@@ -2095,5 +2093,77 @@
     "statement_descriptor": "TEAM47STUDIO [ASSUMPTION]",
     "address": "[MAILING ADDRESS]",
     "confirmed": false
+  },
+  "placements": {
+    "status": "EDITABLE DRAFT 2026-11-17",
+    "packet": "05-RETAIL-PARTNER-PLACEMENT-PACKET-v1.0.md (Drive: Team47Studio Update and Transfer)",
+    "slots": [
+      {
+        "id": "home_featured",
+        "places": 3
+      },
+      {
+        "id": "home_deals",
+        "places": 4
+      },
+      {
+        "id": "home_collab",
+        "places": 1
+      },
+      {
+        "id": "shop_featured",
+        "places": 3
+      },
+      {
+        "id": "app_home",
+        "places": 1
+      },
+      {
+        "id": "app_offers",
+        "places": 4
+      }
+    ],
+    "rotation": "line-up by calendar month; order rotates once a day",
+    "never": [
+      "inside matched results",
+      "re-scoring or reordering matches",
+      "personal data to partners",
+      "per-user tracking"
+    ],
+    "statuses": [
+      "draft",
+      "changes_requested",
+      "in_review",
+      "approved",
+      "scheduled",
+      "live",
+      "ended",
+      "paused"
+    ],
+    "partner_editable_until": "live",
+    "review": "independent reviewer before listing; edits after approval return to review",
+    "label": "Sponsored · {Partner} before the headline",
+    "measurement": "daily aggregate opens and code copies",
+    "reuse": [
+      "apps/api/src/portal/sponsored-content.ts",
+      "omni-retail.ts",
+      "commercial-billing.ts",
+      "business/PARTNER-AGREEMENT-TEMPLATE.json"
+    ],
+    "flag": "off at launch",
+    "demo_screens": [
+      "W1",
+      "W5",
+      "W21",
+      "A04",
+      "A27",
+      "P5",
+      "P6",
+      "P7",
+      "P8",
+      "P9",
+      "P10",
+      "X3"
+    ]
   }
 }

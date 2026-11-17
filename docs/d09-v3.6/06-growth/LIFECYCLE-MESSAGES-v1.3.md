@@ -1,12 +1,12 @@
 # Team 47 Studio — Lifecycle Messages
 
-**Version 1.2 · 2026-11-16 · For the lifecycle agent and anyone sending member email, SMS or push** · Companion to the marketing packet (voice §2, copy bank §3, claims rules §4) and cost addendum v2.3 §11.5 · v1.2: two footers by message purpose; legal name and postal address in commercial email only as required · v1.1: two plans since 2026-11-16; the sequence now follows the 14-day trial on Guided or Studio (day 0, 3, 7, 11, 14); renewal reminder two days before every charge; cancel and payment-failure paths end in "no plan", not a free tier (counsel item label corrected to C-11 on 2026-11-16)
+**Version 1.3 · 2026-11-17 · For the lifecycle agent and anyone sending member email, SMS or push** · Companion to the marketing packet (voice §2, copy bank §3, claims rules §4) and cost addendum v2.3 §11.5 · v1.3: required trial reminder L-05 moves to day 7 (seven days before conversion, card-network rule); L-04 becomes the day-11 check-in; no quarterly cycle for customers · v1.2: two footers by message purpose; legal name and postal address in commercial email only as required · v1.1: two plans since 2026-11-16; the sequence now follows the 14-day trial on Guided or Studio (day 0, 3, 7, 11, 14); renewal reminder two days before every charge; cancel and payment-failure paths end in "no plan", not a free tier (counsel item label corrected to C-11 on 2026-11-16)
 
 > **Status: PRELIMINARY — pending full release.** Prepared for review ahead of any execution. Decisions, routes, wording and figures are subject to change before work begins; nothing here is final until the owner releases it. The trial messages depend on owner decision O-7; notice timing depends on counsel item C-11.
 
 Every template is written in the packet voice: warm, plain, specific, one idea per line, "you" not "users". Every message passes the claims rules in marketing §4: fit and method, never outcome; no "accurate"; no timing claims; no before-and-after; invented brands only until clearance. Transactional messages carry no marketing. Marketing messages carry a working opt-out and are sent only with recorded consent (Terms clause 7).
 
-**Variables.** `{first}` first name or "there" · `{plan}` Guided or Studio · `{price}` e.g. `$29.99/mo`, `$89.97/qtr`, `$299.90/yr` · `{cycle_word}` monthly / quarterly / yearly · `{trial_end}` e.g. Dec 1, 2026 · `{season}` colour season from the intake · `{routine_step}` a named step · `{product}` an invented catalogue name · `{trial_url}` Your trial page · `{manage_url}` account billing · `{cancel_url}` one-step cancel · `{support_url}` care centre · `{last4}` card ending.
+**Variables.** `{first}` first name or "there" · `{plan}` Guided or Studio · `{price}` e.g. `$29.99/mo`, `$299.90/yr` · `{cycle_word}` monthly / yearly · `{trial_end}` e.g. Dec 1, 2026 · `{season}` colour season from the intake · `{routine_step}` a named step · `{product}` an invented catalogue name · `{trial_url}` Your trial page · `{manage_url}` account billing · `{cancel_url}` one-step cancel · `{support_url}` care centre · `{last4}` card ending.
 
 **Footer, transactional and service messages (L-01 to L-12).** Guidance for looking and feeling your best — cosmetic, not medical. Results differ from person to person. · Manage membership · Privacy & Terms · © 2026 Team 47 Studio — {entity_legal}. The From name is Team 47 Studio and the sending domain is ours; routing and sender details must be truthful.
 
@@ -21,8 +21,8 @@ Every template is written in the packet voice: warm, plain, specific, one idea p
 | L-01 | Account created, trial not yet started | Email | Transactional | Immediately | Yes |
 | L-02 | Trial started (card verified, $0) — acknowledgment | Email + in-app | Transactional, required | Immediately | Yes — must send |
 | L-03 | Trial day 3 check-in | Email + push | Service nudge | Day 3, 10:00 local | Yes |
-| L-04 | Trial day 7, halfway review | Email | Service nudge | Day 7, 10:00 local | Yes |
-| L-05 | Trial ends in 3 days (day 11) | Email + in-app + web banner; SMS if consented | Transactional, required, cannot be switched off | Day 11, 09:00 local | Yes — must send |
+| L-04 | Trial day 11 check-in | Email | Service nudge | Day 11, 10:00 local | Yes |
+| L-05 | Trial ends in 7 days (day 7) | Email + in-app + web banner; SMS if consented | Transactional, required, cannot be switched off | Day 7, 09:00 local | Yes — must send |
 | L-06 | Trial converted, first charge (day 14) | Email | Transactional, receipt | On webhook `invoice.paid` | Yes |
 | L-07 | Trial cancelled before the charge | Email | Transactional | On cancel | Yes |
 | L-08 | Paid membership cancelled | Email | Transactional | On cancel | Yes |
@@ -71,7 +71,7 @@ So there are no surprises:
 
 1. **Today:** nothing was charged. Your card was checked, not billed.
 2. **Day 3 and day 7:** short check-ins on your routine and season.
-3. **Day 11:** a reminder that your trial ends in three days.
+3. **Day 7:** a reminder that your trial ends in seven days.
 4. **{trial_end}:** {plan} starts at **{price}** and renews {cycle_word} until you cancel.
 
 **How to cancel:** open Your trial and choose Cancel my trial, any time before {trial_end}. One step, nothing charged: {cancel_url}
@@ -101,14 +101,14 @@ If you have not opened it yet, two minutes is enough. If something does not fit,
 
 ---
 
-### L-04 · Day 7, halfway review
+### L-04 · Day 11 check-in
 
-**Subject:** Halfway. Here is what you have used.
+**Subject:** Three days left. Here is what you have used.
 **Preview:** A plain summary in your own numbers.
 
 Hi {first},
 
-You are halfway through your trial. Here is where things stand:
+Your trial has three days left. Here is where things stand:
 
 - Routine opened **{opens}** times; **{steps_done}** steps logged.
 - Coach answered **{coach_turns}** questions.
@@ -124,7 +124,7 @@ Want a different plan after the trial? You can switch between Guided and Studio,
 
 ---
 
-### L-05 · Three days before the first charge (required, cannot be switched off)
+### L-05 · Seven days before the first charge (required, cannot be switched off)
 
 **Subject:** Your {plan} trial ends {trial_end}. {price} after that.
 **Preview:** This is the reminder we promised. Cancel in one step if you want to.
@@ -284,7 +284,7 @@ Hi {first},
 
 Your preview is still here: **{season}**, a {steps}-step routine and your first Coach note.
 
-If you want to try it, 14 days of {recommended_plan} costs nothing today. The reminder comes on day 11, and you can cancel in one step.
+If you want to try it, 14 days of {recommended_plan} costs nothing today. The reminder comes on day 7, and you can cancel in one step.
 
 **Start my 14-day trial** → {trial_url}
 
@@ -294,7 +294,7 @@ If you want to try it, 14 days of {recommended_plan} costs nothing today. The re
 
 ## 3. Agent instruction (paste into the lifecycle agent's system prompt)
 
-You draft and send Team 47 Studio member messages from the templates in LIFECYCLE-MESSAGES-v1.2.md. Rules you cannot override:
+You draft and send Team 47 Studio member messages from the templates in LIFECYCLE-MESSAGES-v1.3.md. Rules you cannot override:
 
 1. Transactional and service messages (L-01 to L-12) send on their trigger without approval. L-02, L-05 and L-09 are required and must never be skipped, delayed past their window, or suppressed by a notification setting. L-10 respects the member's renewal-reminder switch.
 2. Marketing messages (L-13, L-14) are drafted into the approval queue. Never send one yourself. Never send a marketing message without a recorded marketing consent for that channel.
@@ -314,6 +314,6 @@ You draft and send Team 47 Studio member messages from the templates in LIFECYCL
 |---|---|
 | O-7 | Owner approval of the 14-day trial as the only way in |
 | C-5 / N-6 | Production consent ledger that L-02 and L-05 read `{consent_date}` from |
-| C-11 | Counsel confirms the day-11 trial reminder, L-09's 30-day annual notice and L-10's two-day reminder meet each launch state's automatic-renewal rules. California's law covers free-to-pay conversions from July 1, 2025. The cancel link is one step with no retention screen |
+| C-11 | Counsel confirms the day-7 trial reminder, L-09's 30-day annual notice and L-10's two-day reminder meet each launch state's automatic-renewal rules. California's law covers free-to-pay conversions from July 1, 2025. The cancel link is one step with no retention screen |
 | SMS | Separate SMS consent capture and STOP handling before L-05 SMS is enabled |
 | Email provider | None selected; send-time and quiet-hour logic assumes one that supports member time zones |

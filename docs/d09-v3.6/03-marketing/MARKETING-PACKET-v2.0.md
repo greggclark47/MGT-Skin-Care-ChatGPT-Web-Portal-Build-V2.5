@@ -1,6 +1,6 @@
 # Team 47 Studio — Marketing Packet
 
-**Version 1.9 · 2026-11-16 · For anyone producing Team 47 Studio material: web, social, email, partner decks** · v1.1: utility row colours (§5.2) · v1.2: utility row moves to the lighter Aura palette (§5.2) · v1.3: Prism Weave seamless pattern (§5.4, `patterns/`), accessibility figures refreshed (§9) · v1.4: plans and prices (§3.1), Prism Weave on the landing hero · v1.5: trial line in §3.1; build reference is v4.2 · v1.6: Retail Partners is one section with its own text theme, accent colours (dark `#FFC23A`, light `#8A5B00`; the utility-row Aura family is unchanged), global and regional graphics; the logo on landing surfaces is 18% larger (36px to 42.5px header height) · v1.7: two plans since 2026-11-16, Studio quarterly option, renewal-reminder line, a gradient per header button (§5.2) · v1.8: every call to action is the intake and the 14-day trial on Guided or Studio; trial lines in §3.1; build reference is v4.4 · v1.9: legal name only where appropriate or required (§ footer, below the compliance line)
+**Version 2.0 · 2026-11-17 · For anyone producing Team 47 Studio material: web, social, email, partner decks** · v1.1: utility row colours (§5.2) · v1.2: utility row moves to the lighter Aura palette (§5.2) · v1.3: Prism Weave seamless pattern (§5.4, `patterns/`), accessibility figures refreshed (§9) · v1.4: plans and prices (§3.1), Prism Weave on the landing hero · v1.5: trial line in §3.1; build reference is v4.2 · v1.6: Retail Partners is one section with its own text theme, accent colours (dark `#FFC23A`, light `#8A5B00`; the utility-row Aura family is unchanged), global and regional graphics; the logo on landing surfaces is 18% larger (36px to 42.5px header height) · v1.7: two plans since 2026-11-16, Studio quarterly option, renewal-reminder line, a gradient per header button (§5.2) · v1.8: every call to action is the intake and the 14-day trial on Guided or Studio; trial lines in §3.1; build reference is v4.4 · v1.9: legal name only where appropriate or required (§ footer, below the compliance line) · v2.0: quarterly removed from customer copy (internal only); reminder line now day 7; partner co-promotion rule
 
 > **Status: PRELIMINARY — pending full release.** Prepared for review ahead of any execution. Decisions, routes, wording and figures are subject to change before work begins; nothing here is final until the owner releases it.
 
@@ -67,12 +67,11 @@ All of these are live in the v3.6 build and have been checked against the claims
 
 ### 3.1 Plans and prices (preliminary)
 
-Owner-set 2026-11-15, pending full release. Use these figures exactly; never round, never "from". There is no free plan: never write "free plan", "free to keep" or "begin free". The only $0 offer is the 14-day trial on Guided or Studio, always stated with what it renews at. Annual is always stated with its effective monthly figure. Quarterly is a Studio option; its $89.97 figure is `[ASSUMPTION]` and is not approved for ads until the owner sets it (N-9).
+Owner-set 2026-11-15, pending full release. Use these figures exactly; never round, never "from". There is no free plan: never write "free plan", "free to keep" or "begin free". The only $0 offer is the 14-day trial on Guided or Studio, always stated with what it renews at. Annual is always stated with its effective monthly figure.
 
 | | Guided | Studio |
 |---|---|---|
 | Monthly | $14.99 | $29.99 |
-| Quarterly (optional, Studio only) | — | $89.97 `[ASSUMPTION]` — three months at the monthly price, no discount, until the owner sets it |
 | Annual (two months free) | $149.90 ($12.49 a month) | $299.90 ($24.99 a month) |
 | Best for | Building a routine you keep | The whole studio, at professional depth |
 | The outcome | Routines that keep up with you, and visible progress | Everything coordinated, with a record you own |
@@ -87,7 +86,9 @@ Owner-set 2026-11-15, pending full release. Use these figures exactly; never rou
 
 Safety checks (shade range, ingredients, hair lift) and "shows its work" are on for every plan. Allowances marked `[ASSUMPTION]` are to be set from routing logs before release; the entitlement system reads them, the copy does not invent them.
 
-Approved plan lines: "Start my 14-day trial." (the one call to action) · "14 days free on Guided or Studio. Then from $14.99 a month." · "A reminder on day 11. Cancel in one step." · "Eight quick questions, then your studio preview." · "Two plans. Everything connected." · "Two months free on annual." · "A reminder two days before every renewal." · "Studio, quarterly if you prefer." (no quarterly price in ads until N-9) · "Guided, $14.99 a month." · "Studio, $29.99 a month." · "14 days of Guided, $0 today." (trial ads must state the price after the trial and that it renews; never "free" without "14 days")
+**Partner co-promotion (v2.0).** Posts made with a retail partner start with #ad (or "Ad") in the caption, use the platform's paid-partnership label, tag both accounts, carry no medical or guaranteed-result claims, and go out only when both sides approve (placement packet §8). Quarterly billing is internal only: never mention it in customer material.
+
+Approved plan lines: "Start my 14-day trial." (the one call to action) · "14 days free on Guided or Studio. Then from $14.99 a month." · "A reminder a week before your trial ends. Cancel in one step." · "Eight quick questions, then your studio preview." · "Two plans. Everything connected." · "Two months free on annual." · "A reminder two days before every renewal." · "Guided, $14.99 a month." · "Studio, $29.99 a month." · "14 days of Guided, $0 today." (trial ads must state the price after the trial and that it renews; never "free" without "14 days")
 
 ---
 

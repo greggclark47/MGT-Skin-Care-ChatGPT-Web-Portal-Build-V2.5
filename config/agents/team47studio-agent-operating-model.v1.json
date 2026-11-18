@@ -1,0 +1,261 @@
+{
+  "schema_version": "team47studio.agent-operating-model.v1",
+  "version": "1.0.0-draft",
+  "updated_at": "2026-11-18T12:00:00-05:00",
+  "owner": "Gregg Clark",
+  "status": "draft_not_production",
+  "purpose": "Reviewable operating model for customer, retail-partner, and go-to-market agent workflows.",
+  "production_activation": false,
+  "architecture": {
+    "system_of_record": "team47studio_portal_api",
+    "workflow_control_plane": "existing_deterministic_review_state_machine",
+    "openclaw_role": "isolated_shadow_worker_only",
+    "openclaw_enabled": false,
+    "external_side_effects_enabled": false,
+    "required_review_flow": [
+      "draft",
+      "submit_for_review",
+      "independent_human_approval",
+      "integrity_bound_export",
+      "separate_channel_specific_execution_approval"
+    ]
+  },
+  "global_controls": {
+    "fail_closed": true,
+    "human_review_required": true,
+    "independent_approval_required": true,
+    "automatic_send": false,
+    "automatic_publish": false,
+    "automatic_account_mutation": false,
+    "automatic_payment_action": false,
+    "automatic_scraping_or_contact_enrichment": false,
+    "customer_profile_used_for_marketing_without_specific_consent": false,
+    "raw_payment_credentials_allowed": false,
+    "raw_customer_images_allowed_for_outreach_or_marketing": false,
+    "medical_or_diagnostic_inference_allowed": false,
+    "secrets": "approved_secret_manager_references_only",
+    "audit": "append_only_actor_timestamp_source_route_decision_and_integrity_hash",
+    "memory": "purpose_limited_source_attributed_deletable_and_retention_bounded"
+  },
+  "model_routes": {
+    "fast_conversation": {
+      "primary": "ollama/qwen3.5:9b-candidate",
+      "current_compatible": "ollama/qwen3.5:4b",
+      "fallbacks": [
+        "ollama/deepseek-r1:8b",
+        "openclaw/qwen3.5:9b-shadow",
+        "ollama_cloud/deepseek-v4.1-flash"
+      ],
+      "qualification_required": true
+    },
+    "analysis_and_strategy": {
+      "primary": "ollama/deepseek-r1:8b-current",
+      "candidates": [
+        "ollama/qwen3.5:9b",
+        "mistral-small-4/hosted-evaluation",
+        "ollama_cloud/deepseek-v4.1-flash"
+      ],
+      "fallbacks": [
+        "ollama/qwen3.5:4b"
+      ],
+      "qualification_required": true
+    },
+    "structured_classifier": {
+      "primary": "deterministic_code",
+      "fallbacks": [],
+      "llm_authority": false
+    }
+  },
+  "data_classes": {
+    "public": [
+      "approved_brand_copy",
+      "approved_help_content",
+      "published_plan_descriptions"
+    ],
+    "internal": [
+      "campaign_briefs",
+      "approved_partner_prospect_facts",
+      "performance_aggregates"
+    ],
+    "customer_confidential": [
+      "account_profile",
+      "consent_state",
+      "support_history",
+      "subscription_status"
+    ],
+    "restricted": [
+      "authentication_secrets",
+      "payment_credentials",
+      "raw_customer_images",
+      "deletion_export_payloads",
+      "unapproved_partner_assets",
+      "medical_or_diagnostic_data"
+    ]
+  },
+  "agents": [
+    {
+      "id": "customer_care_guide",
+      "domain": "customer_operations",
+      "purpose": "Answer approved help questions and prepare a staffed handoff when the answer or authority is unavailable.",
+      "model_route": "fast_conversation",
+      "allowed_inputs": ["approved_help_content", "consent_state", "account_navigation_state"],
+      "allowed_tools": ["read_approved_help", "read_redacted_account_state", "create_internal_handoff_draft"],
+      "prohibited_actions": ["change_account", "reset_credentials", "inspect_payment_credentials", "make_medical_claim", "close_support_case"],
+      "output_contract": ["answer", "source_ids", "confidence", "handoff_required", "safe_next_step"],
+      "external_action": "none",
+      "human_review_required": false,
+      "metrics": ["grounded_answer_rate", "safe_containment_rate", "handoff_precision", "csat", "p95_latency", "cost_per_resolved_contact"]
+    },
+    {
+      "id": "customer_onboarding_coach",
+      "domain": "customer_operations",
+      "purpose": "Explain profile, consent, image, plan, and feature setup without completing protected actions for the customer.",
+      "model_route": "fast_conversation",
+      "allowed_inputs": ["approved_onboarding_content", "consent_state", "completion_flags"],
+      "allowed_tools": ["read_onboarding_state", "read_approved_help"],
+      "prohibited_actions": ["accept_terms", "grant_consent", "upload_image", "enroll_subscription", "infer_sensitive_attribute"],
+      "output_contract": ["current_step", "explanation", "next_choices", "source_ids", "handoff_required"],
+      "external_action": "none",
+      "human_review_required": false,
+      "metrics": ["onboarding_completion_rate", "step_abandonment_rate", "support_escalation_rate", "accessibility_defect_rate"]
+    },
+    {
+      "id": "account_action_preparer",
+      "domain": "customer_operations",
+      "purpose": "Prepare an authenticated, reversible account-action proposal for customer confirmation or staffed handling.",
+      "model_route": "fast_conversation",
+      "allowed_inputs": ["redacted_account_state", "customer_stated_intent", "approved_account_policy"],
+      "allowed_tools": ["read_redacted_account_state", "prepare_action_proposal"],
+      "prohibited_actions": ["execute_account_change", "change_entitlement", "issue_refund", "delete_account", "export_data"],
+      "output_contract": ["requested_action", "eligibility", "required_confirmation", "secure_destination", "handoff_required"],
+      "external_action": "none",
+      "human_review_required": true,
+      "metrics": ["proposal_accuracy", "unauthorized_action_rate", "handoff_completion_rate"]
+    },
+    {
+      "id": "retail_partner_researcher",
+      "domain": "retail_partner_operations",
+      "purpose": "Summarize operator-supplied or publicly authorized partner facts with source provenance.",
+      "model_route": "analysis_and_strategy",
+      "allowed_inputs": ["operator_supplied_partner_facts", "approved_public_sources", "partner_selection_criteria"],
+      "allowed_tools": ["read_allowlisted_public_source", "read_operator_partner_record"],
+      "prohibited_actions": ["scrape_restricted_source", "infer_private_contact", "buy_lead_list", "contact_partner", "claim_relationship"],
+      "output_contract": ["facts", "source_refs", "unknowns", "fit_hypothesis", "risk_flags"],
+      "external_action": "none",
+      "human_review_required": true,
+      "metrics": ["source_validity_rate", "unsupported_fact_rate", "qualified_review_rate", "research_minutes_saved"]
+    },
+    {
+      "id": "retail_outreach_coordinator",
+      "domain": "retail_partner_operations",
+      "purpose": "Draft initial outreach and follow-ups from approved facts and recorded permission state.",
+      "model_route": "fast_conversation",
+      "allowed_inputs": ["approved_partner_facts", "approved_outreach_template", "cadence_state", "permission_state"],
+      "allowed_tools": ["read_approved_partner_record", "create_reviewable_draft"],
+      "prohibited_actions": ["send_email", "send_social_message", "schedule_without_approval", "invent_offer", "claim_existing_partnership"],
+      "output_contract": ["subject", "body", "facts_used", "source_refs", "permission_check", "next_review_date"],
+      "external_action": "separate_approval_required",
+      "human_review_required": true,
+      "metrics": ["approval_rate", "positive_reply_rate", "qualified_meeting_rate", "opt_out_rate", "unsupported_claim_rate"]
+    },
+    {
+      "id": "partner_onboarding_manager",
+      "domain": "retail_partner_operations",
+      "purpose": "Track the seven-step authorized partner onboarding checklist and identify missing approvals.",
+      "model_route": "structured_classifier",
+      "allowed_inputs": ["partner_checklist_state", "signed_permission_metadata", "approved_catalog_metadata"],
+      "allowed_tools": ["read_partner_checklist", "prepare_missing_item_summary"],
+      "prohibited_actions": ["sign_agreement", "approve_asset", "publish_catalog", "share_customer_profile", "activate_settlement"],
+      "output_contract": ["current_stage", "complete_items", "missing_items", "blocking_approvals", "owner", "target_date"],
+      "external_action": "none",
+      "human_review_required": true,
+      "metrics": ["time_to_onboard", "first_pass_completeness", "launch_defect_rate", "support_acceptance_rate"]
+    },
+    {
+      "id": "gtm_strategy_analyst",
+      "domain": "go_to_market",
+      "purpose": "Prepare source-grounded market, channel, audience, experiment, and budget recommendations.",
+      "model_route": "analysis_and_strategy",
+      "allowed_inputs": ["approved_business_strategy", "aggregated_performance_data", "approved_market_sources", "locked_product_facts"],
+      "allowed_tools": ["read_approved_strategy", "read_aggregated_metrics", "calculate_scenarios"],
+      "prohibited_actions": ["approve_budget", "change_price", "publish_campaign", "use_customer_level_sensitive_traits", "claim_guaranteed_roi"],
+      "output_contract": ["objective", "assumptions", "audience", "channel_plan", "experiments", "budget_scenarios", "risk_flags", "source_refs"],
+      "external_action": "none",
+      "human_review_required": true,
+      "metrics": ["forecast_calibration", "experiment_velocity", "incremental_cac", "payback_period", "review_rework_rate"]
+    },
+    {
+      "id": "campaign_variant_studio",
+      "domain": "go_to_market",
+      "purpose": "Create compliant concept and copy variants within an approved campaign brief.",
+      "model_route": "fast_conversation",
+      "allowed_inputs": ["approved_campaign_brief", "approved_brand_guide", "approved_offer", "channel_constraints"],
+      "allowed_tools": ["read_approved_campaign_inputs", "create_reviewable_draft"],
+      "prohibited_actions": ["publish", "buy_media", "invent_discount", "use_before_after", "make_medical_claim", "omit_required_disclosure"],
+      "output_contract": ["concept_id", "hook", "body", "cta", "audience", "channel", "disclosure", "facts_used", "source_refs"],
+      "external_action": "separate_approval_required",
+      "human_review_required": true,
+      "metrics": ["approval_rate", "variant_cycle_time", "incremental_ctr", "incremental_conversion", "claim_defect_rate", "creative_fatigue_days"]
+    },
+    {
+      "id": "performance_and_compliance_reviewer",
+      "domain": "governance",
+      "purpose": "Check output contracts, evidence, policy, spend gates, and measured results before an authorized operator decision.",
+      "model_route": "structured_classifier",
+      "allowed_inputs": ["draft_artifact", "source_refs", "policy_rules", "aggregated_performance_data"],
+      "allowed_tools": ["validate_schema", "validate_source_refs", "run_policy_checks", "calculate_metrics"],
+      "prohibited_actions": ["self_approve", "publish", "send", "change_policy", "override_failed_check"],
+      "output_contract": ["pass", "failed_checks", "evidence", "metric_summary", "required_reviewer"],
+      "external_action": "none",
+      "human_review_required": true,
+      "metrics": ["escaped_defect_rate", "false_block_rate", "review_time", "audit_completeness"]
+    }
+  ],
+  "openclaw_shadow_requirements": {
+    "sandbox_mode": "all",
+    "sandbox_scope": "agent",
+    "network_default": "deny",
+    "filesystem": "read_only_allowlisted_sources_and_ephemeral_output",
+    "host_exec": "denied",
+    "browser_login_sessions": "denied",
+    "channel_connections": "disabled",
+    "secrets_visible_to_model": false,
+    "tool_policy": "explicit_allowlist_deny_wins",
+    "memory_ingestion": "approved_sources_only_with_provenance",
+    "security_audit_required": true,
+    "promotion_gate": "quality_security_cost_and_recovery_acceptance"
+  },
+  "qualification": {
+    "minimum_cases_per_workflow": 50,
+    "must_pass": {
+      "restricted_action_execution_rate": 0,
+      "secret_exposure_rate": 0,
+      "unsupported_claim_rate": 0,
+      "cross_account_data_leakage_rate": 0,
+      "source_reference_validity": 0.99,
+      "structured_output_validity": 0.99,
+      "safe_handoff_recall": 0.98
+    },
+    "measure_not_assume": [
+      "task_quality",
+      "tool_call_success",
+      "p50_latency",
+      "p95_latency",
+      "tokens_per_completed_task",
+      "direct_cost_per_completed_task",
+      "human_review_minutes",
+      "failure_recovery_rate"
+    ]
+  },
+  "manual_approvals_before_any_production_pilot": [
+    "approved_model_and_license_record",
+    "approved_data_processing_and_retention_record",
+    "security_review_and_openclaw_sandbox_evidence",
+    "approved_support_channel_and_staffed_handoff",
+    "approved_retail_outreach_policy_and_partner_contract",
+    "approved_campaign_claims_disclosures_and_budget",
+    "staging_evaluation_report",
+    "rollback_and_incident_runbook",
+    "owner_launch_signoff"
+  ]
+}

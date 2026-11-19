@@ -1,8 +1,13 @@
-import type { SkinProfileInput, Routine, ProfileVector, AvoidFlags } from '@mgt/domain';
+import type {
+  SkinProfileInput, Routine, ProfileVector, AvoidFlags, IngredientRecord, ProductRecord,
+  ProviderRecord, TreatmentRecord, ReadOnlyPage, AntiAgingResponseMeta, GroundedAntiAgingExplanation, GroundedSearchResult,
+  MerchantReferral, ProgressEntry, ProgressAggregate, ProgressReminder, ProgressControlSummary, ProgressExportManifest, ProgressExportSummary, ProgressReminderPreview, AppointmentRequest, AntiAgingOperationsDigest, AntiAgingLaunchReadiness, CatalogModerationQueueItem, CatalogModerationQueuePage, CatalogModerationQueueSummary, CatalogQualityIssue, CatalogQualitySummary, LaunchEvidenceFreshness, LaunchEvidenceSummary, ProviderSearchDailySummary, ProviderSearchSloSummary, MatchIntelligence, RegimenCycleFocus, RegimenCycleCheckInStatus,
+  AntiAgingReviewPlan, AntiAgingReviewPlanSummary, AntiAgingReviewSession, AntiAgingDecisionPacket, AntiAgingDecisionPacketIntegrity,
+} from '@mgt/domain';
 
 // One API client shared by web and mobile (Section C.1: "no separate business logic per
-// platform"). Every call goes to the Express API — the Next.js app never talks to Stripe,
-// RevenueCat or an AI provider directly (Section C.1's first rule).
+// platform"). Every call goes to the Express API — the clients never call external
+// billing or analysis services directly (Section C.1's first rule).
 
 export interface SkinMatchResult {
   session_id: string;
@@ -10,10 +15,26 @@ export interface SkinMatchResult {
   avoid_flags: AvoidFlags;
   rules_version: string;
   routine: Routine;
+  match_intelligence: MatchIntelligence;
 }
 
 export interface ApiErrorShape {
   error: { code: string; message: string; details?: unknown; request_id: string };
+}
+
+export interface AntiAgingListResponse<T> {
+  data: ReadOnlyPage<T>;
+  meta: AntiAgingResponseMeta;
+}
+
+export interface AntiAgingRecordResponse<T> {
+  data: T;
+  meta: AntiAgingResponseMeta;
+}
+
+export interface AntiAgingSearchResponse {
+  data: { results: GroundedSearchResult[]; uncertainty: string; task: string; policy_version: string };
+  meta: AntiAgingResponseMeta;
 }
 
 export class ApiClient {
@@ -25,18 +46,37 @@ export class ApiClient {
       headers: { 'content-type': 'application/json', ...(token ? { authorization: `Bearer ${token}` } : {}) },
       body: JSON.stringify(body),
     });
-    const json = await res.json();
-    if (!res.ok) throw new ApiError(json as ApiErrorShape, res.status);
-    return json as T;
+    return this.readResponse<T>(res);
   }
 
   private async get<T>(path: string, token?: string): Promise<T> {
     const res = await this.fetchImpl(`${this.baseUrl}${path}`, {
       headers: token ? { authorization: `Bearer ${token}` } : {},
     });
-    const json = await res.json();
-    if (!res.ok) throw new ApiError(json as ApiErrorShape, res.status);
-    return json as T;
+    return this.readResponse<T>(res);
+  }
+
+  private async delete<T>(path: string, body: unknown, token?: string): Promise<T> {
+    const res = await this.fetchImpl(`${this.baseUrl}${path}`, {
+      method: 'DELETE',
+      headers: { 'content-type': 'application/json', ...(token ? { authorization: `Bearer ${token}` } : {}) },
+      body: JSON.stringify(body),
+    });
+    return this.readResponse<T>(res);
+  }
+
+  private async readResponse<T>(res: Response): Promise<T> {
+    let payload: unknown;
+    try {
+      payload = await res.json();
+    } catch {
+      if (!res.ok) throw new ApiError(null, res.status);
+      throw new ApiError({ error: {
+        code: 'invalid_response', message: 'The platform returned an unreadable response.', request_id: 'unknown',
+      } }, res.status);
+    }
+    if (!res.ok) throw new ApiError(payload, res.status);
+    return payload as T;
   }
 
   // Pre-account: no token needed. The returned session_id is what binds the anonymous
@@ -51,7 +91,7 @@ export class ApiClient {
 
   priceCart(sessionId: string, premium = false) {
     return this.get<{ pricing: { total_cents: number; subtotal_cents: number; shipping_cents: number } }>(
-      `/api/cart/${sessionId}/price?premium=${premium}`,
+      `/api/cart/${encodeURIComponent(sessionId)}/price?premium=${premium}`,
     );
   }
 
@@ -64,16 +104,187 @@ export class ApiClient {
   }
 
   orderStatus(orderId: string) {
-    return this.get<{ status: string }>(`/api/checkout/orders/${orderId}/status`);
+    return this.get<{ status: string }>(`/api/checkout/orders/${encodeURIComponent(orderId)}/status`);
   }
+
+  listIngredients(query: { q?: string; category?: string; limit?: number } = {}) {
+    return this.get<AntiAgingListResponse<IngredientRecord>>(`/api/v1/ingredients${queryString(query)}`);
+  }
+
+  getIngredient(id: string) {
+    return this.get<AntiAgingRecordResponse<IngredientRecord>>(`/api/v1/ingredients/${encodeURIComponent(id)}`);
+  }
+
+  listProducts(query: { q?: string; category?: string; concern?: string; ingredient?: string; limit?: number } = {}) {
+    return this.get<AntiAgingListResponse<ProductRecord>>(`/api/v1/products${queryString(query)}`);
+  }
+
+  listTreatments(query: { q?: string; category?: string; limit?: number } = {}) {
+    return this.get<AntiAgingListResponse<TreatmentRecord>>(`/api/v1/treatments${queryString(query)}`);
+  }
+
+  listProviders(query: { q?: string; city?: string; provider_type?: string; category?: string; limit?: number } = {}) {
+    return this.get<AntiAgingListResponse<ProviderRecord>>(`/api/v1/providers${queryString(query)}`);
+  }
+
+  previewOnboarding(query: { goals: string[]; sensitivity: string; consent?: 'personalization' }) {
+    return this.get<AntiAgingRecordResponse<unknown>>(`/api/v1/onboarding/preview${queryString({ goals: query.goals.join(','), sensitivity: query.sensitivity, consent: query.consent })}`);
+  }
+
+  previewRoutine(query: { product_ids: string[]; avoid_ingredient_ids?: string[]; sensitivity: string }) {
+    return this.get<AntiAgingRecordResponse<unknown>>(`/api/v1/routines/preview${queryString({ product_ids: query.product_ids.join(','), avoid_ingredient_ids: query.avoid_ingredient_ids?.join(','), sensitivity: query.sensitivity })}`);
+  }
+
+  providerHandoff(id: string) {
+    return this.get<AntiAgingRecordResponse<{ provider_id: string; handoff_type: string; handoff_url: string; data_shared: string[]; booking_supported: false; disclosure: string }>>(`/api/v1/providers/${encodeURIComponent(id)}/handoff`);
+  }
+
+  explainIngredient(id: string) {
+    return this.get<AntiAgingRecordResponse<GroundedAntiAgingExplanation & { task: string; policy_version: string }>>(`/api/v1/explanations/ingredients/${encodeURIComponent(id)}`);
+  }
+
+  explainProduct(id: string) {
+    return this.get<AntiAgingRecordResponse<GroundedAntiAgingExplanation & { task: string; policy_version: string }>>(`/api/v1/explanations/products/${encodeURIComponent(id)}`);
+  }
+
+  searchAntiAging(q: string, limit = 8) {
+    return this.get<AntiAgingSearchResponse>(`/api/v1/search${queryString({ q, limit })}`);
+  }
+
+  getAntiAgingQuality(filters: { owner_role?: 'catalog_editor' | 'sme' | 'compliance'; severity?: 'review' | 'blocker' } = {}, token?: string) {
+    return this.get<{ policy: string; filters: { owner_role: string | null; severity: string | null }; quality: CatalogQualitySummary; issues: CatalogQualityIssue[]; queue: CatalogModerationQueueItem[]; queue_page: CatalogModerationQueuePage; queue_summary: CatalogModerationQueueSummary }>(`/admin/anti-aging-quality${queryString(filters)}`, token);
+  }
+
+  getAntiAgingSearchReview(token?: string) {
+    return this.get<{ policy: string; slo: ProviderSearchSloSummary; daily: ProviderSearchDailySummary[]; window: { days: number; first_day: string | null; last_day: string | null; retention_days: number; truncated: boolean; review_required_days: number }; days: number }>(`/admin/anti-aging-search`, token);
+  }
+
+  getAntiAgingReadinessReview(token?: string) {
+    return this.get<{ readiness: AntiAgingLaunchReadiness; evidence_summary: LaunchEvidenceSummary; evidence_freshness: LaunchEvidenceFreshness }>(`/admin/anti-aging-readiness`, token);
+  }
+
+  getAntiAgingOperationsDigest(token?: string) {
+    return this.get<{ policy: string; digest: AntiAgingOperationsDigest; queue_summary: CatalogModerationQueueSummary; evidence_freshness: LaunchEvidenceFreshness; review_plan: AntiAgingReviewPlan; review_summary: AntiAgingReviewPlanSummary; review_session: AntiAgingReviewSession; decision_packet: AntiAgingDecisionPacket; decision_packet_integrity: AntiAgingDecisionPacketIntegrity }>(`/admin/anti-aging-operations`, token);
+  }
+
+  getAntiAgingReviewSession(query: { limit?: number; offset?: number } = {}, token?: string) {
+    return this.get<{ policy: string; review_plan: AntiAgingReviewPlan; review_summary: AntiAgingReviewPlanSummary; review_session: AntiAgingReviewSession; decision_packet: AntiAgingDecisionPacket; decision_packet_integrity: AntiAgingDecisionPacketIntegrity }>(`/admin/anti-aging-operations${queryString({ review_limit: query.limit, review_offset: query.offset })}`, token);
+  }
+
+  referralPreview(productId: string) {
+    return this.get<AntiAgingRecordResponse<MerchantReferral>>(`/api/v1/referrals/preview${queryString({ product_id: productId })}`);
+  }
+
+  recordReferralClick(productId: string, token?: string) {
+    return this.post<{ data: { recorded: true; measurement: string; data_shared: [] } }>('/api/v1/referrals/click', { product_id: productId }, token);
+  }
+
+  listAntiAgingProgress(token?: string) {
+    return this.get<{ data: { entries: ProgressEntry[]; aggregate: ProgressAggregate; consent_scope: 'progress_tracking' } }>('/api/v1/progress', token);
+  }
+
+  exportAntiAgingProgress(token?: string) {
+    return this.get<{ data: { entries: ProgressEntry[]; reminders: ProgressReminder[]; summary: ProgressExportSummary; manifest: ProgressExportManifest; export_format: 'json'; data_shared: []; note: string } }>('/api/v1/progress/export', token);
+  }
+
+  getAntiAgingProgressExportManifest(token?: string) {
+    return this.get<{ data: ProgressExportManifest }>('/api/v1/progress/export/manifest', token);
+  }
+
+  summarizeAntiAgingProgressExport(token?: string) {
+    return this.get<{ data: ProgressExportSummary; consent_scope: ['progress_tracking', 'reminders'] }>('/api/v1/progress/export/summary', token);
+  }
+
+  getAntiAgingProgressControlSummary(token?: string) {
+    return this.get<{ data: ProgressControlSummary }>('/api/v1/progress/control-summary', token);
+  }
+
+  saveAntiAgingProgress(input: { entry_id: string; status: string; completed_at: string; consent_version: string }, token?: string) {
+    return this.post<{ data: ProgressEntry; note: string }>('/api/v1/progress', { ...input, consent: 'progress_tracking' }, token);
+  }
+
+  deleteAntiAgingProgress(token?: string) {
+    return this.delete<{ data: { deleted: number; consent_revoked: true } }>('/api/v1/progress', { confirm: true }, token);
+  }
+
+  listRegimenCycles(token?: string) {
+    return this.get<{ data: { items: unknown[]; current: unknown | null; retention: 'user_controlled'; sync_scope: 'signed_in_account'; data_shared: [] } }>('/api/v1/regimen-cycles', token);
+  }
+
+  startRegimenCycle(input: { focus: RegimenCycleFocus; consent_version: string }, token?: string) {
+    return this.post<{ data: unknown; sync_scope: 'signed_in_account' }>('/api/v1/regimen-cycles', { ...input, consent: 'regimen_cycle_tracking' }, token);
+  }
+
+  saveRegimenCycleCheckIn(id: string, input: { status: RegimenCycleCheckInStatus; completed_at: string }, token?: string) {
+    return this.post<{ data: unknown; note: string }>(`/api/v1/regimen-cycles/${encodeURIComponent(id)}/check-ins`, input, token);
+  }
+
+  exportRegimenCycles(token?: string) {
+    return this.get<{ data: { cycles: unknown[]; check_ins: unknown[]; manifest: { export_format: 'json'; retention: 'user_controlled'; deletion_supported: true; external_delivery: 'disabled'; data_shared: [] }; exported_at: string; note: string } }>('/api/v1/regimen-cycles/export', token);
+  }
+
+  deleteRegimenCycles(token?: string) {
+    return this.delete<{ data: { cycles: number; check_ins: number; consent_revoked: true; retention: 'user_controlled'; data_shared: [] } }>('/api/v1/regimen-cycles', { confirm: true }, token);
+  }
+
+  listAntiAgingReminders(token?: string) {
+    return this.get<{ data: { reminders: ProgressReminder[]; states: Record<string, number>; consent_scope: 'reminders' } }>('/api/v1/progress/reminders', token);
+  }
+
+  previewAntiAgingReminders(token?: string) {
+    return this.get<{ data: { items: ProgressReminderPreview[]; delivery: 'in_app_only'; data_shared: []; consent_scope: 'reminders' } }>('/api/v1/progress/reminders/preview', token);
+  }
+
+  createAntiAgingReminder(input: { entry_id: string; cadence: 'daily' | 'weekly'; days_from_now: number; consent_version: string }, token?: string) {
+    return this.post<{ data: ProgressReminder }>('/api/v1/progress/reminders', { ...input, consent: 'reminders' }, token);
+  }
+
+  setAntiAgingReminderState(id: string, action: 'pause' | 'resume' | 'snooze', token?: string, days = 1) {
+    return this.post<{ data: ProgressReminder }>(`/api/v1/progress/reminders/${encodeURIComponent(id)}`, { action, days }, token);
+  }
+
+  deleteAntiAgingReminder(id: string, token?: string) {
+    return this.delete<{ data: { deleted: true } }>(`/api/v1/progress/reminders/${encodeURIComponent(id)}`, {}, token);
+  }
+
+  nearbyAntiAgingProviders(city: string, radiusKm = 10, limit = 20) {
+    return this.get<{ data: { items: ProviderRecord[]; radius_km: number; location_precision: 'city'; geocoding: 'disabled'; uncertainty: string } }>(`/api/v1/providers/nearby${queryString({ city, radius_km: radiusKm, limit })}`);
+  }
+
+  createAppointmentRequest(input: { provider_id: string; idempotency_key: string; requested_window?: string }, token?: string) {
+    return this.post<{ data: AppointmentRequest }>('/api/v1/appointment-requests', { ...input, consent: 'provider_handoff' }, token);
+  }
+
+  getAppointmentRequest(id: string, token?: string) {
+    return this.get<{ data: AppointmentRequest }>(`/api/v1/appointment-requests/${encodeURIComponent(id)}`, token);
+  }
+
+  listAppointmentRequests(token?: string) {
+    return this.get<{ data: { items: AppointmentRequest[]; data_shared: []; booking_supported: false; note: string } }>('/api/v1/appointment-requests', token);
+  }
+
+  withdrawAppointmentRequest(id: string, token?: string) {
+    return this.delete<{ data: AppointmentRequest & { withdrawn: true } }>(`/api/v1/appointment-requests/${encodeURIComponent(id)}`, {}, token);
+  }
+}
+
+function queryString(values: Record<string, string | number | undefined>): string {
+  const query = Object.entries(values).filter(([, value]) => value !== undefined)
+    .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`).join('&');
+  return query ? `?${query}` : '';
 }
 
 export class ApiError extends Error {
   readonly code: string;
   readonly requestId: string;
-  constructor(payload: ApiErrorShape, public status: number) {
-    super(payload?.error?.message ?? 'Request failed');
-    this.code = payload?.error?.code ?? 'unknown';
-    this.requestId = payload?.error?.request_id ?? 'unknown';
+  constructor(payload: unknown, public status: number) {
+    const record = payload !== null && typeof payload === 'object'
+      ? payload as Record<string, unknown> : {};
+    const envelope = record.error !== null && typeof record.error === 'object'
+      ? record.error as Record<string, unknown> : {};
+    super(typeof envelope.message === 'string' ? envelope.message : 'Request failed');
+    this.code = typeof envelope.code === 'string' ? envelope.code
+      : typeof record.error === 'string' ? record.error : 'unknown';
+    this.requestId = typeof envelope.request_id === 'string' ? envelope.request_id : 'unknown';
   }
 }

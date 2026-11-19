@@ -1,7 +1,8 @@
 // End-to-end smoke test of the Tier-0 engine pipeline. Not a substitute for the SC-P2 jest
 // suite (200-case eval golden set, Section H) — this proves the pipeline wires together and
 // produces sane output before that harness exists.
-import { classify } from '../engines/rules-engine';
+import { classify, loadSensitivityMatrix } from '../engines/rules-engine';
+import { SEED_INGREDIENT_RULES } from '../engines/ingredient-rules';
 import { scoreCandidates, type CandidateProduct } from '../engines/scoring-engine';
 import { buildRoutine } from '../engines/routine-engine';
 import { buildCartFromRoutine, applyBundle, type ProductCatalogLookup } from '../engines/cart-engine';
@@ -29,6 +30,9 @@ const profileInput = {
 const classification = classify({ ...profileInput, concerns: [...profileInput.concerns] });
 console.log('1. classify() ->', JSON.stringify(classification.profile_vector));
 check(classification.profile_vector.acne_focus > 0.5, 'acne_focus should be elevated for acne concern');
+const fallbackMatrix = loadSensitivityMatrix();
+check(fallbackMatrix.length === SEED_INGREDIENT_RULES.length, 'fallback matrix must contain every canonical versioned seed rule');
+check(fallbackMatrix.find((rule) => rule.ingredient_key === 'niacinamide')?.sensitivity_ceiling_required === 0.15, 'fallback thresholds must match the canonical versioned seed');
 
 const candidates: Record<RoutineSlot, CandidateProduct[]> = {
   cleanser: [{ id: 'p-cleanser-1', slot: 'cleanser', ingredients: ['salicylic_acid'], price_cents: 2200, concern_tags: [], concern_weights: { acne_focus: 1 }, type_fit: { oil_control_need: 1 }, brand_id: 'brand-a', status: 'active' }],

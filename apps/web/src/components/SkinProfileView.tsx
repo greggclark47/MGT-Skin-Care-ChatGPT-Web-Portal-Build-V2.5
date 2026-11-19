@@ -1,5 +1,6 @@
 import React from 'react';
 import type { ProfileVector, AvoidFlags } from '@mgt/domain';
+import { Timestamp } from './HubFrames';
 import { color, space, radius, font } from './theme-tokens';
 
 // "My Skin" (Section G): the profile as the user's own record, with the timeline that makes
@@ -92,9 +93,9 @@ export function SkinProfileView({
               <span style={{ fontSize: font.size.sm, color: color.text }}>
                 {{ initial: 'Skin Match completed', feedback: 'Updated from your feedback', retake: 'You retook the Skin Match', photo: 'Updated after a photo check' }[v.reason]}
               </span>
-              <time dateTime={v.created_at} style={{ marginLeft: 'auto', fontSize: font.size.xs, color: color.textFaint, whiteSpace: 'nowrap' }}>
-                {new Date(v.created_at).toLocaleDateString()}
-              </time>
+              <span style={{ marginLeft: 'auto', fontSize: font.size.xs, color: color.textFaint, whiteSpace: 'nowrap' }}>
+                <Timestamp value={v.created_at}/>
+              </span>
             </li>
           ))}
         </ol>

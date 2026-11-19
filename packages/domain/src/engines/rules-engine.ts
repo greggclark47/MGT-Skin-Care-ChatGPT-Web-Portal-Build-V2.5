@@ -1,5 +1,6 @@
 import type { SkinProfileInput, ProfileVector, AvoidFlags } from '../types/skin-profile';
 import type { SkinType, SkinConcern } from '../types/enums';
+import { SEED_INGREDIENT_RULES as VERSIONED_SEED_INGREDIENT_RULES } from './ingredient-rules';
 
 export const RULES_ENGINE_VERSION = '2.0.0'; // SC-P2: age band, current routine, desired outcome added; `sensitive` removed from skin_type per C8
 
@@ -32,29 +33,19 @@ const CONCERN_ADJUSTMENTS: Record<SkinConcern, Partial<ProfileVector>> = {
 // `ingredient_rules` with an SME sign-off column; this loader function is the seam.
 export interface IngredientRule {
   ingredient_key: string;
-  sensitivity_ceiling_required: number; // profile.sensitivity_ceiling must be <= this to allow
+  sensitivity_ceiling_required: number; // profile tolerance must meet or exceed this minimum
   triggers_avoid_flag?: keyof AvoidFlags;
 }
-const SEED_INGREDIENT_RULES: IngredientRule[] = [
-  { ingredient_key: 'retinol', sensitivity_ceiling_required: 0.6, triggers_avoid_flag: 'high_strength_actives' },
-  { ingredient_key: 'glycolic_acid', sensitivity_ceiling_required: 0.6, triggers_avoid_flag: 'high_strength_actives' },
-  { ingredient_key: 'salicylic_acid', sensitivity_ceiling_required: 0.7 },
-  { ingredient_key: 'benzoyl_peroxide', sensitivity_ceiling_required: 0.5, triggers_avoid_flag: 'high_strength_actives' },
-  { ingredient_key: 'fragrance', sensitivity_ceiling_required: 0.4, triggers_avoid_flag: 'fragrance' },
-  { ingredient_key: 'essential_oil', sensitivity_ceiling_required: 0.4, triggers_avoid_flag: 'essential_oils' },
-  { ingredient_key: 'denatured_alcohol', sensitivity_ceiling_required: 0.5, triggers_avoid_flag: 'alcohol_denat' },
-  { ingredient_key: 'physical_scrub', sensitivity_ceiling_required: 0.5, triggers_avoid_flag: 'physical_exfoliants' },
-  { ingredient_key: 'niacinamide', sensitivity_ceiling_required: 0.9 },
-  { ingredient_key: 'vitamin_c_l_ascorbic', sensitivity_ceiling_required: 0.6 },
-  { ingredient_key: 'hyaluronic_acid', sensitivity_ceiling_required: 1.0 },
-  { ingredient_key: 'ceramides', sensitivity_ceiling_required: 1.0 },
-  // TODO(SC-P2 data track): load the remaining ~22 entries from the SME-reviewed source; keep
-  // this array as the CI-tested fallback so the engine never runs with zero safety data.
-];
+const SEED_INGREDIENT_RULES: IngredientRule[] = VERSIONED_SEED_INGREDIENT_RULES.map((rule) => ({
+  ingredient_key: rule.ingredient_key,
+  sensitivity_ceiling_required: rule.sensitivity_ceiling_required,
+  ...(rule.triggers_avoid_flag ? { triggers_avoid_flag: rule.triggers_avoid_flag } : {}),
+}));
 
 export function loadSensitivityMatrix(): IngredientRule[] {
-  // Seam for Section 0.4: swap this for a DB-backed loader (`select * from ingredient_rules
-  // where status = 'approved'`) without touching classify() or ScoringEngine.
+  // The production portal loads approved database rows. This deterministic fallback derives
+  // from the same versioned seed data used by migration 0004, so test and legacy callers
+  // cannot silently drift to different thresholds or omit newly reviewed seed entries.
   return SEED_INGREDIENT_RULES;
 }
 

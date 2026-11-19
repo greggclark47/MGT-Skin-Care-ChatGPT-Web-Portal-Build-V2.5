@@ -2,7 +2,10 @@ import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { IngredientRulesConsole } from '../components/admin/IngredientRulesConsole';
 import { KnowledgeConsole } from '../components/admin/KnowledgeConsole';
+import { AgentRunCard, AuditTable, DataTable, MetricSummary, ProductionAdmissionGuidance, SupportTicketEditor } from '../components/ConnectedAdmin';
+import { AuditTrail } from '../components/admin/AdminPrimitives';
 import type { KnowledgeObject, VersionedIngredientRule } from '@mgt/domain';
+import { PRODUCTION_ADMISSION_ACTIONS, PRODUCTION_ADMISSION_CONTRACT_VERSION } from '@mgt/shared';
 
 // These assert the admin console's SAFETY-RELEVANT claims, not its layout. Each check below
 // corresponds to a way the console could mislead an SME into thinking a safety change is in
@@ -151,6 +154,85 @@ console.log('\n== 10. Zero approved objects reads as a grounding problem ==');
 {
   const html = renderKnowledge({ objects: [], selectedId: null });
   check('warns the assistant has nothing grounded', html.includes('no grounded material to cite'));
+}
+
+console.log('\n== 11. Support updates explain and enforce customer-visible replies ==');
+{
+  const baseTicket = {
+    id: 'support-1', subject: 'Account help', message: 'I need help.',
+    request_type: 'account_privacy', replies: [], created_at: '2026-09-25T12:00:00.000Z',
+  };
+  const open = renderToStaticMarkup(<SupportTicketEditor ticket={{ ...baseTicket, status: 'open' }} onSaved={() => {}}/>);
+  check('open requests require a reply', open.includes('required=""'));
+  check('reply rule is explained before submission', open.includes('A reply is required for Open'));
+  check('reply count is live and associated', open.includes('0 / 4,000 characters') && open.includes('aria-live="polite"'));
+  check('form exposes its busy state', open.includes('aria-busy="false"'));
+  check('submit button has an explicit type', open.includes('type="submit"'));
+
+  const review = renderToStaticMarkup(<SupportTicketEditor ticket={{ ...baseTicket, status: 'in_review' }} onSaved={() => {}}/>);
+  check('in-review requests allow an internal-only update', !review.includes('required=""'));
+  check('in-review placeholder explains reply is optional', review.includes('Optional while the request is under internal review.'));
+}
+
+console.log('\n== 12. Operator metrics and tables expose their structure ==');
+{
+  const metrics = renderToStaticMarkup(<MetricSummary label="Support totals" items={[["Open", 2], ["Resolved", 4]]}/>);
+  check('metrics use a named description list', metrics.includes('<dl') && metrics.includes('aria-label="Support totals"') && metrics.includes('<dt>Open</dt><dd>2</dd>'));
+
+  const table = renderToStaticMarkup(<DataTable label="Queue" caption="Current support queue"><thead><tr><th scope="col">Request</th></tr></thead><tbody><tr><th scope="row">One</th></tr></tbody></DataTable>);
+  check('wide table has a keyboard-focusable named region', table.includes('role="region"') && table.includes('aria-label="Queue"') && table.includes('tabindex="0"'));
+  check('table has a caption and scoped headers', table.includes('<caption class="sr-only">Current support queue</caption>') && table.includes('scope="col"') && table.includes('scope="row"'));
+}
+
+console.log('\n== 13. Audit evidence uses machine-readable dates ==');
+{
+  const audit = renderToStaticMarkup(<AuditTable entries={[{ id: 'a1', action: 'ticket.updated', at: '2026-09-25T12:00:00.000Z' }]}/>);
+  check('audit table names its evidence', audit.includes('The 20 most recent recorded portal actions'));
+  check('audit timestamp uses the original ISO value', audit.includes('<time dateTime="2026-09-25T12:00:00.000Z"'));
+  check('audit action is a row header', audit.includes('<th scope="row">ticket.updated</th>'));
+
+  const trail = renderToStaticMarkup(<AuditTrail entries={[{ actor_id: 'sme-1', action: 'knowledge.approved', created_at: '2026-09-25T12:00:00.000Z' }]}/>);
+  check('admin primitive audit trail keeps machine-readable dates', trail.includes('<time dateTime="2026-09-25T12:00:00.000Z"'));
+}
+
+console.log('\n== 14. Production admission shows only reviewed category-level guidance ==');
+{
+  const checks = (blocked: string[] = []) => Object.keys(PRODUCTION_ADMISSION_ACTIONS).map(id => ({ id, healthy: !blocked.includes(id) }));
+  const blocked = renderToStaticMarkup(<ProductionAdmissionGuidance admission={{ mode: 'production', admission_version: PRODUCTION_ADMISSION_CONTRACT_VERSION, healthy: false, issues: ['database'], checks: checks(['database']), next_actions: [{ id: 'database', action: 'Provide the reviewed PostgreSQL target with full TLS verification and migrations disabled at runtime.' }] }}/>);
+  check('production admission is clearly labelled', blocked.includes('Production admission') && blocked.includes('Blocked'));
+  check('reviewed remediation is shown', blocked.includes('reviewed PostgreSQL target'));
+  check('guidance declares the safe display boundary', blocked.includes('does not show configuration values, credentials'));
+
+  const unsafe = renderToStaticMarkup(<ProductionAdmissionGuidance admission={{ mode: 'production', admission_version: PRODUCTION_ADMISSION_CONTRACT_VERSION, healthy: false, issues: ['database'], checks: checks(['database']), next_actions: [{ id: 'database', action: 'DATABASE_URL=do-not-render-this' }] }}/>);
+  check('unexpected response text is not echoed', !unsafe.includes('DATABASE_URL=do-not-render-this') && unsafe.includes('no unrecognized response details'));
+
+  const inconsistentReady = renderToStaticMarkup(<ProductionAdmissionGuidance admission={{ mode: 'production', admission_version: PRODUCTION_ADMISSION_CONTRACT_VERSION, healthy: true, issues: [], checks: checks(), next_actions: [{ id: 'database', action: 'Provide the reviewed PostgreSQL target with full TLS verification and migrations disabled at runtime.' }] }}/>);
+  check('inconsistent ready response fails closed', inconsistentReady.includes('Blocked') && !inconsistentReady.includes('All runtime admission categories are currently satisfied'));
+
+  const mismatchedBlocked = renderToStaticMarkup(<ProductionAdmissionGuidance admission={{ mode: 'production', admission_version: PRODUCTION_ADMISSION_CONTRACT_VERSION, healthy: false, issues: ['ownership'], checks: checks(['ownership']), next_actions: [{ id: 'database', action: 'Provide the reviewed PostgreSQL target with full TLS verification and migrations disabled at runtime.' }] }}/>);
+  check('mismatched blocked response fails closed', mismatchedBlocked.includes('no unrecognized response details') && !mismatchedBlocked.includes('reviewed PostgreSQL target'));
+
+  const reordered = renderToStaticMarkup(<ProductionAdmissionGuidance admission={{ mode: 'production', admission_version: PRODUCTION_ADMISSION_CONTRACT_VERSION, healthy: false, issues: ['database', 'ownership'], checks: checks(['database', 'ownership']), next_actions: [{ id: 'database', action: 'Provide the reviewed PostgreSQL target with full TLS verification and migrations disabled at runtime.' }, { id: 'ownership', action: 'Confirm the approved release and support owner declarations.' }, { id: 'database', action: 'Provide the reviewed PostgreSQL target with full TLS verification and migrations disabled at runtime.' }] }}/>);
+  check('reviewed guidance has stable order and no duplicates', reordered.indexOf('approved release and support owner') < reordered.indexOf('reviewed PostgreSQL target') && (reordered.match(/reviewed PostgreSQL target/g) || []).length === 1);
+
+  const nonProduction = renderToStaticMarkup(<ProductionAdmissionGuidance admission={{ mode: 'non_production', healthy: true }}/>);
+  check('non-production has no production admission panel', nonProduction === '');
+}
+
+console.log('\n== 15. Agent operations preserve independent review and no-side-effect export ==');
+{
+  const baseRun = { id:'agent_00000000-0000-4000-8000-000000000001', agent_id:'marketing_promotions', status:'pending_review', draft:'Reviewed promotional draft.', source_refs:['drive:approved-campaign-1'], created_at:'2026-11-07T12:00:00.000Z', updated_at:'2026-11-07T12:01:00.000Z', reviewed_at:null, permissions:{submit:false,approve:false,reject:true,export:false} };
+  const creator = renderToStaticMarkup(<AgentRunCard run={baseRun} agentName="Marketing Promotions" busy={false} onReview={()=>{}} onExport={()=>{}}/>);
+  check('draft creator is told a second operator must approve', creator.includes('A second authorized operator must approve this draft.'));
+  check('draft creator cannot approve or export', !creator.includes('Approve reviewed draft') && !creator.includes('Download integrity package'));
+  check('pending draft can still be rejected', creator.includes('Reject draft'));
+
+  const reviewer = renderToStaticMarkup(<AgentRunCard run={{...baseRun,permissions:{submit:false,approve:true,reject:true,export:false}}} agentName="Marketing Promotions" busy={false} onReview={()=>{}} onExport={()=>{}}/>);
+  check('independent reviewer receives explicit approval action', reviewer.includes('Approve reviewed draft'));
+
+  const approved = renderToStaticMarkup(<AgentRunCard run={{...baseRun,status:'approved',reviewed_at:'2026-11-07T12:02:00.000Z',permissions:{submit:false,approve:false,reject:false,export:true}}} agentName="Marketing Promotions" busy={false} onReview={()=>{}} onExport={()=>{}}/>);
+  check('approved draft exposes only the integrity download action', approved.includes('Download integrity package') && !approved.includes('Submit for independent review') && !approved.includes('Approve reviewed draft'));
+  check('export copy states that no external delivery occurs', approved.includes('does not send, publish, contact a retailer, or write to Drive'));
 }
 
 console.log(failures === 0

@@ -1,0 +1,349 @@
+{
+ "name": "Prism Weave",
+ "version": "1.0",
+ "status": "PRELIMINARY - pending full release",
+ "tile": {
+  "width": 1080,
+  "height": 624,
+  "lattice": "hexagonal, 6 orbs, 360px apart, rows offset by half a spacing",
+  "radius": 260,
+  "hot_spot_offset": 0.26,
+  "stop_positions": [
+   0.0,
+   0.125,
+   0.25,
+   0.375,
+   0.5,
+   0.625,
+   0.75,
+   0.875,
+   1.0
+  ],
+  "ramp_spread": 0.8,
+  "alpha_profile": "peak x (1 - smoothstep(position))"
+ },
+ "ground": {
+  "day": "#FFFFFF",
+  "night": "#101327"
+ },
+ "alpha": {
+  "night": 0.88,
+  "day": 0.95
+ },
+ "blend": {
+  "day": "multiply",
+  "night": "screen"
+ },
+ "assignment": [
+  {
+   "point": [
+    180,
+    156
+   ],
+   "vertical": "skin",
+   "angle": 135,
+   "night": [
+    "#19AFBE",
+    "#1E88F8",
+    "#200068"
+   ],
+   "day": [
+    "#BEE4E9",
+    "#C3DEFF",
+    "#D7D9F6"
+   ],
+   "day_core": [
+    "#7CC9D3",
+    "#8ABEFF",
+    "#B5B8D6"
+   ],
+   "day_source": "raw ramp tinted to the Aura lightness and chroma, resting and current-page"
+  },
+  {
+   "point": [
+    540,
+    156
+   ],
+   "vertical": "makeup",
+   "angle": 108,
+   "night": [
+    "#C844C8",
+    "#F27A6B",
+    "#F27A6B"
+   ],
+   "day": [
+    "#FFD3D9",
+    "#FFC8B0",
+    "#FFE0A8"
+   ],
+   "day_core": [
+    "#FF9CAB",
+    "#FF9E78",
+    "#FFC76B"
+   ],
+   "day_source": "Shop family, resting and current-page ramps"
+  },
+  {
+   "point": [
+    900,
+    156
+   ],
+   "vertical": "style",
+   "angle": 146,
+   "night": [
+    "#9040F8",
+    "#C844C8",
+    "#200068"
+   ],
+   "day": [
+    "#E0D3FF",
+    "#F3CEF1",
+    "#D7D9F6"
+   ],
+   "day_core": [
+    "#C4A9FF",
+    "#E59EE3",
+    "#B5B8D6"
+   ],
+   "day_source": "raw ramp tinted to the Aura lightness and chroma, resting and current-page"
+  },
+  {
+   "point": [
+    360,
+    468
+   ],
+   "vertical": "wardrobe",
+   "angle": 120,
+   "night": [
+    "#1E88F8",
+    "#9040F8",
+    "#C844C8"
+   ],
+   "day": [
+    "#C9DCFF",
+    "#D9CCFF",
+    "#F0CCF2"
+   ],
+   "day_core": [
+    "#8FB5FF",
+    "#B49DFF",
+    "#E48FDD"
+   ],
+   "day_source": "Applications family, resting and current-page ramps"
+  },
+  {
+   "point": [
+    720,
+    468
+   ],
+   "vertical": "hair",
+   "angle": 162,
+   "night": [
+    "#19AFBE",
+    "#19AFBE",
+    "#1E88F8"
+   ],
+   "day": [
+    "#BDF0E0",
+    "#BFE7F5",
+    "#C9D8FF"
+   ],
+   "day_core": [
+    "#6FD9B8",
+    "#6FC6E8",
+    "#8FA9FF"
+   ],
+   "day_source": "Learn family, resting and current-page ramps"
+  },
+  {
+   "point": [
+    0,
+    468
+   ],
+   "vertical": "color",
+   "angle": 94,
+   "night": [
+    "#F27A6B",
+    "#F27A6B",
+    "#C844C8"
+   ],
+   "day": [
+    "#FFE3A3",
+    "#FFD0A0",
+    "#F7B9C8"
+   ],
+   "day_core": [
+    "#FFC94D",
+    "#FFA85C",
+    "#F27A9A"
+   ],
+   "day_source": "Retail Partners family, resting and current-page ramps"
+  }
+ ],
+ "touching_pairs": [
+  [
+   "skin",
+   "makeup",
+   1
+  ],
+  [
+   "skin",
+   "style",
+   1
+  ],
+  [
+   "skin",
+   "wardrobe",
+   2
+  ],
+  [
+   "skin",
+   "color",
+   2
+  ],
+  [
+   "makeup",
+   "style",
+   1
+  ],
+  [
+   "makeup",
+   "wardrobe",
+   2
+  ],
+  [
+   "makeup",
+   "hair",
+   2
+  ],
+  [
+   "style",
+   "hair",
+   2
+  ],
+  [
+   "style",
+   "color",
+   2
+  ],
+  [
+   "wardrobe",
+   "hair",
+   1
+  ],
+  [
+   "wardrobe",
+   "color",
+   1
+  ],
+  [
+   "hair",
+   "color",
+   1
+  ]
+ ],
+ "modes": {
+  "night": {
+   "layers": 18,
+   "full": {
+    "strength": 1.0,
+    "min_contrast_text": 2.78,
+    "min_contrast_secondary": 1.67
+   },
+   "quiet": {
+    "strength": 0.44,
+    "min_contrast_text": 7.88,
+    "min_contrast_secondary": 4.72
+   },
+   "text_colours": {
+    "text": "#F3F4FA",
+    "sub": "#B9BFD3"
+   },
+   "seam_mean_abs_diff_wrap_vs_neighbour_px": {
+    "horizontal": [
+     0.42,
+     0.42
+    ],
+    "vertical": [
+     0.47,
+     0.47
+    ]
+   },
+   "cross_check": {
+    "css_vs_oracle_mean_abs_8bit": 0.48,
+    "css_vs_oracle_max": 3,
+    "svg_vs_oracle_mean_abs_8bit": 0.63,
+    "svg_vs_oracle_max": 4
+   }
+  },
+  "day": {
+   "layers": 18,
+   "full": {
+    "strength": 1.0,
+    "min_contrast_text": 8.92,
+    "min_contrast_secondary": 3.59
+   },
+   "quiet": {
+    "strength": 0.64,
+    "min_contrast_text": 11.56,
+    "min_contrast_secondary": 4.65
+   },
+   "text_colours": {
+    "text": "#15172D",
+    "sub": "#4E5872"
+   },
+   "seam_mean_abs_diff_wrap_vs_neighbour_px": {
+    "horizontal": [
+     0.2,
+     0.2
+    ],
+    "vertical": [
+     0.17,
+     0.17
+    ]
+   },
+   "cross_check": {
+    "css_vs_oracle_mean_abs_8bit": 0.5,
+    "css_vs_oracle_max": 2,
+    "svg_vs_oracle_mean_abs_8bit": 0.6,
+    "svg_vs_oracle_max": 4
+   }
+  }
+ },
+ "selection": {
+  "rule": "look-alike verticals sit on lattice points that never touch; every touching pair must look different (OKLab distance between body colours relative to chroma, Night and Day together; 1.0 is about a 60 degree hue gap); maximise the worst touching pair, then the weighted mean",
+  "worst_touching_pair": 0.9092,
+  "weighted_mean": 1.5589,
+  "touching_pairs_checked": 12,
+  "never_touch": [
+   [
+    "skin",
+    "hair"
+   ],
+   [
+    "makeup",
+    "color"
+   ],
+   [
+    "style",
+    "wardrobe"
+   ]
+  ]
+ },
+ "hero_contrast": {
+  "night": {
+   "h1": 5.98,
+   "sub": 8.28,
+   "url": 8.03,
+   "req": 6.12,
+   "note": "worst pixel inside each text box, rendered pattern + scrim without text; headline uses the worst gradient stop"
+  },
+  "day": {
+   "h1": 3.83,
+   "sub": 5.34,
+   "url": 4.86,
+   "req": 6.25,
+   "note": "worst pixel inside each text box, rendered pattern + scrim without text; headline uses the worst gradient stop"
+  }
+ }
+}

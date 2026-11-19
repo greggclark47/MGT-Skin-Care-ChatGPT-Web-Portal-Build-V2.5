@@ -1,0 +1,32 @@
+{
+  "version": "1.0",
+  "candidate_commit": "6ed0b09678e85262c15f8bab7aae7dc3cc0d5807",
+  "bundle_checksum": "sha256:7f6e092578792f957e0ba3935dc8d65254a914190b528fbebec378bc1a117249",
+  "production_decision_review_checksum": "sha256:f468ba271abaa8e3d84a00c88c89a104d55a151b745a58b5d683b1bee399bae9",
+  "generated_at": "2026-10-06T16:48:13.090Z",
+  "status": "pending_production_decision",
+  "entries": [],
+  "errors": [
+    "launch_owner record is required",
+    "launch_window record is required",
+    "change_freeze record is required",
+    "deployment_command record is required",
+    "target_confirmation record is required",
+    "secret_injection record is required",
+    "migration_execution record is required",
+    "artifact_digests record is required",
+    "health_smoke_test record is required",
+    "customer_smoke_test record is required",
+    "support_smoke_test record is required",
+    "accessibility_smoke_test record is required",
+    "customer_communication record is required",
+    "monitoring_activation record is required",
+    "rollback_activation record is required",
+    "incident_channel record is required",
+    "data_protection record is required",
+    "billing_scope record is required",
+    "ai_scope record is required",
+    "launch_hold_attestation record is required"
+  ],
+  "production_launch_readiness_checksum": "sha256:4d3d0cee17a95b8fa6f1f7acba56481d87ee2f0020c9673d5d05c9646dba7faa"
+}

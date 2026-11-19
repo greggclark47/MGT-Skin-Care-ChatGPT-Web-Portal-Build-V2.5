@@ -2,4 +2,6 @@ packages:
   - "apps/*"
   - "packages/*"
 allowBuilds:
+  dtrace-provider: false
   esbuild: true
+  protobufjs: false

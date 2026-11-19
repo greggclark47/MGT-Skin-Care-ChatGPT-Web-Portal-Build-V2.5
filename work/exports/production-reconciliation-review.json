@@ -1,0 +1,27 @@
+{
+  "version": "1.0",
+  "candidate_commit": "6ed0b09678e85262c15f8bab7aae7dc3cc0d5807",
+  "bundle_checksum": "sha256:7f6e092578792f957e0ba3935dc8d65254a914190b528fbebec378bc1a117249",
+  "production_closeout_checksum": "sha256:96e334c9e23f0eb9eba94b4f4ed19689f9ef94db75fa66385b691e1bc77e99d1",
+  "generated_at": "2026-10-06T16:48:13.789Z",
+  "status": "pending_production_closeout_review",
+  "entries": [],
+  "errors": [
+    "github_commit_receipt record is required",
+    "google_drive_receipt record is required",
+    "candidate_bundle_match record is required",
+    "staging_candidate_match record is required",
+    "production_target_match record is required",
+    "image_digest_match record is required",
+    "database_target_match record is required",
+    "owner_identity_match record is required",
+    "support_owner_match record is required",
+    "accessibility_report_match record is required",
+    "backup_evidence_match record is required",
+    "billing_evidence_match record is required",
+    "monitoring_evidence_match record is required",
+    "rollback_evidence_match record is required",
+    "final_reconciliation_decision record is required"
+  ],
+  "production_reconciliation_checksum": "sha256:45492296fafc365e5df6bf464251e8ca35e2c66e15f8d33b98c0e9c77d7b263c"
+}

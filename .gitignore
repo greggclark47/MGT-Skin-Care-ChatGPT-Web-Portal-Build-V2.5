@@ -9,6 +9,9 @@ dist/
 *.log
 .DS_Store
 work/data/
+work/verification/
+work/checkpoints/
+work/staging/
 *.sqlite
 *.sqlite-shm
 *.sqlite-wal
@@ -18,4 +21,16 @@ tmp/
 output/
 .pnpm-store/
 *.zip
+MGT-Skin-Care-v2-Production-Status-2026-09-09.*
+MGT-Skin-Care-v2-phase-3-backup-manifest-2026-09-12.md
 *.tsbuildinfo
+
+# Local infrastructure state and operator-supplied values.
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+
+# One-time local backend migration overrides are operator-specific.
+infra/gcp/bootstrap/backend_override.tf

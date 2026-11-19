@@ -1,8 +1,8 @@
 import type { SkinProfileInput, Routine, ProfileVector, AvoidFlags } from '@mgt/domain';
 
 // One API client shared by web and mobile (Section C.1: "no separate business logic per
-// platform"). Every call goes to the Express API — the Next.js app never talks to Stripe,
-// RevenueCat or an AI provider directly (Section C.1's first rule).
+// platform"). Every call goes to the Express API — the clients never call external
+// billing or analysis services directly (Section C.1's first rule).
 
 export interface SkinMatchResult {
   session_id: string;

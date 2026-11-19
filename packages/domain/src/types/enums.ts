@@ -45,5 +45,6 @@ export type UsageFrequency = typeof USAGE_FREQUENCIES[number];
 export const PRODUCT_STATUSES = ['draft', 'active', 'inactive', 'discontinued'] as const;
 export type ProductStatus = typeof PRODUCT_STATUSES[number];
 
-export const BILLING_PROVIDERS = ['stripe', 'apple', 'google'] as const;
-export type BillingProvider = typeof BILLING_PROVIDERS[number];
+// Billing source values are persisted on the server and must not become a
+// client-bundle allowlist. The server owns the concrete source vocabulary.
+export type BillingProvider = string;

@@ -1,0 +1,43 @@
+timeout: 2700s
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+  machineType: E2_HIGHCPU_8
+
+substitutions:
+  _REGION: us-east1
+  _REPOSITORY: team47-production-platform
+  _CANDIDATE: required
+  _NODE_IMAGE: required
+
+steps:
+  - name: gcr.io/cloud-builders/docker
+    id: build-api
+    args:
+      - build
+      - --pull
+      - --build-arg
+      - NODE_IMAGE=${_NODE_IMAGE}
+      - --file
+      - infra/portal/Dockerfile.api
+      - --tag
+      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/api:${_CANDIDATE}
+      - .
+  - name: gcr.io/cloud-builders/docker
+    id: build-web
+    args:
+      - build
+      - --pull
+      - --build-arg
+      - NODE_IMAGE=${_NODE_IMAGE}
+      - --build-arg
+      - PORTAL_API_ORIGIN=http://127.0.0.1:3100
+      - --file
+      - infra/portal/Dockerfile.web
+      - --tag
+      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/web:${_CANDIDATE}
+      - .
+
+images:
+  - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/api:${_CANDIDATE}
+  - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/web:${_CANDIDATE}

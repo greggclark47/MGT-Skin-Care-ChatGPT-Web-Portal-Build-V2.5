@@ -6,11 +6,13 @@ import { color, radius, space, font } from './theme-tokens';
 // output; `blurb` is the ONLY AI-generated field and is rendered as supporting copy, never
 // as the reason itself. That separation is the visible half of the explainability claim in
 // Section A.3 — if the AI is unavailable, this component still explains the match fully.
-export function ProductExplanationCard({ explanation, productName }: { explanation: ProductExplanation; productName: string }) {
+type ProductFeedback='comfortable'|'not_right'|'irritation';
+type PendingProductFeedback={productId:string;feedback:ProductFeedback}|null;
+export function ProductExplanationCard({ explanation, productName, onFeedback, busyFeedback }: { explanation: ProductExplanation; productName: string; onFeedback?: (productId:string,feedback:ProductFeedback)=>void; busyFeedback?:PendingProductFeedback }) {
   const { match_score, why_matched, ingredients, sensitivity_compatibility, routine_placement, cautions, blurb } = explanation;
 
   const compatibilityStyle = {
-    safe:     { label: 'Suitable for your sensitivity', bg: color.accentSubtle, fg: color.success },
+    safe:     { label: 'Within your saved sensitivity filters', bg: color.accentSubtle, fg: color.success },
     caution:  { label: 'Introduce slowly',              bg: color.cautionSubtle, fg: color.caution },
     excluded: { label: 'Not recommended for you',       bg: 'var(--danger-bg)',           fg: color.danger },
   }[sensitivity_compatibility];
@@ -58,6 +60,8 @@ export function ProductExplanationCard({ explanation, productName }: { explanati
         </ul>
       )}
 
+      {onFeedback&&<div style={{marginTop:space.md,paddingTop:space.md,borderTop:`1px solid ${color.border}`}}><strong style={{display:'block',fontSize:font.size.sm,color:color.text}}>How did this product feel for you?</strong><p style={{margin:`${space.xs}px 0 ${space.sm}px`,fontSize:font.size.xs,color:color.textMuted}}>“Not right” or “Irritated” removes it from future routine matches. You can later review or remove that saved exclusion. Irritation also makes your saved sensitivity setting more cautious.</p><div role="group" aria-label={`Feedback for ${productName}`} style={{display:'flex',gap:space.sm,flexWrap:'wrap'}}>{([['comfortable','Comfortable'],['not_right','Not right'],['irritation','Irritated']] as [ProductFeedback,string][]).map(([feedback,label])=><button key={feedback} type="button" className="text-button" disabled={!!busyFeedback} onClick={()=>onFeedback(explanation.product_id,feedback)}>{busyFeedback?.productId===explanation.product_id&&busyFeedback.feedback===feedback?'Saving…':label}</button>)}</div></div>}
+
       {/* AI-generated supporting copy, explicitly labelled. Absent when generation failed or
           has not completed — the card must never depend on it. */}
       {blurb && (
@@ -81,6 +85,7 @@ export function humanizeReason(code: string): string {
     'fits:skin_type': 'Suits your skin type',
     'fits:budget': 'Within your budget range',
     'brand:preferred': 'From a brand you already like',
+    'eligible:safety_filters': 'Passed the reviewed ingredient and sensitivity filters',
   };
   return map[code] ?? code.replace(/[:_]/g, ' ');
 }

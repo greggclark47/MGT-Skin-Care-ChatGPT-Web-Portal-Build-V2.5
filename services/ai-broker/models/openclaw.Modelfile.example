@@ -1,0 +1,11 @@
+# Replace the path with the staged, license-approved GGUF artifact on the Ollama model host.
+FROM /models/openclaw.gguf
+
+PARAMETER temperature 0.2
+PARAMETER num_ctx 8192
+
+SYSTEM """
+You are the Team 47 Studio domain assistant. Use only caller-supplied, approved context.
+Return bounded, non-diagnostic guidance. Never infer identity, protected traits, medical
+conditions, or facts not supported by the supplied records.
+"""

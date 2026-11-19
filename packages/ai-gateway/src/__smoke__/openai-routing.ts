@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { OpenAiAdapter, OpenClawAdapter, type HttpPost } from '../adapters/http-adapters';
+import { OllamaCloudAdapter, OpenAiAdapter, OpenClawAdapter, type HttpPost } from '../adapters/http-adapters';
 import { getTaskConfig } from '../task-registry';
 import { AiGateway } from '../router';
 import { InMemoryBudgetStore } from '../budget';
@@ -11,6 +11,25 @@ async function main() {
   assert.equal(premium.reasoning_effort, 'medium');
   assert.equal(deep.model, 'gpt-6-astra');
   assert.equal(deep.reasoning_effort, 'high');
+  const finalFallback = getTaskConfig('product_why').fallbacks.at(-1);
+  assert.equal(finalFallback?.model, 'gpt-5');
+  assert.equal(finalFallback?.provider, 'openai');
+  const ollamaCloudFallback = getTaskConfig('product_why').fallbacks.at(-2);
+  assert.equal(ollamaCloudFallback?.model, 'deepseek-v4.1-flash');
+  assert.equal(ollamaCloudFallback?.provider, 'ollama_cloud');
+
+  let cloudSeen: {url: string; body: any; headers: Record<string, string>} | undefined;
+  const cloud = new OllamaCloudAdapter('cloud-test-key', 'https://ollama.com', async (url, headers, body) => {
+    cloudSeen = {url, headers, body};
+    return {model: 'deepseek-v4.1-flash', message: {content: 'cloud answer'}, prompt_eval_count: 24, eval_count: 9};
+  });
+  const cloudResponse = await cloud.complete(ollamaCloudFallback!, 'cloud system', 'cloud user', new AbortController().signal);
+  assert.equal(cloudSeen?.url, 'https://ollama.com/api/chat');
+  assert.equal(cloudSeen?.headers.authorization, 'Bearer cloud-test-key');
+  assert.equal(cloudSeen?.body.stream, false);
+  assert.equal(cloudResponse.provider, 'ollama_cloud');
+  assert.equal(cloudResponse.model, 'deepseek-v4.1-flash');
+  assert.equal(cloudResponse.text, 'cloud answer');
 
   let seen: {url: string; body: any; headers: Record<string, string>} | undefined;
   const post: HttpPost = async (url, headers, body) => {
@@ -35,9 +54,20 @@ async function main() {
   const local = new OpenClawAdapter('http://127.0.0.1:11434/v1', 'ollama', async (url) => {
     localUrl = url;
     return {choices: [{message: {content: 'local answer'}}], usage: {prompt_tokens: 10, completion_tokens: 4}};
-  });
-  assert.equal((await local.complete(getTaskConfig('product_why').fallbacks[2], 's', 'u', new AbortController().signal)).text, 'local answer');
+  }, 'openai-completions');
+  assert.equal((await local.complete(getTaskConfig('product_why').fallbacks[1], 's', 'u', new AbortController().signal)).text, 'local answer');
   assert.equal(localUrl, 'http://127.0.0.1:11434/v1/chat/completions');
+
+  let nativeUrl = '';
+  const native = new OpenClawAdapter('http://ollama:11434', 'ollama', async (url, headers, body) => {
+    nativeUrl = url;
+    assert.deepEqual(headers, {});
+    assert.equal((body as {stream?: boolean}).stream, false);
+    return {message: {content: 'native local answer'}, prompt_eval_count: 8, eval_count: 3};
+  });
+  const nativeResponse = await native.complete(getTaskConfig('product_why').fallbacks[1], 's', 'u', new AbortController().signal);
+  assert.equal(nativeResponse.text, 'native local answer');
+  assert.equal(nativeUrl, 'http://ollama:11434/api/chat');
 
   let calls = 0;
   const gateway = new AiGateway({adapters: {openai: {

@@ -1,28 +1,34 @@
 // Design system tokens (blueprint Section G.5). ONE token file consumed by web and mobile —
 // Section 0.3 conflict C10 found five competing accent colours across the Sept 3-6 lineage
-// (pink #E75480, #FF69B4, rose, violet #7C3AED, indigo #6366f1). C10 is decided: violet.
+// (pink #E75480, #FF69B4, rose, violet #7C3AED, indigo #6366f1). C10 now follows
+// the Team 47 Studio spectrum, with violet as the primary action color.
 // Anything that needs a colour imports it from here; no literal hex in a component.
 
 export const color = {
-  // Primary accent — locked decision C10 (2026-09-05).
-  accent:        '#7C3AED',
-  accentHover:   '#6D28D9',
-  accentSubtle:  '#F5F3FF',
-  accentBorder:  '#DDD6FE',
+  // Primary accent and supporting brand colors from logo Variation 07.
+  accent:        '#6631DC',
+  accentHover:   '#5124C0',
+  accentSubtle:  '#EEF5FF',
+  accentBorder:  '#A7DCE8',
+  brandCyan:     '#05C8DB',
+  brandBlue:     '#218AF7',
+  brandViolet:   '#6631DC',
+  brandLime:     '#81DB31',
+  brandAmber:    '#FFB42C',
 
-  text:          '#18181B',
-  textMuted:     '#52525B',
-  textFaint:     '#A1A1AA',
-  bg:            '#FFFFFF',
-  bgSubtle:      '#FAFAFA',
-  border:        '#E4E4E7',
+  text:          '#17163B',
+  textMuted:     '#52617A',
+  textFaint:     '#7A879D',
+  bg:            '#F7FAFF',
+  bgSubtle:      '#EAF3FF',
+  border:        '#C6D2E5',
 
   // Semantic. `caution` is deliberately amber, not red: an ingredient caution in the
   // explanation contract is guidance, not a medical warning, and red reads as alarm —
   // exactly the diagnostic tone the compliance position (Section A.3) avoids.
-  success:       '#059669',
-  caution:       '#D97706',
-  cautionSubtle: '#FFFBEB',
+  success:       '#397A1E',
+  caution:       '#A85C00',
+  cautionSubtle: '#FFF2D5',
   danger:        '#DC2626',
 } as const;
 

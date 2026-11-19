@@ -1,0 +1,37 @@
+swagger: "2.0"
+info:
+  title: Team 47 Studio AI Broker
+  version: "1.0"
+schemes: [https]
+produces: [application/json]
+consumes: [application/json]
+securityDefinitions:
+  team47_jwt:
+    type: oauth2
+    flow: implicit
+    authorizationUrl: "${client_jwt_issuer}/authorize"
+    x-google-issuer: "${client_jwt_issuer}"
+    x-google-jwks_uri: "${client_jwks_uri}"
+    x-google-audiences: "${client_jwt_audience}"
+security:
+  - team47_jwt: []
+paths:
+  /healthz:
+    get:
+      operationId: health
+      security: []
+      x-google-backend:
+        address: ${broker_url}
+        path_translation: APPEND_PATH_TO_ADDRESS
+      responses:
+        "200": { description: Healthy }
+  /v1/inference:
+    post:
+      operationId: inference
+      x-google-backend:
+        address: ${broker_url}
+        path_translation: APPEND_PATH_TO_ADDRESS
+        deadline: 60.0
+      responses:
+        "200": { description: Routed inference result }
+        "422": { description: Policy or request validation failure }

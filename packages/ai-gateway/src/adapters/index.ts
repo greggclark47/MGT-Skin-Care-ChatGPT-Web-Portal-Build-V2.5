@@ -1,11 +1,11 @@
-import type { ModelConfig, ProviderName, ProviderResponse } from '../types';
+import type { GatewayImageInput, ModelConfig, ProviderName, ProviderResponse } from '../types';
 
 // One adapter interface shared by local and hosted implementations (Section 0.2 row 1: keep Phase 1's adapter
 // abstraction — it was the only one of the three routers that had it). Adding a provider is
 // a new file here plus a config row; it is never a change to the router or to any caller.
 export interface ProviderAdapter {
   readonly name: ProviderName;
-  complete(config: ModelConfig, systemPrompt: string, userPrompt: string, signal: AbortSignal): Promise<ProviderResponse>;
+  complete(config: ModelConfig, systemPrompt: string, userPrompt: string, signal: AbortSignal, imageInputs?: readonly GatewayImageInput[]): Promise<ProviderResponse>;
 }
 
 // Per-million-token pricing, in CENTS, used for cost telemetry and budget enforcement.
@@ -26,12 +26,29 @@ export interface ModelPrice {
    * routing production traffic to it is making a decision nobody took deliberately.
    */
   legacy?: true;
+  /** The provider has announced retirement, but the model can still be called until removal. */
+  deprecated?: true;
+  /** Provider-published removal date for an explicitly temporary route. */
+  removal_on?: string;
 }
 
 const OPENAI_PRICING = 'https://developers.openai.com/api/docs/models';
 
 export const PRICING_PER_MTOK: Record<string, ModelPrice> = {
+  'deepseek-v4.1-flash': {
+    input_cents: 30, output_cents: 120,
+    source: 'https://ollama.com/library/deepseek-v4.1-flash',
+    verified_on: '2026-11-06',
+  },
+  'gpt-5': {
+    input_cents: 125, output_cents: 1000,
+    source: 'https://developers.openai.com/api/docs/models/gpt-5',
+    verified_on: '2026-11-06', deprecated: true, removal_on: '2026-12-11',
+  },
   'gpt-6-astra': { input_cents: 1000, output_cents: 5000, source: OPENAI_PRICING, verified_on: '2026-09-12' },
+  // Qualification candidates only; the active task registry is unchanged.
+  'gpt-6.1-sol': { input_cents: 200, output_cents: 1000, source: 'https://developers.openai.com/api/docs/pricing', verified_on: '2026-10-25' },
+  'gpt-6-luna': { input_cents: 10, output_cents: 50, source: 'https://developers.openai.com/api/docs/pricing', verified_on: '2026-10-25' },
   'gpt-5.6-sol': { input_cents: 400, output_cents: 2000, source: OPENAI_PRICING, verified_on: '2026-09-12' },
   'gpt-5.6-terra': { input_cents: 200, output_cents: 1200, source: OPENAI_PRICING, verified_on: '2026-09-12' },
   'gpt-5.6-luna': { input_cents: 20, output_cents: 120, source: OPENAI_PRICING, verified_on: '2026-09-12' },
@@ -39,6 +56,7 @@ export const PRICING_PER_MTOK: Record<string, ModelPrice> = {
   // so the router can still compare local utilization with hosted escalation spend.
   'llama3.2:3b': { input_cents: 0, output_cents: 0, source: 'self-hosted Ollama', verified_on: '2026-09-12' },
   'deepseek-r1:8b': { input_cents: 0, output_cents: 0, source: 'self-hosted Ollama', verified_on: '2026-09-12' },
+  'qwen3.5:4b': { input_cents: 0, output_cents: 0, source: 'self-hosted Ollama', verified_on: '2026-11-06' },
   'llava:latest': { input_cents: 0, output_cents: 0, source: 'self-hosted Ollama', verified_on: '2026-09-12' },
   'nomic-embed-text': { input_cents: 0, output_cents: 0, source: 'self-hosted Ollama', verified_on: '2026-09-12' },
 

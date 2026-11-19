@@ -1,7 +1,7 @@
 // Core AI Gateway types (blueprint Section C.6 / E.2-E.5).
 // The Gateway is an in-process LIBRARY, not a microservice — the API and workers import it.
 
-export type ProviderName = 'ollama' | 'openclaw' | 'openai' | 'openai_compatible';
+export type ProviderName = 'ollama' | 'ollama_cloud' | 'openclaw' | 'openai' | 'openai_compatible';
 
 // Fixed task registry (Section E.3). Callers name a task_type; classification is NEVER an
 // LLM call and never a heuristic on message content — that was the Phase 4 mistake the
@@ -20,6 +20,16 @@ export type TaskType =
   | 'premium_consultation'
   | 'routine_optimization_deep'
   | 'operator_analysis'
+  | 'anti_aging_explanation'
+  | 'anti_aging_search'
+  | 'anti_aging_comparison'
+  | 'anti_aging_provider_summary'
+  | 'complexion_profile_summary'
+  | 'photo_journal_cosmetic_summary'
+  | 'style_color_match'
+  | 'social_engagement_draft'
+  | 'marketing_promotion_draft'
+  | 'retailer_outreach_draft'
   | 'embed';
 
 export type BudgetClass = 'tier1_copy' | 'tier2_vision' | 'tier3_premium' | 'embedding';
@@ -52,6 +62,13 @@ export interface JsonSchema {
   properties: Record<string, { type: 'string' | 'number' | 'boolean' | 'array' | 'object' }>;
 }
 
+// Images are an opt-in, caller-owned input. The router verifies that an image task is
+// local-only before an adapter sees the bytes.
+export interface GatewayImageInput {
+  mime_type: 'image/jpeg';
+  base64: string;
+}
+
 export interface GatewayRequest {
   task_type: TaskType;
   user_id: string | null;          // null for pre-account Skin Match sessions
@@ -61,6 +78,7 @@ export interface GatewayRequest {
   has_premium_entitlement?: boolean;
   has_operator_authorization?: boolean;
   metadata?: Record<string, string>;
+  image_inputs?: GatewayImageInput[];
   // Optional caller-owned validation for contracts that depend on retrieved records, such as
   // exact reviewed excerpts. A failure moves the request to the next configured candidate.
   output_validator?: (text: string) => { ok: boolean; reason?: string };

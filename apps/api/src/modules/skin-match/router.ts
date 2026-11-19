@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import {
-  classify, scoreCandidates, buildRoutine,
+  classify, scoreCandidates, buildRoutine, buildMatchIntelligence,
   type SkinProfileInput, type CandidateProduct, type RoutineSlot, type ScoreResult, type ExclusionResult,
 } from '@mgt/domain';
 import { ApiError } from '../../middleware/error';
@@ -40,6 +40,14 @@ export function skinMatchRouter(catalog: CatalogStore) {
       }
 
       const routine = buildRoutine(slotResults, ingredientMap);
+      const matchIntelligence = buildMatchIntelligence({
+        profile_input: input,
+        profile_vector: classification.profile_vector,
+        routine,
+        slot_results: slotResults,
+        products: Object.values(candidatesBySlot).flat(),
+        safety_matrix_version: classification.rules_version,
+      });
       saveSession(sessionId, { classification, routine, slotResults: slotResults as Map<RoutineSlot, ScoreResult[]> });
 
       res.json({
@@ -48,6 +56,7 @@ export function skinMatchRouter(catalog: CatalogStore) {
         avoid_flags: classification.avoid_flags,
         rules_version: classification.rules_version,
         routine,
+        match_intelligence: matchIntelligence,
         // narrative/blurb fields are filled asynchronously by the ai-jobs worker per Section C.1
         // and delivered via a follow-up GET or a push once ready — never generated inline here.
       });

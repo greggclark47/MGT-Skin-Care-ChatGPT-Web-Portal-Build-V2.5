@@ -28,6 +28,32 @@ export PGHOST PGPORT PGUSER PGDATABASE PGOPTIONS
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 MIGRATIONS="$ROOT/infra/db/migrations"
+PORTAL_MIGRATIONS="$ROOT/infra/portal/migrations"
+
+apply_migrations() {
+  for f in $(ls "$MIGRATIONS"/*.sql | sort); do
+    name=$(basename "$f")
+    if out=$(psql -v ON_ERROR_STOP=1 -q -f "$f" 2>&1 | grep -v NOTICE); [ -n "$out" ]; then
+      echo "    FAIL  $name"
+      echo "$out" | head -10
+      exit 1
+    fi
+    echo "    ok    $name"
+  done
+  psql -v ON_ERROR_STOP=1 -q -c "create table if not exists portal_schema_migrations (id text primary key, applied_at timestamptz not null default now())" >/dev/null
+  for f in $(ls "$PORTAL_MIGRATIONS"/*.sql | sort); do
+    name=$(basename "$f")
+    if out=$(psql -v ON_ERROR_STOP=1 -q -f "$f" 2>&1 | grep -v NOTICE); [ -n "$out" ]; then
+      echo "    FAIL  portal/$name"
+      echo "$out" | head -10
+      exit 1
+    fi
+    psql -v ON_ERROR_STOP=1 -q -c \
+      "insert into portal_schema_migrations(id) values ('$name') on conflict (id) do nothing" \
+      >/dev/null
+    echo "    ok    portal/$name"
+  done
+}
 
 echo "==> Resetting database"
 psql -v ON_ERROR_STOP=1 -q -c "
@@ -39,15 +65,7 @@ psql -v ON_ERROR_STOP=1 -q -c "
 " >/dev/null
 
 echo "==> Applying migrations in numeric order"
-for f in $(ls "$MIGRATIONS"/*.sql | sort); do
-  name=$(basename "$f")
-  if out=$(psql -v ON_ERROR_STOP=1 -q -f "$f" 2>&1 | grep -v NOTICE); [ -n "$out" ]; then
-    echo "    FAIL  $name"
-    echo "$out" | head -10
-    exit 1
-  fi
-  echo "    ok    $name"
-done
+apply_migrations
 
 if [ "${1:-}" = "--reset-only" ]; then
   echo "==> Reset complete (--reset-only)"
@@ -68,13 +86,16 @@ for t in persistence dual-backend admin-persistence ingredient-rules-persistence
     drop schema if exists public cascade; drop schema if exists knowledge cascade;
     drop schema if exists analytics cascade; drop schema if exists auth cascade;
     create schema public;" >/dev/null
-  for f in $(ls "$MIGRATIONS"/*.sql | sort); do
-    psql -v ON_ERROR_STOP=1 -q -f "$f" >/dev/null 2>&1
-  done
+  apply_migrations >/dev/null
   if ! node "$API/dist/__smoke__/$t.js"; then
     FAILED=1
   fi
 done
+
+echo ""
+echo "==> rls-isolation"
+psql -v ON_ERROR_STOP=1 -q -f "$ROOT/infra/db/rls-isolation.sql" >/dev/null
+echo "PASS authenticated owner, cross-account, anonymous and service-only RLS isolation"
 
 echo ""
 if [ $FAILED -eq 0 ]; then

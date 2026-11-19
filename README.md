@@ -1,11 +1,20 @@
-# MGT Skin Care v2
+# Team 47 Studio platform
+
+Primary production URL: `https://team47studio.com`
+
+This repository is the continuing code history of the MGT Skin Care v2 build. The public
+web portal and application name is now **Team 47 Studio**; internal `@mgt/*` package names
+remain temporarily stable to avoid an unrelated dependency and migration risk during the
+production-readiness phase.
+
+Current production gap and end-to-end flow analysis: [PRODUCTION-GAP-AND-FLOW-ANALYSIS-2026-10-07.md](PRODUCTION-GAP-AND-FLOW-ANALYSIS-2026-10-07.md).
 
 Consumer skincare application (web + iOS + Android) — personalized routine matching,
-explainable AI-assisted recommendations, and multi-brand commerce with subscription
-replenishment.
+explainable AI-assisted guidance, external-retailer discovery, and an optional Premium
+portal membership. Team 47 Studio product checkout and vendor payouts are outside the initial scope.
 
 ## Source of truth
-`claude/skincare-master-blueprint-v2.md` (v2.0.0) is the canonical build specification:
+`claude/skincare-master-blueprint-v2.md` (v2.0.2) is the canonical build specification:
 architecture, database schema, API spec, event taxonomy, AI prompt architecture,
 financial model, and the six-month build order (SC-P0–SC-P6). Read it before making
 structural changes.
@@ -25,5 +34,9 @@ re-run it whenever a pricing or cost assumption changes.
 - `docs` — supplementary docs
 
 ## Status
-SC-P1 scaffold. See `claude/skincare-master-blueprint-v2.md` Section Q for the full
-build order and Section H for phase objectives/gates.
+Repository-controlled production requirements have a passing local checkpoint. Production
+remains gated on approved configuration, live target-system evidence, the remaining ingredient
+matrix decision, named owners, and release sign-off. The release export manifest prepares the
+same checksum-bound handoff for GitHub and Google Drive while keeping destination completion
+explicit. Use `MGT-V2-BLUEPRINT-RECONCILIATION.md` for the current boundary and
+`claude/skincare-master-blueprint-v2.md` for original product intent.

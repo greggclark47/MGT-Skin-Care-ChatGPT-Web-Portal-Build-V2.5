@@ -1,0 +1,32 @@
+{
+  "version": "1.0",
+  "candidate_commit": "6ed0b09678e85262c15f8bab7aae7dc3cc0d5807",
+  "bundle_checksum": "sha256:7f6e092578792f957e0ba3935dc8d65254a914190b528fbebec378bc1a117249",
+  "execution_intake_review_checksum": "sha256:bcf3488fd6218b9bc79d464f6240d30c5d82c514129c108cc4de580b06faf571",
+  "generated_at": "2026-10-06T16:48:12.746Z",
+  "status": "pending_external_execution_intake",
+  "entries": [],
+  "errors": [
+    "observed_receipt record is required",
+    "candidate_binding record is required",
+    "bundle_binding record is required",
+    "operator_binding record is required",
+    "start_timestamp record is required",
+    "end_timestamp record is required",
+    "target_binding record is required",
+    "action_summary record is required",
+    "artifact_digest_check record is required",
+    "health_result_check record is required",
+    "database_result_check record is required",
+    "traffic_result_check record is required",
+    "rollback_result_check record is required",
+    "support_result_check record is required",
+    "incident_result_check record is required",
+    "secret_redaction_check record is required",
+    "transcript_integrity_check record is required",
+    "customer_impact_check record is required",
+    "archive_binding record is required",
+    "verifier_attestation record is required"
+  ],
+  "receipt_verification_checksum": "sha256:261919d7353ce8a91c92c03ed05dd6ace17607409a7701d1ea5c5806fcc83a53"
+}

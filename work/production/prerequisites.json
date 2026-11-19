@@ -1,0 +1,98 @@
+{
+  "version": "1.0",
+  "candidate_commit": "675f5f7e1ac79fd7f85a29c47697553357aee1f7",
+  "generated_at": "2026-10-06T18:15:34.562Z",
+  "local": {
+    "backend_build": "verified_by_ci_build",
+    "portal_tests": "verified_by_local_suite",
+    "configuration": {
+      "status": "blocked",
+      "errors": [
+        "NODE_ENV must be production.",
+        "DEMO_MODE must be false.",
+        "PUBLIC_ORIGIN must be set to a production value.",
+        "DATABASE_URL must be set to a production value.",
+        "PORTAL_AUTO_MIGRATE must be false; review and apply database changes separately.",
+        "PORTAL_DOMAIN must be set to a production value.",
+        "NODE_IMAGE must use an approved immutable @sha256 image digest.",
+        "OLLAMA_IMAGE must use an approved immutable @sha256 image digest.",
+        "CADDY_IMAGE must use an approved immutable @sha256 image digest.",
+        "SUPABASE_URL must be set to a production value.",
+        "SUPABASE_ANON_KEY must be set to a production value.",
+        "SUPABASE_SERVICE_ROLE_KEY must be set to a production value.",
+        "OLLAMA_ENABLED must be true or false.",
+        "OPENCLAW_ENABLED must be true or false.",
+        "WORKER_INTERVAL_SECONDS must be between 15 and 3600.",
+        "WORKER_READINESS_MAX_AGE_SECONDS must be between 60 and 86400.",
+        "BACKUP_MAX_AGE_HOURS must be between 1 and 72.",
+        "NOTIFICATION_DELIVERY must be in_app or webhook.",
+        "SUPPORT_OWNER_NAME must be set to a production value.",
+        "SUPPORT_OWNER_EMAIL must be set to a production value.",
+        "ACCESSIBILITY_VALIDATION_REPORT_URL must be set to a production value.",
+        "ACCESSIBILITY_VALIDATED_AT must be set to a production value.",
+        "SUBSCRIPTIONS_ENABLED must be true or false."
+      ],
+      "warnings": [
+        "Configuration checks do not prove target-project identity, schema compatibility, RLS isolation, or data reconciliation. Those require separate release evidence.",
+        "OpenClaw orchestration is disabled.",
+        "Subscriptions are disabled.",
+        "Hosted OpenAI escalation is disabled; local routes remain available."
+      ]
+    }
+  },
+  "external": [
+    {
+      "id": "hosting_target",
+      "requirement": "Production hosting account, domain, TLS, and edge routing",
+      "status": "pending_external_evidence"
+    },
+    {
+      "id": "database_target",
+      "requirement": "Production PostgreSQL/Supabase target with migration and RLS evidence",
+      "status": "pending_external_evidence"
+    },
+    {
+      "id": "secret_manager",
+      "requirement": "Approved secret-manager injection and rotation evidence",
+      "status": "pending_external_evidence"
+    },
+    {
+      "id": "backup_restore",
+      "requirement": "Encrypted off-host backup and verified restore transcript",
+      "status": "pending_external_evidence"
+    },
+    {
+      "id": "support_owner",
+      "requirement": "Named support owner, backup, route, and coverage window",
+      "status": "pending_external_evidence"
+    },
+    {
+      "id": "accessibility_report",
+      "requirement": "Deployed accessibility report for the production origin",
+      "status": "pending_external_evidence"
+    },
+    {
+      "id": "rollback_authority",
+      "requirement": "Named rollback authority and immutable rollback target",
+      "status": "pending_external_evidence"
+    },
+    {
+      "id": "launch_approval",
+      "requirement": "Named go/no-go decision and launch window",
+      "status": "pending_external_evidence"
+    },
+    {
+      "id": "github_receipt",
+      "requirement": "Observed GitHub destination receipt for the candidate",
+      "status": "pending_external_evidence"
+    },
+    {
+      "id": "drive_receipt",
+      "requirement": "Observed Google Drive destination receipt for the candidate",
+      "status": "pending_external_evidence"
+    }
+  ],
+  "status": "blocked_on_configuration",
+  "next_action": "Populate a production environment outside source control and rerun the preflight.",
+  "prerequisites_checksum": "sha256:9ec0eac9fba72fc0be6fedd804b0fdbb4a4725b9d41358d56682bf3658e20fcb"
+}
